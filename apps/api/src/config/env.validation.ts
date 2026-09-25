@@ -102,6 +102,27 @@ export const envValidationSchema = Joi.object({
   // shared staging database is a real account with a real session.
   SEED_DEMO_PASSWORD: Joi.string().min(12),
 
+  // ── Role test accounts (used ONLY by `pnpm seed:roles`) ─────────
+  // Optional for the same reason as SEED_DEMO_PASSWORD: the running API
+  // never reads them, so `.required()` would refuse to boot a production
+  // deployment over variables it will never touch. The seeder reads them
+  // with getOrThrow() and so refuses to run without them.
+  SEED_VENDOR_NAME: Joi.string(),
+  SEED_VENDOR_EMAIL: Joi.string().email(),
+  SEED_VENDOR_PHONE: Joi.string().pattern(/^\d{10}$/),
+  SEED_VENDOR_PASSWORD: Joi.string().min(12),
+  SEED_VENDOR_STORE_NAME: Joi.string(),
+
+  SEED_CUSTOMER_NAME: Joi.string(),
+  SEED_CUSTOMER_EMAIL: Joi.string().email(),
+  SEED_CUSTOMER_PHONE: Joi.string().pattern(/^\d{10}$/),
+  SEED_CUSTOMER_PASSWORD: Joi.string().min(12),
+
+  SEED_DELIVERY_NAME: Joi.string(),
+  SEED_DELIVERY_EMAIL: Joi.string().email(),
+  SEED_DELIVERY_PHONE: Joi.string().pattern(/^\d{10}$/),
+  SEED_DELIVERY_PASSWORD: Joi.string().min(12),
+
   // ── Maps (used ONLY when geocoding an address) ──────────────────
   // OPTIONAL, for the same reason as SEED_DEMO_PASSWORD above: the API
   // has no use for it on a deployment that does not geocode, so

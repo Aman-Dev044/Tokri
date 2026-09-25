@@ -93,6 +93,32 @@ export const configuration = () => ({
      * thing that needs it, and it is the only thing that fails without it.
      */
     demoPassword: process.env.SEED_DEMO_PASSWORD,
+
+    /**
+     * One real account per operating role, for manual end-to-end testing.
+     * Optional in the Joi schema, so these are `undefined` on a normal
+     * deployment; `seed:roles` reads them with `getOrThrow()` and is the
+     * only thing that fails without them.
+     */
+    vendor: {
+      name: process.env.SEED_VENDOR_NAME,
+      email: process.env.SEED_VENDOR_EMAIL,
+      phone: process.env.SEED_VENDOR_PHONE,
+      password: process.env.SEED_VENDOR_PASSWORD,
+      storeName: process.env.SEED_VENDOR_STORE_NAME,
+    },
+    customer: {
+      name: process.env.SEED_CUSTOMER_NAME,
+      email: process.env.SEED_CUSTOMER_EMAIL,
+      phone: process.env.SEED_CUSTOMER_PHONE,
+      password: process.env.SEED_CUSTOMER_PASSWORD,
+    },
+    delivery: {
+      name: process.env.SEED_DELIVERY_NAME,
+      email: process.env.SEED_DELIVERY_EMAIL,
+      phone: process.env.SEED_DELIVERY_PHONE,
+      password: process.env.SEED_DELIVERY_PASSWORD,
+    },
   },
 });
 

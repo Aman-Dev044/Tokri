@@ -72,6 +72,9 @@ export class AuthService {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        // Included so the login response matches GET /auth/me. Omitting it
+        // left a vendor client without its tenant id until a second call.
+        vendorId: user.vendorId?.toString() ?? null,
       },
       ...tokens,
     };
