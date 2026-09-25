@@ -6,7 +6,14 @@
  * Big enough to hit on a phone with one thumb, keyboard-operable, and it never
  * silently clamps: hitting the stock ceiling says so in words rather than just
  * refusing to increment, which otherwise reads as a broken button.
+ *
+ * The value bounces on `--spring` every time it changes — `shop.css`'s
+ * `shop-bounce` keyframe — so a tap reads as the number reacting, not just
+ * repainting. `prefers-reduced-motion` collapses it to an instant change via
+ * the global reduced-motion block; the state below still flips either way.
  */
+
+import { useEffect, useRef, useState } from 'react';
 
 export interface QuantityStepperProps {
   value: number;
@@ -32,6 +39,24 @@ export function QuantityStepper({
   const atMax = max !== null && value >= max;
   const atMin = value <= min;
 
+  /* Bounce the number, not the whole control, every time it changes — never
+     on the first render, or every stepper on a loaded page would pop at once. */
+  const previous = useRef(value);
+  const [bounce, setBounce] = useState(false);
+  useEffect(() => {
+    if (previous.current !== value) {
+      previous.current = value;
+      setBounce(true);
+      const timer = window.setTimeout(() => {
+        setBounce(false);
+      }, 320);
+      return () => {
+        window.clearTimeout(timer);
+      };
+    }
+    return undefined;
+  }, [value]);
+
   return (
     <div className="shop-step" data-size={size} data-disabled={disabled ? 'true' : undefined}>
       <button
@@ -48,7 +73,11 @@ export function QuantityStepper({
         </svg>
       </button>
 
-      <output className="shop-step__value" aria-label={`${value} ${label}`}>
+      <output
+        className="shop-step__value"
+        data-bounce={bounce ? 'true' : undefined}
+        aria-label={`${value} ${label}`}
+      >
         {value}
       </output>
 

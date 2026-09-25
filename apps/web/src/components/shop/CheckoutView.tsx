@@ -336,7 +336,7 @@ export function CheckoutView() {
         />
       ) : null}
 
-      <div className="shop-checkout__grid">
+      <div className="shop-split">
         <div className="shop-checkout__main">
           {/* ── 1. address ──────────────────────────────────────────────── */}
           <section className="shop-panel" aria-labelledby="ck-address">
@@ -345,10 +345,10 @@ export function CheckoutView() {
             </h2>
 
             {rows.length > 0 ? (
-              <ul className="shop-addresses">
+              <ul className="shop-choices">
                 {rows.map((row) => (
                   <li key={row.id}>
-                    <label className="shop-address" data-selected={chosen?.id === row.id ? 'true' : undefined}>
+                    <label className="shop-choice" data-selected={chosen?.id === row.id ? 'true' : undefined}>
                       <input
                         type="radio"
                         name="address"
@@ -358,15 +358,15 @@ export function CheckoutView() {
                           setSelectedId(row.id);
                         }}
                       />
-                      <span>
-                        <strong className="shop-address__label">{row.label}</strong>
-                        <span className="shop-address__lines">
+                      <span className="shop-choice__text">
+                        <strong className="shop-choice__label">{row.label}</strong>
+                        <span className="shop-choice__lines">
                           {[row.line1, row.line2, row.city, row.pincode]
                             .filter((part): part is string => part !== null && part !== '')
                             .join(', ')}
                         </span>
                         {row.phone !== '' ? (
-                          <span className="shop-address__phone mono">{row.phone}</span>
+                          <span className="shop-choice__phone mono">{row.phone}</span>
                         ) : null}
                       </span>
                     </label>
@@ -536,9 +536,11 @@ export function CheckoutView() {
             <h2 id="ck-slot" className="shop-panel__title">
               <span className="shop-panel__step">2</span> Delivery time
             </h2>
-            <div className="shop-slot" data-selected="true">
-              <strong>As soon as it is packed</strong>
-              <span className="mono">typically 15–30 min</span>
+            <div className="shop-choice" data-selected="true">
+              <span className="shop-choice__text">
+                <strong className="shop-choice__label">As soon as it is packed</strong>
+                <span className="shop-choice__note mono">typically 15–30 min</span>
+              </span>
             </div>
             <p className="shop-panel__note">
               On-demand only for now. Scheduled slots need a capacity planner and a rider roster,
@@ -595,7 +597,7 @@ export function CheckoutView() {
               <span className="shop-panel__step">4</span> Payment
             </h2>
 
-            <label className="shop-pay" data-selected={method === 'cod' ? 'true' : undefined}>
+            <label className="shop-choice" data-selected={method === 'cod' ? 'true' : undefined}>
               <input
                 type="radio"
                 name="payment"
@@ -605,9 +607,9 @@ export function CheckoutView() {
                   setMethod('cod');
                 }}
               />
-              <span>
-                <strong>Cash on delivery</strong>
-                <span className="shop-pay__note">
+              <span className="shop-choice__text">
+                <strong className="shop-choice__label">Cash on delivery</strong>
+                <span className="shop-choice__note">
                   {codAvailable
                     ? 'Working today. Pay the rider at your door.'
                     : (codReason ?? 'Not available for this order.')}
@@ -615,7 +617,7 @@ export function CheckoutView() {
               </span>
             </label>
 
-            <label className="shop-pay" data-selected={method === 'online' ? 'true' : undefined}>
+            <label className="shop-choice" data-selected={method === 'online' ? 'true' : undefined}>
               <input
                 type="radio"
                 name="payment"
@@ -625,9 +627,9 @@ export function CheckoutView() {
                   setMethod('online');
                 }}
               />
-              <span>
-                <strong>Card, UPI or netbanking</strong>
-                <span className="shop-pay__note">
+              <span className="shop-choice__text">
+                <strong className="shop-choice__label">Card, UPI or netbanking</strong>
+                <span className="shop-choice__note">
                   {onlineAvailable ? (
                     'Available for this order.'
                   ) : (

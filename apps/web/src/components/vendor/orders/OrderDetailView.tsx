@@ -39,16 +39,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  AdminSection,
-  ConfirmDialog,
-  Money,
-  RelativeTime,
-  StatusPill,
-} from '@/components/admin';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
-import { formatDate } from '@/lib/admin/format';
+import { formatDate } from '../format';
 import { NEXT_STATUS, REJECT_REASONS, STATUS_AISLE, previewFulfilment } from '@/lib/vendor/orders';
 import type {
   FulfilmentUpdate,
@@ -58,7 +50,9 @@ import type {
   VendorOrderDetail,
   VendorPartner,
 } from '@/lib/vendor/types';
-import { EndpointError } from '../primitives';
+import { ConfirmDialog } from '../overlay';
+import { VenPage, VenSection } from '../Page';
+import { Btn, EndpointError, Money, OrderStatusPill, RelativeTime, SkelStat, WriteFailure } from '../primitives';
 
 /** Re-picking is only legal while the order is still in the shop's hands. */
 const REPICKABLE = new Set(['ACCEPTED', 'PACKING']);
@@ -120,7 +114,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
   if (order.error && !order.data) {
     return (
-      <AdminPage
+      <VenPage
         title="Order"
         description="This order could not be loaded."
         breadcrumbs={[{ label: 'Orders', href: '/vendor/orders' }, { label: orderId }]}
@@ -131,7 +125,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           status={order.error.status}
           onRetry={order.refetch}
         />
-      </AdminPage>
+      </VenPage>
     );
   }
 
@@ -139,16 +133,15 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
   if (!data || !kept || !preview) {
     return (
-      <AdminPage
+      <VenPage
         title="Order"
         description="Loading the order…"
         breadcrumbs={[{ label: 'Orders', href: '/vendor/orders' }, { label: orderId }]}
       >
-        <div className="adm-stack" aria-busy="true">
-          <div className="adm-skel adm-skel--tile" />
-          <div className="adm-skel adm-skel--chart" />
+        <div className="ven-stack" aria-busy="true">
+          <SkelStat />
         </div>
-      </AdminPage>
+      </VenPage>
     );
   }
 
@@ -225,7 +218,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   );
 
   return (
-    <AdminPage
+    <VenPage
       title={data.orderNo}
       description={`${customerName} · placed ${data.placedAt === null ? 'at an unrecorded time' : formatDate(data.placedAt, 'long')}`}
       breadcrumbs={[{ label: 'Orders', href: '/vendor/orders' }, { label: data.orderNo }]}
@@ -234,13 +227,12 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
         (value): value is string => value !== null,
       )}
       actions={
-        <div className="adm-row">
-          <StatusPill status={data.status} kind="order" />
+        <div className="ven-row">
+          <OrderStatusPill status={data.status} />
           {data.status === 'PLACED' ? (
             <>
-              <button
-                type="button"
-                className="adm-btn adm-btn--primary"
+              <Btn
+                variant="primary"
                 disabled={accept.loading}
                 onClick={() => {
                   setFailure(null);
@@ -255,49 +247,32 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 }}
               >
                 Accept
-              </button>
-              <button
-                type="button"
-                className="adm-btn adm-btn--danger"
-                onClick={() => setDialog('reject')}
-              >
+              </Btn>
+              <Btn variant="danger" onClick={() => setDialog('reject')}>
                 Reject
-              </button>
+              </Btn>
             </>
           ) : null}
           {nextStatus || (canRepick && changed) ? (
-            <button
-              type="button"
-              className="adm-btn adm-btn--primary"
-              onClick={() => setDialog('confirm')}
-            >
+            <Btn variant="primary" onClick={() => setDialog('confirm')}>
               {!nextStatus
                 ? 'Confirm the short order'
                 : nextStatus === 'PACKING'
                   ? 'Start packing'
                   : 'Confirm items & mark ready'}
-            </button>
+            </Btn>
           ) : null}
           {data.status === 'READY_FOR_PICKUP' ? (
-            <button type="button" className="adm-btn" onClick={() => setDialog('assign')}>
-              Assign rider
-            </button>
+            <Btn onClick={() => setDialog('assign')}>Assign rider</Btn>
           ) : null}
         </div>
       }
     >
-      {failure ? (
-        <div className="adm-fixture" role="alert" style={{ marginBottom: 'var(--s-3)' }}>
-          <div>
-            <p className="adm-fixture__title">That did not go through</p>
-            <p className="adm-fixture__body">{failure}</p>
-          </div>
-        </div>
-      ) : null}
+      {failure ? <WriteFailure message={failure} /> : null}
 
-      <div className="adm-grid adm-grid--split">
-        <div className="adm-stack">
-          <AdminSection
+      <div className="ven-cols-2">
+        <div className="ven-stack">
+          <VenSection
             title="Items"
             description={
               data.status === 'DELIVERED' || data.status === 'REJECTED' || data.status === 'CANCELLED'
@@ -319,7 +294,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                         onChange={() => toggleLine(item.productId)}
                         disabled={!canRepick}
                       />
-                      <span className="adm-sr">
+                      <span className="ven-sr">
                         {on ? 'Included' : 'Dropped'} — {item.name}
                       </span>
                     </label>
@@ -354,9 +329,9 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                   : ' A ledger entry was written.'}
               </p>
             ) : null}
-          </AdminSection>
+          </VenSection>
 
-          <AdminSection title="Status history" description="Every transition the server recorded.">
+          <VenSection title="Status history" description="Every transition the server recorded.">
             <div className="ven-timeline">
               {data.statusHistory.map((event, index) => (
                 <div
@@ -383,11 +358,11 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 </div>
               ))}
             </div>
-          </AdminSection>
+          </VenSection>
         </div>
 
-        <div className="adm-stack">
-          <AdminSection title="Money" description="Recomputed live as you untick lines.">
+        <div className="ven-stack">
+          <VenSection title="Money" description="Recomputed live as you untick lines.">
             <div className="ven-sum">
               <span className="ven-sum__label">Items</span>
               <span className="ven-sum__value">
@@ -439,11 +414,11 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 <Money value={preview.vendorPayout} />
               </span>
             </div>
-          </AdminSection>
+          </VenSection>
 
-          <AdminSection title="Customer" panel>
-            <div className="adm-panel--pad">
-              <dl className="adm-dl">
+          <VenSection title="Customer">
+            <div className="ven-panel ven-panel--pad">
+              <dl className="ven-dl">
                 <dt>Name</dt>
                 <dd>{customerName}</dd>
                 <dt>Phone</dt>
@@ -494,9 +469,9 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 </p>
               ) : null}
             </div>
-          </AdminSection>
+          </VenSection>
 
-          <Link className="adm-btn" href="/vendor/orders">
+          <Link className="ven-btn" data-variant="plain" data-size="md" href="/vendor/orders">
             Back to the board
           </Link>
         </div>
@@ -515,7 +490,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
         }}
         body={
           changed ? (
-            <div className="adm-stack">
+            <div className="ven-stack">
               <p>
                 {preview.droppedCount} of {data.items.length} lines will be dropped.
               </p>
@@ -668,6 +643,6 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           )
         }
       />
-    </AdminPage>
+    </VenPage>
   );
 }

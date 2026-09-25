@@ -36,9 +36,10 @@ import { LocationBadge } from './LocationBadge';
 import { OtpEntry } from './OtpEntry';
 import { PhotoProof } from './PhotoProof';
 import { PlaceCard } from './PlaceCard';
+import { CardSkeleton } from './Skeletons';
 import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
-import { IconBox, IconCheck, IconClock, IconStore } from './icons';
+import { IconBox, IconCheck, IconStore } from './icons';
 import { ApiError } from '@/lib/api-client';
 import {
   deliverOrder,
@@ -222,10 +223,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
   // 0 IS prepaid: the API sends 0, not null, for an order already paid for.
   const codAmount = job?.payment.codAmountPaise ?? 0;
 
-  const progress = useMemo(() => {
-    const index = STEP_ORDER.indexOf(step);
-    return `Step ${index + 1} of ${STEP_ORDER.length} · ${STEP_LABEL[step]}`;
-  }, [step]);
+  const stepIndex = useMemo(() => STEP_ORDER.indexOf(step), [step]);
 
   /* ---------------- empty / wrong-job states ---------------- */
 
@@ -249,7 +247,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
   }
 
   if (loading && job === null) {
-    return <div className={styles.skeleton} style={{ height: '16rem' }} aria-hidden="true" />;
+    return <CardSkeleton />;
   }
 
   if (job === null) {
@@ -303,8 +301,30 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
       {jobIsSample ? <FixtureBanner endpoints={sampleEndpoints} onRetry={refresh} /> : null}
       {jobFromCache && !jobIsSample ? <CachedBanner onRetry={refresh} /> : null}
 
-      <div className={styles.stepTag}>
-        <IconClock size={14} /> {progress}
+      {/* The rail pulses once on mount and is keyed on the step, so it pulses
+          exactly once per real transition, then holds — never an ambient
+          blink on a screen a rider is not browsing. */}
+      <div className={styles.stepRail} key={step}>
+        <div className={styles.stepPips} aria-hidden="true">
+          {STEP_ORDER.map((s, index) => (
+            <span
+              key={s}
+              className={[
+                styles.stepPip,
+                index < stepIndex ? styles.stepPipDone : '',
+                index === stepIndex ? styles.stepPipNow : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            />
+          ))}
+        </div>
+        <div className={styles.stepRailText}>
+          <span className={styles.stepRailNow}>{STEP_LABEL[step]}</span>
+          <span className={styles.stepRailCount}>
+            Step {stepIndex + 1} of {STEP_ORDER.length}
+          </span>
+        </div>
       </div>
 
       {problem === null ? null : (
@@ -313,189 +333,208 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         </Notice>
       )}
 
+      {/*
+        Keyed on the step, so a real transition remounts the pane and slides it
+        forward exactly once. The Dock is deliberately OUTSIDE this element: it
+        is `position: fixed`, and a `transform` mid-animation on an ancestor
+        would make it fixed to the ANIMATING box instead of the viewport for
+        the length of the transition — a fixed dock that is not actually fixed
+        for 280ms. Keeping the pane's motion scoped to the scrolling content
+        above the dock avoids that entirely.
+      */}
+      <div className={styles.stepPane} key={step}>
+        {step === 'GO_TO_STORE' ? (
+          <>
+            <div className={styles.etaRow}>
+              <span className={styles.mega}>{etaMinutes(job.etaMinutes)}</span>
+              <span className={styles.megaUnit}>min to the door</span>
+            </div>
+            <p className={styles.lede}>
+              {distanceKm(job.distanceKm)} total · you earn {money(job.payoutPaise)}
+            </p>
+
+            <PlaceCard kind="pickup" place={job.pickup} showMap />
+          </>
+        ) : null}
+
+        {step === 'AT_STORE' ? (
+          <>
+            <h1 className={styles.h1}>
+              Collect {job.itemCount} item{job.itemCount === 1 ? '' : 's'}
+            </h1>
+            <section className={styles.panel}>
+              <ul className={styles.items}>
+                {job.items.map((item, index) => (
+                  // The API sends no item id — name, qty, unit and image only.
+                  // The index is the right key for a list that never reorders.
+                  <li key={`${item.name}-${index}`} className={styles.item}>
+                    <span className={styles.itemQty}>
+                      {item.qty}
+                      {item.unit === '' ? '' : ` ${item.unit}`}
+                    </span>
+                    <span className={styles.itemName}>{item.name}</span>
+                  </li>
+                ))}
+                {job.items.length === 0 ? (
+                  <li className={styles.item}>
+                    <span className={styles.itemName}>
+                      The order list did not load. Check the packed bag against order{' '}
+                      {job.orderNo === '' ? 'number' : job.orderNo} with the store.
+                    </span>
+                  </li>
+                ) : null}
+              </ul>
+            </section>
+
+            <button type="button" className={styles.ghost} onClick={() => setArrived(false)}>
+              Not at the store yet
+            </button>
+          </>
+        ) : null}
+
+        {step === 'TO_CUSTOMER' ? (
+          <>
+            <h1 className={styles.h1}>Ready to go</h1>
+            <p className={styles.lede}>
+              Starting the delivery tells the customer you are on the way and begins
+              sharing your location.
+            </p>
+
+            <PlaceCard
+              kind="drop"
+              place={job.drop}
+              phone={job.customerPhone}
+              phoneLabel={job.customerName === null ? 'Call' : 'Call customer'}
+            />
+          </>
+        ) : null}
+
+        {step === 'DELIVER' ? (
+          <>
+            <LocationBadge tracking={tracking} now={now} />
+
+            <PlaceCard
+              kind="drop"
+              place={job.drop}
+              showMap
+              phone={job.customerPhone}
+              phoneLabel={job.customerName === null ? 'Call' : `Call ${job.customerName}`}
+            />
+
+            {codAmount <= 0 ? (
+              <div className={styles.prepaid}>
+                <IconCheck size={20} /> Prepaid — collect nothing.
+              </div>
+            ) : (
+              <div className={styles.cod}>
+                <div className={styles.codLabel}>Collect cash</div>
+                <div className={styles.codValue}>
+                  <span className={styles.codRupee}>&#8377;</span>
+                  {rupeesOnly(codAmount)}
+                </div>
+              </div>
+            )}
+
+            {locked ? (
+              <div className={styles.locked} role="alert">
+                This order is locked after too many wrong codes. Call the store or support
+                — you cannot complete it from here.
+              </div>
+            ) : (
+              <section className={styles.panelFlat}>
+                <OtpEntry
+                  value={otp}
+                  onChange={(next) => {
+                    setOtp(next);
+                    setOtpWrong(false);
+                  }}
+                  attemptsRemaining={attemptsRemaining}
+                  invalid={otpWrong}
+                  disabled={busy}
+                />
+              </section>
+            )}
+
+            <PhotoProof disabled={busy} />
+
+            {failOpen ? (
+              <section className={styles.panelFlat}>
+                <span className={styles.stepTag}>Why can you not deliver?</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  {FAIL_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      className={styles.linkBtn}
+                      onClick={() => void onFail(reason)}
+                      disabled={busy}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={styles.ghost}
+                    onClick={() => setFailOpen(false)}
+                  >
+                    Never mind
+                  </button>
+                </div>
+              </section>
+            ) : (
+              <button
+                type="button"
+                className={styles.ghost}
+                onClick={() => setFailOpen(true)}
+                disabled={busy}
+              >
+                I can&rsquo;t deliver this
+              </button>
+            )}
+          </>
+        ) : null}
+      </div>
+
       {step === 'GO_TO_STORE' ? (
-        <>
-          <div className={styles.etaRow}>
-            <span className={styles.mega}>{etaMinutes(job.etaMinutes)}</span>
-            <span className={styles.megaUnit}>min to the door</span>
-          </div>
-          <p className={styles.lede}>
-            {distanceKm(job.distanceKm)} total · you earn {money(job.payoutPaise)}
-          </p>
-
-          <PlaceCard kind="pickup" place={job.pickup} showMap />
-
-          <Dock>
-            <PrimaryButton onClick={() => setArrived(true)}>
-              <IconStore size={24} /> I&rsquo;m at the store
-            </PrimaryButton>
-          </Dock>
-        </>
+        <Dock>
+          <PrimaryButton onClick={() => setArrived(true)}>
+            <IconStore size={24} /> I&rsquo;m at the store
+          </PrimaryButton>
+        </Dock>
       ) : null}
 
       {step === 'AT_STORE' ? (
-        <>
-          <h1 className={styles.h1}>
-            Collect {job.itemCount} item{job.itemCount === 1 ? '' : 's'}
-          </h1>
-          <section className={styles.panel}>
-            <ul className={styles.items}>
-              {job.items.map((item, index) => (
-                // The API sends no item id — name, qty, unit and image only.
-                // The index is the right key for a list that never reorders.
-                <li key={`${item.name}-${index}`} className={styles.item}>
-                  <span className={styles.itemQty}>
-                    {item.qty}
-                    {item.unit === '' ? '' : ` ${item.unit}`}
-                  </span>
-                  <span className={styles.itemName}>{item.name}</span>
-                </li>
-              ))}
-              {job.items.length === 0 ? (
-                <li className={styles.item}>
-                  <span className={styles.itemName}>
-                    The order list did not load. Check the packed bag against order{' '}
-                    {job.orderNo === '' ? 'number' : job.orderNo} with the store.
-                  </span>
-                </li>
-              ) : null}
-            </ul>
-          </section>
-
-          <button type="button" className={styles.ghost} onClick={() => setArrived(false)}>
-            Not at the store yet
-          </button>
-
-          <Dock>
-            <PrimaryButton
-              onClick={() => void advance(() => markPickedUp(job.orderId))}
-              disabled={busy}
-            >
-              <IconCheck size={24} /> {busy ? 'Saving…' : 'Picked up'}
-            </PrimaryButton>
-          </Dock>
-        </>
+        <Dock>
+          <PrimaryButton
+            onClick={() => void advance(() => markPickedUp(job.orderId))}
+            disabled={busy}
+          >
+            <IconCheck size={24} /> {busy ? 'Saving…' : 'Picked up'}
+          </PrimaryButton>
+        </Dock>
       ) : null}
 
       {step === 'TO_CUSTOMER' ? (
-        <>
-          <h1 className={styles.h1}>Ready to go</h1>
-          <p className={styles.lede}>
-            Starting the delivery tells the customer you are on the way and begins
-            sharing your location.
-          </p>
-
-          <PlaceCard
-            kind="drop"
-            place={job.drop}
-            phone={job.customerPhone}
-            phoneLabel={job.customerName === null ? 'Call' : 'Call customer'}
-          />
-
-          <Dock>
-            <PrimaryButton
-              onClick={() => void advance(() => markOutForDelivery(job.orderId))}
-              disabled={busy}
-            >
-              {busy ? 'Starting…' : 'Start delivery'}
-            </PrimaryButton>
-          </Dock>
-        </>
+        <Dock>
+          <PrimaryButton
+            onClick={() => void advance(() => markOutForDelivery(job.orderId))}
+            disabled={busy}
+          >
+            {busy ? 'Starting…' : 'Start delivery'}
+          </PrimaryButton>
+        </Dock>
       ) : null}
 
       {step === 'DELIVER' ? (
-        <>
-          <LocationBadge tracking={tracking} now={now} />
-
-          <PlaceCard
-            kind="drop"
-            place={job.drop}
-            showMap
-            phone={job.customerPhone}
-            phoneLabel={job.customerName === null ? 'Call' : `Call ${job.customerName}`}
-          />
-
-          {codAmount <= 0 ? (
-            <div className={styles.prepaid}>
-              <IconCheck size={20} /> Prepaid — collect nothing.
-            </div>
-          ) : (
-            <div className={styles.cod}>
-              <div className={styles.codLabel}>Collect cash</div>
-              <div className={styles.codValue}>
-                <span className={styles.codRupee}>&#8377;</span>
-                {rupeesOnly(codAmount)}
-              </div>
-            </div>
-          )}
-
-          {locked ? (
-            <div className={styles.locked} role="alert">
-              This order is locked after too many wrong codes. Call the store or support
-              — you cannot complete it from here.
-            </div>
-          ) : (
-            <section className={styles.panelFlat}>
-              <OtpEntry
-                value={otp}
-                onChange={(next) => {
-                  setOtp(next);
-                  setOtpWrong(false);
-                }}
-                attemptsRemaining={attemptsRemaining}
-                invalid={otpWrong}
-                disabled={busy}
-              />
-            </section>
-          )}
-
-          <PhotoProof disabled={busy} />
-
-          {failOpen ? (
-            <section className={styles.panelFlat}>
-              <span className={styles.stepTag}>Why can you not deliver?</span>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.5rem' }}>
-                {FAIL_REASONS.map((reason) => (
-                  <button
-                    key={reason}
-                    type="button"
-                    className={styles.linkBtn}
-                    onClick={() => void onFail(reason)}
-                    disabled={busy}
-                  >
-                    {reason}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className={styles.ghost}
-                  onClick={() => setFailOpen(false)}
-                >
-                  Never mind
-                </button>
-              </div>
-            </section>
-          ) : (
-            <button
-              type="button"
-              className={styles.ghost}
-              onClick={() => setFailOpen(true)}
-              disabled={busy}
-            >
-              I can&rsquo;t deliver this
-            </button>
-          )}
-
-          <Dock>
-            <PrimaryButton
-              onClick={() => void onDeliver()}
-              disabled={busy || locked || otp.length !== OTP_LENGTH}
-            >
-              <IconCheck size={24} />
-              {busy ? 'Confirming…' : 'Confirm delivery'}
-            </PrimaryButton>
-          </Dock>
-        </>
+        <Dock>
+          <PrimaryButton
+            onClick={() => void onDeliver()}
+            disabled={busy || locked || otp.length !== OTP_LENGTH}
+          >
+            <IconCheck size={24} />
+            {busy ? 'Confirming…' : 'Confirm delivery'}
+          </PrimaryButton>
+        </Dock>
       ) : null}
 
       {/* Honest about the PWA, once, at the bottom of the live step. */}

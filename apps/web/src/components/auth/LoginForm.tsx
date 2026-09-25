@@ -121,7 +121,7 @@ export function LoginForm() {
   return (
     <form className="authform" onSubmit={onSubmit} noValidate>
       <header className="authform__head">
-        <p className="eyebrow">Welcome back</p>
+        <p className="auth-eyebrow">Welcome back</p>
         <h1 className="authform__title">
           The market is
           <br />

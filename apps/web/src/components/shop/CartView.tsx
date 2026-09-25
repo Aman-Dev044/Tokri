@@ -176,8 +176,8 @@ export function CartView() {
         </div>
       ) : null}
 
-      <div className="shop-cart__grid">
-        <ul className="shop-cart__lines">
+      <div className="shop-split">
+        <ul className="shop-lines">
           {lines.map((line) => (
             <li key={line.productId} className="shop-line">
               <div className="shop-line__main">

@@ -46,7 +46,7 @@ export function AisleRail() {
               >
                 <span
                   className="shop-rail__swatch"
-                  style={{ background: entry.swatch }}
+                  data-key={entry.key}
                   aria-hidden="true"
                 />
                 <span className="shop-rail__name">{entry.name}</span>

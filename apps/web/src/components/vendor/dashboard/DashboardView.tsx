@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The morning screen.
+ * The morning screen — the panel's one Bento Pop surface besides earnings.
  *
  * A shop owner opens this once, reads it in about four seconds, and then lives
  * in the orders board for the rest of the day. So it answers exactly five
@@ -32,30 +32,26 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  AdminSection,
-  BarChart,
-  IconChevronRight,
-  IconInbox,
-  EmptyState,
-  KpiTile,
-  Money,
-  RelativeTime,
-  StatusPill,
-  type ChartRow,
-} from '@/components/admin';
+import { BentoCard, BentoGrid, BentoHead } from '@mandi/design-system';
 import { useFreshness, useVendorQuery } from '@/hooks';
-import { formatDate, formatPaiseCompact } from '@/lib/admin/format';
 import { todayWindow } from '@/lib/vendor/range';
-import type {
-  OrderStatus,
-  Paged,
-  VendorDashboard,
-  VendorOrder,
-} from '@/lib/vendor/types';
+import type { OrderStatus, Paged, VendorDashboard, VendorOrder } from '@/lib/vendor/types';
+import { BarChart, RankedBars, type BarDatum } from '../charts';
+import { formatCount, formatDate, formatPaiseCompact, humanise } from '../format';
+import { IconChevronRight, IconInbox } from '../icons';
+import { VenPage, VenSection } from '../Page';
+import {
+  EmptyState,
+  EndpointError,
+  FreshLine,
+  KpiCell,
+  Money,
+  OrderStatusPill,
+  RelativeTime,
+  SkelChart,
+  SkelStat,
+} from '../primitives';
 import { ORDER_POLL_MS, useVendorAlerts } from '../VendorAlertProvider';
-import { EndpointError, FreshLine } from '../primitives';
 
 export function DashboardView() {
   // `from`/`to` for the local day, computed here. The API has no `window`
@@ -78,25 +74,23 @@ export function DashboardView() {
   const data = dashboard.data;
 
   /* ---- today's shape, straight from the server ---- */
-  const statusRows: ChartRow[] = useMemo(() => {
+  const statusRows: BarDatum[] = useMemo(() => {
     const byStatus = data?.ordersToday.byStatus;
     if (!byStatus) return [];
     return (Object.entries(byStatus) as Array<[OrderStatus, number]>)
       .filter(([, count]) => count > 0)
       .sort((a, b) => b[1] - a[1])
-      .map(([status, count]) => ({ status, count }));
+      .map(([status, count]) => ({ label: humanise(status), value: count }));
   }, [data]);
 
-  const spark = useMemo(
-    () => (data?.sparkline ?? []).map((point) => point.revenue),
-    [data],
-  );
+  const spark = useMemo(() => (data?.sparkline ?? []).map((point) => point.revenue), [data]);
 
-  const salesRows: ChartRow[] = useMemo(
+  const salesRows: BarDatum[] = useMemo(
     () =>
       (data?.sparkline ?? []).map((point) => ({
-        day: formatDate(point.date, 'day'),
-        revenue: point.revenue,
+        label: formatDate(point.date, 'day'),
+        value: point.revenue,
+        fullLabel: formatDate(point.date, 'long'),
       })),
     [data],
   );
@@ -113,22 +107,23 @@ export function DashboardView() {
   /* ---- a failed dashboard is an error state, never a blank page ---- */
   if (dashboard.error && data === null) {
     return (
-      <AdminPage title="Your store" description="Today’s numbers could not be loaded.">
+      <VenPage title="Your store" description="Today’s numbers could not be loaded.">
         <EndpointError
           path="/vendor/dashboard"
           message={dashboard.error.friendlyMessage}
           status={dashboard.error.status}
           onRetry={dashboard.refetch}
         />
-      </AdminPage>
+      </VenPage>
     );
   }
 
   const lowOrOut = (data?.lowStockCount ?? 0) + (data?.outOfStockCount ?? 0);
   const outOfStock = data?.outOfStockCount ?? 0;
+  const rating = data?.rating ?? 0;
 
   return (
-    <AdminPage
+    <VenPage
       title={data?.storeName ?? 'Your store'}
       description="Today, in the order it matters. Everything here links to the screen that fixes it."
       isFixture={fixturePaths.length > 0}
@@ -138,7 +133,7 @@ export function DashboardView() {
       }
     >
       {/* ---------------------------------------- needs action ---- */}
-      <AdminSection
+      <VenSection
         title="Needs you now"
         description="Ordered by what it costs to ignore, not by category."
       >
@@ -184,172 +179,166 @@ export function DashboardView() {
             }
           />
         </div>
-      </AdminSection>
+      </VenSection>
 
       {/* ------------------------------------------------ KPIs ---- */}
-      <AdminSection>
-        <div className="adm-grid adm-grid--3">
-          <KpiTile
-            label="Revenue today"
-            value={data?.revenueToday.gross ?? 0}
-            unit="paise"
-            spark={spark}
-            tone="good"
-            index={0}
-            loading={loading}
-            isFixture={dashboard.isFixture}
-          />
-          <KpiTile
-            label="Orders today"
-            value={data?.ordersToday.total ?? 0}
-            tone="neutral"
-            index={1}
-            loading={loading}
-            isFixture={dashboard.isFixture}
-          />
-          <KpiTile
-            label="Delivered today"
-            value={data?.ordersToday.byStatus.DELIVERED ?? 0}
-            tone="good"
-            index={2}
-            loading={loading}
-            isFixture={dashboard.isFixture}
-          />
-          <KpiTile
-            label="Waiting for you"
-            value={data?.pendingCount ?? 0}
-            tone={(data?.pendingCount ?? 0) > 0 ? 'crit' : 'neutral'}
-            index={3}
-            loading={loading}
-            isFixture={dashboard.isFixture}
-          />
-          <KpiTile
-            label="Low or out of stock"
-            value={lowOrOut}
-            tone={lowOrOut > 0 ? 'warn' : 'neutral'}
-            index={4}
-            loading={loading}
-            isFixture={dashboard.isFixture}
-          />
-          {/*
-            Rating is the one tile that is NOT a <KpiTile>. That component
-            formats a plain number as a count, and a 4.6 rendered as "5" is a
-            lie that would take a year to notice. One decimal or nothing.
-
-            The API sends `rating` and NOTHING ELSE about ratings — there is no
-            `ratingCount`. Reading one is what used to crash this page, so the
-            footnote below says what the number is, not how many votes made it.
-          */}
-          <article className="adm-tile" data-fixture={dashboard.isFixture ? 'true' : undefined}>
-            <p className="adm-tile__label">Store rating</p>
-            <p className="adm-tile__value">
-              <span className="adm-num">{(data?.rating ?? 0).toFixed(1)}</span>
-              <span className="adm-tile__unit">★</span>
-            </p>
-            <div className="adm-tile__foot">
-              <span className="adm-delta__label">
-                {data === null
+      <VenSection>
+        {loading ? (
+          <div className="ven-needs">
+            <SkelStat index={0} />
+            <SkelStat index={1} />
+            <SkelStat index={2} />
+            <SkelStat index={3} />
+            <SkelStat index={4} />
+            <SkelStat index={5} />
+          </div>
+        ) : (
+          <BentoGrid dense>
+            <KpiCell
+              label="Revenue today"
+              value={data?.revenueToday.gross ?? 0}
+              format={formatPaiseCompact}
+              spark={spark}
+              tone="good"
+              index={0}
+            />
+            <KpiCell
+              label="Orders today"
+              value={data?.ordersToday.total ?? 0}
+              format={formatCount}
+              tone="plain"
+              index={1}
+            />
+            <KpiCell
+              label="Delivered today"
+              value={data?.ordersToday.byStatus.DELIVERED ?? 0}
+              format={formatCount}
+              tone="good"
+              index={2}
+            />
+            <KpiCell
+              label="Waiting for you"
+              value={data?.pendingCount ?? 0}
+              format={formatCount}
+              tone={(data?.pendingCount ?? 0) > 0 ? 'crit' : 'plain'}
+              index={3}
+            />
+            <KpiCell
+              label="Low or out of stock"
+              value={lowOrOut}
+              format={formatCount}
+              tone={lowOrOut > 0 ? 'warn' : 'plain'}
+              index={4}
+            />
+            {/*
+              Rating is deliberately not driven off a plain count formatter — a
+              4.6 rendered as "5" is a lie that would take a year to notice.
+              The API sends `rating` and NOTHING ELSE about ratings — there is
+              no `ratingCount`, so the note says what the number is rather than
+              how many votes made it.
+            */}
+            <KpiCell
+              label="Store rating"
+              value={Math.round(rating * 10)}
+              format={(tenths) => `${(tenths / 10).toFixed(1)} ★`}
+              tone="plain"
+              index={5}
+              note={
+                data === null
                   ? 'not loaded yet'
-                  : data.rating > 0
+                  : rating > 0
                     ? 'average across your delivered orders'
-                    : 'no ratings yet'}
-              </span>
-            </div>
-          </article>
-        </div>
-      </AdminSection>
+                    : 'no ratings yet'
+              }
+            />
+          </BentoGrid>
+        )}
+      </VenSection>
 
       {/* ---------------------------------------------- charts ---- */}
-      <div className="adm-grid adm-grid--split">
-        <AdminSection
-          title="Last 7 days"
-          description="Revenue per day, in rupees. The shape matters more than any single bar."
-          panel
-        >
-          <div className="adm-panel--pad">
-            {loading ? (
-              <div className="adm-skel adm-skel--chart" />
-            ) : (
-              <BarChart
-                data={salesRows}
-                xKey="day"
-                series={[{ key: 'revenue', label: 'Revenue' }]}
-                formatValue={formatPaiseCompact}
-                label="Daily revenue for the last seven days"
-              />
-            )}
-          </div>
-        </AdminSection>
+      <BentoGrid dense>
+        <BentoCard span="half" index={0}>
+          <BentoHead
+            title="Last 7 days"
+            eyebrow="Revenue"
+          />
+          <p className="ven-dim">Revenue per day, in rupees. The shape matters more than any single bar.</p>
+          {loading ? (
+            <SkelChart />
+          ) : (
+            <BarChart
+              data={salesRows}
+              format={formatPaiseCompact}
+              label="Daily revenue for the last seven days"
+              tone="pop-2"
+            />
+          )}
+        </BentoCard>
 
-        <AdminSection
-          title="Today by status"
-          description="Where today's orders currently sit."
-          panel
-        >
-          <div className="adm-panel--pad">
-            {loading ? (
-              <div className="adm-skel adm-skel--chart" />
-            ) : statusRows.length === 0 ? (
-              <EmptyState
-                title="No orders yet today"
-                body="They will appear here as they come in."
-                icon={<IconInbox />}
-              />
-            ) : (
-              <BarChart
-                data={statusRows}
-                xKey="status"
-                series={[{ key: 'count', label: 'Orders' }]}
-                horizontal
-                label="Today's orders grouped by status"
-              />
-            )}
-          </div>
-        </AdminSection>
-      </div>
+        <BentoCard span="half" index={1}>
+          <BentoHead title="Today by status" eyebrow="Breakdown" />
+          <p className="ven-dim">Where today&rsquo;s orders currently sit.</p>
+          {loading ? (
+            <SkelChart />
+          ) : statusRows.length === 0 ? (
+            <EmptyState
+              title="No orders yet today"
+              body="They will appear here as they come in."
+              icon={<IconInbox />}
+              tight
+            />
+          ) : (
+            <RankedBars data={statusRows} format={formatCount} label="Today's orders grouped by status" />
+          )}
+        </BentoCard>
+      </BentoGrid>
 
       {/* ---------------------------------------------- recent ---- */}
-      <AdminSection
+      <VenSection
         title="Latest orders"
         description="The six most recent today, whatever state they are in."
       >
-        <div className="adm-panel">
+        <div className="ven-panel">
           {recent.error && recent.data === null ? (
-            <EndpointError
-              path="/vendor/orders"
-              message={recent.error.friendlyMessage}
-              status={recent.error.status}
-              onRetry={recent.refetch}
-            />
+            <div className="ven-panel--pad">
+              <EndpointError
+                path="/vendor/orders"
+                message={recent.error.friendlyMessage}
+                status={recent.error.status}
+                onRetry={recent.refetch}
+              />
+            </div>
           ) : (
-            orders.map((order, index) => (
-              <Link
-                className="adm-feed__item"
-                key={order.id}
-                href={`/vendor/orders/${order.id}`}
-                style={{ ['--adm-i' as string]: String(index) }}
-              >
-                <span>
-                  <span className="adm-feed__no">{order.orderNo}</span>
-                  <span className="adm-feed__meta">
-                    {' '}
-                    · {order.customer.name ?? 'Customer'} · {order.itemCount} items
+            <div className="ven-feed">
+              {orders.map((order, index) => (
+                <Link
+                  className="ven-feed__item"
+                  key={order.id}
+                  href={`/vendor/orders/${order.id}`}
+                  style={{ ['--i' as string]: index }}
+                >
+                  <span>
+                    <span className="ven-feed__no">{order.orderNo}</span>
+                    <span className="ven-feed__meta">
+                      {' '}
+                      · {order.customer.name ?? 'Customer'} · {order.itemCount} items
+                    </span>
+                    <br />
+                    <span className="ven-feed__meta">
+                      {order.placedAt === null ? (
+                        'time unknown'
+                      ) : (
+                        <RelativeTime value={order.placedAt} live={false} />
+                      )}
+                    </span>
                   </span>
-                  <br />
-                  <span className="adm-feed__meta">
-                    {order.placedAt === null ? (
-                      'time unknown'
-                    ) : (
-                      <RelativeTime value={order.placedAt} live={false} />
-                    )}
+                  <span className="ven-row">
+                    <OrderStatusPill status={order.status} />
+                    <Money value={order.grandTotal} />
                   </span>
-                </span>
-                <span className="adm-row">
-                  <StatusPill status={order.status} kind="order" />
-                  <Money value={order.grandTotal} />
-                </span>
-              </Link>
-            ))
+                </Link>
+              ))}
+            </div>
           )}
           {orders.length === 0 && !recent.loading && recent.error === null ? (
             <EmptyState
@@ -359,8 +348,8 @@ export function DashboardView() {
             />
           ) : null}
         </div>
-      </AdminSection>
-    </AdminPage>
+      </VenSection>
+    </VenPage>
   );
 }
 

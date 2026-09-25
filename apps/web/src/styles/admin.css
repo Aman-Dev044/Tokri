@@ -1,32 +1,47 @@
 /* =============================================================================
-   MANDI — ADMIN CONSOLE
+   MANDI — ADMIN CONSOLE · "BENTO POP"
    -----------------------------------------------------------------------------
    Imported once, from `app/admin/layout.tsx`.
 
-   ── THIS SURFACE IS DELIBERATELY NOT THE SHOP (plan §2.4) ──────────────────
-   The customer app is warm, chromatic and photographic. The admin console is
-   none of those things. It is a tool someone stares at for six hours:
+   ── WHAT THIS SURFACE IS NOW ───────────────────────────────────────────────
+   The console used to be a deliberately grey tool. Bento Pop replaces that:
+   the same density, the same seriousness about data, but sitting on the warm
+   cream ground with the rest of the product, composed in bento cells, with one
+   saturated accent doing the identity work.
 
-     · data-dense — 13px base, tight leading, hairlines instead of cards
-     · neutral — the ground and the ink, nothing else
-     · no chrome — no gradients, no drop shadows on a table row, no decoration
-     · SEMANTIC colour only — --good / --warn / --crit, and only where the
-       colour means something a word beside it also says
-     · the chromatic-aisle re-tinting is switched OFF here. `--aisle` is never
-       read by this stylesheet.
+   The console is scanned for a whole shift, so the rules are sharper here than
+   on the shop:
 
-   THE ONE EXCEPTION: a chart or a swatch that breaks data down BY AISLE uses
-   the eight aisle hues as categorical series colours, because there the hue is
-   the data. Those are the `--adm-aisle-*` custom properties below and the
-   .adm-dot / .adm-bar--aisle rules. Nowhere else.
+     · CALM AT REST. The pop palette carries IDENTITY and CHART SERIES. It
+       never says "this is broken". Semantic --good/--warn/--crit say that, and
+       only when something is genuinely wrong.
+     · SEVERITY IS NEVER COLOUR ALONE. Every severity state carries a SHAPE
+       (circle / triangle / square) and a WORD as well as a hue. Print the
+       board in greyscale and it still triages correctly.
+     · DASHBOARDS ARE BENTO. Tables are tables. A twelve-column mosaic is how
+       you compose KPIs, charts and attention panels; it is not how you read
+       two hundred rows of settlements.
+     · EVERY NUMBER IS MONO AND TABULAR. Columns of digits that do not align
+       are columns nobody can scan.
+
+   ── TOKENS ONLY ────────────────────────────────────────────────────────────
+   There is not one raw hex value in this file. Every colour comes from
+   `@mandi/design-system/tokens.css`, which defines light and dark together —
+   so nothing here can be a colour that works in one theme and vanishes in the
+   other.
+
+   The eight aisle hues appear in exactly two places: <AisleDot/> and charts
+   that break data down BY AISLE. There the hue IS the data. Nowhere else.
 
    ── MOTION ─────────────────────────────────────────────────────────────────
-   Every animation in this file is functional: it shows where something came
-   from, or that data changed. All of them are switched off in one block at the
-   bottom under `prefers-reduced-motion: reduce`, and every animated element is
-   rendered in its FINAL state by default — there is nothing parked at
-   `opacity: 0` waiting for a script to arrive. With JavaScript disabled, or
-   with the animation cancelled, the page still reads correctly.
+   Every animation in this file is functional — it shows where something came
+   from, or that data just changed. Nothing loops forever except a skeleton
+   shimmer, and an SLA breach pulses ONCE and then holds, because a permanently
+   pulsing screen is unusable by Wednesday.
+
+   Every screen is complete and readable at rest: nothing is parked at
+   `opacity: 0` waiting for a script. All of it is switched off in one block,
+   §19, under `prefers-reduced-motion: reduce`.
    ============================================================================= */
 
 /* ===========================================================================
@@ -34,58 +49,73 @@
    =========================================================================== */
 
 .adm {
-  /* surfaces — a console sits on the sunken ground with panels raised out of
-     it, which reads as depth without a single shadow. */
-  --adm-bg: var(--sunken);
-  --adm-panel: var(--surface-2);
-  --adm-panel-2: var(--surface);
+  /* ── surfaces ───────────────────────────────────────────────────────────
+     The console sits on the ground; panels are cards lifted out of it. The
+     rail is a card so it reads as chrome rather than as content. */
+  --adm-bg: var(--ground);
+  --adm-panel: var(--card);
+  --adm-panel-2: var(--ground-sunk);
   --adm-line: var(--hairline);
   --adm-line-strong: var(--hairline-strong);
   --adm-text: var(--ink);
-  --adm-dim: var(--muted);
+  --adm-dim: var(--ink-faint);
+  --adm-soft: var(--ink-soft);
 
-  /* geometry — tighter than the shop. --r-panel (18px) is a magazine radius;
-     a table does not want one. */
-  --adm-r: 8px;
-  --adm-r-sm: 5px;
-  --adm-rail: 244px;
-  --adm-rail-min: 64px;
-  --adm-topbar: 56px;
-  --adm-row: 40px;
+  /* ── geometry ───────────────────────────────────────────────────────────
+     Bento radii, stepped down one notch for console density: a panel is
+     --r-lg, a control is --r-sm, a chip is --r-xs. Nested shapes nest. */
+  --adm-r: var(--r-md);
+  --adm-r-lg: var(--r-lg);
+  --adm-r-sm: var(--r-sm);
+  --adm-r-xs: var(--r-xs);
+  --adm-rail: var(--rail);
+  --adm-rail-min: var(--rail-collapsed);
+  --adm-topbar: 64px;
+  --adm-row: 44px;
 
-  /* type scale, console-sized */
-  --adm-fs: 0.8125rem;      /* 13px */
-  --adm-fs-sm: 0.75rem;     /* 12px */
-  --adm-fs-xs: 0.6875rem;   /* 11px */
-  --adm-fs-lg: 0.9375rem;   /* 15px */
+  /* ── type, console-sized ────────────────────────────────────────────── */
+  --adm-fs: var(--t-sm);
+  --adm-fs-sm: var(--t-xs);
+  --adm-fs-xs: var(--t-2xs);
+  --adm-fs-lg: var(--t-md);
 
-  /* the eight aisle hues, as CATEGORICAL SERIES COLOURS only (see header) */
-  --adm-aisle-fruits: #d64530;
-  --adm-aisle-vegetables: #4e8c3f;
-  --adm-aisle-dairy: #c89b3c;
-  --adm-aisle-bakery: #b5651d;
-  --adm-aisle-beverages: #2f6f8c;
-  --adm-aisle-snacks: #8c4a6b;
-  --adm-aisle-staples: #6b6244;
-  --adm-aisle-frozen: #4a7c8c;
+  /* ── the eight aisle hues, as CATEGORICAL SERIES COLOURS only ───────────
+     Aliased rather than redefined, so the console and the shop cannot drift
+     apart about what "bakery" looks like. */
+  --adm-aisle-fruits: var(--aisle-fruits);
+  --adm-aisle-vegetables: var(--aisle-vegetables);
+  --adm-aisle-dairy: var(--aisle-dairy);
+  --adm-aisle-bakery: var(--aisle-bakery);
+  --adm-aisle-beverages: var(--aisle-beverages);
+  --adm-aisle-snacks: var(--aisle-snacks);
+  --adm-aisle-staples: var(--aisle-staples);
+  --adm-aisle-frozen: var(--aisle-frozen);
 
-  /* neutral chart series — used when the breakdown is NOT by aisle. Steps of
-     one ink, so a stacked bar reads as one quantity split, not eight brands. */
-  --adm-series-1: color-mix(in srgb, var(--ink) 82%, var(--paper));
-  --adm-series-2: color-mix(in srgb, var(--ink) 58%, var(--paper));
-  --adm-series-3: color-mix(in srgb, var(--ink) 38%, var(--paper));
-  --adm-series-4: color-mix(in srgb, var(--ink) 22%, var(--paper));
+  /* ── chart series, when the breakdown is NOT by aisle ───────────────────
+     Four of the pops in a fixed order. They are identity, not severity: a
+     series being "series 3" says nothing about whether it is good news. */
+  --adm-series-1: var(--pop-1);
+  --adm-series-2: var(--pop-3);
+  --adm-series-3: var(--pop-2);
+  --adm-series-4: var(--pop-4);
+
+  /* ── stacking ───────────────────────────────────────────────────────── */
+  --adm-z-rail: 40;
+  --adm-z-topbar: 30;
+  --adm-z-menu: 60;
+  --adm-z-scrim: 70;
+  --adm-z-sheet: 80;
+  --adm-z-toast: 90;
 
   background: var(--adm-bg);
   color: var(--adm-text);
   font-family: var(--body);
   font-size: var(--adm-fs);
-  line-height: 1.45;
+  line-height: 1.5;
   min-height: 100dvh;
 }
 
-/* Every number in this console is mono and tabular. Columns of digits that do
-   not align are columns you cannot scan. */
+/* Every number in this console is mono and tabular. */
 .adm-num,
 .adm td .adm-num,
 .adm-money,
@@ -93,22 +123,24 @@
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .adm h1,
 .adm h2,
 .adm h3 {
   font-family: var(--display);
-  letter-spacing: -0.015em;
-  line-height: 1.18;
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  line-height: var(--lh-snug);
+  margin: 0;
 }
 
 /* One focus treatment, everywhere, and it is always visible. */
 .adm :focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 3px solid var(--accent);
   outline-offset: 2px;
-  border-radius: var(--adm-r-sm);
+  border-radius: var(--adm-r-xs);
 }
 
 .adm-dim {
@@ -122,9 +154,18 @@
   padding: 0;
   margin: -1px;
   overflow: hidden;
+  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+.adm code {
+  font-family: var(--data);
+  font-size: 0.92em;
+  background: var(--ground-sunk);
+  border-radius: var(--adm-r-xs);
+  padding: 0.1em 0.38em;
 }
 
 /* ===========================================================================
@@ -135,27 +176,27 @@
   display: grid;
   grid-template-columns: var(--adm-rail) minmax(0, 1fr);
   min-height: 100dvh;
-  transition: grid-template-columns var(--t-move) var(--ease);
 }
 
 .adm-shell[data-collapsed='true'] {
   grid-template-columns: var(--adm-rail-min) minmax(0, 1fr);
 }
 
-/* ---- rail ---------------------------------------------------------------- */
+/* ── the rail ───────────────────────────────────────────────────────────── */
 
 .adm-rail {
   position: sticky;
   top: 0;
-  align-self: start;
-  height: 100dvh;
+  z-index: var(--adm-z-rail);
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-2);
-  background: var(--adm-panel-2);
+  gap: var(--s-1);
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s-4) var(--s-3) var(--s-3);
+  background: var(--card);
   border-right: 1px solid var(--adm-line);
-  overflow: hidden auto;
   scrollbar-width: thin;
 }
 
@@ -163,140 +204,151 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2);
-  min-height: 36px;
+  padding: var(--s-2) var(--s-2) var(--s-4);
+  color: var(--ink);
   text-decoration: none;
-  color: inherit;
-  border-radius: var(--adm-r-sm);
+  min-width: 0;
 }
 
 .adm-rail__mark {
+  width: 26px;
+  height: 26px;
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  color: var(--moss);
+  color: var(--accent);
 }
 
 .adm-rail__wordmark {
   font-family: var(--display);
-  font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  font-size: var(--t-lg);
+  letter-spacing: var(--track-tight);
   white-space: nowrap;
 }
 
 .adm-rail__env {
-  font-family: var(--data);
+  font-family: var(--body);
   font-size: var(--adm-fs-xs);
-  color: var(--adm-dim);
-  border: 1px solid var(--adm-line);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
   border-radius: var(--r-pill);
-  padding: 0 0.4em;
+  padding: 2px 8px;
   white-space: nowrap;
 }
 
 .adm-rail__group {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
+  padding-bottom: var(--s-3);
 }
 
 .adm-rail__grouplabel {
   font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
   color: var(--adm-dim);
-  padding: var(--s-3) var(--s-2) var(--s-1);
-  white-space: nowrap;
+  padding: var(--s-2) var(--s-3) var(--s-1);
+  margin: 0;
 }
 
 .adm-rail__link {
   position: relative;
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: var(--s-2);
-  min-height: 34px;
-  padding: 0 var(--s-2);
+  gap: var(--s-3);
+  min-height: 38px;
+  padding: 0 var(--s-3);
   border-radius: var(--adm-r-sm);
-  color: var(--adm-text);
+  color: var(--adm-soft);
   text-decoration: none;
-  transition: background-color var(--t-micro) var(--ease);
+  font-size: var(--adm-fs);
+  font-weight: 500;
+  transition:
+    background var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
 }
 
 .adm-rail__link:hover {
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  background: var(--ground-sunk);
+  color: var(--ink);
 }
 
+/* The active item takes the accent wash and a solid accent nub on its left
+   edge. Two channels — fill and mark — so it is not the tint alone. */
 .adm-rail__link[aria-current='page'] {
-  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
-/* The active marker is a rule against the rail edge, not a filled pill. Ink on
-   ink — the console never spends a brand colour on navigation. */
 .adm-rail__link[aria-current='page']::before {
   content: '';
   position: absolute;
-  left: calc(var(--s-2) * -1 - 1px);
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 2px;
-  background: var(--adm-text);
+  left: calc(var(--s-1) * -1);
+  top: 50%;
+  width: 4px;
+  height: 20px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transform: translateY(-50%);
+  animation: adm-nub var(--t-move) var(--spring) backwards;
 }
 
 .adm-rail__icon {
-  width: 20px;
-  height: 20px;
-  color: var(--adm-dim);
+  width: 17px;
+  height: 17px;
   flex: 0 0 auto;
+  opacity: 0.85;
 }
 
 .adm-rail__link[aria-current='page'] .adm-rail__icon {
-  color: var(--adm-text);
+  opacity: 1;
 }
 
 .adm-rail__label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 1;
-  transition:
-    opacity var(--t-micro) var(--ease),
-    transform var(--t-move) var(--ease);
+  flex: 1 1 auto;
+}
+
+.adm-rail__badge {
+  flex: 0 0 auto;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-fs-xs);
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  background: var(--crit-wash);
+  color: var(--crit);
+  border: 1px solid color-mix(in oklab, var(--crit) 30%, transparent);
+}
+
+/* A sample-data badge is struck through so it cannot be mistaken for a count
+   somebody should act on. */
+.adm-rail__badge[data-fixture='true'] {
+  background: var(--warn-wash);
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 34%, transparent);
+  text-decoration: line-through;
 }
 
 .adm-rail__su {
-  font-family: var(--data);
-  font-size: 0.5625rem;
-  letter-spacing: 0.08em;
-  color: var(--warn-ink);
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  border-radius: var(--r-nub);
-  padding: 0 0.35em;
-  white-space: nowrap;
-}
-
-/* collapsed rail: labels fade and the grid closes to the icon column */
-.adm-shell[data-collapsed='true'] .adm-rail__label,
-.adm-shell[data-collapsed='true'] .adm-rail__su,
-.adm-shell[data-collapsed='true'] .adm-rail__grouplabel,
-.adm-shell[data-collapsed='true'] .adm-rail__wordmark,
-.adm-shell[data-collapsed='true'] .adm-rail__env {
-  opacity: 0;
-  transform: translateX(-4px);
-  pointer-events: none;
-}
-
-.adm-shell[data-collapsed='true'] .adm-rail__grouplabel {
-  height: var(--s-4);
-  padding: 0;
-  overflow: hidden;
-}
-
-.adm-shell[data-collapsed='true'] .adm-rail__link {
-  grid-template-columns: 20px 0 0;
+  flex: 0 0 auto;
+  font-size: var(--adm-fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  color: var(--pop-3-ink);
+  background: var(--pop-3-wash);
+  border-radius: var(--r-pill);
+  padding: 2px 6px;
 }
 
 .adm-rail__foot {
@@ -308,276 +360,63 @@
 .adm-rail__collapse {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--s-3);
   width: 100%;
-  min-height: 32px;
-  padding: 0 var(--s-2);
+  min-height: 36px;
+  padding: 0 var(--s-3);
   border: 0;
   border-radius: var(--adm-r-sm);
+  background: none;
   color: var(--adm-dim);
+  font: inherit;
   font-size: var(--adm-fs-sm);
   cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease);
+  transition: background var(--t-micro) var(--ease);
 }
 
 .adm-rail__collapse:hover {
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
-  color: var(--adm-text);
+  background: var(--ground-sunk);
+  color: var(--ink);
 }
 
 .adm-rail__chev {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  transition: transform var(--t-move) var(--ease);
+  width: 15px;
+  height: 15px;
+  transition: transform var(--t-move) var(--spring);
+}
+
+/* ── collapsed rail ─────────────────────────────────────────────────────── */
+
+.adm-shell[data-collapsed='true'] .adm-rail__wordmark,
+.adm-shell[data-collapsed='true'] .adm-rail__env,
+.adm-shell[data-collapsed='true'] .adm-rail__label,
+.adm-shell[data-collapsed='true'] .adm-rail__grouplabel,
+.adm-shell[data-collapsed='true'] .adm-rail__su {
+  display: none;
+}
+
+.adm-shell[data-collapsed='true'] .adm-rail__link,
+.adm-shell[data-collapsed='true'] .adm-rail__collapse,
+.adm-shell[data-collapsed='true'] .adm-rail__brand {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .adm-shell[data-collapsed='true'] .adm-rail__chev {
   transform: rotate(180deg);
 }
 
-/* ---- top bar ------------------------------------------------------------- */
-
-.adm-main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.adm-top {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-topbar);
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-height: var(--adm-topbar);
-  padding: 0 var(--s-4);
-  background: color-mix(in srgb, var(--adm-panel-2) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--adm-line);
-}
-
-.adm-top__burger {
-  display: none;
-}
-
-.adm-search {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-width: 0;
-  flex: 1 1 320px;
-  max-width: 420px;
-  height: 32px;
-  padding: 0 var(--s-2) 0 var(--s-3);
-  background: var(--adm-bg);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--r-pill);
-  color: var(--adm-dim);
-  font-size: var(--adm-fs-sm);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
-}
-
-.adm-search:hover {
-  border-color: var(--adm-line-strong);
-  color: var(--adm-text);
-}
-
-.adm-search__text {
-  flex: 1 1 auto;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.adm-kbd {
-  font-family: var(--data);
-  font-size: var(--adm-fs-xs);
-  border: 1px solid var(--adm-line);
-  border-bottom-width: 2px;
-  border-radius: var(--r-nub);
-  padding: 0.05em 0.4em;
-  color: var(--adm-dim);
-  background: var(--adm-panel);
-  white-space: nowrap;
-}
-
-.adm-top__spacer {
-  flex: 1 1 auto;
-}
-
-.adm-iconbtn {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid transparent;
-  border-radius: var(--adm-r-sm);
-  color: var(--adm-dim);
-  cursor: pointer;
-  transition:
-    background-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
-}
-
-.adm-iconbtn:hover {
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-  color: var(--adm-text);
-}
-
-.adm-iconbtn svg {
-  width: 18px;
-  height: 18px;
-}
-
-.adm-iconbtn__count {
+/* A count still has to be visible when the rail is a strip of icons — it
+   shrinks to a dot on the icon's shoulder rather than disappearing. */
+.adm-shell[data-collapsed='true'] .adm-rail__badge {
   position: absolute;
-  top: 1px;
-  right: 0;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
-  display: grid;
-  place-items: center;
-  font-family: var(--data);
-  font-size: 0.5625rem;
-  line-height: 1;
-  color: var(--on-semantic);
-  background: var(--crit);
-  border-radius: var(--r-pill);
-  border: 1.5px solid var(--adm-panel-2);
+  top: 3px;
+  right: 8px;
+  padding: 1px 4px;
+  font-size: 9px;
 }
 
-/* ---- user menu ----------------------------------------------------------- */
-
-.adm-user {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  height: 32px;
-  padding: 0 var(--s-2);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--r-pill);
-  cursor: pointer;
-  font-size: var(--adm-fs-sm);
-  transition: border-color var(--t-micro) var(--ease);
-}
-
-.adm-user:hover {
-  border-color: var(--adm-line-strong);
-}
-
-.adm-user__initials {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--ink) 12%, transparent);
-  font-family: var(--data);
-  font-size: var(--adm-fs-xs);
-  font-weight: 600;
-}
-
-.adm-user__name {
-  max-width: 12ch;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.adm-rolepill {
-  font-family: var(--data);
-  font-size: 0.5625rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.1em 0.45em;
-  border-radius: var(--r-nub);
-  border: 1px solid var(--adm-line-strong);
-  color: var(--adm-dim);
-  white-space: nowrap;
-}
-
-.adm-rolepill[data-level='SUPER_ADMIN'] {
-  color: var(--warn-ink);
-  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
-}
-
-.adm-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: var(--z-sheet);
-  min-width: 232px;
-  padding: var(--s-2);
-  background: var(--adm-panel);
-  border: 1px solid var(--adm-line-strong);
-  border-radius: var(--adm-r);
-  box-shadow: var(--lift-2);
-  animation: adm-pop var(--t-micro) var(--ease) both;
-}
-
-.adm-menu__head {
-  padding: var(--s-2);
-  border-bottom: 1px solid var(--adm-line);
-  margin-bottom: var(--s-1);
-}
-
-.adm-menu__email {
-  color: var(--adm-dim);
-  font-size: var(--adm-fs-sm);
-  overflow-wrap: anywhere;
-}
-
-.adm-menu__item {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  width: 100%;
-  min-height: 30px;
-  padding: 0 var(--s-2);
-  border: 0;
-  border-radius: var(--adm-r-sm);
-  color: inherit;
-  font-size: var(--adm-fs);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.adm-menu__item:hover {
-  background: color-mix(in srgb, var(--ink) 7%, transparent);
-}
-
-.adm-menu__item--danger {
-  color: var(--crit-ink);
-}
-
-.adm-menu__wrap {
-  position: relative;
-}
-
-/* ---- content region ------------------------------------------------------ */
-
-.adm-content {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--s-5) var(--s-5) var(--s-8);
-}
-
-@media (max-width: 1400px) {
-  .adm-content {
-    padding: var(--s-4) var(--s-4) var(--s-7);
-  }
-}
-
-/* ---- responsive: the rail becomes a drawer under 1024px ------------------ */
+/* ── mobile drawer ──────────────────────────────────────────────────────── */
 
 @media (max-width: 1023px) {
   .adm-shell,
@@ -588,52 +427,354 @@
   .adm-rail {
     position: fixed;
     inset: 0 auto 0 0;
-    width: min(280px, 82vw);
-    z-index: var(--z-sheet);
+    width: min(84vw, var(--rail));
     transform: translateX(-102%);
     transition: transform var(--t-move) var(--ease-out);
-    box-shadow: var(--lift-2);
+    box-shadow: var(--lift-3);
   }
 
   .adm-shell[data-drawer='true'] .adm-rail {
-    transform: translateX(0);
-  }
-
-  /* On a drawer the collapsed state is meaningless — always show the labels. */
-  .adm-shell[data-collapsed='true'] .adm-rail__label,
-  .adm-shell[data-collapsed='true'] .adm-rail__su,
-  .adm-shell[data-collapsed='true'] .adm-rail__grouplabel,
-  .adm-shell[data-collapsed='true'] .adm-rail__wordmark {
-    opacity: 1;
     transform: none;
-    pointer-events: auto;
   }
 
-  .adm-shell[data-collapsed='true'] .adm-rail__link {
-    grid-template-columns: 20px minmax(0, 1fr) auto;
-  }
-
+  /* Collapsed is a desktop preference; in the drawer it would hide the labels
+     of a menu the user just opened to read. */
+  .adm-shell[data-collapsed='true'] .adm-rail__label,
+  .adm-shell[data-collapsed='true'] .adm-rail__wordmark,
+  .adm-shell[data-collapsed='true'] .adm-rail__env,
   .adm-shell[data-collapsed='true'] .adm-rail__grouplabel {
-    height: auto;
-    padding: var(--s-3) var(--s-2) var(--s-1);
+    display: revert;
+  }
+
+  .adm-shell[data-collapsed='true'] .adm-rail__link,
+  .adm-shell[data-collapsed='true'] .adm-rail__brand {
+    justify-content: flex-start;
+    padding-inline: var(--s-3);
+  }
+
+  .adm-shell[data-collapsed='true'] .adm-rail__badge {
+    position: static;
+    font-size: var(--adm-fs-xs);
+    padding: 3px 7px;
   }
 
   .adm-rail__foot {
     display: none;
   }
+}
 
-  .adm-top__burger {
-    display: grid;
+.adm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--adm-z-scrim);
+  border: 0;
+  background: color-mix(in oklab, var(--ink) 42%, transparent);
+  backdrop-filter: blur(2px);
+  animation: adm-fade var(--t-micro) var(--ease) backwards;
+}
+
+@media (max-width: 1023px) {
+  .adm-rail {
+    z-index: calc(var(--adm-z-scrim) + 1);
   }
+}
 
-  .adm-scrim {
-    position: fixed;
-    inset: 0;
-    z-index: calc(var(--z-sheet) - 1);
-    background: color-mix(in srgb, var(--ink) 38%, transparent);
-    border: 0;
-    cursor: pointer;
-    animation: adm-fade var(--t-micro) var(--ease) both;
+/* ── main column ────────────────────────────────────────────────────────── */
+
+.adm-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.adm-top {
+  position: sticky;
+  top: 0;
+  z-index: var(--adm-z-topbar);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--adm-topbar);
+  padding: var(--s-2) var(--s-5);
+  background: color-mix(in oklab, var(--ground) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.adm-top__spacer {
+  flex: 1 1 auto;
+}
+
+.adm-top__burger {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .adm-top__burger {
+    display: inline-flex;
+  }
+  .adm-top {
+    padding-inline: var(--s-4);
+  }
+}
+
+.adm-search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  width: min(360px, 42vw);
+  height: 38px;
+  padding: 0 var(--s-2) 0 var(--s-3);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--adm-dim);
+  font: inherit;
+  font-size: var(--adm-fs-sm);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+
+.adm-search:hover {
+  border-color: var(--adm-line-strong);
+  box-shadow: var(--lift-1);
+}
+
+.adm-search__text {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 719px) {
+  .adm-search__text {
+    display: none;
+  }
+  .adm-search {
+    width: 38px;
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+.adm-kbd {
+  font-family: var(--data);
+  font-size: var(--adm-fs-xs);
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: var(--adm-r-xs);
+  background: var(--ground-sunk);
+  border: 1px solid var(--adm-line);
+  color: var(--adm-dim);
+}
+
+@media (max-width: 719px) {
+  .adm-kbd {
+    display: none;
+  }
+}
+
+.adm-iconbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--adm-soft);
+  cursor: pointer;
+  transition:
+    background var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+
+.adm-iconbtn:hover {
+  background: var(--ground-sunk);
+  color: var(--ink);
+}
+
+.adm-iconbtn:active {
+  transform: scale(0.93);
+}
+
+.adm-iconbtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.adm-iconbtn__count {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--crit);
+  color: var(--card);
+  font-family: var(--data);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.adm-user {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: 38px;
+  padding: 0 var(--s-2) 0 3px;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  font-size: var(--adm-fs-sm);
+  cursor: pointer;
+  max-width: 260px;
+  transition: box-shadow var(--t-micro) var(--ease);
+}
+
+.adm-user:hover {
+  box-shadow: var(--lift-1);
+}
+
+.adm-user__initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--display);
+  font-size: var(--adm-fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.adm-user__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+@media (max-width: 899px) {
+  .adm-user__name {
+    display: none;
+  }
+}
+
+.adm-rolepill {
+  flex: 0 0 auto;
+  font-size: var(--adm-fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+
+.adm-rolepill[data-level='SUPER_ADMIN'] {
+  background: var(--pop-3-wash);
+  color: var(--pop-3-ink);
+}
+
+.adm-rolepill[data-level='ADMIN'] {
+  background: var(--pop-2-wash);
+  color: var(--pop-2-ink);
+}
+
+/* ── the dropdown menus ─────────────────────────────────────────────────── */
+
+.adm-menu__wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.adm-menu {
+  position: absolute;
+  top: calc(100% + var(--s-2));
+  right: 0;
+  z-index: var(--adm-z-menu);
+  min-width: 260px;
+  max-width: min(92vw, 380px);
+  padding: var(--s-2);
+  border-radius: var(--adm-r);
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--lift-3);
+  animation: adm-menu-in var(--t-move) var(--spring-soft) backwards;
+  transform-origin: top right;
+}
+
+.adm-menu__head {
+  padding: var(--s-2) var(--s-3) var(--s-3);
+  border-bottom: 1px solid var(--adm-line);
+  margin-bottom: var(--s-2);
+}
+
+.adm-menu__email {
+  margin: 2px 0 0;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+  overflow-wrap: anywhere;
+}
+
+.adm-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-radius: var(--adm-r-sm);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--adm-fs);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--t-instant) var(--ease);
+}
+
+.adm-menu__item:hover {
+  background: var(--ground-sunk);
+}
+
+.adm-menu__item--danger {
+  color: var(--crit);
+}
+
+.adm-menu__item--danger:hover {
+  background: var(--crit-wash);
+}
+
+/* ── content ────────────────────────────────────────────────────────────── */
+
+.adm-content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--s-5);
+}
+
+@media (max-width: 719px) {
+  .adm-content {
+    padding: var(--s-4) var(--s-3);
   }
 }
 
@@ -644,34 +785,43 @@
 .adm-palette__scrim {
   position: fixed;
   inset: 0;
-  z-index: var(--z-toast);
-  display: grid;
-  place-items: start center;
-  padding: clamp(var(--s-6), 12vh, 9rem) var(--s-4) var(--s-4);
-  background: color-mix(in srgb, var(--ink) 34%, transparent);
+  z-index: var(--adm-z-sheet);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(var(--s-5), 12vh, 148px) var(--s-4) var(--s-4);
+  background: color-mix(in oklab, var(--ink) 44%, transparent);
   backdrop-filter: blur(3px);
-  animation: adm-fade var(--t-micro) var(--ease) both;
+  animation: adm-fade var(--t-micro) var(--ease) backwards;
 }
 
 .adm-palette {
-  width: min(560px, 100%);
-  background: var(--adm-panel);
-  border: 1px solid var(--adm-line-strong);
-  border-radius: var(--adm-r);
-  box-shadow: var(--lift-2);
+  width: min(620px, 100%);
+  max-height: 68vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--adm-r-lg);
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--lift-3);
   overflow: hidden;
-  animation: adm-rise var(--t-move) var(--spring) both;
+  animation: adm-sheet-in var(--t-enter) var(--spring-soft) backwards;
 }
 
 .adm-palette__input {
   width: 100%;
-  height: 46px;
-  padding: 0 var(--s-4);
   border: 0;
   border-bottom: 1px solid var(--adm-line);
-  background: transparent;
-  color: var(--adm-text);
-  font-size: var(--adm-fs-lg);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--body);
+  font-size: var(--t-lg);
+  padding: var(--s-4) var(--s-5);
+}
+
+.adm-palette__input::placeholder {
+  color: var(--adm-dim);
 }
 
 .adm-palette__input:focus {
@@ -679,147 +829,206 @@
 }
 
 .adm-palette__list {
-  max-height: min(48vh, 380px);
-  overflow-y: auto;
-  padding: var(--s-2);
-  margin: 0;
   list-style: none;
+  margin: 0;
+  padding: var(--s-2);
+  overflow-y: auto;
+  flex: 1 1 auto;
 }
 
 .adm-palette__item {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
   gap: var(--s-3);
   width: 100%;
-  padding: var(--s-2);
+  padding: var(--s-3);
   border: 0;
   border-radius: var(--adm-r-sm);
-  color: inherit;
+  background: none;
+  color: var(--ink);
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.adm-palette__item[data-active='true'] {
-  background: color-mix(in srgb, var(--ink) 9%, transparent);
+.adm-palette__item svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--adm-dim);
 }
 
-.adm-palette__item svg {
-  width: 20px;
-  height: 20px;
-  color: var(--adm-dim);
+.adm-palette__item[aria-selected='true'] {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.adm-palette__item[aria-selected='true'] svg {
+  color: var(--accent-ink);
 }
 
 .adm-palette__hint {
   display: block;
-  color: var(--adm-dim);
   font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .adm-palette__foot {
   display: flex;
+  align-items: center;
   gap: var(--s-3);
   padding: var(--s-2) var(--s-4);
   border-top: 1px solid var(--adm-line);
+  background: var(--ground-sunk);
+  font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
-  font-size: var(--adm-fs-xs);
 }
 
 /* ===========================================================================
-   4. AdminPage / AdminSection
+   4. AdminPage / AdminSection / bento helpers
    =========================================================================== */
+
+.adm-page {
+  max-width: 1480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
 
 .adm-page__head {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: var(--s-3);
-  padding-bottom: var(--s-4);
-  margin-bottom: var(--s-4);
-  border-bottom: 1px solid var(--adm-line);
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+
+.adm-page__title {
+  font-size: var(--t-h2);
+  font-weight: 800;
+  margin: 0;
+}
+
+.adm-page__desc {
+  margin: var(--s-2) 0 0;
+  max-width: 78ch;
+  color: var(--adm-soft);
+  font-size: var(--adm-fs);
+}
+
+.adm-page__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
 }
 
 .adm-crumbs {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-1);
-  margin-bottom: var(--s-2);
+  flex-wrap: wrap;
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
+  margin-bottom: var(--s-2);
 }
 
 .adm-crumbs a {
-  color: inherit;
+  color: var(--adm-dim);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
 }
 
 .adm-crumbs a:hover {
-  color: var(--adm-text);
-  border-bottom-color: var(--adm-line-strong);
+  color: var(--accent-ink);
+  text-decoration: underline;
 }
 
 .adm-crumbs__sep {
-  opacity: 0.55;
-}
-
-.adm-page__title {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.adm-page__desc {
-  margin-top: var(--s-1);
-  color: var(--adm-dim);
-  max-width: 68ch;
-}
-
-.adm-page__actions,
-.adm-section__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
+  color: var(--adm-line-strong);
 }
 
 .adm-section {
-  margin-bottom: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
 }
 
 .adm-section__head {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: var(--s-2);
-  margin-bottom: var(--s-3);
+  gap: var(--s-3);
+  flex-wrap: wrap;
 }
 
 .adm-section__title {
-  font-size: var(--adm-fs-lg);
-  font-weight: 650;
+  font-size: var(--t-h3);
+  font-weight: 700;
+  margin: 0;
 }
 
 .adm-section__desc {
-  color: var(--adm-dim);
+  margin: var(--s-1) 0 0;
+  max-width: 78ch;
   font-size: var(--adm-fs-sm);
-  margin-top: 2px;
+  color: var(--adm-dim);
 }
 
-/* the panel: a hairline box on the sunken ground. No shadow, ever. */
+.adm-section__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+/* ── the panel ──────────────────────────────────────────────────────────── */
+
 .adm-panel {
   background: var(--adm-panel);
   border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
+  border-radius: var(--adm-r-lg);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .adm-panel--pad {
   padding: var(--s-4);
+}
+
+/* ── bento inside the console ───────────────────────────────────────────
+   The design system's <BentoGrid/> is the primitive. These are the console's
+   two adjustments: tighter gaps, and cells that can hold a scrolling table
+   without blowing out the twelve-column track. */
+
+.adm .mnd-bento {
+  gap: var(--s-4);
+}
+
+.adm .mnd-cell {
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--adm-r-lg);
+}
+
+.adm .mnd-cell__title {
+  font-size: var(--t-lg);
+  font-weight: 700;
+}
+
+/* A cell whose whole job is to hold a table: the table brings its own
+   padding, so the cell drops its own. */
+.adm .mnd-cell--table {
+  padding: 0;
+  overflow: hidden;
+}
+
+.adm .mnd-cell--table > .mnd-cell__head {
+  padding: var(--s-4) var(--s-4) 0;
 }
 
 /* ===========================================================================
@@ -831,46 +1040,44 @@
   align-items: flex-start;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
-  margin-bottom: var(--s-4);
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  border-left-width: 3px;
   border-radius: var(--adm-r);
-  background: color-mix(in srgb, var(--warn) 10%, var(--adm-panel));
-  color: var(--adm-text);
+  background: var(--warn-wash);
+  border: 1px solid color-mix(in oklab, var(--warn) 34%, transparent);
+  color: var(--ink);
 }
 
-.adm-fixture svg {
+.adm-fixture > svg {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
-  color: var(--warn-ink);
-  margin-top: 1px;
+  margin-top: 2px;
+  color: var(--warn);
 }
 
 .adm-fixture__title {
-  font-weight: 650;
-  color: var(--warn-ink);
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--adm-fs);
+  color: var(--warn);
 }
 
 .adm-fixture__body {
+  margin: var(--s-1) 0 0;
   font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
+  color: var(--adm-soft);
+  max-width: 88ch;
 }
 
-/* A tile showing sample data says so on the tile too, because a KPI gets read
-   without the banner ever entering the reader's eye line. */
-.adm-tile[data-fixture='true']::after {
-  content: 'SAMPLE';
-  position: absolute;
-  top: var(--s-2);
-  right: var(--s-2);
-  font-family: var(--data);
-  font-size: 0.5rem;
-  letter-spacing: 0.1em;
-  color: var(--warn-ink);
-  border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
-  border-radius: var(--r-nub);
-  padding: 0 0.3em;
+.adm-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--adm-r);
+  background: var(--info-wash);
+  border: 1px solid color-mix(in oklab, var(--info) 30%, transparent);
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-soft);
 }
 
 /* ===========================================================================
@@ -879,7 +1086,7 @@
 
 .adm-kpirow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--s-3);
 }
 
@@ -888,45 +1095,70 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  min-height: 116px;
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--adm-r);
   background: var(--adm-panel);
   border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-  animation: adm-rise var(--t-move) var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 45ms);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  overflow: hidden;
+  animation: adm-pop var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * var(--stagger));
+}
+
+/* The tone is a bar along the top edge, not a wash over the tile. A KPI
+   reads best on a plain surface; the bar is enough to group them. */
+.adm-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity var(--t-micro) var(--ease);
+}
+
+.adm-tile[data-tone='good']::before {
+  background: var(--good);
+  opacity: 1;
+}
+
+.adm-tile[data-tone='warn']::before {
+  background: var(--warn);
+  opacity: 1;
+}
+
+.adm-tile[data-tone='crit']::before {
+  background: var(--crit);
+  opacity: 1;
 }
 
 .adm-tile__label {
-  font-size: var(--adm-fs-sm);
+  margin: 0;
+  font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   color: var(--adm-dim);
-  letter-spacing: 0.01em;
 }
 
 .adm-tile__value {
+  margin: 0;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
+  font-size: clamp(1.4rem, 1.1rem + 0.9vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  color: var(--ink);
   overflow-wrap: anywhere;
 }
 
-.adm-tile[data-tone='good'] .adm-tile__value {
-  color: var(--good-ink);
-}
-.adm-tile[data-tone='warn'] .adm-tile__value {
-  color: var(--warn-ink);
-}
-.adm-tile[data-tone='crit'] .adm-tile__value {
-  color: var(--crit-ink);
-}
-
 .adm-tile__unit {
-  font-size: 0.85em;
+  font-size: 0.62em;
+  font-weight: 700;
   color: var(--adm-dim);
-  margin-left: 0.15em;
+  margin-left: 2px;
 }
 
 .adm-tile__foot {
@@ -935,34 +1167,55 @@
   justify-content: space-between;
   gap: var(--s-2);
   margin-top: auto;
+  min-height: 26px;
+}
+
+/* A sample tile says so on its face, not only in the page banner. */
+.adm-tile[data-fixture='true']::after {
+  content: 'SAMPLE';
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  font-family: var(--body);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  color: var(--warn);
+  background: var(--warn-wash);
+  border-radius: var(--r-pill);
+  padding: 2px 6px;
 }
 
 .adm-delta {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--adm-fs-sm);
+  font-weight: 700;
   color: var(--adm-dim);
-  white-space: nowrap;
 }
 
 .adm-delta svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
 }
 
 .adm-delta[data-dir='up'] {
-  color: var(--good-ink);
+  color: var(--good);
 }
+
 .adm-delta[data-dir='down'] {
-  color: var(--crit-ink);
+  color: var(--crit);
 }
 
 .adm-delta__label {
   font-family: var(--body);
+  font-weight: 500;
+  font-size: var(--adm-fs-xs);
   color: var(--adm-dim);
+  margin-left: 2px;
 }
 
 /* ===========================================================================
@@ -971,21 +1224,20 @@
 
 .adm-spark {
   display: block;
+  flex: 0 0 auto;
   overflow: visible;
 }
 
-.adm-spark__line,
-.adm-chart__line {
+.adm-spark__line {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 
-/* ★ paths draw themselves in. The dash length is set inline from the measured
-   path length; this only supplies the timing. */
+/* The draw-in. `--adm-len` is the path length, computed in JS; the dash offset
+   ramps from it to zero, so the line draws itself once on mount. */
 .adm-draw {
-  animation: adm-draw var(--adm-draw-ms, 900ms) var(--ease-out) both;
+  animation: adm-draw var(--adm-draw-ms, 820ms) var(--ease-out) backwards;
   animation-delay: var(--adm-draw-delay, 0ms);
 }
 
@@ -995,6 +1247,11 @@
   overflow: visible;
 }
 
+.adm-chart__wrap {
+  position: relative;
+  min-width: 0;
+}
+
 .adm-chart__grid {
   stroke: var(--adm-line);
   stroke-width: 1;
@@ -1002,34 +1259,26 @@
 }
 
 .adm-chart__axis {
+  fill: var(--adm-dim);
   font-family: var(--data);
   font-size: 10px;
-  fill: var(--adm-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .adm-chart__area {
   stroke: none;
 }
 
-.adm-chart__bar {
-  transition: opacity var(--t-micro) var(--ease);
-  transform-box: fill-box;
-  transform-origin: bottom;
-  animation: adm-grow var(--t-move) var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 28ms);
-}
-
-.adm-chart__bar:hover {
-  opacity: 0.78;
-}
-
 .adm-chart__dot {
-  transition: r var(--t-micro) var(--ease);
-}
-
-.adm-chart__hit {
-  fill: transparent;
-  cursor: crosshair;
+  stroke: var(--card);
+  stroke-width: 2;
 }
 
 .adm-chart__cursor {
@@ -1038,24 +1287,38 @@
   stroke-dasharray: 3 3;
 }
 
-.adm-chart__wrap {
-  position: relative;
-  min-width: 0;
+.adm-chart__hit {
+  fill: transparent;
+  cursor: crosshair;
 }
+
+/* Bars grow out of the baseline, staggered, so a chart assembles. */
+.adm-chart__bar {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: adm-bar-grow var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 40ms);
+  rx: 3;
+}
+
+.adm-chart__bar[data-horizontal='true'] {
+  transform-origin: left center;
+  animation-name: adm-bar-grow-x;
+}
+
+/* ── the tooltip ────────────────────────────────────────────────────────── */
 
 .adm-tip {
   position: absolute;
-  z-index: 2;
+  z-index: 5;
   pointer-events: none;
-  transform: translate(-50%, -110%);
-  min-width: 120px;
-  padding: var(--s-2);
-  background: var(--adm-panel);
-  border: 1px solid var(--adm-line-strong);
+  min-width: 128px;
+  padding: var(--s-2) var(--s-3);
   border-radius: var(--adm-r-sm);
-  box-shadow: var(--lift-1);
+  background: var(--card);
+  border: 1px solid var(--adm-line-strong);
+  box-shadow: var(--lift-2);
   font-size: var(--adm-fs-sm);
-  white-space: nowrap;
 }
 
 .adm-tip__row {
@@ -1066,15 +1329,82 @@
 }
 
 .adm-tip__key {
+  color: var(--adm-dim);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  color: var(--adm-dim);
+  gap: 6px;
 }
 
 .adm-tip__val {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ── donut ──────────────────────────────────────────────────────────────── */
+
+.adm-donut__wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+
+.adm-donut__seg {
+  transition: opacity var(--t-micro) var(--ease);
+  animation: adm-fade var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 60ms);
+}
+
+.adm-donut__wrap:hover .adm-donut__seg {
+  opacity: 0.4;
+}
+
+.adm-donut__wrap .adm-donut__seg:hover {
+  opacity: 1;
+}
+
+.adm-donut__center {
+  text-align: center;
+}
+
+.adm-donut__total {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-h3);
+  font-weight: 700;
+  fill: var(--ink);
+}
+
+.adm-donut__caption {
+  font-family: var(--body);
+  font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  fill: var(--adm-dim);
+}
+
+.adm-donut__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+  flex: 1 1 180px;
+}
+
+.adm-donut__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--adm-fs-sm);
+  min-width: 0;
+}
+
+.adm-donut__pct {
+  margin-left: auto;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  color: var(--adm-dim);
 }
 
 .adm-legend {
@@ -1083,7 +1413,7 @@
   gap: var(--s-2) var(--s-4);
   margin-top: var(--s-3);
   font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
+  color: var(--adm-soft);
 }
 
 .adm-legend__item {
@@ -1093,156 +1423,124 @@
 }
 
 .adm-swatch {
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
   flex: 0 0 auto;
-}
-
-/* donut */
-.adm-donut__wrap {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-5);
-}
-
-.adm-donut__center {
-  font-family: var(--data);
-  text-anchor: middle;
-}
-
-.adm-donut__total {
-  font-size: 20px;
-  font-weight: 600;
-  fill: var(--adm-text);
-}
-
-.adm-donut__caption {
-  font-size: 9px;
-  fill: var(--adm-dim);
-  letter-spacing: 0.1em;
-}
-
-.adm-donut__seg {
-  transition:
-    opacity var(--t-micro) var(--ease),
-    stroke-width var(--t-micro) var(--ease);
-  animation: adm-draw 900ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 70ms);
-}
-
-.adm-donut__seg:hover {
-  opacity: 0.8;
-}
-
-.adm-donut__legend {
-  flex: 1 1 200px;
-  min-width: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.adm-donut__row {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--s-2);
-  padding: 3px var(--s-1);
-  border-radius: var(--adm-r-sm);
-  font-size: var(--adm-fs-sm);
-}
-
-.adm-donut__row:hover {
-  background: color-mix(in srgb, var(--ink) 5%, transparent);
-}
-
-.adm-donut__pct {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  color: var(--adm-dim);
-  min-width: 5ch;
-  text-align: right;
+  border-radius: 3px;
 }
 
 /* ===========================================================================
-   8. Small data atoms — pill, money, aisle dot
+   8. Small data atoms — pill, money, aisle dot, time
    =========================================================================== */
+
+/* ── the status pill ──────────────────────────────────────────────────────
+   COLOUR + SHAPE + WORD. The glyph is a different shape per tone, never the
+   same dot in five colours, and the word is always present. */
 
 .adm-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 1px 0.5em 1px 0.4em;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
   border-radius: var(--r-pill);
-  border: 1px solid;
   font-size: var(--adm-fs-xs);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: 1.5;
   white-space: nowrap;
-  line-height: 1.6;
+  background: var(--ground-sunk);
+  color: var(--adm-soft);
+  border: 1px solid transparent;
 }
 
-/* Colour never carries the meaning alone (plan §2.6): every pill has a glyph
-   AND the status word beside it. The hue is the third signal, not the only one. */
 .adm-pill__glyph {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-pill);
+  width: 8px;
+  height: 8px;
   flex: 0 0 auto;
   background: currentColor;
 }
 
+/* neutral — a bar. Nothing is happening. */
+.adm-pill[data-tone='neutral'] .adm-pill__glyph {
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* good — a circle. Closed, settled. */
 .adm-pill[data-tone='good'] {
-  color: var(--good-ink);
-  border-color: color-mix(in srgb, var(--good) 40%, transparent);
-  background: color-mix(in srgb, var(--good) 9%, transparent);
+  background: var(--good-wash);
+  color: var(--good);
+  border-color: color-mix(in oklab, var(--good) 26%, transparent);
 }
 
-.adm-pill[data-tone='warn'] {
-  color: var(--warn-ink);
-  border-color: color-mix(in srgb, var(--warn) 42%, transparent);
-  background: color-mix(in srgb, var(--warn) 10%, transparent);
+.adm-pill[data-tone='good'] .adm-pill__glyph {
+  border-radius: 50%;
 }
 
-.adm-pill[data-tone='crit'] {
-  color: var(--crit-ink);
-  border-color: color-mix(in srgb, var(--crit) 42%, transparent);
-  background: color-mix(in srgb, var(--crit) 9%, transparent);
-}
-
-.adm-pill[data-tone='neutral'] {
-  color: var(--adm-dim);
-  border-color: var(--adm-line-strong);
-  background: transparent;
-}
-
+/* info — a diamond. In motion, nothing wrong. */
 .adm-pill[data-tone='info'] {
-  color: var(--adm-text);
-  border-color: var(--adm-line-strong);
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  background: var(--info-wash);
+  color: var(--info);
+  border-color: color-mix(in oklab, var(--info) 26%, transparent);
 }
+
+.adm-pill[data-tone='info'] .adm-pill__glyph {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+/* warn — a triangle. Watch this. */
+.adm-pill[data-tone='warn'] {
+  background: var(--warn-wash);
+  color: var(--warn);
+  border-color: color-mix(in oklab, var(--warn) 30%, transparent);
+}
+
+.adm-pill[data-tone='warn'] .adm-pill__glyph {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* crit — a square. Blunt, heavy, unmistakably not the other four. */
+.adm-pill[data-tone='crit'] {
+  background: var(--crit-wash);
+  color: var(--crit);
+  border-color: color-mix(in oklab, var(--crit) 30%, transparent);
+}
+
+.adm-pill[data-tone='crit'] .adm-pill__glyph {
+  border-radius: 1px;
+}
+
+/* ── money ──────────────────────────────────────────────────────────────── */
 
 .adm-money {
   white-space: nowrap;
+  font-weight: 600;
 }
 
+/* A zero is dimmed so an empty column reads as empty at a glance. */
 .adm-money[data-zero='true'] {
   color: var(--adm-dim);
+  font-weight: 500;
 }
 
 .adm-money[data-negative='true'] {
-  color: var(--crit-ink);
+  color: var(--crit);
 }
+
+.adm-time {
+  white-space: nowrap;
+  color: var(--adm-dim);
+  font-size: var(--adm-fs-sm);
+}
+
+/* ── the aisle dot — one of the two places the chromatic palette appears ── */
 
 .adm-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 9px;
+  height: 9px;
   flex: 0 0 auto;
-  vertical-align: -1px;
+  border-radius: 3px;
+  background: var(--adm-line-strong);
 }
 
 .adm-dot[data-aisle='fruits'] { background: var(--adm-aisle-fruits); }
@@ -1254,66 +1552,86 @@
 .adm-dot[data-aisle='staples'] { background: var(--adm-aisle-staples); }
 .adm-dot[data-aisle='frozen'] { background: var(--adm-aisle-frozen); }
 
-.adm-time {
-  white-space: nowrap;
-  border-bottom: 1px dotted var(--adm-line-strong);
-  cursor: help;
-}
-
 /* ===========================================================================
    9. DataTable
    =========================================================================== */
 
-/* Every table gets its own horizontal scroller. The page body never scrolls
-   sideways — a console with a horizontally scrolling BODY is unusable. */
+/* The scroller is here and nowhere else. The page body never scrolls
+   sideways; a wide table scrolls inside its own container. */
 .adm-tablewrap {
   overflow-x: auto;
-  overscroll-behavior-x: contain;
-  border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
   background: var(--adm-panel);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-lg);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  scrollbar-width: thin;
 }
 
 .adm-table {
   width: 100%;
-  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
-}
-
-.adm-table th,
-.adm-table td {
-  padding: 0 var(--s-3);
-  height: var(--adm-row);
-  text-align: left;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--adm-line);
+  font-size: var(--adm-fs);
 }
 
 .adm-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--adm-panel-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--adm-panel);
+  border-bottom: 1px solid var(--adm-line-strong);
   font-size: var(--adm-fs-xs);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  letter-spacing: 0.07em;
   color: var(--adm-dim);
-  height: 34px;
-  border-bottom-color: var(--adm-line-strong);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.adm-table th[data-align='right'],
+.adm-table td[data-align='right'] {
+  text-align: right;
+}
+
+.adm-table th[data-align='center'],
+.adm-table td[data-align='center'] {
+  text-align: center;
+}
+
+.adm-table tbody td {
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--adm-line);
+  vertical-align: middle;
+  color: var(--ink);
 }
 
 .adm-table tbody tr:last-child td {
   border-bottom: 0;
 }
 
-.adm-table [data-align='right'] {
-  text-align: right;
+/* Rows stagger in ~20ms apart when the data changes — the point is to catch
+   the eye when a filter lands, not to make anyone wait. Capped at 14 rows by
+   the component. */
+.adm-table tbody tr {
+  animation: adm-row-in var(--t-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 20ms);
 }
 
-.adm-table [data-align='center'] {
-  text-align: center;
+/* Hover raises a HAIRLINE, not a shadow. A shadow on a table row makes the
+   row look detachable, which it is not. */
+.adm-table tbody tr:hover td {
+  background: var(--ground-sunk);
+}
+
+.adm-table tbody tr[data-clickable='true'] {
+  cursor: pointer;
+}
+
+.adm-table tbody tr[data-clickable='true']:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .adm-table__sort {
@@ -1322,93 +1640,64 @@
   gap: 4px;
   border: 0;
   padding: 0;
+  background: none;
   color: inherit;
   font: inherit;
-  text-transform: inherit;
   letter-spacing: inherit;
+  text-transform: inherit;
   cursor: pointer;
-}
-
-.adm-table__sort:hover {
-  color: var(--adm-text);
 }
 
 .adm-table__sort svg {
   width: 11px;
   height: 11px;
-  opacity: 0.35;
+  opacity: 0;
+  transition:
+    opacity var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+
+.adm-table__sort:hover svg {
+  opacity: 0.4;
 }
 
 .adm-table__sort[data-sorted='asc'] svg,
 .adm-table__sort[data-sorted='desc'] svg {
   opacity: 1;
+  color: var(--accent-ink);
 }
 
 .adm-table__sort[data-sorted='desc'] svg {
   transform: rotate(180deg);
 }
 
-/* ★ hover raises a HAIRLINE, not a shadow. A console is a sheet of paper with
-   rules on it; lifting a row off the page with a shadow is shop chrome. */
-.adm-table tbody tr {
-  position: relative;
-  transition: background-color var(--t-micro) var(--ease);
+.adm-table__link {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
 }
 
-.adm-table tbody tr:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
-.adm-table tbody tr:hover td {
-  border-bottom-color: var(--adm-line-strong);
-}
-
-.adm-table tbody tr:hover td:first-child {
-  box-shadow: inset 2px 0 0 var(--adm-text);
-}
-
-.adm-table tbody tr[data-clickable='true'] {
-  cursor: pointer;
-}
-
-.adm-table tbody tr:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: -2px;
-}
-
-/* ★ rows stagger in, 20ms apart, on every data change. The stagger is capped
-   in the component at 14 rows so page 40 of a table is not a slideshow. */
-.adm-table tbody tr {
-  animation: adm-rowin 260ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
+.adm-table__link:hover {
+  color: var(--accent-ink);
+  text-decoration: underline;
 }
 
 .adm-table__sub {
   display: block;
-  font-size: var(--adm-fs-xs);
+  font-size: var(--adm-fs-sm);
+  font-weight: 400;
   color: var(--adm-dim);
-  font-family: var(--body);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.adm-table__link {
-  color: inherit;
-  text-decoration: none;
-  font-weight: 600;
-  border-bottom: 1px solid transparent;
-}
-
-.adm-table__link:hover {
-  border-bottom-color: currentColor;
-}
-
-/* pagination */
 .adm-pager {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
   border-top: 1px solid var(--adm-line);
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
@@ -1420,90 +1709,106 @@
   gap: var(--s-1);
 }
 
+/* ===========================================================================
+   10. Buttons, toolbar, FilterBar, inputs
+   =========================================================================== */
+
 .adm-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  min-height: 30px;
-  padding: 0 var(--s-3);
+  min-height: 38px;
+  padding: 0 var(--s-4);
   border: 1px solid var(--adm-line-strong);
-  border-radius: var(--adm-r-sm);
-  background: var(--adm-panel);
-  color: var(--adm-text);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
   font-size: var(--adm-fs);
-  font-weight: 550;
-  cursor: pointer;
+  font-weight: 600;
+  text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
   transition:
-    background-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
     border-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--ease);
+    transform var(--t-instant) var(--spring),
+    box-shadow var(--t-micro) var(--ease);
 }
 
-.adm-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 6%, var(--adm-panel));
+.adm-btn:hover {
+  border-color: var(--ink-faint);
+  box-shadow: var(--lift-1);
 }
 
-.adm-btn:active:not(:disabled) {
-  transform: translateY(1px);
+.adm-btn:active {
+  transform: scale(0.97);
 }
 
 .adm-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.adm-btn--primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+.adm-btn--primary:hover {
+  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
+  border-color: transparent;
+  box-shadow: var(--lift-accent);
+}
+
+.adm-btn--danger {
+  background: var(--crit);
+  border-color: transparent;
+  color: var(--card);
+}
+
+.adm-btn--danger:hover {
+  background: color-mix(in oklab, var(--crit) 86%, var(--ink));
+  border-color: transparent;
+}
+
+.adm-btn--ghost {
+  background: none;
+  border-color: transparent;
+  color: var(--adm-soft);
+}
+
+.adm-btn--ghost:hover {
+  background: var(--ground-sunk);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.adm-btn--sm {
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  font-size: var(--adm-fs-sm);
+}
+
+.adm-btn--icon {
+  width: 32px;
+  padding: 0;
 }
 
 .adm-btn svg {
   width: 15px;
   height: 15px;
+  flex: 0 0 auto;
 }
-
-.adm-btn--primary {
-  background: var(--adm-text);
-  color: var(--adm-bg);
-  border-color: var(--adm-text);
-}
-
-.adm-btn--primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 86%, var(--paper));
-}
-
-.adm-btn--danger {
-  color: var(--crit-ink);
-  border-color: color-mix(in srgb, var(--crit) 45%, transparent);
-}
-
-.adm-btn--danger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--crit) 10%, transparent);
-}
-
-.adm-btn--ghost {
-  border-color: transparent;
-  background: transparent;
-}
-
-.adm-btn--sm {
-  min-height: 26px;
-  padding: 0 var(--s-2);
-  font-size: var(--adm-fs-sm);
-}
-
-.adm-btn--icon {
-  padding: 0;
-  width: 30px;
-}
-
-/* ===========================================================================
-   10. Toolbar + FilterBar
-   =========================================================================== */
 
 .adm-toolbar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--s-2);
-  margin-bottom: var(--s-3);
+  flex-wrap: wrap;
   min-width: 0;
 }
 
@@ -1513,239 +1818,313 @@
 
 .adm-filters {
   display: flex;
-  flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--s-2);
-  padding: var(--s-3);
-  margin-bottom: var(--s-3);
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  padding: var(--s-3) var(--s-4);
   background: var(--adm-panel);
   border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-}
-
-.adm-field {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.adm-field__label {
-  font-size: var(--adm-fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--adm-dim);
-}
-
-.adm-input,
-.adm-select {
-  height: 30px;
-  min-width: 0;
-  padding: 0 var(--s-2);
-  background: var(--adm-bg);
-  border: 1px solid var(--adm-line-strong);
-  border-radius: var(--adm-r-sm);
-  color: var(--adm-text);
-  font-size: var(--adm-fs);
-  transition: border-color var(--t-micro) var(--ease);
-}
-
-.adm-input:hover,
-.adm-select:hover {
-  border-color: var(--adm-dim);
-}
-
-.adm-input::placeholder {
-  color: var(--adm-dim);
-}
-
-.adm-field--search .adm-input {
-  min-width: 220px;
-}
-
-.adm-field--date {
-  flex-direction: row;
-  align-items: flex-end;
-  gap: var(--s-2);
-}
-
-.adm-daterange {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.adm-daterange span {
-  color: var(--adm-dim);
-  font-size: var(--adm-fs-sm);
+  border-radius: var(--adm-r-lg);
+  box-shadow: var(--lift-1);
 }
 
 .adm-filters__reset {
   margin-left: auto;
 }
 
-/* a range switcher: 7d / 30d / 90d */
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.adm-field--search {
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
+.adm-field__label {
+  font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--adm-dim);
+}
+
+.adm-input,
+.adm-select {
+  min-height: 36px;
+  padding: 0 var(--s-3);
+  border: 1px solid var(--adm-line-strong);
+  border-radius: var(--adm-r-sm);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--adm-fs);
+  min-width: 0;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+
+.adm-input:focus,
+.adm-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.adm-input::placeholder {
+  color: var(--adm-dim);
+}
+
+.adm-select {
+  cursor: pointer;
+  appearance: none;
+  padding-right: var(--s-6);
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 15px,
+    calc(100% - 12px) 15px;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+.adm-daterange {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
 .adm-segmented {
   display: inline-flex;
-  padding: 2px;
-  background: var(--adm-bg);
-  border: 1px solid var(--adm-line);
+  padding: 3px;
+  gap: 2px;
   border-radius: var(--r-pill);
+  background: var(--ground-sunk);
+  border: 1px solid var(--adm-line);
 }
 
 .adm-segmented__btn {
   border: 0;
   border-radius: var(--r-pill);
-  padding: 2px var(--s-3);
-  font-family: var(--data);
-  font-size: var(--adm-fs-sm);
+  background: none;
   color: var(--adm-dim);
+  font: inherit;
+  font-size: var(--adm-fs-sm);
+  font-weight: 600;
+  padding: 5px var(--s-3);
   cursor: pointer;
   transition:
-    background-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
     color var(--t-micro) var(--ease);
 }
 
+.adm-segmented__btn:hover {
+  color: var(--ink);
+}
+
 .adm-segmented__btn[aria-pressed='true'] {
-  background: var(--adm-panel);
-  color: var(--adm-text);
-  box-shadow: 0 0 0 1px var(--adm-line-strong);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--lift-1);
 }
 
 /* ===========================================================================
    11. Drawer, dialog, empty state
    =========================================================================== */
 
-.adm-drawer__scrim {
+.adm-drawer__scrim,
+.adm-dialog__scrim {
   position: fixed;
   inset: 0;
-  z-index: var(--z-sheet);
-  background: color-mix(in srgb, var(--ink) 36%, transparent);
-  animation: adm-fade var(--t-micro) var(--ease) both;
+  z-index: var(--adm-z-sheet);
+  background: color-mix(in oklab, var(--ink) 42%, transparent);
+  backdrop-filter: blur(2px);
+  border: 0;
+  animation: adm-fade var(--t-micro) var(--ease) backwards;
 }
 
+.adm-dialog__scrim {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-4);
+}
+
+/* The drawer springs in from the edge — the overshoot is what makes it read
+   as a physical panel rather than a fade. */
 .adm-drawer {
   position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: calc(var(--z-sheet) + 1);
+  inset: 0 0 0 auto;
+  z-index: calc(var(--adm-z-sheet) + 1);
   width: min(560px, 100vw);
   display: flex;
   flex-direction: column;
-  background: var(--adm-panel);
-  border-left: 1px solid var(--adm-line-strong);
-  box-shadow: var(--lift-2);
-  /* ★ the one place the spring easing appears in the console: a drawer is a
-     physical thing being pulled out, and it settles. */
-  animation: adm-slide-in var(--t-move) var(--spring) both;
+  background: var(--card);
+  border-left: 1px solid var(--adm-line);
+  box-shadow: var(--lift-3);
+  animation: adm-drawer-in var(--t-enter) var(--spring-soft) backwards;
 }
 
 .adm-drawer__head {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: var(--s-3);
-  padding: var(--s-4);
+  padding: var(--s-4) var(--s-5);
   border-bottom: 1px solid var(--adm-line);
 }
 
 .adm-drawer__title {
-  font-size: var(--adm-fs-lg);
-  font-weight: 650;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  margin: 0;
 }
 
 .adm-drawer__sub {
-  color: var(--adm-dim);
+  margin: var(--s-1) 0 0;
   font-size: var(--adm-fs-sm);
-  margin-top: 2px;
+  color: var(--adm-dim);
 }
 
 .adm-drawer__body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: var(--s-4);
+  padding: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
 }
 
 .adm-drawer__actions {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: var(--s-2);
-  padding: var(--s-3) var(--s-4);
+  flex-wrap: wrap;
+  padding: var(--s-4) var(--s-5);
   border-top: 1px solid var(--adm-line);
-}
-
-.adm-dialog__scrim {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-toast);
-  display: grid;
-  place-items: center;
-  padding: var(--s-4);
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
-  animation: adm-fade var(--t-micro) var(--ease) both;
+  background: var(--ground-sunk);
 }
 
 .adm-dialog {
-  width: min(440px, 100%);
+  width: min(460px, 100%);
   padding: var(--s-5);
-  background: var(--adm-panel);
-  border: 1px solid var(--adm-line-strong);
-  border-radius: var(--adm-r);
-  box-shadow: var(--lift-2);
-  animation: adm-rise var(--t-move) var(--ease-out) both;
+  border-radius: var(--adm-r-lg);
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--lift-3);
+  animation: adm-sheet-in var(--t-move) var(--spring-soft) backwards;
 }
 
 .adm-dialog__title {
-  font-size: var(--adm-fs-lg);
-  font-weight: 650;
-  margin-bottom: var(--s-2);
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  margin: 0 0 var(--s-2);
 }
 
 .adm-dialog__body {
-  color: var(--adm-dim);
-  margin-bottom: var(--s-4);
+  margin: 0;
+  color: var(--adm-soft);
+  font-size: var(--adm-fs);
+}
+
+.adm-dialog__error {
+  margin-top: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--adm-r-sm);
+  background: var(--crit-wash);
+  color: var(--crit);
+  font-size: var(--adm-fs-sm);
+  border: 1px solid color-mix(in oklab, var(--crit) 30%, transparent);
 }
 
 .adm-dialog__actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--s-2);
+  margin-top: var(--s-5);
 }
+
+/* ── the empty state ──────────────────────────────────────────────────────
+   The database is empty by design on a fresh install: most screens show this
+   most of the time. A zero has to read as CALM AND RESOLVED — not broken, not
+   alarming, and never a red nought. */
 
 .adm-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--s-2);
-  padding: var(--s-7) var(--s-4);
+  padding: var(--s-7) var(--s-5);
   text-align: center;
-  color: var(--adm-dim);
+  color: var(--adm-soft);
 }
 
 .adm-empty__icon {
-  width: 32px;
-  height: 32px;
-  opacity: 0.4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--s-1);
+  border-radius: var(--r-pill);
+  background: var(--ground-sunk);
+  color: var(--adm-dim);
+}
+
+.adm-empty__icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .adm-empty__title {
+  margin: 0;
   font-family: var(--display);
-  font-size: var(--adm-fs-lg);
-  font-weight: 650;
-  color: var(--adm-text);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .adm-empty__body {
-  max-width: 46ch;
+  margin: 0;
+  max-width: 52ch;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
 }
 
 /* ===========================================================================
    12. Layout helpers used by the pages
    =========================================================================== */
 
+.adm-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.adm-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
 .adm-grid {
   display: grid;
-  gap: var(--s-3);
+  gap: var(--s-4);
+  min-width: 0;
 }
 
 .adm-grid--2 {
@@ -1753,36 +2132,29 @@
 }
 
 .adm-grid--3 {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
 .adm-grid--split {
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
-@media (max-width: 1100px) {
+@media (min-width: 1100px) {
   .adm-grid--split {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   }
 }
 
-.adm-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
+.adm-asof {
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
 }
 
-.adm-row {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  min-width: 0;
-}
+/* ── definition list, for a detail panel ────────────────────────────────── */
 
-/* definition list used on every detail page */
 .adm-dl {
   display: grid;
-  grid-template-columns: minmax(96px, auto) minmax(0, 1fr);
+  grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
   gap: var(--s-2) var(--s-4);
   margin: 0;
   font-size: var(--adm-fs);
@@ -1790,222 +2162,28 @@
 
 .adm-dl dt {
   color: var(--adm-dim);
+  font-size: var(--adm-fs-sm);
 }
 
 .adm-dl dd {
   margin: 0;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 
-/* attention list */
-.adm-attn {
+/* ── the price breakdown (orders/[id]) ──────────────────────────────────── */
+
+.adm-price {
   display: flex;
   flex-direction: column;
-}
-
-.adm-attn__item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-bottom: 1px solid var(--adm-line);
-  color: inherit;
-  text-decoration: none;
-  transition: background-color var(--t-micro) var(--ease);
-}
-
-.adm-attn__item:last-child {
-  border-bottom: 0;
-}
-
-.adm-attn__item:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
-.adm-attn__count {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: 1.1rem;
-  font-weight: 600;
-  min-width: 2.5ch;
-  text-align: right;
-}
-
-.adm-attn__item[data-tone='crit'] .adm-attn__count {
-  color: var(--crit-ink);
-}
-.adm-attn__item[data-tone='warn'] .adm-attn__count {
-  color: var(--warn-ink);
-}
-
-.adm-attn__title {
-  font-weight: 600;
-}
-
-.adm-attn__detail {
-  font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
-}
-
-.adm-attn__chev {
-  width: 14px;
-  height: 14px;
-  color: var(--adm-dim);
-}
-
-/* feed (recent orders) */
-.adm-feed {
-  display: flex;
-  flex-direction: column;
-}
-
-.adm-feed__item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--s-2) var(--s-3);
-  align-items: center;
-  padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--adm-line);
-  color: inherit;
-  text-decoration: none;
-  animation: adm-rowin 260ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
-}
-
-.adm-feed__item:last-child {
-  border-bottom: 0;
-}
-
-.adm-feed__item:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
-.adm-feed__no {
-  font-family: var(--data);
-  font-size: var(--adm-fs-sm);
-}
-
-.adm-feed__meta {
-  font-size: var(--adm-fs-xs);
-  color: var(--adm-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ===========================================================================
-   13. ★ The order state-machine timeline (orders/[id])
-   ---------------------------------------------------------------------------
-   The centrepiece of the order screen. Every transition the backend recorded,
-   in order, with the actor and the role that made it — because "who moved this
-   order and when" is the first question anyone asks about a bad order.
-   =========================================================================== */
-
-.adm-timeline {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0 0 0 var(--s-2);
-  list-style: none;
-}
-
-.adm-timeline__item {
-  position: relative;
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr);
-  gap: var(--s-3);
-  padding-bottom: var(--s-4);
-  animation: adm-rowin 320ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 60ms);
-}
-
-.adm-timeline__item:last-child {
-  padding-bottom: 0;
-}
-
-/* the rail between stamps */
-.adm-timeline__item:not(:last-child)::before {
-  content: '';
-  position: absolute;
-  left: 12px;
-  top: 22px;
-  bottom: 2px;
-  width: 1px;
-  background: var(--adm-line-strong);
-}
-
-.adm-timeline__node {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--adm-line-strong);
-  background: var(--adm-panel);
-  font-family: var(--data);
-  font-size: 10px;
-  color: var(--adm-dim);
-}
-
-.adm-timeline__item[data-tone='good'] .adm-timeline__node {
-  border-color: color-mix(in srgb, var(--good) 55%, transparent);
-  background: color-mix(in srgb, var(--good) 12%, var(--adm-panel));
-  color: var(--good-ink);
-}
-
-.adm-timeline__item[data-tone='crit'] .adm-timeline__node {
-  border-color: color-mix(in srgb, var(--crit) 55%, transparent);
-  background: color-mix(in srgb, var(--crit) 12%, var(--adm-panel));
-  color: var(--crit-ink);
-}
-
-.adm-timeline__item[data-current='true'] .adm-timeline__node {
-  border-width: 2px;
-  border-color: var(--adm-text);
-  color: var(--adm-text);
-}
-
-.adm-timeline__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   gap: var(--s-2);
 }
 
-.adm-timeline__to {
-  font-weight: 650;
-}
-
-.adm-timeline__from {
-  font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
-  font-family: var(--data);
-}
-
-.adm-timeline__actor {
-  margin-top: 2px;
-  font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
-}
-
-.adm-timeline__reason {
-  margin-top: var(--s-1);
-  padding: var(--s-2);
-  border-left: 2px solid var(--adm-line-strong);
-  background: var(--adm-bg);
-  border-radius: 0 var(--adm-r-sm) var(--adm-r-sm) 0;
-  font-size: var(--adm-fs-sm);
-}
-
-/* pricing breakdown */
-.adm-price {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--s-2) var(--s-4);
+.adm-price__split {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-4);
   font-size: var(--adm-fs);
 }
 
@@ -2014,94 +2192,189 @@
 }
 
 .adm-price__rule {
-  grid-column: 1 / -1;
   height: 1px;
   background: var(--adm-line);
+  margin: var(--s-1) 0;
 }
 
 .adm-price__total {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
   font-weight: 700;
 }
 
-.adm-price__total .adm-money {
-  font-size: var(--adm-fs-lg);
+/* ===========================================================================
+   13. ★ The order state-machine timeline (orders/[id])
+   =========================================================================== */
+
+.adm-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.adm-price__split {
-  grid-column: 1 / -1;
-  margin-top: var(--s-2);
-  padding: var(--s-3);
-  background: var(--adm-bg);
-  border: 1px dashed var(--adm-line-strong);
-  border-radius: var(--adm-r-sm);
+.adm-timeline__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding: 0 0 var(--s-4);
+  animation: adm-row-in var(--t-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 45ms);
+}
+
+/* The spine. It stops at the last node rather than trailing into space. */
+.adm-timeline__item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 18px;
+  bottom: 0;
+  width: 2px;
+  background: var(--adm-line);
+}
+
+.adm-timeline__node {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 2px solid var(--adm-line-strong);
+  color: var(--adm-dim);
+}
+
+.adm-timeline__node svg {
+  width: 11px;
+  height: 11px;
+}
+
+.adm-timeline__item[data-tone='good'] .adm-timeline__node {
+  border-color: var(--good);
+  color: var(--good);
+}
+
+.adm-timeline__item[data-tone='warn'] .adm-timeline__node {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.adm-timeline__item[data-tone='crit'] .adm-timeline__node {
+  border-color: var(--crit);
+  color: var(--crit);
+}
+
+.adm-timeline__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+
+.adm-timeline__from,
+.adm-timeline__to {
+  font-weight: 600;
+}
+
+.adm-timeline__from {
+  color: var(--adm-dim);
+  font-weight: 500;
+}
+
+.adm-timeline__actor,
+.adm-timeline__reason {
+  display: block;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
 }
 
 /* ===========================================================================
    14. Skeletons + the not-authorised state
    =========================================================================== */
 
+/* Skeletons are shaped like the real content — a tile-shaped block where a
+   tile will land, a row-shaped block where a row will. A grey rectangle of
+   the wrong size makes the layout jump when data arrives. */
 .adm-skel {
+  display: block;
   border-radius: var(--adm-r-sm);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--ink) 7%, transparent) 0%,
-    color-mix(in srgb, var(--ink) 12%, transparent) 50%,
-    color-mix(in srgb, var(--ink) 7%, transparent) 100%
+    var(--ground-sunk) 25%,
+    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
+    var(--ground-sunk) 75%
   );
-  background-size: 300% 100%;
-  animation: adm-sweep 1.4s linear infinite;
+  background-size: 200% 100%;
+  animation: adm-shimmer 1.4s linear infinite;
 }
 
 .adm-skel--line {
-  height: 11px;
-}
-
-.adm-skel--tile {
-  height: 116px;
-}
-
-.adm-skel--chart {
-  height: 220px;
+  height: 12px;
+  width: 100%;
 }
 
 .adm-skel--row {
   height: var(--adm-row);
-  margin-bottom: 1px;
+  width: 100%;
+  margin-bottom: var(--s-2);
+  border-radius: var(--adm-r-sm);
+}
+
+.adm-skel--tile {
+  height: 124px;
+  border-radius: var(--adm-r);
+}
+
+.adm-skel--chart {
+  height: 232px;
+  border-radius: var(--adm-r);
 }
 
 .adm-gate {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 100dvh;
   padding: var(--s-5);
-  background: var(--adm-bg);
-  color: var(--adm-text);
-  font-family: var(--body);
+  background: var(--ground);
 }
 
 .adm-gate__card {
-  width: min(520px, 100%);
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
   padding: var(--s-6);
-  background: var(--adm-panel);
+  border-radius: var(--adm-r-lg);
+  background: var(--card);
   border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-  text-align: left;
+  box-shadow: var(--lift-2);
+  animation: adm-pop var(--t-enter) var(--spring-soft) backwards;
 }
 
 .adm-gate__title {
+  margin: 0;
   font-family: var(--display);
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: var(--s-2);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .adm-gate__body {
-  color: var(--adm-dim);
-  margin-bottom: var(--s-4);
+  margin: 0;
+  color: var(--adm-soft);
 }
 
 .adm-gate__note {
-  margin-top: var(--s-4);
+  margin: 0;
   padding-top: var(--s-3);
   border-top: 1px solid var(--adm-line);
   font-size: var(--adm-fs-sm);
@@ -2109,253 +2382,74 @@
 }
 
 /* ===========================================================================
-   15. Keyframes
+   15. ★ OPERATIONS — the ADMIN role's own surface
    =========================================================================== */
 
-@keyframes adm-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes adm-pop {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes adm-rise {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes adm-rowin {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes adm-slide-in {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
-}
-
-@keyframes adm-grow {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
-}
-
-/* the draw-in. --adm-len is set inline from getTotalLength(). */
-@keyframes adm-draw {
-  from { stroke-dashoffset: var(--adm-len, 1000); }
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes adm-sweep {
-  from { background-position: 150% 0; }
-  to { background-position: -150% 0; }
-}
-
-/* ===========================================================================
-   16. ★ REDUCED MOTION — one block, no exceptions
-   ---------------------------------------------------------------------------
-   Everything above is decoration over a page that is already correct. Switching
-   all of it off leaves each element in its finished state: a row at opacity 1,
-   a path fully drawn, a drawer in place. Nothing here is load-bearing, which is
-   the test a functional animation has to pass.
-   =========================================================================== */
-
-@media (prefers-reduced-motion: reduce) {
-  .adm *,
-  .adm *::before,
-  .adm *::after,
-  .adm-drawer,
-  .adm-drawer__scrim,
-  .adm-dialog,
-  .adm-dialog__scrim,
-  .adm-palette,
-  .adm-palette__scrim,
-  .adm-menu,
-  .adm-scrim {
-    animation: none !important;
-    transition-duration: 1ms !important;
-  }
-
-  /* A path mid-draw is a path with a gap in it. Clear the dash outright rather
-     than relying on the animation having reached its end state. */
-  .adm-draw,
-  .adm-donut__seg {
-    stroke-dasharray: none !important;
-    stroke-dashoffset: 0 !important;
-  }
-
-  .adm-skel {
-    background: color-mix(in srgb, var(--ink) 9%, transparent);
-  }
-}
-
-/* Print: the rail and the chrome are noise on paper. */
-@media print {
-  .adm-rail,
-  .adm-top,
-  .adm-pager__nav {
-    display: none;
-  }
-
-  .adm-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* ===========================================================================
-   17. ★ OPERATIONS — the ADMIN role's own surface
-   ---------------------------------------------------------------------------
-   The live board, dispatch and the ops dashboard. Same ink, same hairlines,
-   same semantic-colour-only rule as the rest of the console. Three things are
-   specific to this surface and worth stating:
-
-     · SEVERITY IS NEVER COLOUR ALONE. `.adm-sla` pairs each state with its own
-       SHAPE and its own word. Print the board greyscale and it still triages.
-     · AN SLA BREACH PULSES ONCE, on arrival, and then holds. A permanently
-       animated page is unreadable over an eight-hour shift, and the operator
-       learns to stop seeing exactly the thing it was built to surface.
-     · THE BOARD SCROLLS INSIDE ITSELF. Lanes scroll vertically, the board
-       scrolls horizontally, and the page body never scrolls sideways.
-   =========================================================================== */
-
-/* ---- live / freshness ---------------------------------------------------- */
-
-.adm-live {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
-  white-space: nowrap;
-}
-
-.adm-live__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  flex: 0 0 auto;
-  background: var(--good);
-}
-
-/* The dot breathes only while the poll is actually running, and slowly — it is
-   the page's pulse, not an alarm. */
-.adm-live[data-state='live'] .adm-live__dot {
-  animation: adm-breathe 2.6s var(--ease) infinite;
-}
-
-.adm-live[data-state='paused'] .adm-live__dot {
-  background: var(--adm-line-strong);
-}
-
-.adm-live[data-state='stale'] .adm-live__dot {
-  background: var(--crit);
-}
-
-.adm-live[data-state='stale'] .adm-live__text {
-  color: var(--crit-ink);
-}
-
-.adm-live__text {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.adm-live__glyph {
-  width: 13px;
-  height: 13px;
-}
-
-.adm-asof {
-  font-size: var(--adm-fs-sm);
-  margin-top: var(--s-2);
-}
-
-/* ---- rail badge ---------------------------------------------------------- */
-
-.adm-rail__badge {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--adm-fs-xs);
-  font-weight: 600;
-  min-width: 1.9em;
-  text-align: center;
-  padding: 0 0.35em;
-  border-radius: var(--adm-r-sm);
-  color: var(--warn-ink);
-  background: color-mix(in srgb, var(--warn) 18%, transparent);
-  white-space: nowrap;
-}
-
-/* A count that came from a fixture is NOT a count. Derated and titled, so it
-   cannot be read as real at a glance. */
-.adm-rail__badge[data-fixture='true'] {
-  color: var(--adm-dim);
-  background: transparent;
-  border: 1px dashed var(--adm-line-strong);
-  font-style: italic;
-}
-
-.adm-shell[data-collapsed='true'] .adm-rail__badge {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* ---- the SLA breach bar (top of the ops dashboard) ----------------------- */
+/* ── the SLA breach bar. Loud, once, and only when it is earned. ────────── */
 
 .adm-breachbar {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  margin-bottom: var(--s-4);
-  border: 1px solid color-mix(in srgb, var(--crit) 45%, transparent);
-  border-left-width: 3px;
-  border-radius: var(--adm-r);
-  background: color-mix(in srgb, var(--crit) 8%, var(--adm-panel));
-  color: inherit;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--adm-r-lg);
+  background: var(--crit-wash);
+  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
+  color: var(--ink);
   text-decoration: none;
-  animation: adm-rise 280ms var(--ease-out) both;
+  /* Pulses ONCE on arrival, then holds. See §19 and SlaIndicator's header. */
+  animation: adm-pulse-once 1.1s var(--ease-out) 1;
 }
 
 .adm-breachbar:hover {
-  background: color-mix(in srgb, var(--crit) 13%, var(--adm-panel));
+  border-color: var(--crit);
 }
 
 .adm-breachbar__glyph {
-  display: block;
-  width: 18px;
-  height: 18px;
-  color: var(--crit-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: var(--adm-r-sm);
+  background: var(--crit);
 }
 
+/* A SQUARE, matching the breached SLA glyph on every card on the board. */
 .adm-breachbar__glyph svg {
-  width: 100%;
-  height: 100%;
-  fill: currentColor;
+  width: 15px;
+  height: 15px;
+  fill: var(--card);
+}
+
+.adm-breachbar strong {
+  display: block;
+  color: var(--crit);
+  font-size: var(--adm-fs-lg);
 }
 
 .adm-breachbar__body {
   display: block;
   margin-top: 2px;
   font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
+  color: var(--adm-soft);
 }
 
 .adm-breachbar__cta {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-weight: 700;
   font-size: var(--adm-fs-sm);
-  color: var(--crit-ink);
+  color: var(--crit);
   white-space: nowrap;
 }
 
-/* ---- the "needs action" queue tiles -------------------------------------- */
+/* ── the queue row ──────────────────────────────────────────────────────── */
 
 .adm-qrow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
   gap: var(--s-3);
 }
 
@@ -2364,39 +2458,30 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  min-height: 118px;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--adm-line);
+  padding: var(--s-4);
   border-radius: var(--adm-r);
   background: var(--adm-panel);
-  color: inherit;
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--lift-1);
+  color: var(--ink);
   text-decoration: none;
+  min-width: 0;
+  overflow: hidden;
+  animation: adm-pop var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * var(--stagger));
   transition:
-    background-color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--ease);
-  animation: adm-rise 320ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 30ms);
+    transform var(--t-micro) var(--spring-soft),
+    box-shadow var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
 }
 
 .adm-q:hover {
-  background: color-mix(in srgb, var(--ink) 4%, var(--adm-panel));
-  border-color: var(--adm-line-strong);
+  transform: translateY(-3px);
+  box-shadow: var(--lift-2);
 }
 
 .adm-q:active {
-  transform: translateY(1px);
-}
-
-.adm-q--loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  min-height: 118px;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-  background: var(--adm-panel);
+  transform: translateY(-1px) scale(0.985);
 }
 
 .adm-q__head {
@@ -2408,20 +2493,19 @@
 
 .adm-q__icon {
   display: inline-flex;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
   color: var(--adm-dim);
 }
 
 .adm-q__icon svg {
-  width: 100%;
-  height: 100%;
+  width: 15px;
+  height: 15px;
 }
 
 .adm-q__label {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2430,86 +2514,126 @@
 .adm-q__chev {
   width: 14px;
   height: 14px;
-  margin-left: auto;
-  color: var(--adm-line-strong);
   flex: 0 0 auto;
+  color: var(--adm-dim);
+  transition: transform var(--t-micro) var(--spring);
+}
+
+.adm-q:hover .adm-q__chev {
+  transform: translateX(3px);
+  color: var(--accent-ink);
 }
 
 .adm-q__value {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--s-2);
-  min-height: 30px;
+  min-height: 34px;
 }
 
 .adm-q__count {
-  font-size: 1.75rem;
-  font-weight: 600;
+  font-size: 1.85rem;
+  font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.04em;
 }
 
 .adm-q__hint {
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
-  margin-top: auto;
 }
 
-/* Severity — only ever applied to a tile that HAS work in it. */
-.adm-q[data-tone='crit'] {
-  border-left: 3px solid var(--crit);
-}
-
-.adm-q[data-tone='crit'] .adm-q__count {
-  color: var(--crit-ink);
-}
-
-.adm-q[data-tone='warn'] {
-  border-left: 3px solid var(--warn);
-}
-
-.adm-q[data-tone='warn'] .adm-q__count {
-  color: var(--warn-ink);
-}
-
-/* ★ An empty queue is CALM. No red zero, no alarm border — a tick and a word.
-   A dashboard that shouts when everything is fine has taught its reader to
-   ignore it by Wednesday. */
-.adm-q[data-tone='clear'] {
-  border-left: 3px solid color-mix(in srgb, var(--good) 40%, transparent);
-}
-
+/* ZERO IS CALM. A cleared queue is a tick, the word "Clear", ordinary ink,
+   and the tile sinks back to the plain surface. It is never a red nought. */
 .adm-q__tick {
-  width: 20px;
-  height: 20px;
-  color: var(--good-ink);
-  align-self: center;
+  width: 19px;
+  height: 19px;
+  color: var(--good);
 }
 
 .adm-q__clear {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--good-ink);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  color: var(--good);
+}
+
+.adm-q[data-tone='clear'] {
+  background: var(--adm-panel);
+  box-shadow: none;
+}
+
+.adm-q[data-tone='clear']:hover {
+  box-shadow: var(--lift-1);
+}
+
+/* With work in it, the tile earns its severity: a coloured wash, a coloured
+   edge, AND the number. Three channels, not one. */
+.adm-q[data-tone='warn'] {
+  background: var(--warn-wash);
+  border-color: color-mix(in oklab, var(--warn) 32%, transparent);
+}
+
+.adm-q[data-tone='warn'] .adm-q__count,
+.adm-q[data-tone='warn'] .adm-q__icon {
+  color: var(--warn);
+}
+
+.adm-q[data-tone='crit'] {
+  background: var(--crit-wash);
+  border-color: color-mix(in oklab, var(--crit) 36%, transparent);
+}
+
+.adm-q[data-tone='crit'] .adm-q__count,
+.adm-q[data-tone='crit'] .adm-q__icon {
+  color: var(--crit);
+}
+
+/* The severity edge — a thick bar down the leading edge, so the tone is
+   readable as a SHAPE even printed in greyscale. */
+.adm-q[data-tone='warn']::before,
+.adm-q[data-tone='crit']::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--warn);
+}
+
+.adm-q[data-tone='crit']::before {
+  background: var(--crit);
 }
 
 .adm-q__sample {
   position: absolute;
   top: var(--s-2);
   right: var(--s-2);
-  font-family: var(--data);
-  font-size: 0.5625rem;
-  letter-spacing: 0.08em;
-  color: var(--warn-ink);
-  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
-  border-radius: var(--r-nub);
-  padding: 0 0.35em;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  color: var(--warn);
+  background: var(--warn-wash);
+  border-radius: var(--r-pill);
+  padding: 2px 6px;
 }
 
-/* ---- live lane strip ----------------------------------------------------- */
+.adm-q--loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-height: 132px;
+}
+
+/* ── live lane strip ────────────────────────────────────────────────────── */
 
 .adm-lanes {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--s-2);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-3);
+  padding: var(--s-4);
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-lg);
+  box-shadow: var(--lift-1);
 }
 
 .adm-lanes__item {
@@ -2517,152 +2641,352 @@
   flex-direction: column;
   gap: var(--s-2);
   padding: var(--s-3);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-  background: var(--adm-panel);
-  color: inherit;
+  border-radius: var(--adm-r-sm);
+  background: var(--ground-sunk);
+  color: var(--ink);
   text-decoration: none;
-  animation: adm-rise 280ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 25ms);
+  min-width: 0;
+  animation: adm-pop var(--t-move) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * var(--stagger));
+  transition: background var(--t-micro) var(--ease);
 }
 
 .adm-lanes__item:hover {
-  border-color: var(--adm-line-strong);
+  background: var(--accent-wash);
+}
+
+.adm-lanes__item[data-empty='true'] {
+  opacity: 0.72;
 }
 
 .adm-lanes__label {
-  font-size: var(--adm-fs-sm);
+  font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   color: var(--adm-dim);
 }
 
 .adm-lanes__count {
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: var(--t-h3);
+  font-weight: 700;
   line-height: 1;
-}
-
-.adm-lanes__item[data-empty='true'] .adm-lanes__count {
-  color: var(--adm-dim);
+  letter-spacing: -0.04em;
 }
 
 .adm-lanes__bar {
   display: block;
-  height: 4px;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
   overflow: hidden;
 }
 
 .adm-lanes__fill {
   display: block;
   height: 100%;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--ink) 55%, var(--paper));
-  transition: width var(--t-move) var(--ease);
+  border-radius: var(--r-pill);
+  background: var(--pop-3);
+  transition: width var(--t-slow) var(--spring-soft);
 }
 
-/* ---- dispatch pulse ------------------------------------------------------ */
+/* ── dispatch pulse ─────────────────────────────────────────────────────── */
 
 .adm-pulse {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
   gap: var(--s-3);
 }
 
+.adm-pulse__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--adm-r-sm);
+  background: var(--ground-sunk);
+}
+
 .adm-pulse__label {
-  font-size: var(--adm-fs-sm);
-  color: var(--adm-dim);
   margin: 0;
+  font-size: var(--adm-fs-xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--adm-dim);
 }
 
 .adm-pulse__value {
-  font-size: 1.3rem;
-  font-weight: 600;
-  line-height: 1.2;
-  margin: 2px 0 0;
+  margin: 0;
+  font-size: var(--t-h3);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
 }
 
 .adm-pulse__stat[data-tone='good'] .adm-pulse__value {
-  color: var(--good-ink);
+  color: var(--good);
 }
+
 .adm-pulse__stat[data-tone='warn'] .adm-pulse__value {
-  color: var(--warn-ink);
+  color: var(--warn);
 }
+
 .adm-pulse__stat[data-tone='crit'] .adm-pulse__value {
-  color: var(--crit-ink);
+  color: var(--crit);
+}
+
+.adm-pulse__stat[data-tone='crit'] {
+  background: var(--crit-wash);
 }
 
 .adm-capacity {
-  height: 8px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--ground-sunk);
   overflow: hidden;
 }
 
 .adm-capacity__fill {
   display: block;
   height: 100%;
-  background: color-mix(in srgb, var(--ink) 55%, var(--paper));
-  transition: width var(--t-move) var(--ease);
+  border-radius: var(--r-pill);
+  background: var(--pop-2);
+  transition: width var(--t-slow) var(--spring-soft);
 }
 
-/* ---- activity feed ------------------------------------------------------- */
+/* ── the live-meta chip ─────────────────────────────────────────────────── */
 
-.adm-acts {
+.adm-live {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 4px 4px 4px var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+}
+
+.adm-live__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--good);
+}
+
+/* The only looping animation on the surface, and it is 7px across: it is the
+   one thing that has to say "this screen is still updating". */
+.adm-live[data-state='live'] .adm-live__dot {
+  animation: adm-blink 2.4s var(--ease) infinite;
+}
+
+.adm-live[data-state='stale'] .adm-live__dot {
+  background: var(--warn);
+}
+
+.adm-live[data-state='stale'] .adm-live__text strong {
+  color: var(--warn);
+}
+
+.adm-live[data-state='paused'] .adm-live__dot {
+  background: var(--adm-line-strong);
+}
+
+.adm-live__text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.adm-live__glyph {
+  width: 12px;
+  height: 12px;
+}
+
+/* ── needs-attention list (governance overview) ─────────────────────────── */
+
+.adm-attn {
   display: flex;
   flex-direction: column;
+}
+
+.adm-attn__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--adm-line);
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
+  transition: background var(--t-micro) var(--ease);
+}
+
+.adm-attn__item:last-child {
+  border-bottom: 0;
+}
+
+.adm-attn__item:hover {
+  background: var(--ground-sunk);
+}
+
+.adm-attn__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 32px;
+  padding: 0 var(--s-2);
+  flex: 0 0 auto;
+  border-radius: var(--adm-r-sm);
+  background: var(--ground-sunk);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-fs-lg);
+  font-weight: 700;
+}
+
+.adm-attn__item[data-tone='warn'] .adm-attn__count {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+
+.adm-attn__item[data-tone='crit'] .adm-attn__count {
+  background: var(--crit-wash);
+  color: var(--crit);
+}
+
+.adm-attn__title {
+  display: block;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adm-attn__detail {
+  display: block;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+}
+
+.adm-attn__chev {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: var(--adm-dim);
+  transition: transform var(--t-micro) var(--spring);
+}
+
+.adm-attn__item:hover .adm-attn__chev {
+  transform: translateX(3px);
+  color: var(--accent-ink);
+}
+
+/* ── the order feed ─────────────────────────────────────────────────────── */
+
+.adm-feed {
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-feed__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--adm-line);
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
+  animation: adm-row-in var(--t-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 25ms);
+  transition: background var(--t-micro) var(--ease);
+}
+
+.adm-feed__item:last-child {
+  border-bottom: 0;
+}
+
+.adm-feed__item:hover {
+  background: var(--ground-sunk);
+}
+
+.adm-feed__no {
+  display: block;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.adm-feed__meta {
+  display: block;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── the activity feed (audit log) ──────────────────────────────────────── */
+
+.adm-acts {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .adm-acts > li {
-  animation: adm-rowin 260ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
+  animation: adm-row-in var(--t-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 25ms);
 }
 
 .adm-acts__item {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--adm-line);
-  color: inherit;
-  text-decoration: none;
+  min-width: 0;
 }
 
 .adm-acts > li:last-child .adm-acts__item {
   border-bottom: 0;
 }
 
-a.adm-acts__item:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
 .adm-acts__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
   background: var(--adm-line-strong);
 }
 
 .adm-acts__dot[data-tone='good'] {
   background: var(--good);
 }
+
 .adm-acts__dot[data-tone='warn'] {
   background: var(--warn);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  border-radius: 0;
 }
+
 .adm-acts__dot[data-tone='crit'] {
   background: var(--crit);
+  border-radius: 1px;
 }
 
 .adm-acts__title {
   display: block;
+  font-size: var(--adm-fs);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .adm-acts__detail {
@@ -2671,199 +2995,210 @@ a.adm-acts__item:hover {
   color: var(--adm-dim);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .adm-acts__when {
-  font-size: var(--adm-fs-xs);
-  color: var(--adm-dim);
-  white-space: nowrap;
+  margin-left: auto;
+  flex: 0 0 auto;
 }
 
 /* ===========================================================================
-   18. ★ THE SLA INDICATOR — shape, colour AND word. Never colour alone.
+   16. ★ THE SLA INDICATOR — shape, colour AND word. Never colour alone.
    =========================================================================== */
 
 .adm-sla {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--r-pill);
   font-size: var(--adm-fs-xs);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
   white-space: nowrap;
+  background: var(--ground-sunk);
+  color: var(--adm-soft);
 }
 
 .adm-sla__glyph {
   width: 11px;
   height: 11px;
   flex: 0 0 auto;
-}
-
-.adm-sla__glyph path {
   fill: currentColor;
 }
 
+.adm-sla__text {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* circle · "12m left" */
 .adm-sla[data-state='ok'] {
-  color: var(--good-ink);
+  background: var(--good-wash);
+  color: var(--good);
 }
 
+/* triangle · "Due in 6m" */
 .adm-sla[data-state='warning'] {
-  color: var(--warn-ink);
+  background: var(--warn-wash);
+  color: var(--warn);
 }
 
+/* square · "Late by 12m" — and it pulses once, then holds. */
 .adm-sla[data-state='breached'] {
-  color: var(--crit-ink);
-  font-weight: 600;
-}
-
-/* ★ ONCE. Not `infinite`. See the section header. */
-.adm-sla[data-state='breached'] .adm-sla__glyph {
-  animation: adm-breach 900ms var(--ease-out) 1;
+  background: var(--crit-wash);
+  color: var(--crit);
+  animation: adm-pulse-once 1.1s var(--ease-out) 1;
 }
 
 /* ===========================================================================
-   19. ★ THE LIVE BOARD
+   17. ★ THE LIVE BOARD
    =========================================================================== */
 
+/* Five lanes, each its own column, each scrolling on its own. The board
+   itself scrolls sideways on a narrow screen — the page body does not. */
 .adm-board {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(248px, 1fr);
+  grid-auto-columns: minmax(268px, 1fr);
   gap: var(--s-3);
   overflow-x: auto;
-  overscroll-behavior-x: contain;
   padding-bottom: var(--s-2);
   scrollbar-width: thin;
+  min-width: 0;
 }
 
 .adm-lane {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-height: calc(100dvh - 260px);
+  border-radius: var(--adm-r-lg);
+  background: var(--ground-sunk);
   border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r);
-  background: var(--adm-panel);
-  max-height: calc(100dvh - 280px);
 }
 
 .adm-lane__head {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--adm-line);
+  padding: var(--s-3) var(--s-3) var(--s-2);
   position: sticky;
   top: 0;
-  background: var(--adm-panel);
-  border-radius: var(--adm-r) var(--adm-r) 0 0;
   z-index: 1;
+  background: var(--ground-sunk);
+  border-radius: var(--adm-r-lg) var(--adm-r-lg) 0 0;
 }
 
 .adm-lane__title {
   font-size: var(--adm-fs);
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0;
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .adm-lane__count {
   font-size: var(--adm-fs-sm);
+  font-weight: 700;
   color: var(--adm-dim);
-  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--card);
 }
 
 .adm-lane__breach {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
   font-size: var(--adm-fs-xs);
-  font-family: var(--data);
-  color: var(--crit-ink);
-  border: 1px solid color-mix(in srgb, var(--crit) 40%, transparent);
-  border-radius: var(--r-nub);
-  padding: 0 0.35em;
-  white-space: nowrap;
+  font-weight: 700;
+  color: var(--crit);
+  background: var(--crit-wash);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
 }
 
 .adm-lane__body {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding: var(--s-2);
+  padding: 0 var(--s-2) var(--s-3);
   overflow-y: auto;
+  min-height: 84px;
   scrollbar-width: thin;
 }
 
-.adm-lane__empty,
-.adm-lane__more {
+.adm-lane__empty {
+  margin: 0;
+  padding: var(--s-5) var(--s-3);
+  text-align: center;
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
-  padding: var(--s-2);
-  margin: 0;
 }
 
 .adm-lane__more {
-  border-top: 1px dashed var(--adm-line-strong);
+  margin: 0;
+  padding: var(--s-2);
+  text-align: center;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
 }
 
-/* ---- a card -------------------------------------------------------------- */
+/* ── an order card ──────────────────────────────────────────────────────── */
 
 .adm-card {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  width: 100%;
-  padding: var(--s-2) var(--s-3);
-  text-align: left;
-  border: 1px solid var(--adm-line);
-  border-left: 3px solid var(--adm-line-strong);
+  padding: var(--s-3);
   border-radius: var(--adm-r-sm);
-  background: var(--adm-panel-2);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  animation: adm-rowin 240ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
+  background: var(--card);
+  border: 1px solid var(--adm-line);
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
+  animation: adm-pop var(--t-move) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 30ms);
   transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease);
+    transform var(--t-micro) var(--spring-soft),
+    box-shadow var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
 }
 
 .adm-card:hover {
-  background: color-mix(in srgb, var(--ink) 4%, var(--adm-panel-2));
+  transform: translateY(-2px);
+  box-shadow: var(--lift-2);
   border-color: var(--adm-line-strong);
 }
 
-.adm-card[data-sla='warning'] {
-  border-left-color: var(--warn);
-}
-
 .adm-card[data-sla='breached'] {
-  border-left-color: var(--crit);
-  background: color-mix(in srgb, var(--crit) 6%, var(--adm-panel-2));
+  border-color: color-mix(in oklab, var(--crit) 55%, transparent);
+  background: var(--crit-wash);
 }
 
-/* A card that just changed lane announces itself once, then settles. */
-.adm-card[data-moved='true'] {
-  animation: adm-moved 900ms var(--ease-out) 1;
-}
-
-.adm-card--skel {
-  cursor: default;
-  gap: var(--s-2);
+.adm-card[data-sla='warning'] {
+  border-color: color-mix(in oklab, var(--warn) 50%, transparent);
 }
 
 .adm-card__top {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
   justify-content: space-between;
+  gap: var(--s-2);
 }
 
 .adm-card__no {
+  font-weight: 700;
   font-size: var(--adm-fs-sm);
-  font-weight: 600;
 }
 
 .adm-card__vendor {
   font-size: var(--adm-fs-sm);
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2873,7 +3208,7 @@ a.adm-acts__item:hover {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: var(--adm-fs-xs);
+  font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
   min-width: 0;
 }
@@ -2885,18 +3220,20 @@ a.adm-acts__item:hover {
 }
 
 .adm-card__sep {
-  opacity: 0.6;
+  color: var(--adm-line-strong);
 }
 
 .adm-card__foot {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--s-2);
+  margin-top: 2px;
+  flex-wrap: wrap;
 }
 
 .adm-card__total {
   font-size: var(--adm-fs-sm);
+  margin-left: auto;
 }
 
 .adm-card__mins {
@@ -2910,9 +3247,7 @@ a.adm-acts__item:hover {
   gap: 5px;
   font-size: var(--adm-fs-xs);
   color: var(--adm-dim);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
 }
 
 .adm-card__ridericon {
@@ -2921,126 +3256,133 @@ a.adm-acts__item:hover {
   flex: 0 0 auto;
 }
 
+.adm-card--skel {
+  height: 96px;
+  background: linear-gradient(
+    90deg,
+    var(--card) 25%,
+    color-mix(in oklab, var(--card) 60%, var(--ground-sunk)) 50%,
+    var(--card) 75%
+  );
+  background-size: 200% 100%;
+  animation: adm-shimmer 1.4s linear infinite;
+  border-style: dashed;
+}
+
 /* ===========================================================================
-   20. ★ DISPATCH
+   18. ★ DISPATCH
    =========================================================================== */
-
-.adm-notice {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  margin-bottom: var(--s-3);
-  border: 1px solid var(--adm-line);
-  border-left-width: 3px;
-  border-radius: var(--adm-r);
-  background: var(--adm-panel);
-  animation: adm-pop 220ms var(--ease-out) both;
-}
-
-.adm-notice p {
-  margin: 0;
-}
-
-.adm-notice svg {
-  width: 18px;
-  height: 18px;
-}
-
-.adm-notice[data-tone='good'] {
-  border-left-color: var(--good);
-  color: var(--good-ink);
-}
-
-.adm-notice[data-tone='crit'] {
-  border-left-color: var(--crit);
-  color: var(--crit-ink);
-}
 
 .adm-pane {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
-  max-height: calc(100dvh - 340px);
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--adm-r-lg);
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-line);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  max-height: calc(100dvh - 240px);
   overflow-y: auto;
   scrollbar-width: thin;
-  padding-right: 2px;
 }
 
-/* ---- an order waiting for a rider ---------------------------------------- */
+/* ── a waiting order ────────────────────────────────────────────────────── */
 
 .adm-wait {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
   padding: var(--s-3);
-  border: 1px solid var(--adm-line);
-  border-left: 3px solid var(--adm-line-strong);
-  border-radius: var(--adm-r-sm);
-  background: var(--adm-panel);
-  animation: adm-rowin 240ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
+  border-radius: var(--adm-r);
+  background: var(--ground-sunk);
+  border: 1px solid transparent;
+  min-width: 0;
+  animation: adm-pop var(--t-move) var(--spring-soft) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 35ms);
+  transition: border-color var(--t-micro) var(--ease);
 }
 
-.adm-wait[data-sla='warning'] {
-  border-left-color: var(--warn);
-}
-
-.adm-wait[data-sla='breached'] {
-  border-left-color: var(--crit);
-  background: color-mix(in srgb, var(--crit) 6%, var(--adm-panel));
+.adm-wait[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-wash);
 }
 
 .adm-wait__head {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .adm-wait__waiting {
   margin-left: auto;
-  font-size: var(--adm-fs-xs);
-  color: var(--adm-dim);
+  flex: 0 0 auto;
+  font-size: var(--adm-fs-sm);
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--adm-soft);
+}
+
+/* The longer it has waited, the heavier it reads. Colour AND weight. */
+.adm-wait[data-waited='long'] .adm-wait__waiting {
+  background: var(--crit-wash);
+  color: var(--crit);
+}
+
+.adm-wait[data-waited='medium'] .adm-wait__waiting {
+  background: var(--warn-wash);
+  color: var(--warn);
 }
 
 .adm-wait__meta {
   margin: 0;
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .adm-wait__riders {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--adm-line);
 }
 
+/* ── a suggested rider ──────────────────────────────────────────────────── */
+
 .adm-suggest {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px var(--s-2);
-  border: 1px solid var(--adm-line-strong);
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--adm-line);
   border-radius: var(--adm-r-sm);
-  background: var(--adm-panel-2);
-  color: inherit;
+  background: var(--card);
+  color: var(--ink);
   font: inherit;
   font-size: var(--adm-fs-sm);
+  text-align: left;
   cursor: pointer;
+  min-width: 0;
   transition:
-    background-color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease);
+    border-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease);
 }
 
 .adm-suggest:hover:not(:disabled) {
-  border-color: var(--good);
-  background: color-mix(in srgb, var(--good) 10%, var(--adm-panel-2));
+  border-color: var(--accent);
+  background: var(--accent-wash);
 }
 
 .adm-suggest:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -3051,44 +3393,58 @@ a.adm-acts__item:hover {
   color: var(--adm-dim);
 }
 
+.adm-suggest__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .adm-suggest__km {
-  font-size: var(--adm-fs-xs);
+  flex: 0 0 auto;
   color: var(--adm-dim);
 }
 
 .adm-suggest__state {
+  flex: 0 0 auto;
   font-size: var(--adm-fs-xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--adm-dim);
+  color: var(--good);
 }
 
-/* ---- a rider ------------------------------------------------------------- */
+/* ── a rider row ────────────────────────────────────────────────────────── */
 
 .adm-rider {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--adm-line);
-  border-radius: var(--adm-r-sm);
-  background: var(--adm-panel);
-  animation: adm-rowin 240ms var(--ease-out) both;
-  animation-delay: calc(var(--adm-i, 0) * 20ms);
+  gap: 4px;
+  padding: var(--s-3);
+  border-radius: var(--adm-r);
+  background: var(--ground-sunk);
+  min-width: 0;
+  animation: adm-row-in var(--t-move) var(--ease-out) backwards;
+  animation-delay: calc(var(--adm-i, 0) * 25ms);
 }
 
 .adm-rider__main {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--s-2);
+  min-width: 0;
 }
 
 .adm-rider__state {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  margin-left: auto;
+  flex: 0 0 auto;
   font-size: var(--adm-fs-xs);
+  font-weight: 700;
   color: var(--adm-dim);
   white-space: nowrap;
 }
@@ -3096,7 +3452,7 @@ a.adm-acts__item:hover {
 .adm-rider__dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: var(--adm-line-strong);
 }
 
@@ -3104,17 +3460,21 @@ a.adm-acts__item:hover {
   background: var(--good);
 }
 
-.adm-rider[data-state='on_job'] .adm-rider__dot {
-  background: var(--warn);
+.adm-rider[data-state='available'] .adm-rider__state {
+  color: var(--good);
 }
 
-.adm-rider[data-state='available'] .adm-rider__state {
-  color: var(--good-ink);
+.adm-rider[data-state='on_delivery'] .adm-rider__dot {
+  background: var(--pop-3);
+}
+
+.adm-rider[data-state='offline'] .adm-rider__dot {
+  background: var(--adm-line-strong);
 }
 
 .adm-rider__meta {
   margin: 0;
-  font-size: var(--adm-fs-xs);
+  font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
 }
 
@@ -3122,24 +3482,131 @@ a.adm-acts__item:hover {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  flex-wrap: wrap;
-  padding-top: 5px;
-  border-top: 1px dashed var(--adm-line);
-}
-
-.adm-rider__job .adm-btn {
-  margin-left: auto;
-}
-
-.adm-dialog__error {
-  margin-top: var(--s-2);
+  margin-top: var(--s-1);
+  padding: var(--s-2);
+  border-radius: var(--adm-r-sm);
+  background: var(--card);
   font-size: var(--adm-fs-sm);
-  color: var(--crit-ink);
+  min-width: 0;
 }
 
-/* ---- ops keyframes ------------------------------------------------------- */
+/* ===========================================================================
+   19. Keyframes
+   =========================================================================== */
 
-@keyframes adm-breathe {
+@keyframes adm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes adm-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes adm-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes adm-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes adm-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes adm-drawer-in {
+  from {
+    transform: translateX(28px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes adm-nub {
+  from {
+    transform: translateY(-50%) scaleY(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(-50%) scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* The draw-in: the dash offset ramps from the path's own length to zero. */
+@keyframes adm-draw {
+  from {
+    stroke-dashoffset: var(--adm-len, 1000);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes adm-bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes adm-bar-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes adm-shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes adm-blink {
   0%,
   100% {
     opacity: 1;
@@ -3149,60 +3616,51 @@ a.adm-acts__item:hover {
   }
 }
 
-/* One shot. Starts and ends at the resting state, so a cancelled animation
-   leaves the glyph exactly where it belongs. */
-@keyframes adm-breach {
+/* ONCE, then hold. Never `infinite`. */
+@keyframes adm-pulse-once {
   0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(1.5);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--crit) 55%, transparent);
   }
   100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes adm-moved {
-  0% {
-    transform: translateX(-10px);
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 30%, transparent);
-  }
-  100% {
-    transform: none;
-    box-shadow: inset 0 0 0 0 transparent;
+    box-shadow: 0 0 0 16px transparent;
   }
 }
 
 /* ===========================================================================
-   21. OPS — REDUCED MOTION
-   ---------------------------------------------------------------------------
-   Section 16 already kills `animation` inside `.adm` with !important, which
-   covers everything above. This block exists to state the intent explicitly
-   for the properties that animate a TRANSFORM: with the animation cancelled a
-   card must sit at `transform: none` and a glyph at `scale(1)` — which they
-   do, because every keyframe set above both starts and ends at the resting
-   state. Nothing here is parked at `opacity: 0`.
+   20. ★ REDUCED MOTION — one block, no exceptions
+   -----------------------------------------------------------------------------
+   The design system already collapses durations globally. Two things it cannot
+   know about are handled here:
+
+     · animation-DELAY. A stagger is a delay, and a cell drawn with
+       `animation-fill-mode: backwards` is invisible for the length of its
+       delay. Collapsing the duration without the delay leaves the last cell of
+       a grid blank for half a second.
+     · stroke-dasharray. A path with a dash set for the draw-in and no
+       animation to clear it renders as a dashed line. The dash has to go.
    =========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .adm-live__dot,
-  .adm-sla__glyph,
-  .adm-card,
-  .adm-q,
-  .adm-wait,
-  .adm-rider,
-  .adm-lanes__item,
-  .adm-breachbar,
-  .adm-notice,
-  .adm-acts > li {
-    animation: none !important;
-    transform: none !important;
-    opacity: 1 !important;
+  .adm *,
+  .adm *::before,
+  .adm *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 
-  .adm-lanes__fill,
-  .adm-capacity__fill {
-    transition: none !important;
+  .adm .mnd-cell {
+    animation-delay: 0ms !important;
+  }
+
+  .adm-draw,
+  .adm-spark__line {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .adm-chart__bar {
+    transform: none !important;
   }
 }

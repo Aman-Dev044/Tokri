@@ -47,7 +47,6 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { AdminPage, AdminSection, ConfirmDialog, Money } from '@/components/admin';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import type {
   OpeningHour,
@@ -55,7 +54,9 @@ import type {
   VendorProfile,
   VendorProfileUpdate,
 } from '@/lib/vendor/types';
-import { EndpointError, Field, RupeeInput } from '../primitives';
+import { ConfirmDialog } from '../overlay';
+import { VenPage, VenSection } from '../Page';
+import { Btn, EndpointError, Field, Money, RupeeInput, SkelChart, WriteFailure } from '../primitives';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -186,22 +187,24 @@ export function SettingsView() {
 
   if (profile.error && !profile.data) {
     return (
-      <AdminPage title="Store settings" description="Your shop's profile could not be loaded.">
+      <VenPage title="Store settings" description="Your shop's profile could not be loaded.">
         <EndpointError
           path="/vendor/profile"
           message={profile.error.friendlyMessage}
           status={profile.error.status}
           onRetry={profile.refetch}
         />
-      </AdminPage>
+      </VenPage>
     );
   }
 
   if (!draft || !profile.data || !original) {
     return (
-      <AdminPage title="Store settings" description="Loading your shop's profile…">
-        <div className="adm-skel adm-skel--chart" aria-busy="true" />
-      </AdminPage>
+      <VenPage title="Store settings" description="Loading your shop's profile…">
+        <div aria-busy="true">
+          <SkelChart />
+        </div>
+      </VenPage>
     );
   }
 
@@ -284,25 +287,18 @@ export function SettingsView() {
   const canSave = pincodeValid && latValid && lngValid && draft.storeName.trim().length >= 2;
 
   return (
-    <AdminPage
+    <VenPage
       title="Store settings"
       description="Profile, where you are, when you open, and how you take money."
       isFixture={profile.isFixture}
       fixturePaths={profile.isFixture ? ['/vendor/profile'] : undefined}
     >
-      {failure ? (
-        <div className="adm-fixture" role="alert" style={{ marginBottom: 'var(--s-3)' }}>
-          <div>
-            <p className="adm-fixture__title">Not everything was saved</p>
-            <p className="adm-fixture__body">{failure}</p>
-          </div>
-        </div>
-      ) : null}
+      {failure ? <WriteFailure message={failure} /> : null}
 
-      <div className="adm-grid adm-grid--split">
-        <div className="adm-stack">
+      <div className="ven-cols-2">
+        <div className="ven-stack">
           {/* ------------------------------------------ profile ---- */}
-          <AdminSection title="Profile" description="What customers see at the top of your shop.">
+          <VenSection title="Profile" description="What customers see at the top of your shop.">
             <div className="ven-form">
               <Field
                 label="Store name"
@@ -340,10 +336,10 @@ export function SettingsView() {
                 on the owner's User account, which this panel does not edit.
               */}
             </div>
-          </AdminSection>
+          </VenSection>
 
           {/* ------------------------------------------ address ---- */}
-          <AdminSection
+          <VenSection
             title="Address and map position"
             description="The address is for the rider to read. The coordinates are what the app actually searches on."
           >
@@ -492,10 +488,10 @@ export function SettingsView() {
                 and travel that way too — there is no coordinate swap to get wrong here.
               </p>
             </div>
-          </AdminSection>
+          </VenSection>
 
           {/* -------------------------------------------- hours ---- */}
-          <AdminSection
+          <VenSection
             title="Opening hours"
             description="Orders are only accepted inside these windows, on top of the open/closed switch in the top bar. A day with no row is a day you do not open."
           >
@@ -504,26 +500,22 @@ export function SettingsView() {
                 <div className="ven-hours__row" key={`${hour.day}-${index}`} data-closed="false">
                   <span className="ven-hours__day">{DAYS[hour.day] ?? `Day ${hour.day}`}</span>
                   <input
-                    className="ven-time"
+                    className="ven-hourtime"
                     type="time"
                     value={hour.open}
                     onChange={(event) => setHour(index, { open: event.target.value })}
                     aria-label={`${DAYS[hour.day] ?? ''} opening time`}
                   />
                   <input
-                    className="ven-time"
+                    className="ven-hourtime"
                     type="time"
                     value={hour.close}
                     onChange={(event) => setHour(index, { close: event.target.value })}
                     aria-label={`${DAYS[hour.day] ?? ''} closing time`}
                   />
-                  <button
-                    type="button"
-                    className="adm-btn adm-btn--sm adm-btn--ghost"
-                    onClick={() => removeDay(index)}
-                  >
+                  <Btn size="sm" variant="ghost" onClick={() => removeDay(index)}>
                     Closed all day
-                  </button>
+                  </Btn>
                 </div>
               ))}
 
@@ -534,26 +526,21 @@ export function SettingsView() {
               ) : null}
 
               {missingDays.length > 0 ? (
-                <div className="adm-row" style={{ flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+                <div className="ven-row">
                   {missingDays.map((day) => (
-                    <button
-                      key={day}
-                      type="button"
-                      className="adm-btn adm-btn--sm"
-                      onClick={() => addDay(day)}
-                    >
+                    <Btn key={day} size="sm" onClick={() => addDay(day)}>
                       Open on {DAYS[day]}
-                    </button>
+                    </Btn>
                   ))}
                 </div>
               ) : null}
             </div>
-          </AdminSection>
+          </VenSection>
         </div>
 
         {/* ---------------------------------------------- side ---- */}
-        <div className="adm-stack">
-          <AdminSection title="Cash on delivery" description="Who carries the risk, and up to what.">
+        <div className="ven-stack">
+          <VenSection title="Cash on delivery" description="Who carries the risk, and up to what.">
             <div className="ven-form">
               <label className="ven-switch">
                 <input
@@ -581,17 +568,17 @@ export function SettingsView() {
                 )}
               </Field>
             </div>
-          </AdminSection>
+          </VenSection>
 
-          <AdminSection
+          <VenSection
             title="Set by Mandi"
             description="Platform settings. Visible here so you can check your own payouts — changed only by an admin."
             panel
           >
-            <div className="adm-panel--pad">
-              <dl className="adm-dl">
+            <div className="ven-panel--pad">
+              <dl className="ven-dl">
                 <dt>Commission</dt>
-                <dd className="adm-num">{server.commissionPct}%</dd>
+                <dd className="ven-num">{server.commissionPct}%</dd>
                 <dt>Approval</dt>
                 <dd>{server.status}</dd>
                 <dt>Rating</dt>
@@ -599,7 +586,7 @@ export function SettingsView() {
                   `rating` and nothing else. There is no vote count on this
                   payload — reading one is what used to crash the dashboard.
                 */}
-                <dd className="adm-num">
+                <dd className="ven-num">
                   {server.rating > 0 ? `${server.rating.toFixed(1)} ★` : 'not rated yet'}
                 </dd>
                 <dt>Shop URL</dt>
@@ -612,7 +599,7 @@ export function SettingsView() {
                 </dd>
               </dl>
             </div>
-          </AdminSection>
+          </VenSection>
         </div>
       </div>
 
@@ -624,12 +611,9 @@ export function SettingsView() {
             <span className="ven-dirty__count"> · {changes.join(', ')}</span>
           </span>
           <span className="ven-dirty__actions">
-            <button type="button" className="adm-btn" onClick={() => setConfirmDiscard(true)}>
-              Discard
-            </button>
-            <button
-              type="button"
-              className="adm-btn adm-btn--primary"
+            <Btn onClick={() => setConfirmDiscard(true)}>Discard</Btn>
+            <Btn
+              variant="primary"
               disabled={saving || !canSave}
               title={canSave ? undefined : 'Fix the highlighted fields first.'}
               onClick={() => {
@@ -639,7 +623,7 @@ export function SettingsView() {
               {saving
                 ? 'Saving…'
                 : `Save ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`}
-            </button>
+            </Btn>
           </span>
         </div>
       ) : null}
@@ -657,6 +641,6 @@ export function SettingsView() {
         }}
         body={<p>{changes.join(', ')} will go back to what the server has.</p>}
       />
-    </AdminPage>
+    </VenPage>
   );
 }

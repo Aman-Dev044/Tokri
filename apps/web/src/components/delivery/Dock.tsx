@@ -5,7 +5,7 @@
  *
  * ── THE RULE ────────────────────────────────────────────────────────────────
  * The dock holds EITHER the navigation OR the screen's one primary action.
- * Never both, never two primaries side by side (plan §2.4).
+ * Never both, never two primaries side by side.
  *
  * That is not a layout preference. A rider mid-delivery should not be able to
  * fat-finger "History" while reaching for "Picked up", and a screen with two
@@ -14,7 +14,14 @@
  *
  * The one deliberate exception is the offer screen, where Accept and Decline
  * are a genuine binary and both must be one tap away. Even there they are not
- * peers: Accept is filled and wider, Decline is an outline.
+ * peers: Accept is filled and takes two thirds of the width, Decline is an
+ * outline.
+ *
+ * ── WHY IT IS FIXED, NOT THE LAST GRID ROW ──────────────────────────────────
+ * A docked action parked at the end of the document is only reachable after a
+ * scroll, which on a long job screen means the primary action of the app is
+ * below the fold. It is `position: fixed` and `main` reserves its height, so
+ * the action is always in the thumb and nothing is ever hidden under it.
  */
 
 import Link from 'next/link';
@@ -22,7 +29,11 @@ import styles from './delivery.module.css';
 import { IconBox, IconList, IconNavigate, IconWallet } from './icons';
 
 export function Dock({ children }: { children: React.ReactNode }) {
-  return <div className={styles.dock}>{children}</div>;
+  return (
+    <div className={styles.dock}>
+      <div className={styles.dockInner}>{children}</div>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -49,12 +60,12 @@ export function RiderNav({
     {
       href: '/delivery/offers',
       label: 'Offers',
-      icon: <IconNavigate size={22} />,
+      icon: <IconNavigate size={24} />,
       ...(offersCount > 0 ? { badge: offersCount } : {}),
     },
-    { href: activeHref, label: 'Active', icon: <IconBox size={22} /> },
-    { href: '/delivery/history', label: 'History', icon: <IconList size={22} /> },
-    { href: '/delivery/earnings', label: 'Earnings', icon: <IconWallet size={22} /> },
+    { href: activeHref, label: 'Active', icon: <IconBox size={24} /> },
+    { href: '/delivery/history', label: 'History', icon: <IconList size={24} /> },
+    { href: '/delivery/earnings', label: 'Earnings', icon: <IconWallet size={24} /> },
   ];
 
   return (

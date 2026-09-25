@@ -11,13 +11,13 @@ import '@/styles/auth.css';
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth">
-      <header className="auth__bar shell">
+      <header className="auth__bar auth__shell">
         <Link href="/" className="auth__brand" aria-label="Mandi, home">
           <span className="auth__mark" aria-hidden="true">
             <svg viewBox="0 0 32 32" focusable="false">
               <path
                 d="M5 12 L27 12 L24 26 Q23.4 28 21.5 28 L10.5 28 Q8.6 28 8 26 Z"
-                fill="var(--aisle)"
+                fill="var(--accent)"
                 opacity="0.24"
               />
               <path
@@ -34,7 +34,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
                 strokeWidth="2"
                 strokeLinecap="round"
               />
-              <circle cx="16" cy="19" r="3.4" fill="var(--aisle)" />
+              <circle cx="16" cy="19" r="3.4" fill="var(--accent)" />
             </svg>
           </span>
           <span className="auth__wordmark">Mandi</span>

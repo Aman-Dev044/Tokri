@@ -30,9 +30,9 @@
  */
 
 import Link from 'next/link';
-import { Money, StatusPill } from '@/components/admin';
 import { STATUS_AISLE, minutesWaiting, urgencyOf } from '@/lib/vendor/orders';
 import type { VendorOrder } from '@/lib/vendor/types';
+import { Money, OrderStatusPill, SkelLine } from './primitives';
 
 export interface OrderCardProps {
   order: VendorOrder;
@@ -67,7 +67,7 @@ export function OrderCard({ order, now, index, fresh = false, actions }: OrderCa
         </Link>
         <span className="ven-card__wait">
           {minutes === null ? '—' : `${minutes}m`}
-          <span className="adm-sr">
+          <span className="ven-sr">
             {minutes === null
               ? ''
               : ` waiting${urgency === 'late' ? ', overdue' : urgency === 'warn' ? ', getting late' : ''}`}
@@ -95,7 +95,7 @@ export function OrderCard({ order, now, index, fresh = false, actions }: OrderCa
       </ul>
 
       <div className="ven-card__foot">
-        <StatusPill status={order.status} kind="order" />
+        <OrderStatusPill status={order.status} />
         <span className="ven-paytag" data-method={order.payment.method}>
           {order.payment.method === 'cod' ? 'COD' : 'PAID'}
         </span>
@@ -113,11 +113,19 @@ export function OrderCard({ order, now, index, fresh = false, actions }: OrderCa
 export function OrderCardSkeleton({ index }: { index: number }) {
   return (
     <div className="ven-card" aria-hidden="true" style={{ ['--ven-i' as string]: String(index) }}>
-      <div className="adm-skel adm-skel--line" style={{ width: '48%' }} />
-      <div className="adm-skel adm-skel--line" style={{ width: '64%', marginTop: 10 }} />
-      <div className="adm-skel adm-skel--line" style={{ width: '90%', marginTop: 14 }} />
-      <div className="adm-skel adm-skel--line" style={{ width: '82%', marginTop: 6 }} />
-      <div className="adm-skel adm-skel--line" style={{ width: '40%', marginTop: 14, height: 18 }} />
+      <SkelLine width="48%" />
+      <div style={{ marginTop: 10 }}>
+        <SkelLine width="64%" />
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <SkelLine width="90%" />
+      </div>
+      <div style={{ marginTop: 6 }}>
+        <SkelLine width="82%" />
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <SkelLine width="40%" height={18} />
+      </div>
     </div>
   );
 }

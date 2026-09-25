@@ -33,24 +33,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  ConfirmDialog,
-  DataTable,
-  DetailDrawer,
-  EmptyState,
-  FilterBar,
-  IconClose,
-  IconInbox,
-  IconPlus,
-  Money,
-  Toolbar,
-  type Column,
-  type FilterDef,
-  type FilterValues,
-} from '@/components/admin';
-import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
 import { isAisleKey } from '@mandi/design-system';
+import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
 import { ImageUploadError, formatBytes, uploadProductImage } from '@/lib/vendor/image';
 import type {
   Paged,
@@ -62,7 +46,26 @@ import type {
   VendorProduct,
 } from '@/lib/vendor/types';
 import { ProductPreviewCard } from '../ProductPreviewCard';
-import { EndpointError, Field, RupeeInput } from '../primitives';
+import { VenPage } from '../Page';
+import { IconClose, IconInbox, IconPlus } from '../icons';
+import {
+  Btn,
+  EmptyState,
+  EndpointError,
+  Field,
+  Money,
+  Pill,
+  RupeeInput,
+} from '../primitives';
+import { ConfirmDialog, Drawer } from '../overlay';
+import {
+  SearchBox,
+  SelectBox,
+  Toolbar,
+  ToolbarSpacer,
+  VenTable,
+  type Column,
+} from '../table';
 
 /** Only an absolute https URL survives `CreateProductDto`'s validator. */
 const isUploadedImage = (url: string): boolean => url.startsWith('https://');
@@ -208,42 +211,12 @@ export function ProductsView() {
     }
   };
 
-  /* ---- table ---- */
-  const filterDefs: FilterDef[] = [
-    { key: 'q', label: 'Search', type: 'search', placeholder: 'Name, brand or SKU…' },
-    {
-      key: 'categoryId',
-      label: 'Category',
-      type: 'select',
-      options: [
-        { label: 'All categories', value: 'all' },
-        ...(categories.data ?? []).map((category) => ({
-          label: category.name,
-          value: category.id,
-        })),
-      ],
-    },
-    {
-      key: 'isActive',
-      label: 'Listed',
-      type: 'select',
-      options: [
-        { label: 'Listed and unlisted', value: 'all' },
-        { label: 'Listed only', value: 'true' },
-        { label: 'Unlisted only', value: 'false' },
-      ],
-    },
-    {
-      key: 'lowStock',
-      label: 'Stock',
-      type: 'select',
-      options: [
-        { label: 'Any stock level', value: 'all' },
-        { label: 'Low or out of stock', value: 'true' },
-      ],
-    },
-  ];
+  const resetFilters = () => {
+    setPage(1);
+    setFilters(EMPTY_FILTERS);
+  };
 
+  /* ---- table ---- */
   const columns: Column<VendorProduct>[] = [
     {
       key: 'name',
@@ -252,7 +225,7 @@ export function ProductsView() {
         <span>
           <strong>{row.name}</strong>
           <br />
-          <span className="adm-dim">
+          <span className="ven-dim">
             {row.brand ? `${row.brand} · ` : ''}
             {row.unitValue} {row.unit}
           </span>
@@ -286,7 +259,7 @@ export function ProductsView() {
         return (
           <Link href="/vendor/inventory" className="ven-stock" data-level={level}>
             <span className="ven-stock__n">{row.stock}</span>
-            <span className="adm-sr">
+            <span className="ven-sr">
               {level === 'out' ? 'out of stock' : level === 'low' ? 'low stock' : 'in stock'}
             </span>
           </Link>
@@ -296,12 +269,7 @@ export function ProductsView() {
     {
       key: 'isActive',
       header: 'Listed',
-      render: (row) => (
-        <span className="adm-pill" data-tone={row.isActive ? 'good' : 'neutral'}>
-          <span className="adm-pill__glyph" aria-hidden="true" />
-          {row.isActive ? 'Listed' : 'Hidden'}
-        </span>
-      ),
+      render: (row) => <Pill tone={row.isActive ? 'good' : 'neutral'}>{row.isActive ? 'Listed' : 'Hidden'}</Pill>,
     },
   ];
 
@@ -314,16 +282,16 @@ export function ProductsView() {
   const saveError = (editing ? update.error : create.error)?.friendlyMessage ?? null;
 
   return (
-    <AdminPage
+    <VenPage
       title="Products"
       description="Your catalogue. Prices and photos here; quantities live on the inventory screen."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
-        <button type="button" className="adm-btn adm-btn--primary" onClick={openCreate}>
+        <Btn variant="primary" onClick={openCreate}>
           <IconPlus />
           Add product
-        </button>
+        </Btn>
       }
     >
       {products.error && products.data === null ? (
@@ -336,26 +304,62 @@ export function ProductsView() {
       ) : null}
 
       <Toolbar>
-        <FilterBar
-          filters={filterDefs}
-          values={filters}
-          onChange={(values: FilterValues) => {
+        <SearchBox
+          label="Search products"
+          placeholder="Name, brand or SKU…"
+          value={filters.q}
+          onChange={(value) => {
             setPage(1);
-            setFilters({
-              q: values['q'] ?? '',
-              categoryId: values['categoryId'] ?? 'all',
-              isActive: values['isActive'] ?? 'all',
-              lowStock: values['lowStock'] ?? 'all',
-            });
-          }}
-          onReset={() => {
-            setPage(1);
-            setFilters(EMPTY_FILTERS);
+            setFilters((previous) => ({ ...previous, q: value }));
           }}
         />
+        <SelectBox
+          label="Category"
+          value={filters.categoryId}
+          onChange={(value) => {
+            setPage(1);
+            setFilters((previous) => ({ ...previous, categoryId: value }));
+          }}
+          options={[
+            { label: 'All categories', value: 'all' },
+            ...(categories.data ?? []).map((category) => ({
+              label: category.name,
+              value: category.id,
+            })),
+          ]}
+        />
+        <SelectBox
+          label="Listed"
+          value={filters.isActive}
+          onChange={(value) => {
+            setPage(1);
+            setFilters((previous) => ({ ...previous, isActive: value }));
+          }}
+          options={[
+            { label: 'Listed and unlisted', value: 'all' },
+            { label: 'Listed only', value: 'true' },
+            { label: 'Unlisted only', value: 'false' },
+          ]}
+        />
+        <SelectBox
+          label="Stock"
+          value={filters.lowStock}
+          onChange={(value) => {
+            setPage(1);
+            setFilters((previous) => ({ ...previous, lowStock: value }));
+          }}
+          options={[
+            { label: 'Any stock level', value: 'all' },
+            { label: 'Low or out of stock', value: 'true' },
+          ]}
+        />
+        <ToolbarSpacer />
+        <Btn variant="ghost" size="sm" onClick={resetFilters}>
+          Clear filters
+        </Btn>
       </Toolbar>
 
-      <DataTable
+      <VenTable
         columns={columns}
         rows={products.data?.data ?? []}
         loading={products.loading && !products.hasLoadedOnce}
@@ -371,15 +375,15 @@ export function ProductsView() {
             body="Clear the filters, or add the first product in this shop."
             icon={<IconInbox />}
             action={
-              <button type="button" className="adm-btn adm-btn--primary" onClick={openCreate}>
+              <Btn variant="primary" onClick={openCreate}>
                 Add product
-              </button>
+              </Btn>
             }
           />
         }
       />
 
-      <DetailDrawer
+      <Drawer
         open={drawerOpen}
         onClose={closeDrawer}
         title={editing ? editing.name : 'New product'}
@@ -388,21 +392,14 @@ export function ProductsView() {
         actions={
           <>
             {editing ? (
-              <button
-                type="button"
-                className="adm-btn adm-btn--danger"
-                onClick={() => setDeleting(editing)}
-              >
+              <Btn variant="danger" onClick={() => setDeleting(editing)}>
                 Delete
-              </button>
+              </Btn>
             ) : null}
-            <span className="adm-toolbar__spacer" />
-            <button type="button" className="adm-btn" onClick={closeDrawer}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="adm-btn adm-btn--primary"
+            <ToolbarSpacer />
+            <Btn onClick={closeDrawer}>Cancel</Btn>
+            <Btn
+              variant="primary"
               onClick={save}
               disabled={
                 create.loading ||
@@ -413,7 +410,7 @@ export function ProductsView() {
               }
             >
               {create.loading || update.loading ? 'Saving…' : editing ? 'Save changes' : 'Create'}
-            </button>
+            </Btn>
           </>
         }
       >
@@ -424,7 +421,7 @@ export function ProductsView() {
           productId={editing?.id ?? null}
           error={saveError}
         />
-      </DetailDrawer>
+      </Drawer>
 
       <ConfirmDialog
         open={deleting !== null}
@@ -453,7 +450,7 @@ export function ProductsView() {
           </p>
         }
       />
-    </AdminPage>
+    </VenPage>
   );
 }
 
@@ -482,7 +479,7 @@ function ProductForm({
   const aisleKey = category && isAisleKey(category.aisleKey) ? category.aisleKey : 'vegetables';
 
   return (
-    <div className="adm-grid" style={{ gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)' }}>
+    <div className="ven-cols-2">
       <div className="ven-form">
         {error ? (
           <p className="ven-field__error" role="alert">
@@ -731,12 +728,12 @@ function ImageTray({
               onClick={() => onChange(images.filter((_, i) => i !== index))}
             >
               <IconClose />
-              <span className="adm-sr">Remove photo {index + 1}</span>
+              <span className="ven-sr">Remove photo {index + 1}</span>
             </button>
           </div>
         ))}
 
-        <label className="adm-btn adm-btn--sm" style={{ alignSelf: 'center' }}>
+        <label className="ven-btn" data-variant="plain" data-size="sm" style={{ alignSelf: 'center' }}>
           {busy === null ? 'Add photo' : busy === 'resizing' ? 'Resizing…' : busy === 'signing' ? 'Preparing…' : 'Uploading…'}
           <input
             type="file"

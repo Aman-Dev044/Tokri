@@ -116,7 +116,7 @@ export function SignupForm() {
   return (
     <form className="authform" onSubmit={onSubmit} noValidate>
       <header className="authform__head">
-        <p className="eyebrow">Create an account</p>
+        <p className="auth-eyebrow">Create an account</p>
         <h1 className="authform__title">
           Eight aisles,
           <br />

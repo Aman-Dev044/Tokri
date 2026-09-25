@@ -39,18 +39,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  AdminSection,
-  ConfirmDialog,
-  DataTable,
-  EmptyState,
-  IconInbox,
-  Money,
-  RelativeTime,
-  StatusPill,
-  type Column,
-} from '@/components/admin';
 import { useFreshness, useVendorMutation, useVendorQuery } from '@/hooks';
 import {
   CLOSED_STATUSES,
@@ -68,9 +56,22 @@ import type {
   VendorOrderDetail,
   VendorPartner,
 } from '@/lib/vendor/types';
+import { IconInbox } from '../icons';
+import { ConfirmDialog } from '../overlay';
+import { VenPage, VenSection } from '../Page';
+import {
+  Btn,
+  EmptyState,
+  EndpointError,
+  FreshLine,
+  Money,
+  OrderStatusPill,
+  RelativeTime,
+  WriteFailure,
+} from '../primitives';
+import { VenTable, type Column } from '../table';
 import { ORDER_POLL_MS, useVendorAlerts } from '../VendorAlertProvider';
 import { OrderCard, OrderCardSkeleton } from '../OrderCard';
-import { EndpointError, FreshLine } from '../primitives';
 
 /** One page of the board. `PaginationQueryDto` hard-caps `limit` at 100. */
 const BOARD_LIMIT = 100;
@@ -227,30 +228,23 @@ export function OrdersView() {
   ].filter((value): value is string => value !== null);
 
   return (
-    <AdminPage
+    <VenPage
       title="Orders"
       description="Accept, pack and hand over. The leftmost lane is the one with a customer waiting on it."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
-        <div className="adm-row">
+        <div className="ven-row">
           <FreshLine freshness={freshness} everyMs={ORDER_POLL_MS} onRefresh={board.refetch} />
           {freshIds.size > 0 ? (
-            <button type="button" className="adm-btn adm-btn--sm" onClick={acknowledge}>
+            <Btn size="sm" onClick={acknowledge}>
               Clear {freshIds.size} new {freshIds.size === 1 ? 'mark' : 'marks'}
-            </button>
+            </Btn>
           ) : null}
         </div>
       }
     >
-      {failure ? (
-        <div className="adm-fixture" role="alert" style={{ marginBottom: 'var(--s-3)' }}>
-          <div>
-            <p className="adm-fixture__title">That did not go through</p>
-            <p className="adm-fixture__body">{failure}</p>
-          </div>
-        </div>
-      ) : null}
+      {failure ? <WriteFailure message={failure} /> : null}
 
       {board.error && board.data === null ? (
         <EndpointError
@@ -276,20 +270,12 @@ export function OrdersView() {
               if (order.status === 'PLACED') {
                 return (
                   <>
-                    <button
-                      type="button"
-                      className="adm-btn adm-btn--primary adm-btn--sm"
-                      onClick={() => setDialog({ kind: 'accept', order })}
-                    >
+                    <Btn variant="primary" size="sm" onClick={() => setDialog({ kind: 'accept', order })}>
                       Accept
-                    </button>
-                    <button
-                      type="button"
-                      className="adm-btn adm-btn--sm"
-                      onClick={() => setDialog({ kind: 'reject', order })}
-                    >
+                    </Btn>
+                    <Btn size="sm" onClick={() => setDialog({ kind: 'reject', order })}>
                       Reject
-                    </button>
+                    </Btn>
                   </>
                 );
               }
@@ -298,15 +284,10 @@ export function OrdersView() {
                 const next = NEXT_STATUS[order.status];
                 return (
                   <>
-                    <button
-                      type="button"
-                      className="adm-btn adm-btn--primary adm-btn--sm"
-                      onClick={() => onAdvance(order)}
-                      disabled={advance.loading}
-                    >
+                    <Btn variant="primary" size="sm" onClick={() => onAdvance(order)} disabled={advance.loading}>
                       {next === 'PACKING' ? 'Start packing' : 'Mark ready'}
-                    </button>
-                    <Link className="adm-btn adm-btn--sm" href={`/vendor/orders/${order.id}`}>
+                    </Btn>
+                    <Link className="ven-btn" data-variant="plain" data-size="sm" href={`/vendor/orders/${order.id}`}>
                       Open
                     </Link>
                   </>
@@ -316,14 +297,10 @@ export function OrdersView() {
               if (order.status === 'READY_FOR_PICKUP') {
                 return (
                   <>
-                    <button
-                      type="button"
-                      className="adm-btn adm-btn--primary adm-btn--sm"
-                      onClick={() => setDialog({ kind: 'assign', order })}
-                    >
+                    <Btn variant="primary" size="sm" onClick={() => setDialog({ kind: 'assign', order })}>
                       Assign rider
-                    </button>
-                    <Link className="adm-btn adm-btn--sm" href={`/vendor/orders/${order.id}`}>
+                    </Btn>
+                    <Link className="ven-btn" data-variant="plain" data-size="sm" href={`/vendor/orders/${order.id}`}>
                       Open
                     </Link>
                   </>
@@ -331,7 +308,7 @@ export function OrdersView() {
               }
 
               return (
-                <Link className="adm-btn adm-btn--sm" href={`/vendor/orders/${order.id}`}>
+                <Link className="ven-btn" data-variant="plain" data-size="sm" href={`/vendor/orders/${order.id}`}>
                   Open{' '}
                   {order.deliveryPartner?.name ? `· ${order.deliveryPartner.name}` : ''}
                 </Link>
@@ -341,12 +318,12 @@ export function OrdersView() {
         ))}
       </div>
 
-      <AdminSection
+      <VenSection
         title="Recently closed"
         description="Delivered, rejected and cancelled. Here so the board above stays about what still needs doing."
       >
         <HistoryTable rows={history} loading={board.loading && !board.hasLoadedOnce} />
-      </AdminSection>
+      </VenSection>
 
       {/* ---------------------------------------------- accept ---- */}
       <ConfirmDialog
@@ -480,7 +457,7 @@ export function OrdersView() {
           </div>
         }
       />
-    </AdminPage>
+    </VenPage>
   );
 }
 
@@ -528,6 +505,7 @@ function Lane({
           </>
         ) : orders.length === 0 ? (
           <EmptyState
+            tight
             title={laneKey === 'new' ? 'Nothing waiting' : 'Empty'}
             body={
               laneKey === 'new'
@@ -573,7 +551,7 @@ function HistoryTable({ rows, loading }: { rows: VendorOrder[]; loading: boolean
     {
       key: 'status',
       header: 'Outcome',
-      render: (row) => <StatusPill status={row.status} kind="order" />,
+      render: (row) => <OrderStatusPill status={row.status} />,
     },
     {
       key: 'itemCount',
@@ -597,7 +575,7 @@ function HistoryTable({ rows, loading }: { rows: VendorOrder[]; loading: boolean
   ];
 
   return (
-    <DataTable
+    <VenTable
       columns={columns}
       rows={rows}
       loading={loading}

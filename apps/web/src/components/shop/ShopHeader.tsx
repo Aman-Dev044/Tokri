@@ -68,24 +68,26 @@ export function ShopHeader() {
   return (
     <header className="shop-head">
       <div className="shop-head__bar shell">
-        <Link href="/" className="shop-head__brand" aria-label="Mandi, home">
-          <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
-            <path
-              d="M4 11 H28 L25 27 H7 Z"
-              fill="none"
-              stroke="var(--aisle)"
-              strokeWidth="2.2"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M11 11 C11 6 13.2 4 16 4 C18.8 4 21 6 21 11"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="shop-head__word">Mandi</span>
+        <Link href="/" className="shop-brand" aria-label="Mandi, home">
+          <span className="shop-brand__mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="20" height="20">
+              <path
+                d="M4 11 H28 L25 27 H7 Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M11 11 C11 6 13.2 4 16 4 C18.8 4 21 6 21 11"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span className="shop-brand__word">Mandi</span>
         </Link>
 
         {/* ── location ─────────────────────────────────────────────────── */}

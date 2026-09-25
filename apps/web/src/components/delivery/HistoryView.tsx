@@ -21,6 +21,7 @@
 import styles from './delivery.module.css';
 import { FixtureBanner, Notice } from './Banners';
 import { IconList } from './icons';
+import { RowsSkeleton } from './Skeletons';
 import { dayLabel, distanceKm, money, timeOfDay } from '@/lib/delivery/format';
 import { useRiderHistory } from '@/lib/delivery/useRiderData';
 import type { DeliveryHistoryRow } from '@/lib/delivery/types';
@@ -79,9 +80,7 @@ export function HistoryView() {
         </Notice>
       )}
 
-      {loading && sorted.length === 0 ? (
-        <div className={styles.skeleton} style={{ height: '10rem' }} aria-hidden="true" />
-      ) : null}
+      {loading && sorted.length === 0 ? <RowsSkeleton rows={5} /> : null}
 
       {!loading && error === null && sorted.length === 0 ? (
         <div className={styles.resting}>

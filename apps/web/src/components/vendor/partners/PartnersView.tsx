@@ -38,18 +38,6 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  AdminSection,
-  ConfirmDialog,
-  DataTable,
-  DetailDrawer,
-  EmptyState,
-  IconInbox,
-  IconPlus,
-  RelativeTime,
-  type Column,
-} from '@/components/admin';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import type {
   Paged,
@@ -59,7 +47,11 @@ import type {
   VendorOrder,
   VendorPartner,
 } from '@/lib/vendor/types';
-import { EndpointError, Field } from '../primitives';
+import { IconInbox, IconPlus } from '../icons';
+import { Drawer, ConfirmDialog } from '../overlay';
+import { VenPage, VenSection } from '../Page';
+import { Btn, EmptyState, EndpointError, Field, Pill, RelativeTime } from '../primitives';
+import { VenTable, type Column } from '../table';
 
 /** Exactly the `VehicleType` enum the API validates against. */
 const VEHICLES: readonly VehicleType[] = ['bicycle', 'scooter', 'motorcycle', 'ev_scooter'];
@@ -139,7 +131,7 @@ export function PartnersView() {
         <span>
           <strong>{row.name ?? 'Unnamed rider'}</strong>
           <br />
-          <span className="adm-dim">
+          <span className="ven-dim">
             {row.phone === null ? 'no phone on file' : <a href={`tel:${row.phone}`}>{row.phone}</a>}{' '}
             · {VEHICLE_LABEL[row.vehicleType]}
           </span>
@@ -152,24 +144,14 @@ export function PartnersView() {
       render: (row) => {
         if (row.status !== 'active') {
           return (
-            <span
-              className="adm-pill"
-              data-tone={row.status === 'suspended' ? 'crit' : 'warn'}
-              title={row.statusReason ?? undefined}
-            >
-              <span className="adm-pill__glyph" aria-hidden="true" />
+            <Pill tone={row.status === 'suspended' ? 'crit' : 'warn'} title={row.statusReason ?? undefined}>
               {row.status === 'suspended' ? 'Suspended' : 'Pending'}
-            </span>
+            </Pill>
           );
         }
         const tone = row.isOnline ? (row.isAvailable ? 'good' : 'warn') : 'neutral';
         const word = row.isOnline ? (row.isAvailable ? 'Free' : 'On a delivery') : 'Offline';
-        return (
-          <span className="adm-pill" data-tone={tone}>
-            <span className="adm-pill__glyph" aria-hidden="true" />
-            {word}
-          </span>
-        );
+        return <Pill tone={tone}>{word}</Pill>;
       },
     },
     {
@@ -204,10 +186,9 @@ export function PartnersView() {
       header: 'Actions',
       align: 'right',
       render: (row) => (
-        <span className="adm-row" style={{ justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="adm-btn adm-btn--sm"
+        <span className="ven-row" style={{ justifyContent: 'flex-end' }}>
+          <Btn
+            size="sm"
             disabled={
               row.status !== 'active' ||
               !row.isOnline ||
@@ -231,16 +212,16 @@ export function PartnersView() {
             }
           >
             Assign
-          </button>
+          </Btn>
           {/*
             Administrative state, not the availability toggle — see the note at
             the top of this file. `isAvailable` belongs to the rider's app and
             to the assignment transaction, and there is no endpoint that lets a
             vendor set it by hand.
           */}
-          <button
-            type="button"
-            className="adm-btn adm-btn--sm adm-btn--ghost"
+          <Btn
+            size="sm"
+            variant="ghost"
             // Mid-delivery is the one moment suspension is the wrong answer:
             // it would strand an order that is already in a customer's street.
             disabled={setStatus.loading || row.activeOrderId !== null}
@@ -261,7 +242,7 @@ export function PartnersView() {
             }
           >
             {row.status === 'suspended' ? 'Reinstate' : 'Suspend'}
-          </button>
+          </Btn>
         </span>
       ),
     },
@@ -277,15 +258,14 @@ export function PartnersView() {
   ).length;
 
   return (
-    <AdminPage
+    <VenPage
       title="Delivery partners"
       description="Your own riders. Sorted by who you can hand an order to right now, not alphabetically."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
-        <button
-          type="button"
-          className="adm-btn adm-btn--primary"
+        <Btn
+          variant="primary"
           onClick={() => {
             setDraft(EMPTY_DRAFT);
             create.reset();
@@ -294,7 +274,7 @@ export function PartnersView() {
         >
           <IconPlus />
           Add rider
-        </button>
+        </Btn>
       }
     >
       {partners.error && partners.data === null ? (
@@ -306,14 +286,14 @@ export function PartnersView() {
         />
       ) : null}
 
-      <AdminSection
+      <VenSection
         description={
           freeCount === 0
             ? `No riders are free. ${readyOrders.length} packed ${readyOrders.length === 1 ? 'order is' : 'orders are'} waiting for a pickup.`
             : `${freeCount} free · ${readyOrders.length} packed ${readyOrders.length === 1 ? 'order' : 'orders'} waiting.`
         }
       >
-        <DataTable
+        <VenTable
           columns={columns}
           rows={rows}
           loading={partners.loading && !partners.hasLoadedOnce}
@@ -326,10 +306,10 @@ export function PartnersView() {
             />
           }
         />
-      </AdminSection>
+      </VenSection>
 
       {/* -------------------------------------------- new rider ---- */}
-      <DetailDrawer
+      <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title="Add a rider"
@@ -337,13 +317,10 @@ export function PartnersView() {
         width="min(520px, 96vw)"
         actions={
           <>
-            <span className="adm-toolbar__spacer" />
-            <button type="button" className="adm-btn" onClick={() => setDrawerOpen(false)}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="adm-btn adm-btn--primary"
+            <span style={{ flex: '1 1 auto' }} />
+            <Btn onClick={() => setDrawerOpen(false)}>Cancel</Btn>
+            <Btn
+              variant="primary"
               disabled={
                 create.loading ||
                 draft.name.trim() === '' ||
@@ -361,7 +338,7 @@ export function PartnersView() {
               }
             >
               {create.loading ? 'Creating…' : 'Create rider'}
-            </button>
+            </Btn>
           </>
         }
       >
@@ -452,7 +429,7 @@ export function PartnersView() {
             to this shop scopes theirs to their own deliveries.
           </p>
         </div>
-      </DetailDrawer>
+      </Drawer>
 
       {/* ---------------------------------------------- assign ---- */}
       <ConfirmDialog
@@ -494,6 +471,6 @@ export function PartnersView() {
           </div>
         }
       />
-    </AdminPage>
+    </VenPage>
   );
 }

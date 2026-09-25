@@ -5,11 +5,11 @@
  * account button, and the bottom navigation.
  *
  * ── LAYOUT ──────────────────────────────────────────────────────────────────
- * Three rows: a short sticky header, the scrolling screen, and the dock. The
- * header is short on purpose — everything a thumb needs lives at the BOTTOM
- * (one-handed). The only exception is the online toggle, which is the app's
- * single most important control and belongs where it cannot be missed or hit
- * by accident: under the title, full width, 72px tall.
+ * A short sticky header, a scrolling screen, and a dock fixed to the bottom
+ * edge. The header is short on purpose — everything a thumb needs lives at the
+ * BOTTOM (one-handed). The only exception is the online toggle, which is the
+ * app's single most important control and belongs where it cannot be missed or
+ * hit by accident: under the title, full width, 72px tall.
  *
  * ── TODAY'S NUMBERS ─────────────────────────────────────────────────────────
  * From `GET /delivery/me` → `profile.today`, which is the only endpoint that
@@ -90,7 +90,9 @@ function Gate({
   return (
     <div className={styles.gate}>
       <div className={styles.gateInner}>
-        <IconShield size={40} />
+        <span className={styles.gateMark} aria-hidden="true">
+          <IconShield size={32} />
+        </span>
         <h1 className={styles.h1}>{title}</h1>
         <p className={styles.lede}>{body}</p>
         {action}
@@ -145,82 +147,85 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
 
   return (
     <header className={styles.header}>
-      <div className={styles.headerTop}>
-        <Link
-          href="/delivery"
-          className={styles.brand}
-          style={{ color: 'inherit', textDecoration: 'none' }}
-        >
-          Mandi <span className={styles.brandRole}>RIDER</span>
-        </Link>
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={`${styles.conn} ${connClass}`}
-            onClick={reconnect}
-            aria-label={`Connection: ${CONN_COPY[phase] ?? phase}. Tap to reconnect.`}
-          >
-            <span className={styles.connDot} />
-            {networkOnline ? (CONN_COPY[phase] ?? phase) : 'No network'}
-          </button>
-          <button
-            type="button"
-            className={styles.accountBtn}
-            onClick={onOpenAccount}
-            aria-label={
-              riderName === '' ? 'Your account and sign out' : `${riderName} — account and sign out`
-            }
-          >
-            <IconUser size={24} />
-          </button>
+      <div className={styles.headerInner}>
+        <div className={styles.headerTop}>
+          <Link href="/delivery" className={styles.brand}>
+            Mandi <span className={styles.brandRole}>RIDER</span>
+          </Link>
+          <div className={styles.headerActions}>
+            <button
+              type="button"
+              className={`${styles.conn} ${connClass}`}
+              onClick={reconnect}
+              aria-label={`Connection: ${CONN_COPY[phase] ?? phase}. Tap to reconnect.`}
+            >
+              <span className={styles.connDot} aria-hidden="true" />
+              {networkOnline ? (CONN_COPY[phase] ?? phase) : 'No network'}
+            </button>
+            <button
+              type="button"
+              className={styles.accountBtn}
+              onClick={onOpenAccount}
+              aria-label={
+                riderName === ''
+                  ? 'Your account and sign out'
+                  : `${riderName} — account and sign out`
+              }
+            >
+              <IconUser size={24} />
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* THE control. Everything else on this surface is secondary to it. */}
-      <button
-        type="button"
-        className={`${styles.toggle} ${online ? styles.toggleOn : ''}`}
-        onClick={onToggle}
-        disabled={availabilityPending}
-        aria-pressed={online}
-      >
-        <span className={styles.toggleLamp} aria-hidden="true" />
-        <span className={styles.toggleText}>
-          <span>{online ? "You're online" : "You're offline"}</span>
-          <span className={styles.toggleHint}>
-            {availabilityPending
-              ? 'Saving…'
-              : online
-                ? 'Tap to stop receiving offers'
-                : 'Tap to start receiving offers'}
+        {/*
+          THE control. Everything else on this surface is secondary to it.
+          `key` on the ON state so the leaf fill pulses ONCE when it flips,
+          then holds — a toggle that keeps pulsing stops being read.
+        */}
+        <button
+          key={online ? 'on' : 'off'}
+          type="button"
+          className={`${styles.toggle} ${online ? styles.toggleOn : ''}`}
+          onClick={onToggle}
+          disabled={availabilityPending}
+          aria-pressed={online}
+        >
+          <span className={styles.toggleLamp} aria-hidden="true" />
+          <span className={styles.toggleText}>
+            <span>{online ? "You're online" : "You're offline"}</span>
+            <span className={styles.toggleHint}>
+              {availabilityPending
+                ? 'Saving…'
+                : online
+                  ? 'Tap to stop receiving offers'
+                  : 'Tap to start receiving offers'}
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
 
-      {toggleError === null ? null : (
-        <p className={styles.attempts} role="alert" style={{ color: 'var(--rd-crit)' }}>
-          {toggleError}
-        </p>
-      )}
-
-      <div className={styles.todayStrip}>
-        <span className={styles.todayCell}>
-          TODAY
-          <span className={styles.todayValue}>
-            {today === null ? '—' : money(today.earningsPaise)}
-          </span>
-        </span>
-        <span className={styles.todayCell}>
-          DELIVERIES
-          <span className={styles.todayValue}>
-            {today === null ? '—' : today.deliveries}
-          </span>
-        </span>
-        {riderName === '' ? null : (
-          <span className={styles.todayCell} style={{ marginLeft: 'auto' }}>
-            {riderName}
-          </span>
+        {toggleError === null ? null : (
+          <p className={`${styles.attempts} ${styles.attemptsLow}`} role="alert">
+            {toggleError}
+          </p>
         )}
+
+        <div className={styles.todayStrip}>
+          <span className={styles.todayCell}>
+            Today
+            <span className={styles.todayValue}>
+              {today === null ? '—' : money(today.earningsPaise)}
+            </span>
+          </span>
+          <span className={styles.todayCell}>
+            Deliveries
+            <span className={styles.todayValue}>
+              {today === null ? '—' : today.deliveries}
+            </span>
+          </span>
+          {riderName === '' ? null : (
+            <span className={`${styles.todayCell} ${styles.todayName}`}>{riderName}</span>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -239,6 +244,7 @@ function Chrome({ children }: { children: ReactNode }) {
   const value = useMemo<ChromeValue>(() => ({ hideNav, setHideNav }), [hideNav]);
 
   const closeAccount = useCallback(() => setAccountOpen(false), []);
+  const openAccount = useCallback(() => setAccountOpen(true), []);
 
   /* Escape closes the sheet — a keyboard is rare here but never a dead end. */
   useEffect(() => {
@@ -258,14 +264,13 @@ function Chrome({ children }: { children: ReactNode }) {
   return (
     <ChromeContext.Provider value={value}>
       <div className={styles.shell}>
-        <Header onOpenAccount={() => setAccountOpen(true)} />
+        <Header onOpenAccount={openAccount} />
         <main className={styles.main} id="main">
           {children}
         </main>
-        {hideNav ? (
-          // The screen renders its own dock. Nothing here, deliberately.
-          <div />
-        ) : (
+        {hideNav ? null : (
+          // The screen renders its own dock when it has an action. Nothing
+          // here in that case, deliberately — the dock is exclusive.
           <Dock>
             <RiderNav
               pathname={pathname}
@@ -289,7 +294,11 @@ export function RiderShell({ children }: { children: ReactNode }) {
     return (
       <div className={styles.gate}>
         <div className={styles.gateInner}>
-          <p className={styles.lede}>Checking your sign-in…</p>
+          <span className={styles.gateMark} aria-hidden="true">
+            <IconShield size={32} />
+          </span>
+          <h1 className={styles.h1}>Checking your sign-in</h1>
+          <p className={styles.lede}>One moment — reconnecting you to Mandi.</p>
         </div>
       </div>
     );

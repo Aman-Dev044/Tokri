@@ -27,6 +27,7 @@
 import styles from './delivery.module.css';
 import { FixtureBanner, Notice } from './Banners';
 import { useRider } from './RiderProvider';
+import { RowsSkeleton, StatPairSkeleton } from './Skeletons';
 import { dayLabel, money } from '@/lib/delivery/format';
 import { useRiderEarnings } from '@/lib/delivery/useRiderData';
 
@@ -66,31 +67,31 @@ export function EarningsView() {
       )}
 
       {loading && days.length === 0 ? (
-        <div className={styles.skeleton} style={{ height: '10rem' }} aria-hidden="true" />
-      ) : null}
-
-      <div className={styles.summaryGrid}>
-        <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>
-            {today === null ? '—' : money(today.earningsPaise)}
+        <StatPairSkeleton />
+      ) : (
+        <div className={styles.summaryGrid}>
+          <div className={styles.summaryTile}>
+            <div className={styles.summaryValue}>
+              {today === null ? '—' : money(today.earningsPaise)}
+            </div>
+            <div className={styles.summaryLabel}>Today</div>
           </div>
-          <div className={styles.summaryLabel}>Today</div>
-        </div>
-        <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>
-            {today === null ? '—' : today.deliveries}
+          <div className={styles.summaryTile}>
+            <div className={styles.summaryValue}>
+              {today === null ? '—' : today.deliveries}
+            </div>
+            <div className={styles.summaryLabel}>Deliveries today</div>
           </div>
-          <div className={styles.summaryLabel}>Deliveries today</div>
+          <div className={styles.summaryTile}>
+            <div className={styles.summaryValue}>{money(value.payoutPaise)}</div>
+            <div className={styles.summaryLabel}>This period</div>
+          </div>
+          <div className={styles.summaryTile}>
+            <div className={styles.summaryValue}>{value.deliveries}</div>
+            <div className={styles.summaryLabel}>Deliveries this period</div>
+          </div>
         </div>
-        <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>{money(value.payoutPaise)}</div>
-          <div className={styles.summaryLabel}>This period</div>
-        </div>
-        <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>{value.deliveries}</div>
-          <div className={styles.summaryLabel}>Deliveries this period</div>
-        </div>
-      </div>
+      )}
 
       <section className={styles.panel}>
         <span className={styles.stepTag}>Cash you are holding</span>
@@ -104,26 +105,30 @@ export function EarningsView() {
       </section>
 
       <h2 className={styles.h2}>Day by day</h2>
-      <section className={styles.panelFlat}>
-        {days.length === 0 ? (
-          <p className={styles.lede}>
-            No deliveries in this period yet. Days appear here as you complete jobs.
-          </p>
-        ) : (
-          days.map((day) => {
-            const pct = peak === 0 ? 0 : Math.round((day.payoutPaise / peak) * 100);
-            return (
-              <div key={day.date} className={styles.barRow}>
-                <span className={styles.barLabel}>{dayLabel(day.date).slice(0, 6)}</span>
-                <span className={styles.barTrack}>
-                  <span className={styles.barFill} style={{ width: `${pct}%` }} />
-                </span>
-                <span className={styles.barValue}>{money(day.payoutPaise)}</span>
-              </div>
-            );
-          })
-        )}
-      </section>
+      {loading && days.length === 0 ? (
+        <RowsSkeleton rows={4} />
+      ) : (
+        <section className={styles.panelFlat}>
+          {days.length === 0 ? (
+            <p className={styles.lede}>
+              No deliveries in this period yet. Days appear here as you complete jobs.
+            </p>
+          ) : (
+            days.map((day) => {
+              const pct = peak === 0 ? 0 : Math.round((day.payoutPaise / peak) * 100);
+              return (
+                <div key={day.date} className={styles.barRow}>
+                  <span className={styles.barLabel}>{dayLabel(day.date).slice(0, 6)}</span>
+                  <span className={styles.barTrack}>
+                    <span className={styles.barFill} style={{ width: `${pct}%` }} />
+                  </span>
+                  <span className={styles.barValue}>{money(day.payoutPaise)}</span>
+                </div>
+              );
+            })
+          )}
+        </section>
+      )}
 
       <Notice tone="neutral" title="How this is worked out">
         Each delivery pays out when the order is marked delivered, and the fee is

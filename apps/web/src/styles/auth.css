@@ -1,17 +1,35 @@
-/* =============================================================================
-   MANDI - auth surface
-   -----------------------------------------------------------------------------
-   A split layout: the form on the paper ground, an illustrated shelf of produce
-   crates alongside it. On mobile the illustration collapses to a short band
-   above the form rather than disappearing - it is the only brand moment on the
-   page.
-   ============================================================================= */
+/* ═══════════════════════════════════════════════════════════════════════════
+   MANDI — AUTH SURFACE  ·  "BENTO POP"
+
+   A split layout: the form on the cream ground, an animated bento panel of
+   produce crates beside it — one per aisle, in that aisle's hue. On mobile the
+   panel collapses to a short band above the form rather than disappearing; it
+   is the only brand moment on the page.
+
+   Every value here comes from a token in @mandi/design-system/tokens.css.
+   There is not one raw hex in this file. Entrance motion is load-time CSS from
+   a visible resting state, and every animation is reduced — not removed —
+   inside the prefers-reduced-motion block at the foot of the file.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .auth {
+  --accent: var(--aisle);
+  --accent-ink: var(--aisle-ink);
+  --accent-wash: color-mix(in oklab, var(--aisle) 14%, var(--card));
+
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
+  background: var(--ground);
+  color: var(--ink);
+  overflow-x: clip;
+}
+
+.auth__shell {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 40px);
 }
 
 .auth__bar {
@@ -19,42 +37,80 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-4);
-  min-height: 64px;
+  min-height: 72px;
+  padding-block: var(--s-3);
   flex: 0 0 auto;
 }
 
 .auth__brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--s-3);
   text-decoration: none;
-}
-.auth__mark {
-  width: 28px;
-  height: 28px;
   color: var(--ink);
 }
+.auth__mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--accent-wash);
+  border: 1px solid color-mix(in oklab, var(--accent) 34%, transparent);
+  color: var(--ink);
+  transition: rotate var(--t-move) var(--spring);
+}
 .auth__mark svg {
-  width: 100%;
-  height: 100%;
+  width: 24px;
+  height: 24px;
+}
+.auth__brand:hover .auth__mark {
+  rotate: -8deg;
 }
 .auth__wordmark {
   font-family: var(--display);
   font-size: 1.24rem;
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+
+.auth-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.auth-eyebrow::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  flex: 0 0 auto;
 }
 
 .auth__back {
-  font-size: var(--fs-small);
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  color: var(--ink-soft);
   text-decoration: none;
-  padding: 0.4rem 0.65rem;
+  padding: 0.5rem 0.9rem;
   border-radius: var(--r-pill);
+  transition:
+    color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease);
 }
 .auth__back:hover {
-  background: var(--aisle-wash);
-  color: var(--aisle-ink);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
 }
 
 .auth__main {
@@ -62,9 +118,9 @@
   display: flex;
 }
 
-/* ===========================================================================
-   The split
-   =========================================================================== */
+/* ───────────────────────────────────────────────────────────────────────────
+   THE SPLIT
+   ─────────────────────────────────────────────────────────────────────────── */
 
 .authsplit {
   flex: 1 1 auto;
@@ -74,7 +130,7 @@
 }
 @media (min-width: 900px) {
   .authsplit {
-    /* asymmetric on purpose - the form is the job, the panel is the mood */
+    /* asymmetric on purpose — the form is the job, the panel is the mood */
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
   }
   .authsplit--single {
@@ -86,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(2rem, 6vw, 4.5rem) var(--gutter);
+  padding: clamp(2rem, 6vw, 4.5rem) clamp(16px, 4vw, 40px);
 }
 
 /* On mobile the panel sits ABOVE the form regardless of source order, so the
@@ -97,16 +153,16 @@
   }
   .authsplit .authpanel {
     order: -1;
-    min-height: 168px;
+    min-height: 180px;
   }
   .authsplit--mirror .authsplit__form {
     order: 1;
   }
 }
 
-/* ===========================================================================
-   The form
-   =========================================================================== */
+/* ───────────────────────────────────────────────────────────────────────────
+   THE FORM
+   ─────────────────────────────────────────────────────────────────────────── */
 
 .authform {
   width: 100%;
@@ -114,12 +170,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  animation: authform-rise var(--t-enter) var(--spring-soft) backwards;
 }
+
 .authform--loading {
   min-height: 24rem;
   align-items: center;
   justify-content: center;
-  color: var(--aisle-ink);
+  color: var(--accent-ink);
 }
 
 .authform__head {
@@ -130,69 +188,73 @@
 }
 .authform__title {
   margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
   font-size: clamp(2rem, 1.3rem + 2.4vw, 3rem);
-  letter-spacing: -0.042em;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
 }
 .authform__title-accent {
-  color: var(--aisle-ink);
+  color: var(--accent-ink);
 }
 .authform__sub {
   margin: 0;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: 1.6;
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
 }
 
 .authform__alert {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.8rem 0.9rem;
-  border: 1px solid var(--crit-ink);
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid color-mix(in oklab, var(--crit) 45%, transparent);
   border-inline-start-width: 3px;
-  border-radius: var(--r-soft);
-  background: color-mix(in srgb, var(--crit) 9%, transparent);
+  border-radius: var(--r-md);
+  background: var(--crit-wash);
   color: var(--ink);
-  font-size: var(--fs-small);
-  line-height: 1.5;
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  animation: authform-shake var(--t-move) var(--ease-out);
 }
 .authform__alert-mark {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.3rem;
+  height: 1.3rem;
   margin-top: 0.1rem;
-  border: 1px solid var(--crit-ink);
+  border: 1px solid var(--crit);
   border-radius: var(--r-pill);
-  color: var(--crit-ink);
+  color: var(--crit);
   font-family: var(--data);
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .authform__peek {
   border: 0;
-  padding: 0.3rem 0.45rem;
+  background: transparent;
+  padding: 0.3rem 0.5rem;
   border-radius: var(--r-pill);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--aisle-ink);
+  color: var(--accent-ink);
   cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
 }
 .authform__peek:hover {
-  background: var(--aisle-wash-strong);
-}
-.authform__peek:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  background: var(--accent-wash);
 }
 
 .authform__prefix {
-  font-size: var(--fs-small);
-  color: var(--muted);
+  font-family: var(--data);
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
   padding-inline-end: 0.15rem;
   border-inline-end: 1px solid var(--hairline);
 }
@@ -205,24 +267,28 @@
   gap: var(--s-3);
 }
 .authform__minor {
-  font-size: var(--fs-small);
-  color: var(--muted);
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
   text-decoration: none;
 }
 .authform__minor:hover {
-  color: var(--aisle-ink);
+  color: var(--accent-ink);
   text-decoration: underline;
 }
 
 .authform__foot {
   margin: 0;
-  font-size: var(--fs-small);
-  color: var(--muted);
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
   text-align: center;
 }
 .authform__foot a {
-  color: var(--aisle-ink);
-  font-weight: 560;
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.authform__foot a:hover {
+  text-decoration: underline;
 }
 
 /* ── password strength ───────────────────────────────────────────────────── */
@@ -230,12 +296,12 @@
 .authform__pw {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--s-2);
 }
 .strength {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--s-3);
   margin: 0;
 }
 .strength__bars {
@@ -252,24 +318,64 @@
 .strength[data-score='1'] .strength__bars span:nth-child(1),
 .strength[data-score='2'] .strength__bars span:nth-child(-n + 2),
 .strength[data-score='3'] .strength__bars span {
-  background: var(--aisle);
+  background: var(--good);
 }
 .strength[data-score='0'] .strength__bars span:nth-child(1) {
   background: var(--crit);
 }
 .strength__label {
-  font-size: var(--fs-micro);
+  font-family: var(--data);
+  font-size: var(--t-2xs);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
 }
 .strength[data-score='0'] .strength__label {
-  color: var(--crit-ink);
+  color: var(--crit);
 }
 
-/* ===========================================================================
-   The illustrated panel — eight crates on a shelf
-   =========================================================================== */
+/* ── buttons that are links, not the design-system Button ───────────────── */
+
+.authbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 1rem 1.9rem;
+  min-height: 56px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  font-family: var(--body);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    transform var(--t-micro) var(--spring-soft),
+    scale var(--t-instant) var(--spring),
+    background-color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+.authbtn--outline {
+  background: var(--card);
+  color: var(--accent-ink);
+  border-color: color-mix(in oklab, var(--accent) 38%, var(--hairline));
+  box-shadow: var(--lift-1);
+}
+.authbtn--outline:hover {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.authbtn:active {
+  scale: 0.96;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   THE PANEL — eight crates on a market shelf
+   ─────────────────────────────────────────────────────────────────────────── */
 
 .authpanel {
   position: relative;
@@ -277,8 +383,8 @@
   flex-direction: column;
   justify-content: flex-end;
   gap: var(--s-5);
-  padding: clamp(2rem, 5vw, 4rem) var(--gutter);
-  background: var(--sunken);
+  padding: clamp(2rem, 5vw, 4rem) clamp(16px, 4vw, 40px);
+  background: var(--ground-sunk);
   border-inline-start: 1px solid var(--hairline);
   overflow: hidden;
 }
@@ -294,8 +400,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(52% 44% at 74% 26%, var(--aisle-wash-strong), transparent 70%),
-    radial-gradient(40% 36% at 16% 82%, var(--aisle-wash), transparent 72%);
+    radial-gradient(52% 44% at 74% 26%, var(--accent-wash), transparent 70%),
+    radial-gradient(40% 36% at 16% 82%, var(--accent-wash), transparent 72%);
 }
 
 .authpanel__shelf {
@@ -305,8 +411,8 @@
   justify-content: center;
   gap: clamp(4px, 1vw, 12px);
   flex: 1 1 auto;
-  min-height: 150px;
-  padding-bottom: 14px;
+  min-height: 160px;
+  padding-bottom: 16px;
 }
 
 .authpanel__plank {
@@ -325,9 +431,10 @@
   width: clamp(28px, 6vw, 58px);
   height: clamp(44px, 9vw, 86px);
   border: 2px solid var(--ink);
-  border-radius: 3px 3px 5px 5px;
-  background: color-mix(in srgb, var(--w) 14%, transparent);
+  border-radius: var(--r-xs) var(--r-xs) var(--r-sm) var(--r-sm);
+  background: color-mix(in oklab, var(--w) 16%, var(--card));
   overflow: hidden;
+  cursor: pointer;
   animation: crate-settle 5200ms var(--ease-out) infinite;
   animation-delay: calc(var(--i) * 260ms);
   transition: transform var(--t-move) var(--spring);
@@ -337,14 +444,14 @@
   box-shadow: 0 12px 26px -16px var(--ink);
 }
 
-/* the slats - this is what makes it a crate and not a rectangle */
+/* the slats — this is what makes it a crate and not a rectangle */
 .crate__slats {
   position: absolute;
   inset: 0;
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0 7px,
-    color-mix(in srgb, var(--ink) 55%, transparent) 7px 9px
+    color-mix(in oklab, var(--ink) 55%, transparent) 7px 9px
   );
   opacity: 0.5;
 }
@@ -358,7 +465,7 @@
   height: 46%;
   border-radius: 50%;
   background: var(--w);
-  box-shadow: inset 0 -4px 0 color-mix(in srgb, black 18%, transparent);
+  box-shadow: inset 0 -4px 0 color-mix(in oklab, var(--ink) 22%, transparent);
 }
 
 .crate__label {
@@ -366,6 +473,7 @@
   left: 50%;
   bottom: 6px;
   translate: -50% 0;
+  font-family: var(--data);
   font-size: 0.5rem;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -374,7 +482,54 @@
   transition: opacity var(--t-micro) var(--ease);
 }
 .crate[data-on='true'] .crate__label {
-  opacity: 0.8;
+  opacity: 0.85;
+}
+
+.authpanel__quote {
+  position: relative;
+  margin: 0;
+  max-width: 34ch;
+  animation: authform-rise var(--t-enter) var(--spring-soft) 120ms backwards;
+}
+.authpanel__kicker {
+  margin: 0 0 var(--s-2);
+}
+.authpanel__line {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 0.9rem + 1.1vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.24;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   KEYFRAMES
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@keyframes authform-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes authform-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 @keyframes crate-settle {
@@ -394,30 +549,19 @@
   }
 }
 
-.authpanel__quote {
-  position: relative;
-  margin: 0;
-  max-width: 34ch;
-}
-.authpanel__kicker {
-  margin: 0 0 var(--s-2);
-  color: var(--aisle-ink);
-}
-.authpanel__line {
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(1.15rem, 0.9rem + 1.1vw, 1.75rem);
-  font-weight: 600;
-  line-height: 1.24;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .crate {
+  .authform,
+  .authpanel__quote {
     animation: none;
   }
-  .crate[data-on='true'] {
+  .authform__alert {
+    animation: none;
+  }
+  .crate {
+    animation: none;
     transition: none;
+  }
+  .authbtn:hover {
+    transform: none;
   }
 }

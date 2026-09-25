@@ -136,7 +136,7 @@ export function StorefrontView({ slug }: { slug: string }) {
     <div className="shell shop-page">
       {store.isFixture ? <FixtureBanner endpoint={`GET /stores/${slug}`} /> : null}
 
-      <header className="shop-front__head">
+      <header className="shop-page__head">
         <p className="eyebrow">
           <Link href="/stores">Stores</Link> · {shop.address.city || shop.city || 'Mandi'}
         </p>
@@ -200,7 +200,7 @@ export function StorefrontView({ slug }: { slug: string }) {
                   setAisleKey(group.aisleKey);
                 }}
               >
-                <span className="shop-tab__swatch" style={{ background: aisle.swatch }} aria-hidden="true" />
+                <span className="shop-tab__swatch" data-key={aisle.key} aria-hidden="true" />
                 {aisle.name}
                 <span className="mono"> {group.productCount}</span>
               </button>

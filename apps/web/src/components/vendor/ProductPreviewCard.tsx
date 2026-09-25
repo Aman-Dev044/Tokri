@@ -21,8 +21,8 @@
  */
 
 import type { AisleKey } from '@mandi/design-system';
-import { formatPaise } from '@/lib/admin/format';
 import type { ProductUnit } from '@/lib/vendor/types';
+import { formatPaise } from './format';
 
 export interface ProductPreviewCardProps {
   name: string;

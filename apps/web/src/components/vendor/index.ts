@@ -4,12 +4,14 @@
  * Everything the vendor panel is built from, exported from one place. Route
  * files import from `@/components/vendor` and never reach into a file under it.
  *
- * ── WHAT IS NOT HERE, ON PURPOSE ────────────────────────────────────────────
- * There is no vendor DataTable, no vendor StatusPill, no vendor Money. Those
- * live in `@/components/admin` and are imported from there unchanged. Two
- * implementations of "render a rupee" is how two surfaces end up disagreeing
- * about what a rupee looks like, and the rupee is the thing a shop owner is
- * most likely to notice.
+ * ── SELF-CONTAINED, ON PURPOSE ───────────────────────────────────────────────
+ * This surface used to borrow the admin console's component layer wholesale.
+ * That stopped being the right call once the panel moved to "Bento Pop": the
+ * two surfaces answer different questions, are rebuilt on different
+ * timelines by different people, and sharing a component layer means neither
+ * can be tuned for its reader without risking the other. So everything below
+ * is local to the vendor panel and pulls only tokens + the Bento primitives
+ * from `@mandi/design-system`.
  *
  * ── HOUSE RULES THESE COMPONENTS ENCODE ─────────────────────────────────────
  *   · Money is INTEGER PAISE. Pass paise to <Money/>. Never divide by 100.
@@ -18,6 +20,7 @@
  *     (lib/vendor/orders → STATUS_AISLE) and inside <ProductPreviewCard/>,
  *     which is a quotation of the customer app. Nowhere else.
  *   · The new-order alert pulses ONCE and then holds.
+ *   · Tables stay tables; only the dashboard and earnings are bento.
  *   · Every animation is off under `prefers-reduced-motion: reduce`, and every
  *     screen is complete and readable at rest.
  */
@@ -27,22 +30,88 @@ export { VendorShell } from './VendorShell';
 export { VendorAlertProvider, useVendorAlerts, ORDER_POLL_MS } from './VendorAlertProvider';
 export type { VendorAlertState } from './VendorAlertProvider';
 
-/* ── vendor-only atoms ──────────────────────────────────────────────────── */
-export { FreshLine, Segmented, Field, RupeeInput, EndpointError } from './primitives';
+/* ── page frame ─────────────────────────────────────────────────────────── */
+export { VenPage, VenSection } from './Page';
+export type { VenPageProps, VenSectionProps, Crumb } from './Page';
+
+/* ── atoms ──────────────────────────────────────────────────────────────── */
+export {
+  Money,
+  Num,
+  RelativeTime,
+  Pill,
+  OrderStatusPill,
+  SettlementStatusPill,
+  PartnerStatusPill,
+  Btn,
+  IconBtn,
+  Stat,
+  KpiCell,
+  FreshLine,
+  Segmented,
+  Field,
+  RupeeInput,
+  EmptyState,
+  EndpointError,
+  WriteFailure,
+  SkelLine,
+  SkelStat,
+  SkelChart,
+} from './primitives';
 export type {
+  MoneyProps,
+  RelativeTimeProps,
+  PillTone,
+  PillProps,
+  BtnVariant,
+  BtnSize,
+  BtnProps,
+  StatProps,
+  KpiTone,
+  KpiCellProps,
   FreshLineProps,
   SegmentedProps,
   SegmentedOption,
   FieldProps,
   RupeeInputProps,
+  EmptyStateProps,
   EndpointErrorProps,
 } from './primitives';
 
+/* ── icons ──────────────────────────────────────────────────────────────── */
+export * from './icons';
+
+/* ── tables ─────────────────────────────────────────────────────────────── */
+export { VenTable, Toolbar, ToolbarSpacer, SearchBox, SelectBox } from './table';
+export type { Column, VenTableProps, SelectOption } from './table';
+
+/* ── overlays ───────────────────────────────────────────────────────────── */
+export { Drawer, ConfirmDialog } from './overlay';
+export type { DrawerProps, ConfirmDialogProps } from './overlay';
+
+/* ── charts ─────────────────────────────────────────────────────────────── */
+export { BarChart, AreaChart, Sparkline, RankedBars } from './charts';
+export type { BarDatum } from './charts';
+
+/* ── cards ──────────────────────────────────────────────────────────────── */
 export { OrderCard, OrderCardSkeleton } from './OrderCard';
 export type { OrderCardProps } from './OrderCard';
 
 export { ProductPreviewCard } from './ProductPreviewCard';
 export type { ProductPreviewCardProps } from './ProductPreviewCard';
+
+/* ── formatting ─────────────────────────────────────────────────────────── */
+export {
+  formatPaise,
+  formatPaiseCompact,
+  formatCompact,
+  formatCount,
+  formatPct,
+  formatDate,
+  formatRelative,
+  humanise,
+} from './format';
+export type { DateStyle } from './format';
 
 /* ── screens ────────────────────────────────────────────────────────────── */
 export { DashboardView } from './dashboard/DashboardView';

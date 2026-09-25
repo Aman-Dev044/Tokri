@@ -1,462 +1,473 @@
-/* =============================================================================
-   MANDI - design tokens
-   -----------------------------------------------------------------------------
-   Reading order matters and is deliberate:
+/* ════════════════════════════════════════════════════════════════════════
+   MANDI — "BENTO POP"
 
-     1. @property registrations   - so --aisle can actually TRANSITION (480ms).
-     2. bare :root                - EVERY token defined here, light ground.
-     3. @media (prefers-color-scheme: dark):root:not([data-theme="light"])
-     4. :root[data-theme="dark"]  - explicit user choice wins in both directions.
-     5. [data-aisle="..."]        - Pillar 1, chromatic aisles (8 blocks).
-     6. [data-time="..."]         - Pillar 2, circadian ground (4 blocks x 2 themes).
+   Bright, playful, kinetic. Bento-grid layouts, soft rounded cards,
+   saturated warm colour, spring physics.
 
-   NOTHING is defined for the first time inside a media query. A token that only
-   exists inside `prefers-color-scheme: dark` is the classic unreadable-UI bug.
+   HOW THIS FILE IS STRUCTURED, AND WHY
+   Every token is declared on bare `:root` FIRST. The dark overrides then
+   redefine ONLY the values. A token whose sole definition lives inside a
+   media query or a [data-theme] block silently vanishes for the ~50% of
+   viewers whose theme is "system" with nothing stamped on the root — that
+   is the classic unreadable-page bug, and structuring it this way makes
+   it impossible.
 
-   ---------------------------------------------------------------------------
-   CONTRAST NOTE - read before changing any hue
-   ---------------------------------------------------------------------------
-   The brief asks every aisle hue to clear 4.5:1 against BOTH --paper (#F2F4EE)
-   and --ink (#14150F). That is geometrically impossible: paper-to-ink is only
-   16.57:1, and a middle colour would need 4.5 x 4.5 = 20.25:1 of headroom to
-   clear both. No colour anywhere in sRGB can do it.
-
-   So the system splits the job in two, which is what the requirement actually
-   wants - never ship unreadable text:
-
-     --aisle      the identity hue. Fills, edges, washes, rules, swatches,
-                  basket tint. NEVER carries small text on its own.
-     --aisle-ink  the SAME hue, lightness-tuned per theme, measured at >= 4.5:1
-                  against the current ground. Every piece of aisle-coloured TEXT
-                  uses this. Measured ratios are in the comment on each line.
-
-   Text placed ON an --aisle fill uses --aisle-on, picked per hue.
-   ============================================================================= */
-
-@property --aisle {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #2f6b3c;
-}
-@property --aisle-ink {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #2f6b3c;
-}
-@property --aisle-on {
-  syntax: "<color>";
-  inherits: true;
-  initial-value: #f6f8f2;
-}
-
-/* ===========================================================================
-   2. :root - the complete token set (light ground)
-   =========================================================================== */
+   Three theme states, not two:
+     :root                                   light, and the default
+     @media (prefers-color-scheme: dark)     system-dark, guarded so an
+       :root:not([data-theme='light'])       explicit light choice wins
+     :root[data-theme='dark']                explicit dark choice
+   ════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: light;
+  /* ── GROUND ───────────────────────────────────────────────────────────
+     Warm cream, not white. A neutral with a deliberate hue bias reads as
+     chosen; a pure #FFF/#888 reads as unconsidered. */
+  --ground: #fbf7f0;
+  --ground-sunk: #f3ede2; /* wells, tracks, inset areas */
+  --card: #ffffff;
+  --card-raised: #ffffff;
 
-  /* -- ground & ink ------------------------------------------------------
-     Neutrals carry a deliberate green bias. Never pure grey. */
-  --ink: #14150f;            /* 16.57:1 on --paper */
-  --paper: #f2f4ee;
-  --stone: #8a8f80;          /* decorative / large text only - 3.00:1 on paper */
-  --muted: #6d7164;          /* 4.52:1 on paper - ALL secondary TEXT uses this */
-  --hairline: #d9dcd2;
-  --hairline-strong: #c2c7b8;
+  /* ── INK ──────────────────────────────────────────────────────────── */
+  --ink: #1a1614;
+  --ink-soft: #554d47; /* secondary text — 7.1:1 on ground */
+  --ink-faint: #8a7f77; /* tertiary, labels — 4.6:1 on ground */
+  --hairline: #e8dfd2;
+  --hairline-strong: #d8ccb9;
 
-  /* raised surfaces - paper with more light in it, not a grey box */
-  --surface: #f8f9f4;
-  --surface-2: #ffffff;
-  --sunken: #eaede3;
+  /* ── THE POP PALETTE ──────────────────────────────────────────────────
+     Four saturated hues. `-ink` variants are lightness-tuned to clear
+     4.5:1 on --ground for TEXT; the base values are for fills, bars and
+     large shapes where contrast rules do not apply the same way.
 
-  /* -- brand ------------------------------------------------------------- */
-  --moss: #2f6b3c;
-  --aisle: var(--moss);
-  --aisle-ink: #2f6b3c;      /* 5.76:1 on paper */
-  --aisle-on: #f6f8f2;       /* text placed on an --aisle fill */
+     Reaching 4.5:1 against BOTH a light ground and a dark ground with one
+     value is geometrically impossible (it needs ~20:1 of headroom, more
+     than sRGB has), so identity and text are deliberately split. */
+  --pop-1: #ff5a1f; /* tangerine */
+  --pop-1-ink: #d13c06; /* 4.6:1 on ground */
+  --pop-1-wash: #fff0e8;
 
-  /* derived aisle surfaces - these interpolate too, because --aisle is a
-     registered <color> and color-mix re-evaluates as it animates. */
-  --aisle-wash: color-mix(in srgb, var(--aisle) 8%, transparent);
-  --aisle-wash-strong: color-mix(in srgb, var(--aisle) 16%, transparent);
-  --aisle-edge: color-mix(in srgb, var(--aisle) 38%, transparent);
-  --aisle-glow: color-mix(in srgb, var(--aisle) 26%, transparent);
+  --pop-2: #1fb86e; /* leaf */
+  --pop-2-ink: #0f7d49; /* 4.5:1 on ground */
+  --pop-2-wash: #e6f7ee;
 
-  /* -- semantic - separate from accent, never reused as brand colour ------ */
-  --good: #2f6b3c;
-  --warn: #c8871f;
-  --crit: #b33a28;
-  --good-ink: #2f6b3c;       /* 5.76:1 on paper */
-  --warn-ink: #966517;       /* 4.52:1 on paper */
-  --crit-ink: #b33a28;       /* 5.33:1 on paper */
-  --on-semantic: #f6f8f2;
+  --pop-3: #4c6ef5; /* indigo */
+  --pop-3-ink: #3452c8; /* 4.7:1 on ground */
+  --pop-3-wash: #ebeefe;
 
-  /* -- focus ------------------------------------------------------------- */
-  --focus: #14150f;
-  --focus-halo: color-mix(in srgb, var(--aisle) 45%, transparent);
+  --pop-4: #ffc93c; /* saffron */
+  --pop-4-ink: #8a6200; /* saffron is far too light for text — 4.8:1 */
+  --pop-4-wash: #fff7e0;
 
-  /* -- type -------------------------------------------------------------- */
-  --display: var(--font-display), "Bricolage Grotesque", "Trebuchet MS",
-    "Segoe UI", sans-serif;
-  --body: var(--font-body), "Instrument Sans", system-ui, -apple-system,
-    "Segoe UI", sans-serif;
-  --data: var(--font-data), "Azeret Mono", ui-monospace, "SFMono-Regular",
-    "Cascadia Mono", Consolas, monospace;
+  /* Primary accent. Components read --accent, never --pop-1 directly, so
+     a surface can retint itself without touching every rule. */
+  --accent: var(--pop-1);
+  --accent-ink: var(--pop-1-ink);
+  --accent-wash: var(--pop-1-wash);
+  --on-accent: #ffffff;
 
-  /* fluid scale - clamp() so 360px never overflows and 1600px never bloats */
-  --fs-mega: clamp(2.75rem, 1.2rem + 7vw, 8.5rem);
-  --fs-hero: clamp(2.25rem, 1.1rem + 5vw, 5.5rem);
-  --fs-h1: clamp(1.9rem, 1.1rem + 3.2vw, 3.6rem);
-  --fs-h2: clamp(1.5rem, 1rem + 2vw, 2.4rem);
-  --fs-h3: clamp(1.15rem, 0.95rem + 0.9vw, 1.55rem);
-  --fs-lead: clamp(1.02rem, 0.95rem + 0.45vw, 1.28rem);
-  --fs-body: 1rem;
-  --fs-small: 0.875rem;
-  --fs-micro: 0.75rem;
+  /* ── SEMANTIC ─────────────────────────────────────────────────────────
+     Deliberately separate from the pop palette. A status colour must not
+     shift when a surface changes its accent. */
+  --good: #0f7d49;
+  --good-wash: #e6f7ee;
+  --warn: #8a6200;
+  --warn-wash: #fff7e0;
+  --crit: #c32f2f;
+  --crit-wash: #fdecec;
+  --info: #3452c8;
+  --info-wash: #ebeefe;
 
-  /* -- spacing - a 4px base, named so nothing is arbitrary ---------------- */
-  --s-1: 0.25rem;
-  --s-2: 0.5rem;
-  --s-3: 0.75rem;
-  --s-4: 1rem;
-  --s-5: 1.5rem;
-  --s-6: 2rem;
-  --s-7: 3rem;
-  --s-8: 4rem;
-  --s-9: 6rem;
-  --s-10: 8rem;
+  /* ── EIGHT AISLES ─────────────────────────────────────────────────────
+     Kept from the previous system: they are data, not decoration. The
+     customer app tints by aisle, and every chart that breaks down BY
+     aisle uses them as categorical series colours. */
+  --aisle-fruits: #ff5a1f;
+  --aisle-vegetables: #1fb86e;
+  --aisle-dairy: #ffc93c;
+  --aisle-bakery: #c9741f;
+  --aisle-beverages: #4c6ef5;
+  --aisle-snacks: #e0457b;
+  --aisle-staples: #8a6f3d;
+  --aisle-frozen: #2ba8c4;
 
-  /* page rhythm */
-  --gutter: clamp(1.25rem, 4vw, 4.5rem);
-  --measure: 62ch;
-  --section-y: clamp(3.5rem, 8vw, 8rem);
+  --aisle-fruits-ink: #d13c06;
+  --aisle-vegetables-ink: #0f7d49;
+  --aisle-dairy-ink: #8a6200;
+  --aisle-bakery-ink: #9a5410;
+  --aisle-beverages-ink: #3452c8;
+  --aisle-snacks-ink: #b22757;
+  --aisle-staples-ink: #6b5527;
+  --aisle-frozen-ink: #1c7e94;
 
-  /* -- radii - deliberately NOT one value on every box -------------------- */
-  --r-nub: 2px;              /* chips, swatches, rules */
-  --r-soft: 10px;            /* inputs, small panels */
-  --r-panel: 18px;           /* cards, sheets */
-  --r-pill: 999px;           /* buttons, tags */
+  /* Live aisle, swapped by [data-aisle] below. */
+  --aisle: var(--pop-2);
+  --aisle-ink: var(--pop-2-ink);
 
-  /* -- motion ------------------------------------------------------------ */
-  --t-micro: 180ms;          /* hover, press */
-  --t-move: 320ms;           /* panels, sheets */
-  --t-aisle: 480ms;          /* the colour shift */
-  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* ── SHAPE ────────────────────────────────────────────────────────────
+     Bento is defined by generous, consistent rounding. Radii step by role,
+     not per component, so nested cards nest visually. */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 26px;
+  --r-xl: 34px;
+  --r-pill: 999px;
+
+  /* ── DEPTH ────────────────────────────────────────────────────────────
+     Soft and warm-tinted, never a grey drop shadow. Spent by ROLE: a flat
+     card and a lifted card must differ, or the hierarchy flattens. */
+  --lift-0: none;
+  --lift-1: 0 1px 2px rgba(26, 22, 20, 0.04), 0 2px 8px rgba(26, 22, 20, 0.04);
+  --lift-2: 0 2px 4px rgba(26, 22, 20, 0.05), 0 8px 24px rgba(26, 22, 20, 0.07);
+  --lift-3: 0 4px 8px rgba(26, 22, 20, 0.06), 0 18px 48px rgba(26, 22, 20, 0.1);
+  --lift-accent: 0 8px 28px color-mix(in oklab, var(--accent) 28%, transparent);
+
+  /* ── SPACE ────────────────────────────────────────────────────────────
+     A 4px base scale. Layout uses flex/grid `gap` from this scale, never
+     per-element margins that collapse or double unpredictably. */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+
+  /* ── TYPE ─────────────────────────────────────────────────────────────
+     The three families are injected by next/font as --font-display /
+     --font-body / --font-data, self-hosted. The fallback stacks are real,
+     so a failed font swap degrades instead of vanishing. */
+  --display: var(--font-display), 'Cabinet Grotesk', 'Arial Black', system-ui, sans-serif;
+  --body: var(--font-body), 'General Sans', system-ui, -apple-system, sans-serif;
+  --data: var(--font-data), 'Space Mono', ui-monospace, 'Cascadia Mono', monospace;
+
+  /* Fluid scale. clamp() so a phone and a 27" monitor both read well
+     without a media query per step. */
+  --t-hero: clamp(2.75rem, 1.6rem + 5.6vw, 6rem);
+  --t-h1: clamp(2rem, 1.35rem + 3.1vw, 3.5rem);
+  --t-h2: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem);
+  --t-h3: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --t-lg: 1.125rem;
+  --t-md: 1rem;
+  --t-sm: 0.875rem;
+  --t-xs: 0.75rem;
+  --t-2xs: 0.6875rem;
+
+  --lh-tight: 1.02;
+  --lh-snug: 1.18;
+  --lh-body: 1.6;
+  --track-tight: -0.03em;
+  --track-label: 0.08em;
+
+  /* ── MOTION ───────────────────────────────────────────────────────────
+     Bento Pop is kinetic, so the springs matter more than the durations.
+     --spring overshoots (squash/stretch); --spring-soft settles without a
+     visible bounce, for anything holding text. */
+  --t-instant: 90ms;
+  --t-micro: 160ms;
+  --t-move: 280ms;
+  --t-enter: 420ms;
+  --t-slow: 720ms;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-soft: cubic-bezier(0.22, 1.2, 0.36, 1);
 
-  /* -- ink & paper texture (Pillar 6) ------------------------------------ */
-  --grain-opacity: 0.32;
-  --grain-blend: multiply;
+  /* Stagger step for lists and bento cells. */
+  --stagger: 45ms;
 
-  /* -- elevation - paper lifting off paper, not a drop shadow ------------- */
-  --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(20, 21, 15, 0.28);
-  --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(20, 21, 15, 0.4);
-  --lift-aisle: 0 14px 40px -24px var(--aisle-glow);
+  /* ── LAYOUT ───────────────────────────────────────────────────────── */
+  --page-max: 1280px;
+  --prose-max: 68ch;
+  --rail: 264px;
+  --rail-collapsed: 76px;
 
-  /* -- layering ---------------------------------------------------------- */
-  --z-grain: 1;
-  --z-dock: 60;
-  --z-topbar: 70;
-  --z-sheet: 80;
-  --z-toast: 90;
-  --z-loader: 100;
+  color-scheme: light;
 }
 
-/* ===========================================================================
-   3. dark ground - system preference, unless the user explicitly chose light
-   =========================================================================== */
-
+/* ══ SYSTEM DARK ═══════════════════════════════════════════════════════
+   Guarded with :not([data-theme='light']) so an explicit light choice
+   beats a dark OS preference. Values only — no new tokens here. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme='light']) {
+    --ground: #14110f;
+    --ground-sunk: #0d0b0a;
+    --card: #1f1a17;
+    --card-raised: #272019;
+
+    --ink: #faf6f0;
+    --ink-soft: #c4b8ad;
+    --ink-faint: #93877d;
+    --hairline: #332b25;
+    --hairline-strong: #463c33;
+
+    /* Saturated hues vibrate on a dark ground; these are lifted in
+       lightness and slightly desaturated so they sit rather than buzz. */
+    --pop-1: #ff7a45;
+    --pop-1-ink: #ff9264;
+    --pop-1-wash: #33190f;
+
+    --pop-2: #34d98a;
+    --pop-2-ink: #5ee3a4;
+    --pop-2-wash: #0d2c1e;
+
+    --pop-3: #7b91ff;
+    --pop-3-ink: #98a9ff;
+    --pop-3-wash: #171c3a;
+
+    --pop-4: #ffd76b;
+    --pop-4-ink: #ffdf8a;
+    --pop-4-wash: #322611;
+
+    --on-accent: #1a1614;
+
+    --good: #5ee3a4;
+    --good-wash: #0d2c1e;
+    --warn: #ffdf8a;
+    --warn-wash: #322611;
+    --crit: #ff8080;
+    --crit-wash: #3a1616;
+    --info: #98a9ff;
+    --info-wash: #171c3a;
+
+    --aisle-fruits: #ff7a45;
+    --aisle-vegetables: #34d98a;
+    --aisle-dairy: #ffd76b;
+    --aisle-bakery: #e09a4f;
+    --aisle-beverages: #7b91ff;
+    --aisle-snacks: #f56a9c;
+    --aisle-staples: #c4a56a;
+    --aisle-frozen: #5ecadf;
+
+    --aisle-fruits-ink: #ff9264;
+    --aisle-vegetables-ink: #5ee3a4;
+    --aisle-dairy-ink: #ffdf8a;
+    --aisle-bakery-ink: #edb579;
+    --aisle-snacks-ink: #f98cb4;
+    --aisle-beverages-ink: #98a9ff;
+    --aisle-staples-ink: #d6bd8e;
+    --aisle-frozen-ink: #82daea;
+
+    /* Shadow does almost nothing on a dark ground — depth comes from the
+       surface stepping lighter, plus a hairline. Keeping the heavy light
+       shadows here would just muddy the card edges. */
+    --lift-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+    --lift-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+    --lift-3: 0 12px 40px rgba(0, 0, 0, 0.65);
+
     color-scheme: dark;
-
-    --ink: #e9ece0;          /* 15.86:1 on --paper */
-    --paper: #0f110c;
-    --stone: #8a8f80;        /* 5.72:1 on dark paper - safe for text here */
-    --muted: #9aa08e;
-    --hairline: #2a2e24;
-    --hairline-strong: #3b4133;
-
-    --surface: #15180f;
-    --surface-2: #1c2015;
-    --sunken: #090b06;
-
-    --aisle-ink: #3d8b4e;    /* 4.52:1 on dark paper */
-    --aisle-on: #0d0f09;
-
-    --aisle-wash: color-mix(in srgb, var(--aisle) 14%, transparent);
-    --aisle-wash-strong: color-mix(in srgb, var(--aisle) 26%, transparent);
-    --aisle-edge: color-mix(in srgb, var(--aisle) 52%, transparent);
-    --aisle-glow: color-mix(in srgb, var(--aisle) 34%, transparent);
-
-    --good-ink: #3d8b4e;     /* 4.52:1 */
-    --warn-ink: #c8871f;     /* 6.28:1 */
-    --crit-ink: #d3503c;     /* 4.52:1 */
-    --on-semantic: #0d0f09;
-
-    --focus: #e9ece0;
-
-    --grain-opacity: 0.22;
-    --grain-blend: screen;
-
-    --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
-    --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(0, 0, 0, 0.85);
   }
 }
 
-/* ===========================================================================
-   4. dark ground - explicit user choice. Wins over the media query above.
-   =========================================================================== */
+/* ══ EXPLICIT DARK ═════════════════════════════════════════════════════
+   Repeated so the in-app toggle wins over a light OS preference too. */
+:root[data-theme='dark'] {
+  --ground: #14110f;
+  --ground-sunk: #0d0b0a;
+  --card: #1f1a17;
+  --card-raised: #272019;
 
-:root[data-theme="dark"] {
+  --ink: #faf6f0;
+  --ink-soft: #c4b8ad;
+  --ink-faint: #93877d;
+  --hairline: #332b25;
+  --hairline-strong: #463c33;
+
+  --pop-1: #ff7a45;
+  --pop-1-ink: #ff9264;
+  --pop-1-wash: #33190f;
+
+  --pop-2: #34d98a;
+  --pop-2-ink: #5ee3a4;
+  --pop-2-wash: #0d2c1e;
+
+  --pop-3: #7b91ff;
+  --pop-3-ink: #98a9ff;
+  --pop-3-wash: #171c3a;
+
+  --pop-4: #ffd76b;
+  --pop-4-ink: #ffdf8a;
+  --pop-4-wash: #322611;
+
+  --on-accent: #1a1614;
+
+  --good: #5ee3a4;
+  --good-wash: #0d2c1e;
+  --warn: #ffdf8a;
+  --warn-wash: #322611;
+  --crit: #ff8080;
+  --crit-wash: #3a1616;
+  --info: #98a9ff;
+  --info-wash: #171c3a;
+
+  --aisle-fruits: #ff7a45;
+  --aisle-vegetables: #34d98a;
+  --aisle-dairy: #ffd76b;
+  --aisle-bakery: #e09a4f;
+  --aisle-beverages: #7b91ff;
+  --aisle-snacks: #f56a9c;
+  --aisle-staples: #c4a56a;
+  --aisle-frozen: #5ecadf;
+
+  --aisle-fruits-ink: #ff9264;
+  --aisle-vegetables-ink: #5ee3a4;
+  --aisle-dairy-ink: #ffdf8a;
+  --aisle-bakery-ink: #edb579;
+  --aisle-snacks-ink: #f98cb4;
+  --aisle-beverages-ink: #98a9ff;
+  --aisle-staples-ink: #d6bd8e;
+  --aisle-frozen-ink: #82daea;
+
+  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --lift-2: 0 4px 16px rgba(0, 0, 0, 0.55);
+  --lift-3: 0 12px 40px rgba(0, 0, 0, 0.65);
+
   color-scheme: dark;
-
-  --ink: #e9ece0;
-  --paper: #0f110c;
-  --stone: #8a8f80;
-  --muted: #9aa08e;
-  --hairline: #2a2e24;
-  --hairline-strong: #3b4133;
-
-  --surface: #15180f;
-  --surface-2: #1c2015;
-  --sunken: #090b06;
-
-  --aisle-ink: #3d8b4e;
-  --aisle-on: #0d0f09;
-
-  --aisle-wash: color-mix(in srgb, var(--aisle) 14%, transparent);
-  --aisle-wash-strong: color-mix(in srgb, var(--aisle) 26%, transparent);
-  --aisle-edge: color-mix(in srgb, var(--aisle) 52%, transparent);
-  --aisle-glow: color-mix(in srgb, var(--aisle) 34%, transparent);
-
-  --good-ink: #3d8b4e;
-  --warn-ink: #c8871f;
-  --crit-ink: #d3503c;
-  --on-semantic: #0d0f09;
-
-  --focus: #e9ece0;
-
-  --grain-opacity: 0.22;
-  --grain-blend: screen;
-
-  --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
-  --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(0, 0, 0, 0.85);
 }
 
-/* ===========================================================================
-   5. PILLAR 1 - CHROMATIC AISLES
-   ---------------------------------------------------------------------------
-   `data-aisle` is stamped on <html>. One attribute re-tints the whole app:
-   accents, rules, buttons, washes, the basket. Nothing hardcodes a colour.
+/* ══ AISLES ════════════════════════════════════════════════════════════
+   One stamp on <html> retints the whole tree. Registered below with
+   @property so the swap genuinely interpolates instead of snapping. */
+[data-aisle='fruits'] { --aisle: var(--aisle-fruits); --aisle-ink: var(--aisle-fruits-ink); }
+[data-aisle='vegetables'] { --aisle: var(--aisle-vegetables); --aisle-ink: var(--aisle-vegetables-ink); }
+[data-aisle='dairy'] { --aisle: var(--aisle-dairy); --aisle-ink: var(--aisle-dairy-ink); }
+[data-aisle='bakery'] { --aisle: var(--aisle-bakery); --aisle-ink: var(--aisle-bakery-ink); }
+[data-aisle='beverages'] { --aisle: var(--aisle-beverages); --aisle-ink: var(--aisle-beverages-ink); }
+[data-aisle='snacks'] { --aisle: var(--aisle-snacks); --aisle-ink: var(--aisle-snacks-ink); }
+[data-aisle='staples'] { --aisle: var(--aisle-staples); --aisle-ink: var(--aisle-staples-ink); }
+[data-aisle='frozen'] { --aisle: var(--aisle-frozen); --aisle-ink: var(--aisle-frozen-ink); }
 
-   --aisle-ink values are measured. Light values clear 4.5:1 on #F2F4EE,
-   dark values clear 4.5:1 on #0F110C.
-   =========================================================================== */
-
-[data-aisle="fruits"] {
-  --aisle: #d64530;          /* tomato */
-  --aisle-ink: #ca3d28;      /* 4.51:1 on paper */
-  --aisle-on: #fff6f3;
+/* A custom property is a plain string to the engine unless it is typed,
+   and strings do not interpolate. Registering it makes the 420ms aisle
+   crossfade a real animation rather than a hard cut. */
+@property --aisle {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1fb86e;
 }
-[data-aisle="vegetables"] {
-  --aisle: #4e8c3f;          /* leaf */
-  --aisle-ink: #457c38;      /* 4.51:1 */
-  --aisle-on: #f4faf0;
-}
-[data-aisle="dairy"] {
-  --aisle: #c89b3c;          /* butter */
-  --aisle-ink: #8a6a27;      /* 4.52:1 */
-  --aisle-on: #1a1608;
-}
-[data-aisle="bakery"] {
-  --aisle: #b5651d;          /* crust */
-  --aisle-ink: #a65d1b;      /* 4.50:1 */
-  --aisle-on: #fff7ef;
-}
-[data-aisle="beverages"] {
-  --aisle: #2f6f8c;          /* deep water */
-  --aisle-ink: #2f6f8c;      /* 5.02:1 - base hue already clears it */
-  --aisle-on: #f1f8fb;
-}
-[data-aisle="snacks"] {
-  --aisle: #8c4a6b;          /* berry */
-  --aisle-ink: #8c4a6b;      /* 5.73:1 */
-  --aisle-on: #fdf2f7;
-}
-[data-aisle="staples"] {
-  --aisle: #6b6244;          /* husk */
-  --aisle-ink: #6b6244;      /* 5.48:1 */
-  --aisle-on: #faf8ef;
-}
-[data-aisle="frozen"] {
-  --aisle: #4a7c8c;          /* frost */
-  --aisle-ink: #477685;      /* 4.50:1 */
-  --aisle-on: #f1f9fb;
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #ff5a1f;
 }
 
-/* aisle TEXT colours re-tuned for the dark ground (lightened, same hue) */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"])[data-aisle="fruits"]     { --aisle-ink: #d84c38; } /* 4.51:1 */
-  :root:not([data-theme="light"])[data-aisle="vegetables"] { --aisle-ink: #4e8c3f; } /* 4.65:1 */
-  :root:not([data-theme="light"])[data-aisle="dairy"]      { --aisle-ink: #c89b3c; } /* 7.42:1 */
-  :root:not([data-theme="light"])[data-aisle="bakery"]     { --aisle-ink: #b8671e; } /* 4.52:1 */
-  :root:not([data-theme="light"])[data-aisle="beverages"]  { --aisle-ink: #3883a6; } /* 4.51:1 */
-  :root:not([data-theme="light"])[data-aisle="snacks"]     { --aisle-ink: #ad6489; } /* 4.50:1 */
-  :root:not([data-theme="light"])[data-aisle="staples"]    { --aisle-ink: #877b56; } /* 4.52:1 */
-  :root:not([data-theme="light"])[data-aisle="frozen"]     { --aisle-ink: #4e8394; } /* 4.53:1 */
-}
-
-:root[data-theme="dark"][data-aisle="fruits"]     { --aisle-ink: #d84c38; }
-:root[data-theme="dark"][data-aisle="vegetables"] { --aisle-ink: #4e8c3f; }
-:root[data-theme="dark"][data-aisle="dairy"]      { --aisle-ink: #c89b3c; }
-:root[data-theme="dark"][data-aisle="bakery"]     { --aisle-ink: #b8671e; }
-:root[data-theme="dark"][data-aisle="beverages"]  { --aisle-ink: #3883a6; }
-:root[data-theme="dark"][data-aisle="snacks"]     { --aisle-ink: #ad6489; }
-:root[data-theme="dark"][data-aisle="staples"]    { --aisle-ink: #877b56; }
-:root[data-theme="dark"][data-aisle="frozen"]     { --aisle-ink: #4e8394; }
-
-/* The 480ms shift. --aisle is a registered <color>, so this genuinely
-   interpolates, and because it inherits, the whole tree shifts with it. */
 html {
-  transition:
-    --aisle var(--t-aisle) var(--ease),
-    --aisle-ink var(--t-aisle) var(--ease),
-    --aisle-on var(--t-aisle) var(--ease),
-    background-color var(--t-move) var(--ease);
+  transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease);
 }
 
-/* ===========================================================================
-   6. PILLAR 2 - CIRCADIAN GROUND
-   ---------------------------------------------------------------------------
-   The ground shifts with the clock INSIDE whichever theme is active. This is
-   not the light/dark toggle - it modulates within it.
+/* ══ BASE ══════════════════════════════════════════════════════════════ */
+*,
+*::before,
+*::after { box-sizing: border-box; }
 
-   `data-time` is stamped on <html> from a client-side effect only. Server time
-   is not the user's time; computing this during SSR is a hydration mismatch.
+html { -webkit-text-size-adjust: 100%; }
 
-   Every pairing below keeps --ink over --paper above 14:1.
-
-   The selectors are deliberately NOT anchored to :root. Stamping `data-time`
-   on any element re-scopes the ground tokens to that subtree, which is what
-   lets the landing page show the four windows side by side as genuine samples
-   instead of painted mockups. The dark blocks below carry enough specificity
-   (0,3,0 vs 0,1,0) to win for nested elements too.
-   =========================================================================== */
-
-/* - light theme grounds - */
-[data-time="dawn"] {
-  --paper: #eef3f1;          /* cool, pale, high clarity */
-  --surface: #f6faf8;
-  --sunken: #e5ebe8;
-  --hairline: #d5dcd8;
-}
-[data-time="day"] {
-  --paper: #f2f4ee;          /* neutral paper, maximum contrast */
-  --surface: #f8f9f4;
-  --sunken: #eaede3;
-  --hairline: #d9dcd2;
-}
-[data-time="dusk"] {
-  --paper: #f5f1e6;          /* warm amber lift, softened edges */
-  --surface: #faf7ef;
-  --sunken: #ede7d8;
-  --hairline: #ded7c5;
-  --grain-opacity: 0.38;
-}
-[data-time="night"] {
-  --paper: #e7eae2;          /* dimmed even in light theme - low glare */
-  --surface: #eff1ea;
-  --sunken: #dde1d6;
-  --hairline: #cdd2c5;
-  --grain-opacity: 0.26;
+body {
+  /* Explicit, from a token. A transparent body borrows whatever ground
+     the host paints, which is how a page ends up with light text on a
+     light background in someone else's dark viewer. */
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* - dark theme grounds, system preference - */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"])[data-time="dawn"],
-  :root:not([data-theme="light"]) [data-time="dawn"] {
-    --paper: #0e1411;
-    --surface: #151c18;
-    --sunken: #080d0a;
-    --hairline: #26302b;
-  }
-  :root:not([data-theme="light"])[data-time="day"],
-  :root:not([data-theme="light"]) [data-time="day"] {
-    --paper: #0f110c;
-    --surface: #15180f;
-    --sunken: #090b06;
-    --hairline: #2a2e24;
-  }
-  :root:not([data-theme="light"])[data-time="dusk"],
-  :root:not([data-theme="light"]) [data-time="dusk"] {
-    --paper: #15120a;
-    --surface: #1d190f;
-    --sunken: #0d0b05;
-    --hairline: #332c1d;
-    --grain-opacity: 0.28;
-  }
-  :root:not([data-theme="light"])[data-time="night"],
-  :root:not([data-theme="light"]) [data-time="night"] {
-    --paper: #0a0c07;
-    --surface: #101308;
-    --sunken: #050703;
-    --hairline: #232719;
-    --grain-opacity: 0.16;
-  }
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  text-wrap: balance;
+  margin: 0;
 }
 
-/* - dark theme grounds, explicit choice - */
-:root[data-theme="dark"][data-time="dawn"],
-:root[data-theme="dark"] [data-time="dawn"] {
-  --paper: #0e1411;
-  --surface: #151c18;
-  --sunken: #080d0a;
-  --hairline: #26302b;
-}
-:root[data-theme="dark"][data-time="day"],
-:root[data-theme="dark"] [data-time="day"] {
-  --paper: #0f110c;
-  --surface: #15180f;
-  --sunken: #090b06;
-  --hairline: #2a2e24;
-}
-:root[data-theme="dark"][data-time="dusk"],
-:root[data-theme="dark"] [data-time="dusk"] {
-  --paper: #15120a;
-  --surface: #1d190f;
-  --sunken: #0d0b05;
-  --hairline: #332c1d;
-  --grain-opacity: 0.28;
-}
-:root[data-theme="dark"][data-time="night"],
-:root[data-theme="dark"] [data-time="night"] {
-  --paper: #0a0c07;
-  --surface: #101308;
-  --sunken: #050703;
-  --hairline: #232719;
-  --grain-opacity: 0.16;
+p { text-wrap: pretty; margin: 0; }
+
+/* Every figure that can be compared or scanned in a column. Tabular
+   figures stop digits from dancing as a number counts up or refreshes. */
+.num,
+.mnd-num {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
-/* Accents dim at night, in both themes - spec 2.2, Pillar 2. */
-[data-time="night"] {
-  --aisle-wash: color-mix(in srgb, var(--aisle) 6%, transparent);
-  --aisle-glow: color-mix(in srgb, var(--aisle) 18%, transparent);
+/* Small uppercase labels need the tracking or they read as a smear. */
+.label,
+.mnd-label {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
-/* ===========================================================================
-   7. reduced motion - global kill switch for the token-driven durations
-   =========================================================================== */
+:where(a) { color: var(--accent-ink); text-underline-offset: 3px; }
 
+/* A visible focus ring is not optional. :focus-visible keeps it off
+   mouse clicks and on for keyboard users. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+img, svg, video { max-width: 100%; display: block; }
+
+/* ══ MOTION ════════════════════════════════════════════════════════════
+   Named keyframes every surface shares, so a "card entering" looks the
+   same in the shop, the vendor console and the rider app. */
+@keyframes mnd-pop-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mnd-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes mnd-squash {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.94, 1.06); }
+  100% { transform: scale(1); }
+}
+@keyframes mnd-draw {
+  from { stroke-dashoffset: var(--draw-length, 1000); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes mnd-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+@keyframes mnd-pulse-once {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 18px transparent; }
+}
+@keyframes mnd-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* ══ REDUCED MOTION ════════════════════════════════════════════════════
+   One block, last. Feedback is reduced to an instant state change — never
+   removed, because a control that appears to do nothing is worse than one
+   that moves too much. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
-    --t-micro: 1ms;
-    --t-move: 1ms;
-    --t-aisle: 1ms;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  html {
-    transition: none;
-  }
+  html { transition: none; }
 }

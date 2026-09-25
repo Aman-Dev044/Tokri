@@ -1,1131 +1,753 @@
 /* =============================================================================
-   MANDI — the rider surface.
+   MANDI RIDER — "BENTO POP" on a handlebar.
 
-   This is NOT the shopping app. Plan §2.4 gives this role its own rules and
-   they are the whole brief:
+   This is NOT the shopping app, and Bento Pop's job here is warmth and
+   clarity, not decoration. The rider rules override style every time:
 
-     · one action per screen — never two primary buttons competing
-     · 64px minimum touch target, because the rider is wearing gloves
-     · maximum contrast, because this is read outdoors, in sun and in rain
-     · a big mono ETA legible at arm's length
-     · one-handed: the primary action is ANCHORED TO THE BOTTOM, in the thumb
-     · no decoration. Nothing to hunt for.
+     · ONE action per screen. Never two primary buttons competing.
+     · 64px minimum touch target; the dock primary is 76px. Glove-friendly.
+     · Maximum contrast — read outdoors, in sunlight, in rain.
+     · A big mono ETA legible at arm's length.
+     · Thumb-reachable: the primary action is ANCHORED TO THE BOTTOM.
+     · The dock is exclusive: nav OR the one action, never both.
 
-   The chromatic-aisle system does NOT apply here. Colour is semantic only —
-   --good / --warn / --crit — because on this screen a colour is either an
-   instruction or it is noise.
+   ── TOKENS ONLY ─────────────────────────────────────────────────────────────
+   There is not one raw hex value in this file. Everything resolves through
+   `@mandi/design-system/tokens.css`. Where a colour needs an alpha or a blend
+   it is `color-mix(in oklab, <token> N%, …)`, never a hand-typed rgba.
 
-   ── CONTRAST ────────────────────────────────────────────────────────────────
-   The shared ground (--paper / --ink) is a warm off-white designed for reading
-   a shop. Direct sunlight eats it. So this surface re-derives its own ground
-   from the same palette, pushed to the ends: white-white on light, near-black
-   on dark. Those are defined ONCE below on `.shell` as the complete light set,
-   then overridden for dark in both the system-preference and the explicit
-   `data-theme` direction. Nothing is defined for the first time inside a media
-   query.
+   ── THE ROLE PALETTE ────────────────────────────────────────────────────────
+   Four pops, each given ONE job on this surface so a colour is an instruction
+   rather than a mood:
+
+     --go    leaf     advance, confirm, online          (pop-2)
+     --hot   tangerine the offer, the countdown, urgency (pop-1)
+     --way   indigo   navigation, pickup, links          (pop-3)
+     --cash  saffron  money the rider is holding         (pop-4)
+     --stop  crit     refuse, lock, sign out             (semantic)
+
+   FILLS vs TEXT. Reaching 4.5:1 on both a cream ground and a near-black one
+   with a single value is geometrically impossible, which is why the token file
+   splits `--pop-N` from `--pop-N-ink`. So every filled control here takes the
+   INK value in light (dark fill, white label) and the BASE value in dark
+   (bright fill, dark label) — `--on-accent` already flips for exactly this.
+   That is the whole reason the `--go` / `--hot` / `--way` locals exist.
 
    ── DARK IS THE REAL USE CASE ───────────────────────────────────────────────
-   Riders work evenings. Dark here is not a courtesy mode: the ground goes to
-   near-black so the screen does not blind at 10pm, and every semantic hue is
-   re-tuned against it rather than reused from the light set.
+   Riders work evenings. Dark here is not a courtesy mode. The ground drops to
+   near-black so the screen does not blind at 10pm, every pop is re-taken from
+   the lifted dark values, and depth stops coming from shadow (which does
+   nothing on black) and starts coming from the surface stepping lighter plus a
+   hairline. Both themes are declared in full; nothing is defined for the first
+   time inside a media query.
    ============================================================================= */
 
+/* ══ ROLE PALETTE — light, and the default ═════════════════════════════════ */
+
+.shell,
+.gate {
+  --go: var(--pop-2-ink);
+  --go-on: var(--on-accent);
+  --go-soft: var(--pop-2-wash);
+  --go-text: var(--pop-2-ink);
+
+  --hot: var(--pop-1-ink);
+  --hot-on: var(--on-accent);
+  --hot-soft: var(--pop-1-wash);
+  --hot-text: var(--pop-1-ink);
+
+  --way: var(--pop-3-ink);
+  --way-on: var(--on-accent);
+  --way-soft: var(--pop-3-wash);
+  --way-text: var(--pop-3-ink);
+
+  --cash-soft: var(--pop-4-wash);
+  --cash-edge: var(--pop-4);
+  --cash-text: var(--pop-4-ink);
+
+  --stop: var(--crit);
+  --stop-on: var(--on-accent);
+  --stop-soft: var(--crit-wash);
+  --stop-text: var(--crit);
+
+  /* Every touch target on this surface, in one place. */
+  --tap: 64px;
+  --tap-primary: 76px;
+  /* What `main` reserves so a fixed dock never covers the last control. */
+  --dock-h: 112px;
+
+  --edge: color-mix(in oklab, var(--ink) 14%, var(--hairline));
+  --sheet-lift: 0 -1px 0 var(--hairline-strong),
+    0 -18px 36px -24px color-mix(in oklab, var(--ink) 55%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .shell,
+  :global(:root:not([data-theme='light'])) .gate {
+    /* Values only. Every one of these tokens already exists above. */
+    --go: var(--pop-2);
+    --hot: var(--pop-1);
+    --way: var(--pop-3);
+    --stop: var(--crit);
+
+    --edge: color-mix(in oklab, var(--ink) 22%, var(--hairline));
+    --sheet-lift: 0 -1px 0 var(--hairline-strong),
+      0 -18px 36px -18px color-mix(in oklab, var(--ground-sunk) 92%, transparent);
+  }
+}
+
+:global(:root[data-theme='dark']) .shell,
+:global(:root[data-theme='dark']) .gate {
+  --go: var(--pop-2);
+  --hot: var(--pop-1);
+  --way: var(--pop-3);
+  --stop: var(--crit);
+
+  --edge: color-mix(in oklab, var(--ink) 22%, var(--hairline));
+  --sheet-lift: 0 -1px 0 var(--hairline-strong),
+    0 -18px 36px -18px color-mix(in oklab, var(--ground-sunk) 92%, transparent);
+}
+
+/* ══ MOTION ════════════════════════════════════════════════════════════════
+   Restrained and functional. A rider is not browsing: nothing on a job screen
+   moves unless it is telling them something. Every rule below is neutralised
+   by the reduced-motion block at the foot of this file. */
+
+@keyframes rdPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes rdSlideForward {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Once, then hold. A status that keeps blinking stops being read. */
+@keyframes rdPulseOnce {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--go) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+
+@keyframes rdUrgent {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.055);
+  }
+}
+
+@keyframes rdShimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes rdSquash {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(0.95, 1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ══ SHELL ═════════════════════════════════════════════════════════════════ */
+
 .shell {
-  /* -- ground, light (complete set) -- */
-  --rd-ground: #ffffff;
-  --rd-panel: #f1f3ec;
-  --rd-panel-2: #e6e9df;
-  --rd-ink: #0b0c08;
-  --rd-ink-2: #454a3c; /* 8.9:1 on white — secondary text, still high */
-  --rd-line: #b7bdac;
-  --rd-line-strong: #8a9080;
-
-  /* -- semantic, measured against --rd-ground -- */
-  --rd-good: #1f5c2c; /* 7.4:1 on white */
-  --rd-good-fill: #1f5c2c;
-  --rd-warn: #7d5310; /* 6.4:1 */
-  --rd-warn-fill: #b8791a;
-  --rd-crit: #9e2b19; /* 7.6:1 */
-  --rd-crit-fill: #b33a28;
-  --rd-on-fill: #ffffff;
-
-  /* -- the dock shadow: a lift, not a drop shadow -- */
-  --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -22px rgba(0, 0, 0, 0.6);
-
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  /* 100dvh, so a mobile browser's collapsing URL bar does not clip the dock. */
+  grid-template-rows: auto 1fr;
+  /* 100dvh so a collapsing mobile URL bar never clips anything. */
   min-height: 100dvh;
-  background: var(--rd-ground);
-  color: var(--rd-ink);
+  background: var(--ground);
+  color: var(--ink);
   /* Nothing on this surface may scroll sideways. Ever. */
   overflow-x: clip;
 }
 
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme='light'])) .shell {
-    --rd-ground: #070805;
-    --rd-panel: #14170f;
-    --rd-panel-2: #1e2217;
-    --rd-ink: #f4f6ee;
-    --rd-ink-2: #a9b09b; /* 9.1:1 on #070805 */
-    --rd-line: #363c2c;
-    --rd-line-strong: #565e48;
-
-    --rd-good: #58b06b; /* 7.9:1 */
-    --rd-good-fill: #2f7a41;
-    --rd-warn: #e0a02c; /* 10.3:1 */
-    --rd-warn-fill: #9c6a12;
-    --rd-crit: #f07357; /* 7.7:1 */
-    --rd-crit-fill: #b33a28;
-    --rd-on-fill: #ffffff;
-
-    --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -20px rgba(0, 0, 0, 0.9);
-  }
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--s-4) var(--s-4)
+    calc(var(--dock-h) + env(safe-area-inset-bottom, 0px) + var(--s-4));
+  min-width: 0;
 }
 
-:global(:root[data-theme='dark']) .shell {
-  --rd-ground: #070805;
-  --rd-panel: #14170f;
-  --rd-panel-2: #1e2217;
-  --rd-ink: #f4f6ee;
-  --rd-ink-2: #a9b09b;
-  --rd-line: #363c2c;
-  --rd-line-strong: #565e48;
-
-  --rd-good: #58b06b;
-  --rd-good-fill: #2f7a41;
-  --rd-warn: #e0a02c;
-  --rd-warn-fill: #9c6a12;
-  --rd-crit: #f07357;
-  --rd-crit-fill: #b33a28;
-  --rd-on-fill: #ffffff;
-
-  --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -20px rgba(0, 0, 0, 0.9);
-}
-
-/* ===========================================================================
-   Header — deliberately short. Everything a thumb needs is at the bottom.
-   =========================================================================== */
+/* ══ HEADER ════════════════════════════════════════════════════════════════
+   Short on purpose. Everything a thumb needs is at the BOTTOM — the one
+   exception being the online toggle, which is the app's single most important
+   control and belongs where it cannot be missed or hit by accident. */
 
 .header {
   position: sticky;
   top: 0;
-  z-index: 5;
-  background: var(--rd-ground);
-  border-bottom: 2px solid var(--rd-line);
-  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 0.5rem;
+  z-index: 20;
+  background: color-mix(in oklab, var(--ground) 92%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hairline);
+  padding: max(var(--s-2), env(safe-area-inset-top, 0px)) var(--s-4) var(--s-3);
+}
+
+.headerInner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .headerTop {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-height: 2.5rem;
-}
-
-.brand {
-  font-family: var(--display);
-  font-size: 1.05rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  text-transform: uppercase;
-}
-
-.brandRole {
-  color: var(--rd-ink-2);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  font-size: 0.7rem;
-}
-
-/* ===========================================================================
-   The online / offline toggle — THE control on this surface.
-   Full width, 72px tall, unmistakable in either state.
-   =========================================================================== */
-
-.toggle {
-  width: 100%;
-  min-height: 72px;
-  margin-top: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0 1rem;
-  border: 3px solid var(--rd-line-strong);
-  border-radius: var(--r-panel);
-  background: var(--rd-panel);
-  color: var(--rd-ink);
-  font: inherit;
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease);
-}
-
-.toggleOn {
-  background: var(--rd-good-fill);
-  border-color: var(--rd-good-fill);
-  color: var(--rd-on-fill);
-}
-
-.toggle:disabled {
-  opacity: 0.65;
-  cursor: wait;
-}
-
-.toggleLamp {
-  flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 50%;
-  background: var(--rd-line-strong);
-  box-shadow: inset 0 0 0 3px var(--rd-panel);
-}
-
-.toggleOn .toggleLamp {
-  background: var(--rd-on-fill);
-  box-shadow: inset 0 0 0 3px var(--rd-good-fill);
-}
-
-.toggleText {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+  gap: var(--s-2);
   min-width: 0;
 }
 
-.toggleHint {
-  font-size: 0.8rem;
-  font-weight: 600;
-  opacity: 0.85;
-}
-
-/* ===========================================================================
-   Today's line — earnings + count + connection, one compact strip.
-   =========================================================================== */
-
-.todayStrip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.todayCell {
-  display: flex;
+.brand {
+  display: inline-flex;
   align-items: baseline;
-  gap: 0.35rem;
-  font-size: 0.78rem;
-  color: var(--rd-ink-2);
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  gap: var(--s-2);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  color: inherit;
+  text-decoration: none;
+  margin-right: auto;
+  min-width: 0;
 }
 
-.todayValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
+.brandRole {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
   font-weight: 700;
-  color: var(--rd-ink);
+  letter-spacing: var(--track-label);
+  color: var(--hot-on);
+  background: var(--hot);
+  border-radius: var(--r-pill);
+  padding: 3px var(--s-2);
 }
 
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-left: auto;
-  min-width: 0;
+  gap: var(--s-2);
+  flex: 0 0 auto;
 }
 
-/* The account button. 44px in the header is the ONE place a 64px target does
-   not fit — the header is deliberately short so the thumb zone stays free —
-   so it is padded to 44 and its real destructive action lives on the sheet it
-   opens, at 64px+, in the dock. Opening a sheet is not a destructive act. */
-.accountBtn {
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-soft);
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  cursor: pointer;
-  padding: 0;
-}
-
+/* Connection state. A dot alone would carry meaning by colour only, so the
+   word is always there beside it. */
 .conn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-  font-size: 0.72rem;
+  gap: var(--s-2);
+  min-height: 44px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--rd-ink-2);
-  background: none;
-  border: 0;
-  padding: 0.35rem 0;
   cursor: pointer;
-  font-family: inherit;
+  transition: transform var(--t-micro) var(--spring-soft);
+}
+
+.conn:active {
+  transform: scale(0.95);
 }
 
 .connDot {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 50%;
-  background: var(--rd-line-strong);
-  flex: none;
-}
-
-.connLive .connDot {
-  background: var(--rd-good);
-}
-.connRetry .connDot {
-  background: var(--rd-warn);
-}
-.connFailed .connDot {
-  background: var(--rd-crit);
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  background: var(--ink-faint);
+  flex: 0 0 auto;
 }
 
 .connLive {
-  color: var(--rd-good);
+  border-color: color-mix(in oklab, var(--go) 45%, transparent);
+  background: var(--go-soft);
+  color: var(--go-text);
 }
+.connLive .connDot {
+  background: var(--go);
+}
+
 .connRetry {
-  color: var(--rd-warn);
+  border-color: color-mix(in oklab, var(--warn) 45%, transparent);
+  background: var(--warn-wash);
+  color: var(--warn);
 }
+.connRetry .connDot {
+  background: var(--warn);
+}
+
 .connFailed {
-  color: var(--rd-crit);
+  border-color: color-mix(in oklab, var(--stop) 45%, transparent);
+  background: var(--stop-soft);
+  color: var(--stop-text);
+}
+.connFailed .connDot {
+  background: var(--stop);
 }
 
-/* ===========================================================================
-   Main
-   =========================================================================== */
+.accountBtn {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: transform var(--t-micro) var(--spring-soft);
+}
 
-.main {
-  padding: 0.875rem 0.75rem 1.25rem;
+.accountBtn:active {
+  transform: scale(0.93);
+}
+
+/* ── THE control ─────────────────────────────────────────────────────────── */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: 72px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-lg);
+  border: 2px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease),
+    transform var(--t-micro) var(--spring-soft);
+}
+
+.toggle:active {
+  transform: scale(0.985);
+}
+
+.toggle:disabled {
+  opacity: 0.68;
+  cursor: progress;
+}
+
+.toggleOn {
+  background: var(--go);
+  border-color: var(--go);
+  color: var(--go-on);
+  animation: rdPulseOnce 700ms var(--ease-out) 1;
+}
+
+.toggleLamp {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-pill);
+  background: var(--ink-faint);
+  flex: 0 0 auto;
+  transition: background var(--t-move) var(--ease);
+}
+
+.toggleOn .toggleLamp {
+  background: var(--go-on);
+}
+
+.toggleText {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: 2px;
+  min-width: 0;
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+
+.toggleHint {
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink-faint);
+}
+
+.toggleOn .toggleHint {
+  color: color-mix(in oklab, var(--go-on) 80%, transparent);
+}
+
+/* ── Today, in the header, always ────────────────────────────────────────── */
+
+.todayStrip {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-2);
   min-width: 0;
 }
 
+.todayCell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.todayValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-md);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.todayName {
+  margin-left: auto;
+  align-self: center;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+/* ══ DOCK ══════════════════════════════════════════════════════════════════
+   Fixed to the bottom edge, not parked at the end of the document: a rider
+   must never have to scroll to reach the action. `main` reserves the height,
+   so nothing is ever hidden beneath it.
+
+   THE RULE: this holds EITHER the navigation OR the screen's one primary
+   action. Never both. During a job the nav is gone — the job owns the phone. */
+
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  background: color-mix(in oklab, var(--ground) 94%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--sheet-lift);
+  padding: var(--s-3) var(--s-4)
+    calc(var(--s-3) + env(safe-area-inset-bottom, 0px));
+}
+
+.dockInner {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-1);
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--tap);
+  padding: var(--s-2) 2px;
+  border-radius: var(--r-md);
+  color: var(--ink-faint);
+  text-decoration: none;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  transition:
+    background var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring-soft);
+}
+
+.navItem:active {
+  transform: scale(0.93);
+}
+
+.navItemActive {
+  background: var(--way-soft);
+  color: var(--way-text);
+}
+
+.navBadge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--hot);
+  color: var(--hot-on);
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ══ BUTTONS ═══════════════════════════════════════════════════════════════ */
+
+.primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: var(--tap-primary);
+  padding: 0 var(--s-4);
+  border: none;
+  border-radius: var(--r-lg);
+  background: var(--go);
+  color: var(--go-on);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--t-micro) var(--spring),
+    filter var(--t-micro) var(--ease);
+}
+
+.primary:active {
+  animation: rdSquash var(--t-move) var(--spring) 1;
+}
+
+.primary:disabled {
+  background: var(--ground-sunk);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.primaryCrit {
+  background: var(--stop);
+  color: var(--stop-on);
+}
+
+.decline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--tap-primary);
+  padding: 0 var(--s-3);
+  border-radius: var(--r-lg);
+  border: 2px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--t-micro) var(--spring);
+}
+
+.decline:active {
+  animation: rdSquash var(--t-move) var(--spring) 1;
+}
+
+.decline:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Accept and Decline are the ONE deliberate exception to "one action per
+   screen" — an offer is a genuine binary. They are still not peers: Accept
+   takes twice the width and the fill; Decline is an outline. */
+.choiceRow {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) 2fr;
+  gap: var(--s-2);
+}
+
+.ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: var(--tap);
+  width: 100%;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 2px solid var(--hairline-strong);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--t-micro) var(--spring-soft);
+}
+
+.ghost:active {
+  transform: scale(0.97);
+}
+
+.ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary, 64px, full-width: "Open in Google Maps", "Call customer". These
+   never compete with the dock — they are how the rider LEAVES this app. */
+.linkRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.linkBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 2px solid color-mix(in oklab, var(--way) 40%, transparent);
+  background: var(--way-soft);
+  color: var(--way-text);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--t-micro) var(--spring-soft);
+}
+
+.linkBtn:active {
+  transform: scale(0.97);
+}
+
+.linkBtn:disabled {
+  opacity: 0.5;
+}
+
+/* ══ SURFACES ══════════════════════════════════════════════════════════════ */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+}
+
+.panelFlat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--ground-sunk);
+  border: 1px solid var(--hairline);
+  min-width: 0;
+}
+
+/* ══ TYPE ══════════════════════════════════════════════════════════════════ */
+
 .h1 {
   font-family: var(--display);
-  font-size: 1.6rem;
+  font-size: var(--t-h2);
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
 }
 
 .h2 {
   font-family: var(--display);
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: var(--t-h3);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  margin: 0;
 }
 
 .lede {
-  color: var(--rd-ink-2);
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
-.panel {
-  background: var(--rd-panel);
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  padding: 1rem;
-}
-
-.panelFlat {
-  background: none;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  padding: 1rem;
+  font-family: var(--body);
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  margin: 0;
+  text-wrap: pretty;
 }
 
 .stepTag {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-family: var(--data);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rd-ink-2);
-}
-
-/* ===========================================================================
-   The big mono numbers. Azeret Mono, tabular-nums, readable at arm's length.
-   =========================================================================== */
-
-.mega {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  line-height: 0.95;
-  letter-spacing: -0.03em;
-  font-size: clamp(3.25rem, 19vw, 5.5rem);
-}
-
-.megaUnit {
+  gap: var(--s-2);
   font-family: var(--body);
-  font-size: 0.95rem;
+  font-size: var(--t-2xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--rd-ink-2);
-}
-
-.etaRow {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-/* COD — the number the rider must not get wrong. */
-.cod {
-  border: 3px solid var(--rd-warn-fill);
-  border-radius: var(--r-panel);
-  padding: 0.875rem 1rem;
-  background: var(--rd-ground);
-}
-
-.codLabel {
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--rd-warn);
-}
-
-.codValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: clamp(2.75rem, 16vw, 4.25rem);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  display: flex;
-  align-items: baseline;
-  gap: 0.25rem;
-}
-
-.codRupee {
-  font-size: 0.55em;
-}
-
-.prepaid {
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  padding: 0.75rem 1rem;
-  font-weight: 700;
-  color: var(--rd-good);
-}
-
-/* ===========================================================================
-   Addresses — the primary artefact when there is no map, which is today.
-   =========================================================================== */
-
-.place {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.placeKind {
-  font-family: var(--data);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--rd-ink-2);
-}
-
-.placeLabel {
-  font-size: 1.25rem;
-  font-weight: 800;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.placeAddress {
-  font-size: 1.05rem;
-  line-height: 1.45;
-  overflow-wrap: anywhere;
-}
-
-.placeNote {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--rd-warn);
-  overflow-wrap: anywhere;
-}
-
-/* A row of secondary, equally-weighted links. Never a primary action. */
-.linkRow {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.25rem;
-}
-
-.linkBtn {
-  flex: 1 1 10rem;
-  min-height: 64px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0 0.875rem;
-  border: 2px solid var(--rd-line-strong);
-  border-radius: var(--r-panel);
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  font: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  text-decoration: none;
-  text-align: center;
-  cursor: pointer;
-}
-
-/* ===========================================================================
-   The map slot — and its designed absence.
-
-   NEXT_PUBLIC_MAPS_BROWSER_KEY is empty, so this is what ships today. It is a
-   real element with a real height so the layout does not jump when a key
-   arrives; it is not an apology box.
-   =========================================================================== */
-
-.mapSlot {
-  border: 2px dashed var(--rd-line-strong);
-  border-radius: var(--r-panel);
-  min-height: 140px;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  text-align: center;
-  color: var(--rd-ink-2);
-  background: repeating-linear-gradient(
-    135deg,
-    transparent 0 10px,
-    var(--rd-panel) 10px 20px
-  );
-}
-
-.mapSlotText {
-  font-size: 0.9rem;
-  font-weight: 600;
-  max-width: 28ch;
-  line-height: 1.4;
-}
-
-.mapLive {
-  border-radius: var(--r-panel);
-  overflow: hidden;
-  border: 2px solid var(--rd-line);
-}
-
-/* ===========================================================================
-   Items to collect
-   =========================================================================== */
-
-.items {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  min-height: 56px;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--rd-line);
-  font-size: 1.05rem;
-}
-
-.item:last-child {
-  border-bottom: 0;
-}
-
-.itemQty {
-  flex: none;
-  min-width: 3.25rem;
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.itemName {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* ===========================================================================
-   The offer card — payout BEFORE accepting, countdown impossible to miss.
-   =========================================================================== */
-
-.offerHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.countdown {
-  flex: none;
-  min-width: 5.5rem;
-  text-align: center;
-  border: 3px solid var(--rd-good-fill);
-  border-radius: var(--r-panel);
-  padding: 0.5rem 0.25rem;
-  color: var(--rd-good);
-}
-
-.countdownUrgent {
-  border-color: var(--rd-crit-fill);
-  color: var(--rd-crit);
-}
-
-.countdownValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 2.25rem;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.countdownLabel {
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-/* The urgency pulse. Rest state is fully readable; this only adds emphasis,
-   and it is off entirely under reduced motion. */
-@media (prefers-reduced-motion: no-preference) {
-  .countdownUrgent {
-    animation: rdPulse 1s steps(2, end) infinite;
-  }
-}
-
-@keyframes rdPulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
-.payoutBlock {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.payoutValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: clamp(2.5rem, 14vw, 3.5rem);
-  line-height: 1;
-  letter-spacing: -0.03em;
-}
-
-.facts {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.fact {
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-soft);
-  padding: 0.5rem;
-  text-align: center;
-  min-width: 0;
-}
-
-.factValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.15rem;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-
-.factLabel {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rd-ink-2);
-  margin-top: 0.15rem;
-}
-
-/* ===========================================================================
-   OTP — four big boxes. The app NEVER knows the correct value.
-   =========================================================================== */
-
-.otpRow {
-  display: flex;
-  gap: 0.6rem;
-  justify-content: center;
-  margin: 0.5rem 0;
-}
-
-.otpBox {
-  width: 4rem;
-  height: 5rem;
-  border: 3px solid var(--rd-line-strong);
-  border-radius: var(--r-soft);
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: 2.25rem;
-  font-weight: 700;
-  text-align: center;
-  padding: 0;
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
-.otpBox::-webkit-outer-spin-button,
-.otpBox::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.otpBox:focus-visible {
-  outline: 3px solid var(--rd-ink);
-  outline-offset: 2px;
-  border-color: var(--rd-ink);
-}
-
-.otpFilled {
-  border-color: var(--rd-ink);
-}
-
-.otpError {
-  border-color: var(--rd-crit-fill);
-}
-
-.attempts {
-  text-align: center;
-  font-weight: 700;
-  font-size: 0.95rem;
-}
-
-.attemptsLow {
-  color: var(--rd-crit);
-}
-
-.locked {
-  border: 3px solid var(--rd-crit-fill);
-  border-radius: var(--r-panel);
-  padding: 1rem;
-  color: var(--rd-crit);
-  font-weight: 700;
-}
-
-/* ===========================================================================
-   The dock — the bottom of the viewport, where the thumb is.
-   It holds EITHER the nav OR the one primary action. Never both.
-   =========================================================================== */
-
-.dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 6;
-  background: var(--rd-ground);
-  box-shadow: var(--rd-dock-lift);
-  padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
-}
-
-.nav {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.25rem;
-}
-
-.navItem {
-  min-height: 64px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  border-radius: var(--r-soft);
-  border: 2px solid transparent;
-  color: var(--rd-ink-2);
-  text-decoration: none;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  min-width: 0;
-}
-
-.navItemActive {
-  color: var(--rd-ink);
-  border-color: var(--rd-line-strong);
-  background: var(--rd-panel);
-}
-
-.navBadge {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  background: var(--rd-crit-fill);
-  color: var(--rd-on-fill);
-  border-radius: var(--r-pill);
-  padding: 0 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  min-width: 1.25rem;
-  text-align: center;
-}
-
-/* The one primary action. Big, bottom, unmissable. */
-.primary {
-  width: 100%;
-  min-height: 76px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 0 1rem;
-  border: 3px solid var(--rd-good-fill);
-  border-radius: var(--r-panel);
-  background: var(--rd-good-fill);
-  color: var(--rd-on-fill);
-  font: inherit;
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  text-decoration: none;
-  text-align: center;
-}
-
-.primary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-.primaryCrit {
-  border-color: var(--rd-crit-fill);
-  background: var(--rd-crit-fill);
-}
-
-/* Accept / Decline: the ONE screen with two buttons, and they are not peers —
-   Accept is the filled primary, Decline is an outline. The offer is a genuine
-   binary choice, so both must be one tap away. */
-.choiceRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-  gap: 0.5rem;
-}
-
-.decline {
-  min-height: 76px;
-  border: 3px solid var(--rd-line-strong);
-  border-radius: var(--r-panel);
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  font: inherit;
-  font-size: 1.1rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* A quiet, secondary text action that must never read as the primary. */
-.ghost {
-  min-height: 64px;
-  width: 100%;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  background: none;
-  color: var(--rd-ink-2);
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* ===========================================================================
-   Banners
-   =========================================================================== */
-
-.banner {
-  border: 3px solid var(--rd-warn-fill);
-  border-radius: var(--r-panel);
-  padding: 0.75rem 0.875rem;
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  font-weight: 600;
-}
-
-.bannerTitle {
-  font-weight: 800;
-  display: block;
-  margin-bottom: 0.15rem;
-}
-
-.bannerCode {
-  font-family: var(--data);
-  font-size: 0.8rem;
-  overflow-wrap: anywhere;
-}
-
-.bannerCrit {
-  border-color: var(--rd-crit-fill);
-  color: var(--rd-crit);
-}
-
-.bannerNeutral {
-  border-color: var(--rd-line-strong);
-  color: var(--rd-ink-2);
-}
-
-/* Location honesty badge (plan §8.7 #16). */
-.locBadge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-pill);
-  padding: 0.5rem 0.75rem;
-  color: var(--rd-ink-2);
-  min-height: 44px;
-}
-
-.locBadgeWarn {
-  border-color: var(--rd-warn-fill);
-  color: var(--rd-warn);
-}
-
-.locBadgeValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ===========================================================================
-   Resting state — calm, deliberately empty
-   =========================================================================== */
-
-.resting {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.75rem;
-  padding: 2.5rem 1rem;
-  color: var(--rd-ink-2);
-}
-
-.restingMark {
-  color: var(--rd-line-strong);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .restingMark {
-    animation: rdBreathe 4s var(--ease) infinite;
-  }
-}
-
-@keyframes rdBreathe {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ===========================================================================
-   History + earnings
-   =========================================================================== */
-
-.rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  padding: 0.75rem;
-  min-height: 72px;
-  min-width: 0;
-}
-
-.rowMain {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.rowTitle {
-  font-weight: 700;
-  font-size: 1rem;
-  overflow-wrap: anywhere;
-}
-
-.rowMeta {
-  font-size: 0.82rem;
-  color: var(--rd-ink-2);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  margin-top: 0.15rem;
-}
-
-.rowValue {
-  flex: none;
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.15rem;
-  text-align: right;
-}
-
-.rowFailed .rowValue {
-  color: var(--rd-crit);
-}
-
-.dayHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 2px solid var(--rd-line);
-  font-weight: 800;
-}
-
-/* A bar, not a chart library. Two divs and a width. */
-.barRow {
-  display: grid;
-  grid-template-columns: 5.5rem minmax(0, 1fr) 4.5rem;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 48px;
-  font-size: 0.85rem;
-}
-
-.barTrack {
-  height: 1.25rem;
-  border-radius: var(--r-nub);
-  background: var(--rd-panel-2);
-  overflow: hidden;
-}
-
-.barFill {
-  height: 100%;
-  background: var(--rd-good-fill);
-  border-radius: var(--r-nub);
-}
-
-.barLabel,
-.barValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.barValue {
-  text-align: right;
-}
-
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.summaryTile {
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-panel);
-  padding: 0.75rem;
-  min-width: 0;
-}
-
-.summaryValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.5rem;
-  line-height: 1.1;
-  overflow-wrap: anywhere;
-}
-
-.summaryLabel {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--rd-ink-2);
-  margin-top: 0.2rem;
-}
-
-/* ===========================================================================
-   Gate + misc
-   =========================================================================== */
-
-.gate {
-  min-height: 100dvh;
-  display: grid;
-  place-items: center;
-  padding: 1.5rem;
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  text-align: center;
-}
-
-.gateInner {
-  max-width: 30rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: center;
-}
-
-.skeleton {
-  border-radius: var(--r-panel);
-  background: var(--rd-panel);
-  border: 2px solid var(--rd-line);
+  color: var(--ink-faint);
 }
 
 .srOnly {
@@ -1135,175 +757,1179 @@
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
 }
 
-/* ===========================================================================
-   The account sheet — who is signed in, and the way out.
+/* ══ GATES (signed out / wrong role) ═══════════════════════════════════════ */
 
-   Full-screen and opaque: it is not a popover over a live job, because a
-   half-visible delivery behind a sign-out confirm is exactly the ambiguity
-   that produces the mis-tap. Its own dock holds the one action.
-   =========================================================================== */
+.gate {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--s-5);
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.gateInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--s-6) var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-2);
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+}
+
+.gateMark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-lg);
+  background: var(--hot-soft);
+  color: var(--hot-text);
+}
+
+/* ══ THE RESTING STATE ═════════════════════════════════════════════════════
+   With the demo data wiped there are zero orders and zero offers, so this is
+   the screen a rider actually spends their shift looking at. It is designed,
+   not defaulted: a warm bento card, a calm mark, and one plain sentence about
+   what happens next. No spinner — waiting is not loading. */
+
+.resting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-7) var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  text-align: center;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+}
+
+.restingMarkWrap {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  border-radius: var(--r-xl);
+  background: var(--go-soft);
+  color: var(--go-text);
+}
+
+.restingOff .restingMarkWrap {
+  background: var(--ground-sunk);
+  color: var(--ink-faint);
+}
+
+.restingMark {
+  color: inherit;
+}
+
+.restingTitle {
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  margin: 0;
+}
+
+.restingBody {
+  font-family: var(--body);
+  font-size: var(--t-md);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 34ch;
+}
+
+/* Three quiet facts under the resting state, so the screen is informative
+   rather than merely empty. */
+.restingFacts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+}
+
+.restingChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--ground-sunk);
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+
+/* ══ KPI TILES ═════════════════════════════════════════════════════════════ */
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+.summaryTile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+.summaryValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.5rem, 1.1rem + 2.2vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.summaryLabel {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ══ BANNERS ═══════════════════════════════════════════════════════════════
+   None of these are dismissible. A rider acting on an invented address is a
+   far worse outcome than a banner they scroll past. */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--warn-wash);
+  border: 2px solid color-mix(in oklab, var(--warn) 40%, transparent);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+}
+
+.bannerIcon {
+  flex: 0 0 auto;
+  color: var(--warn);
+  margin-top: 2px;
+}
+
+.bannerNeutral {
+  background: var(--way-soft);
+  border-color: color-mix(in oklab, var(--way) 35%, transparent);
+}
+.bannerNeutral .bannerIcon {
+  color: var(--way-text);
+}
+
+.bannerCrit {
+  background: var(--stop-soft);
+  border-color: color-mix(in oklab, var(--stop) 45%, transparent);
+}
+.bannerCrit .bannerIcon {
+  color: var(--stop-text);
+}
+
+.bannerBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.bannerTitle {
+  display: block;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+.bannerCode {
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+/* ══ THE OFFER ═════════════════════════════════════════════════════════════
+   The screen the whole surface is built around: 45 seconds, handlebars, rain.
+   The payout is the biggest thing on it and it is shown BEFORE accepting. */
+
+.offerCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5) var(--s-4);
+  border-radius: var(--r-xl);
+  background: var(--hot-soft);
+  border: 2px solid color-mix(in oklab, var(--hot) 40%, transparent);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring) backwards;
+}
+
+.offerHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.payoutBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.payoutValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2.5rem, 1.6rem + 6vw, 3.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ── The countdown. Impossible to miss: a draining ring AND the number. ──── */
+
+.countdown {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  flex: 0 0 auto;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ringTrack {
+  fill: none;
+  stroke: color-mix(in oklab, var(--hot) 22%, transparent);
+  stroke-width: 9;
+}
+
+.ringDrain {
+  fill: none;
+  stroke: var(--hot);
+  stroke-width: 9;
+  stroke-linecap: round;
+  /* Driven from the SERVER's expiresAt every tick, so a suspended tab cannot
+     leave a rider believing they have time they do not. One second of linear
+     transition simply joins the dots between ticks. */
+  transition: stroke-dashoffset 1s linear, stroke var(--t-move) var(--ease);
+}
+
+.countdownInner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.countdownValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.countdownLabel {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.countdownUrgent .ringDrain {
+  stroke: var(--stop);
+}
+.countdownUrgent .countdownValue {
+  color: var(--stop-text);
+}
+.countdownUrgent .ringTrack {
+  stroke: color-mix(in oklab, var(--stop) 22%, transparent);
+}
+/* Under 15 seconds. This is the one repeating animation on the surface and it
+   is strictly functional — it stops the instant the offer is taken or gone. */
+.countdownUrgent {
+  animation: rdUrgent 900ms var(--ease) infinite;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  min-width: 0;
+  text-align: center;
+}
+
+.factValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.factLabel {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ══ THE JOB ═══════════════════════════════════════════════════════════════ */
+
+/* Four pips, one per step. Position without a progress bar's false precision. */
+.stepRail {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  min-width: 0;
+  /* Pulse ONCE on a status change, then hold. Keyed on the step in React. */
+  animation: rdPulseOnce 700ms var(--ease-out) 1;
+}
+
+.stepPips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+}
+
+.stepPip {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--hairline-strong);
+}
+
+.stepPipDone {
+  background: var(--go);
+}
+
+.stepPipNow {
+  width: 26px;
+  background: var(--go);
+}
+
+.stepRailText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stepRailNow {
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepRailCount {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Each step slides forward. Keyed on the step, so the pane remounts and the
+   animation replays exactly once per real transition. */
+.stepPane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+  animation: rdSlideForward var(--t-move) var(--ease-out) backwards;
+}
+
+/* ── The big mono ETA, readable at arm's length ──────────────────────────── */
+
+.etaRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  padding: var(--s-5) var(--s-4);
+  border-radius: var(--r-xl);
+  background: var(--way-soft);
+  border: 2px solid color-mix(in oklab, var(--way) 32%, transparent);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+}
+
+.mega {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(3.75rem, 2.2rem + 9vw, 5.5rem);
+  font-weight: 700;
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: var(--ink);
+}
+
+.megaUnit {
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 700;
+  color: var(--way-text);
+  min-width: 0;
+}
+
+/* ── The packing list ────────────────────────────────────────────────────── */
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 56px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--ground-sunk);
+  min-width: 0;
+}
+
+.itemQty {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 56px;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.itemName {
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── Money at the door ───────────────────────────────────────────────────── */
+
+/* The largest thing on the delivery screen. A rider who collects the wrong
+   cash has a problem no refund fixes cleanly. The frame is saffron; the
+   FIGURE is --ink, because at that size contrast beats hue. */
+.cod {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-5) var(--s-4);
+  border-radius: var(--r-xl);
+  background: var(--cash-soft);
+  border: 3px solid var(--cash-edge);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring) backwards;
+}
+
+.codLabel {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--cash-text);
+}
+
+.codValue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-1);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2.75rem, 1.7rem + 6.5vw, 4rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.codRupee {
+  font-size: 0.55em;
+  color: var(--cash-text);
+}
+
+.prepaid {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--go-soft);
+  border: 2px solid color-mix(in oklab, var(--go) 35%, transparent);
+  color: var(--go-text);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 700;
+  min-width: 0;
+}
+
+.prepaid strong {
+  color: var(--ink);
+}
+
+.locked {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--stop-soft);
+  border: 2px solid var(--stop);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 600;
+  line-height: var(--lh-body);
+}
+
+/* ── The OTP keypad ──────────────────────────────────────────────────────── */
+
+.otpRow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+
+.otpBox {
+  width: 100%;
+  min-width: 0;
+  height: 76px;
+  padding: 0;
+  border-radius: var(--r-md);
+  border: 2px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+
+.otpFilled {
+  border-color: var(--go);
+  background: var(--go-soft);
+  transform: scale(1.02);
+}
+
+.otpError {
+  border-color: var(--stop);
+  background: var(--stop-soft);
+  color: var(--stop-text);
+}
+
+.attempts {
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.attemptsLow {
+  color: var(--stop-text);
+  font-weight: 700;
+}
+
+/* ══ PLACES, AND LIFE WITHOUT A MAP ════════════════════════════════════════
+   The Maps key has no billing behind it, so Google answers REQUEST_DENIED and
+   no tile will ever draw. The address is therefore the PRIMARY ARTEFACT, set
+   large and high-contrast, with a keyless Google Maps deep link under it. The
+   placeholder holds the slot so nothing jumps if billing is ever switched on. */
+
+.place {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.placeKind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  align-self: flex-start;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-pill);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.placeKindPickup {
+  background: var(--way-soft);
+  color: var(--way-text);
+}
+
+.placeKindDrop {
+  background: var(--hot-soft);
+  color: var(--hot-text);
+}
+
+.placeLabel {
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Large, ink-black, generous leading. This is what gets read in the rain. */
+.placeAddress {
+  font-family: var(--body);
+  font-size: var(--t-lg);
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.placeAddressMissing {
+  color: var(--stop-text);
+  font-weight: 700;
+}
+
+.mapSlot {
+  display: grid;
+  place-items: center;
+  min-height: 116px;
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--ground-sunk);
+  border: 1px dashed var(--hairline-strong);
+  text-align: center;
+}
+
+.mapSlotText {
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 34ch;
+}
+
+.mapLive {
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--hairline);
+}
+
+/* ── The honest location badge ───────────────────────────────────────────── */
+
+.locBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  border: 1px solid var(--hairline-strong);
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 0;
+  min-width: 0;
+}
+
+.locBadgeWarn {
+  background: var(--warn-wash);
+  border-color: color-mix(in oklab, var(--warn) 45%, transparent);
+  color: var(--ink);
+  border-radius: var(--r-lg);
+}
+
+.locBadgeValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ══ HISTORY ═══════════════════════════════════════════════════════════════ */
+
+.dayHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: 0 var(--s-1);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  min-width: 0;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+.rowFailed {
+  background: var(--stop-soft);
+  border-color: color-mix(in oklab, var(--stop) 30%, transparent);
+  box-shadow: none;
+}
+
+.rowMain {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.rowTitle {
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.rowValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  flex: 0 0 auto;
+}
+
+/* ══ EARNINGS — two divs and a percentage, no chart library ════════════════
+   Every bar carries its own mono value, so length is emphasis and the number
+   is the data. Colour and length never carry meaning alone. */
+
+.barRow {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: 44px;
+  min-width: 0;
+}
+
+.barLabel {
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.barTrack {
+  display: block;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--ink) 8%, var(--card));
+  overflow: hidden;
+  min-width: 0;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--go);
+  transition: width var(--t-enter) var(--spring-soft);
+}
+
+.barValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ══ PROFILE SHEET ═════════════════════════════════════════════════════════ */
 
 .profileSheet {
   position: fixed;
   inset: 0;
-  z-index: 20;
+  z-index: 60;
   display: grid;
   grid-template-rows: 1fr auto;
-  background: var(--rd-ground);
-  color: var(--rd-ink);
-  overflow-x: clip;
+  background: var(--ground);
+  color: var(--ink);
+  animation: rdPop var(--t-move) var(--spring-soft) backwards;
 }
 
 .profileScroll {
   overflow-y: auto;
-  padding: max(0.875rem, env(safe-area-inset-top)) 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
-  min-width: 0;
+  gap: var(--s-4);
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: max(var(--s-4), env(safe-area-inset-top, 0px)) var(--s-4)
+    calc(var(--dock-h) + var(--s-4));
 }
 
 .profileHead {
   display: flex;
-  align-items: flex-start;
-  gap: 0.625rem;
+  align-items: center;
+  gap: var(--s-3);
   min-width: 0;
 }
 
 .profileMark {
-  flex: none;
-  width: 3rem;
-  height: 3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--rd-line-strong);
-  border-radius: 50%;
-  color: var(--rd-ink);
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-lg);
+  background: var(--hot-soft);
+  color: var(--hot-text);
+  flex: 0 0 auto;
 }
 
 .profileWho {
-  flex: 1 1 auto;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--s-1);
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .profileName {
   font-family: var(--display);
-  font-size: 1.45rem;
+  font-size: var(--t-h3);
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.015em;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-/* The role, stated. Not a colour: a word, in a box. */
 .rolePill {
-  align-self: flex-start;
-  font-family: var(--data);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 0.2rem 0.5rem;
-  border: 2px solid var(--rd-line-strong);
+  padding: 2px var(--s-2);
   border-radius: var(--r-pill);
-  color: var(--rd-ink);
-  background: var(--rd-panel);
+  background: var(--hot);
+  color: var(--hot-on);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
 }
 
 .profileClose {
-  flex: none;
-  width: 2.75rem;
-  height: 2.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--rd-line);
-  border-radius: var(--r-soft);
-  background: var(--rd-ground);
-  color: var(--rd-ink);
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
   cursor: pointer;
-  padding: 0;
+  flex: 0 0 auto;
 }
 
 .profileRow {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--rd-line);
+  gap: var(--s-3);
+  min-height: 44px;
+  padding: var(--s-2) 0;
+  border-bottom: 1px solid var(--hairline);
   min-width: 0;
 }
 
 .profileRow:last-child {
-  border-bottom: 0;
+  border-bottom: none;
 }
 
 .profileRowLabel {
-  font-size: 0.8rem;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--rd-ink-2);
-  flex: none;
+  color: var(--ink-faint);
+  flex: 0 0 auto;
 }
 
 .profileRowValue {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: 1rem;
-  font-weight: 700;
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 600;
+  color: var(--ink);
   text-align: right;
-  color: var(--rd-ink);
   overflow-wrap: anywhere;
-  min-width: 0;
 }
 
-/* The way out. Outlined in crit, not filled: it is the only action in this
-   dock, so it must be unmistakable, but it is the FIRST of two taps and a
-   filled red button reads as already-done. The confirm's button is filled. */
+/* Sign out is deliberate: this opens the confirm, it does not sign out. */
 .signOut {
-  width: 100%;
-  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
-  border: 3px solid var(--rd-crit-fill);
-  border-radius: var(--r-panel);
-  background: var(--rd-ground);
-  color: var(--rd-crit);
-  font: inherit;
-  font-size: 1.15rem;
+  gap: var(--s-2);
+  width: 100%;
+  min-height: var(--tap-primary);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-lg);
+  border: 2px solid var(--stop);
+  background: var(--stop-soft);
+  color: var(--stop-text);
+  font-family: var(--display);
+  font-size: var(--t-lg);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
   cursor: pointer;
+  transition: transform var(--t-micro) var(--spring);
 }
 
-/* Focus is never subtle here. Sunlight. */
-.shell :focus-visible {
-  outline: 3px solid var(--rd-ink);
-  outline-offset: 3px;
+.signOut:active {
+  animation: rdSquash var(--t-move) var(--spring) 1;
 }
 
-/* 360px is the real device. Nothing below may overflow it. */
-@media (max-width: 22.5rem) {
-  .facts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* ══ SKELETONS — shaped like the real thing ════════════════════════════════
+   A grey rectangle tells a rider nothing. These are the outline of the screen
+   that is about to arrive, so the layout does not jump when it does. */
+
+.skelStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.skelCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+}
+
+.skelBar,
+.skelStat,
+.skelTitle {
+  border-radius: var(--r-sm);
+  background: linear-gradient(
+    90deg,
+    var(--ground-sunk) 25%,
+    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
+    var(--ground-sunk) 75%
+  );
+  background-size: 200% 100%;
+  animation: rdShimmer 1.4s linear infinite;
+}
+
+.skelTitle {
+  height: 30px;
+  width: 62%;
+}
+
+.skelBar {
+  height: 16px;
+  width: 100%;
+}
+
+.skelBarShort {
+  width: 44%;
+}
+
+.skelStat {
+  height: 52px;
+  width: 100%;
+  border-radius: var(--r-md);
+}
+
+.skelGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+
+/* ══ REDUCED MOTION ════════════════════════════════════════════════════════
+   One block, last. Feedback is reduced to an instant state change and never
+   removed: a control that appears to do nothing is worse than one that moves
+   too much. The countdown keeps its NUMBER and its colour — only the pulse
+   goes — because the 45 seconds are information, not decoration. */
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .panelFlat,
+  .resting,
+  .gateInner,
+  .summaryTile,
+  .banner,
+  .offerCard,
+  .cod,
+  .etaRow,
+  .row,
+  .stepPane,
+  .stepRail,
+  .profileSheet,
+  .toggleOn {
+    animation: none;
   }
-  .otpBox {
-    width: 3.5rem;
-    height: 4.5rem;
-    font-size: 2rem;
+
+  .skelBar,
+  .skelStat,
+  .skelTitle {
+    animation: none;
+    background: var(--ground-sunk);
   }
-  .barRow {
-    grid-template-columns: 4.5rem minmax(0, 1fr) 4rem;
+
+  .countdownUrgent {
+    animation: none;
+    /* Still unmissable without motion: a solid crit border on the dial. */
+    outline: 3px solid var(--stop);
+    outline-offset: 4px;
+    border-radius: var(--r-pill);
+  }
+
+  .ringDrain,
+  .barFill,
+  .otpBox,
+  .toggle,
+  .conn,
+  .navItem,
+  .primary,
+  .decline,
+  .ghost,
+  .linkBtn,
+  .accountBtn,
+  .signOut {
+    transition-duration: 0.01ms;
+    animation: none;
   }
 }

@@ -103,7 +103,7 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
           <img
             src={preview}
             alt={name === null ? 'Proof photo' : `Proof photo: ${name}`}
-            style={{ width: '100%', borderRadius: 'var(--r-panel)' }}
+            style={{ width: '100%', borderRadius: 'var(--r-md)' }}
           />
           <button
             type="button"

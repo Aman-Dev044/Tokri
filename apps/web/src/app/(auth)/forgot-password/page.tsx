@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
       <section className="authsplit__form">
         <div className="authform">
           <header className="authform__head">
-            <p className="eyebrow">Password reset</p>
+            <p className="auth-eyebrow">Password reset</p>
             <h1 className="authform__title">
               Not wired up
               <br />
@@ -34,7 +34,7 @@ export default function ForgotPasswordPage() {
             </p>
           </header>
 
-          <Link href="/login" className="mnd-btn mnd-btn--outline mnd-btn--lg">
+          <Link href="/login" className="authbtn authbtn--outline">
             Back to sign in
           </Link>
         </div>

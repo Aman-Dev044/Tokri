@@ -26,6 +26,7 @@ import styles from './delivery.module.css';
 import { CachedBanner, FixtureBanner, Notice } from './Banners';
 import { Dock, PrimaryLink } from './Dock';
 import { useHideNav } from './RiderShell';
+import { CardSkeleton, StatPairSkeleton } from './Skeletons';
 import { useRider } from './RiderProvider';
 import { IconBox, IconResting } from './icons';
 import { distanceKm, money } from '@/lib/delivery/format';
@@ -53,7 +54,10 @@ export function HomeView() {
 
   if (loading && !hasJob) {
     return (
-      <div className={styles.skeleton} style={{ height: '12rem' }} aria-hidden="true" />
+      <>
+        <StatPairSkeleton />
+        <CardSkeleton />
+      </>
     );
   }
 

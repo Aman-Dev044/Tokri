@@ -9,25 +9,25 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="foot bleed">
-      <div className="shell">
-        <div className="foot__top">
-          <div className="foot__brand">
-            <p className="foot__mark">
+    <footer className="mk-foot">
+      <div className="mk-shell">
+        <div className="mk-foot__top">
+          <div className="mk-foot__brand">
+            <p className="mk-foot__mark">
               Mandi
-              <span className="foot__mark-hi" aria-hidden="true">
+              <span className="mk-foot__mark-hi" aria-hidden="true">
                 मंडी
               </span>
             </p>
-            <p className="foot__pitch">
-              A market that changes colour as you walk through it, and changes light as
-              the day passes.
+            <p className="mk-foot__pitch">
+              A market that changes colour as you walk through it — built for real
+              Indian grocery, eight aisles at a time.
             </p>
           </div>
 
-          <nav className="foot__cols" aria-label="Footer">
-            <div className="foot__col">
-              <h2 className="foot__col-head eyebrow">Shop</h2>
+          <nav className="mk-foot__cols" aria-label="Footer">
+            <div className="mk-foot__col">
+              <h2>Shop</h2>
               <ul>
                 {AISLES.slice(0, 4).map((a) => (
                   <li key={a.key}>
@@ -36,8 +36,8 @@ export function Footer() {
                 ))}
               </ul>
             </div>
-            <div className="foot__col">
-              <h2 className="foot__col-head eyebrow">More aisles</h2>
+            <div className="mk-foot__col">
+              <h2>More aisles</h2>
               <ul>
                 {AISLES.slice(4).map((a) => (
                   <li key={a.key}>
@@ -46,8 +46,8 @@ export function Footer() {
                 ))}
               </ul>
             </div>
-            <div className="foot__col">
-              <h2 className="foot__col-head eyebrow">Partner</h2>
+            <div className="mk-foot__col">
+              <h2>Partner</h2>
               <ul>
                 <li>
                   <Link href="/#vendors">Sell on Mandi</Link>
@@ -60,8 +60,8 @@ export function Footer() {
                 </li>
               </ul>
             </div>
-            <div className="foot__col">
-              <h2 className="foot__col-head eyebrow">Account</h2>
+            <div className="mk-foot__col">
+              <h2>Account</h2>
               <ul>
                 <li>
                   <Link href="/login">Log in</Link>
@@ -74,15 +74,15 @@ export function Footer() {
           </nav>
         </div>
 
-        <hr className="mnd-rule" />
+        <hr className="mk-rule" />
 
-        <div className="foot__bottom">
-          <p className="mono foot__legal">
+        <div className="mk-foot__bottom">
+          <p className="mk-foot__legal">
             © {year} Mandi · Built for Indian grocery · All prices in ₹ INR
           </p>
-          <p className="foot__aisle-strip" aria-hidden="true">
+          <p className="mk-foot__strip" aria-hidden="true">
             {AISLES.map((a) => (
-              <span key={a.key} style={{ background: a.swatch }} />
+              <span key={a.key} style={{ ['--sw' as string]: `var(--aisle-${a.key})` }} />
             ))}
           </p>
         </div>

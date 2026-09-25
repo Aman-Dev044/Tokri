@@ -79,17 +79,21 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
   const rows = products.data?.data ?? [];
 
   return (
-    <div className="shell shop-page shop-aisle">
-      <header className="shop-aisle__head">
+    <div className="shell shop-page">
+      {/* PILLAR 1 — the chromatic band. The largest colour area on the page,
+          deliberately, because that is what makes the aisle tint land as an
+          event rather than a detail. */}
+      <header className="shop-band">
         <p className="eyebrow">Aisle</p>
-        <h1 className="shop-aisle__title">
+        <h1 className="shop-band__title">
           {aisle.name}
-          <span className="shop-aisle__hindi" aria-hidden="true">
+          <span className="shop-band__hindi" aria-hidden="true">
             {aisle.hindi}
           </span>
         </h1>
         <p className="lede">{aisle.blurb}</p>
-        <p className="shop-aisle__hue">
+        <p className="shop-band__hue">
+          <span className="shop-band__chip" aria-hidden="true" />
           The colour of this aisle is taken from {aisle.source}. Everything on screen — the
           buttons, the rules, the basket — is wearing it right now.
         </p>

@@ -6,7 +6,7 @@
  * window" of the page - the thing that makes it read as a market rather than a
  * software product.
  *
- * Every price is set in Azeret Mono with tabular figures, because a price is
+ * Every price is set in Space Mono with tabular figures, because a price is
  * data and Mandi sets data in the mono face. Amounts are integer paise
  * (plan section 5.2) and pass through formatPaise, the single place paise turns
  * into a rupee string.
@@ -21,13 +21,13 @@
  */
 
 import { AISLES, formatPaise } from '@mandi/design-system';
+import type { AisleKey } from '@mandi/design-system';
 
 interface TickerItem {
   name: string;
   unit: string;
   paise: number;
-  swatch: string;
-  aisle: string;
+  aisle: AisleKey;
 }
 
 function collect(offset: number): TickerItem[] {
@@ -35,7 +35,7 @@ function collect(offset: number): TickerItem[] {
   AISLES.forEach((aisle) => {
     aisle.items.forEach((item, i) => {
       if (i % 2 === offset) {
-        out.push({ ...item, swatch: aisle.swatch, aisle: aisle.name });
+        out.push({ ...item, aisle: aisle.key });
       }
     });
   });
@@ -47,18 +47,18 @@ function Row({ items, reverse }: { items: TickerItem[]; reverse?: boolean }) {
   const doubled = [...items, ...items];
 
   return (
-    <div className="ticker__row" data-reverse={reverse ? 'true' : 'false'}>
-      <ul className="ticker__track">
+    <div className="mk-ticker__row" data-reverse={reverse ? 'true' : 'false'}>
+      <ul className="mk-ticker__track">
         {doubled.map((item, i) => (
-          <li className="ticker__item" key={`${item.name}-${i}`}>
+          <li className="mk-ticker__item" key={`${item.name}-${i}`}>
             <span
-              className="ticker__dot"
-              style={{ background: item.swatch }}
+              className="mk-ticker__dot"
+              style={{ ['--sw' as string]: `var(--aisle-${item.aisle})` }}
               aria-hidden="true"
             />
-            <span className="ticker__name">{item.name}</span>
-            <span className="ticker__unit mono">{item.unit}</span>
-            <span className="ticker__price price">{formatPaise(item.paise)}</span>
+            <span className="mk-ticker__name">{item.name}</span>
+            <span className="mk-ticker__unit">{item.unit}</span>
+            <span className="mk-ticker__price">{formatPaise(item.paise)}</span>
           </li>
         ))}
       </ul>
@@ -68,7 +68,7 @@ function Row({ items, reverse }: { items: TickerItem[]; reverse?: boolean }) {
 
 export function ProduceTicker() {
   return (
-    <section className="ticker bleed" aria-hidden="true">
+    <section className="mk-ticker" aria-hidden="true">
       <Row items={collect(0)} />
       <Row items={collect(1)} reverse />
     </section>

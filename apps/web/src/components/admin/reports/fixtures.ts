@@ -63,8 +63,8 @@ export const REPORTS: readonly ReportDef[] = [
     chart: 'line',
     xKey: 'date',
     series: [
-      { key: 'gmvPaise', label: 'GMV', color: '#2F6B3C' },
-      { key: 'orders', label: 'Orders', color: '#6D7164' },
+      { key: 'gmvPaise', label: 'GMV' },
+      { key: 'orders', label: 'Orders' },
     ],
     columns: [
       { key: 'date', header: 'Date', kind: 'date' },
@@ -86,7 +86,7 @@ export const REPORTS: readonly ReportDef[] = [
     description: 'How much each store sold, and what the platform earned from it.',
     chart: 'bar',
     xKey: 'vendor',
-    series: [{ key: 'gmvPaise', label: 'GMV', color: '#2F6B3C' }],
+    series: [{ key: 'gmvPaise', label: 'GMV' }],
     columns: [
       { key: 'vendor', header: 'Vendor', kind: 'text' },
       { key: 'city', header: 'City', kind: 'text' },
@@ -128,8 +128,8 @@ export const REPORTS: readonly ReportDef[] = [
     chart: 'line',
     xKey: 'date',
     series: [
-      { key: 'avgMinutes', label: 'Avg minutes', color: '#2F6F8C' },
-      { key: 'onTimePct', label: 'On time %', color: '#2F6B3C' },
+      { key: 'avgMinutes', label: 'Avg minutes' },
+      { key: 'onTimePct', label: 'On time %' },
     ],
     columns: [
       { key: 'date', header: 'Date', kind: 'date' },
@@ -150,7 +150,7 @@ export const REPORTS: readonly ReportDef[] = [
     description: 'Taxable value and GST collected, by rate slab.',
     chart: 'bar',
     xKey: 'slab',
-    series: [{ key: 'taxPaise', label: 'Tax collected', color: '#C8871F' }],
+    series: [{ key: 'taxPaise', label: 'Tax collected' }],
     columns: [
       { key: 'slab', header: 'GST slab', kind: 'text' },
       { key: 'orders', header: 'Orders', kind: 'number' },

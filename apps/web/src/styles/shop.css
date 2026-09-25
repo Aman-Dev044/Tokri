@@ -1,879 +1,1214 @@
-/* =============================================================================
-   MANDI — the customer shop
-   -----------------------------------------------------------------------------
-   Imported once, from `app/(shop)/layout.tsx`.
+/* ═══════════════════════════════════════════════════════════════════════════
+   MANDI — THE CUSTOMER SHOP, in "Bento Pop".
 
-   Everything here reads design tokens. Not one hex value, not one hardcoded
-   hue — which is what lets `data-aisle` on <html> re-tint this entire surface
-   in 480ms without a single component knowing it happened.
+   Everything here is built from the tokens in
+   `@mandi/design-system/tokens.css`. There is not one raw hex in this file:
+   if a value is missing, it is derived with `color-mix()` from a token, never
+   typed as a literal.
 
-   Contrast rule, applied throughout (tokens.css explains why):
-     --aisle      fills, edges, washes, rules, the basket mass
-     --aisle-ink  every piece of aisle-coloured TEXT (measured >= 4.5:1)
-     --aisle-on   text placed ON an --aisle fill
+   ── THE CONTRAST RULE THIS FILE IS BUILT AROUND ─────────────────────────────
+   `--aisle` is the vivid identity hue — tomato, leaf, butter, indigo. It is
+   for FILLS, BARS and LARGE SHAPES only.
 
-   Motion rule (plan §2.5): every animation is inside a
-   `prefers-reduced-motion` guard and every screen is readable at rest.
-   ============================================================================= */
+   `--aisle-ink` is the same hue, lightness-tuned to clear 4.5:1 against
+   `--ground` in whichever theme is active. Contrast is symmetric, so the
+   reverse is true as well: `background: var(--aisle-ink); color: var(--ground)`
+   is guaranteed ≥ 4.5:1 for ALL EIGHT AISLES IN BOTH THEMES, by construction
+   rather than by eyeballing eight swatches. That pairing is `--shop-fill` /
+   `--shop-on-fill` below, and it is what every button, chip, stamp and badge
+   that carries text or a glyph uses. `--aisle` itself never sits under type.
+
+   ── WHY THERE IS A COMPAT LAYER ─────────────────────────────────────────────
+   The design system's component stylesheet, the JourneyRibbon and MandiMap
+   still read the PREVIOUS token vocabulary (`--surface`, `--muted`, `--paper`,
+   `--fs-body`, `--aisle-on`…). Those names no longer exist in tokens.css, and
+   an undefined custom property makes the whole declaration invalid at
+   computed-value time — which is how a button ends up with no background at
+   all. `packages/**` is out of scope for this rebuild, so the shop republishes
+   the old names as aliases onto the new tokens.
+
+   It lives in a CASCADE LAYER. An unlayered rule always beats a layered one
+   regardless of source order, so if another surface defines any of these names
+   for itself, theirs wins and nothing here can break them.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer mandi-shop-compat {
+  :root {
+    /* surfaces */
+    --paper: var(--ground);
+    --surface: var(--card);
+    --surface-2: var(--card-raised);
+    --sunken: var(--ground-sunk);
+    --stone: var(--ground-sunk);
+
+    /* ink */
+    --muted: var(--ink-soft);
+    --crit-ink: var(--crit);
+    --good-ink: var(--good);
+    --warn-ink: var(--warn);
+    --on-semantic: var(--on-accent);
+
+    /* the aisle, derived */
+    --aisle-on: var(--ground);
+    --aisle-edge: color-mix(in oklab, var(--aisle) 42%, transparent);
+    --aisle-glow: color-mix(in oklab, var(--aisle) 50%, transparent);
+    --aisle-wash: color-mix(in oklab, var(--aisle) 12%, var(--card));
+    --aisle-wash-strong: color-mix(in oklab, var(--aisle) 22%, var(--card));
+    --lift-aisle: 0 8px 26px -14px color-mix(in oklab, var(--aisle) 70%, transparent);
+
+    /* focus */
+    --focus: var(--aisle-ink);
+    --focus-halo: color-mix(in oklab, var(--aisle) 26%, transparent);
+
+    /* type scale */
+    --fs-micro: var(--t-2xs);
+    --fs-small: var(--t-sm);
+    --fs-body: var(--t-md);
+    --fs-lead: var(--t-lg);
+    --fs-h3: var(--t-h3);
+    --fs-h2: var(--t-h2);
+
+    /* shape */
+    --r-nub: var(--r-xs);
+    --r-soft: var(--r-sm);
+    --r-panel: var(--r-lg);
+
+    /* layout + stacking */
+    --gutter: var(--s-4);
+    --measure: var(--prose-max);
+    --z-grain: 1;
+    --z-loader: 60;
+    --z-sheet: 70;
+    --z-toast: 90;
+    --grain-opacity: 0.035;
+    --grain-blend: multiply;
+  }
+
+  @media (min-width: 720px) {
+    :root {
+      --gutter: var(--s-6);
+    }
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --grain-opacity: 0.05;
+      --grain-blend: screen;
+    }
+  }
+  :root[data-theme='dark'] {
+    --grain-opacity: 0.05;
+    --grain-blend: screen;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   1 · THE SURFACE
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop {
+  /* The two aisle roles, named by what they are ALLOWED to do. */
+  --shop-fill: var(--aisle-ink); /* carries text or a glyph */
+  --shop-on-fill: var(--ground);
+  --shop-vivid: var(--aisle); /* fills, bars, masses — never under type */
+
+  --shop-wash: color-mix(in oklab, var(--aisle) 11%, var(--card));
+  --shop-wash-deep: color-mix(in oklab, var(--aisle) 20%, var(--card));
+  --shop-edge: color-mix(in oklab, var(--aisle) 40%, var(--hairline));
+  --shop-edge-soft: color-mix(in oklab, var(--aisle) 22%, var(--hairline));
+  --shop-glow: color-mix(in oklab, var(--aisle) 46%, transparent);
+
+  --shop-head-h: 122px;
+  --shop-dock-h: 92px;
+
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--body);
+}
+
+@media (min-width: 720px) {
+  .shop {
+    --shop-head-h: 134px;
+  }
 }
 
 .shop-main {
-  flex: 1;
+  flex: 1 1 auto;
+  width: 100%;
   padding-block: var(--s-5) var(--s-9);
 }
 
-/* =============================================================================
-   1. HEADER
-   ============================================================================= */
+/* Width container. Self-contained rather than leaning on `.shell`, whose
+   `--gutter` belongs to another surface's stylesheet. */
+.shop-shell {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding-inline: var(--s-4);
+}
+@media (min-width: 720px) {
+  .shop-shell {
+    padding-inline: var(--s-6);
+  }
+}
+
+/* Wide things scroll inside themselves. The body never scrolls sideways. */
+.shop-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-strong) transparent;
+}
+
+/* ── the house type ─────────────────────────────────────────────────────── */
+
+.shop-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-eyebrow a {
+  color: inherit;
+  text-decoration-color: var(--shop-edge);
+}
+.shop-eyebrow a:hover {
+  color: var(--aisle-ink);
+}
+
+.shop-title,
+.shop-page__title {
+  font-family: var(--display);
+  font-size: var(--t-h1);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  margin: 0;
+}
+
+.shop-title--hero {
+  font-size: var(--t-hero);
+}
+
+/* A short status line under a page head — "showing this store only",
+   "saved PIN 560076" — information, not a headline. */
+.shop-page__scope {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.shop-page__scope strong {
+  color: var(--ink);
+}
+
+/* A generic vertical section — a labelled group of content below the page
+   head, e.g. the store list under the location prompt. */
+.shop-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.shop-section__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+}
+
+/* The call-to-action under a short empty-state message — "find a store near
+   you" and the like. */
+.shop-cart__cta {
+  margin: var(--s-2) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.shop-h2 {
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+  margin: 0;
+}
+
+.shop-h3 {
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+  margin: 0;
+}
+
+.shop-lede {
+  margin: 0;
+  max-width: var(--prose-max);
+  font-size: var(--t-lg);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.shop-note {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.shop-num,
+.shop-price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.shop-price {
+  font-weight: 700;
+}
+
+.shop-link {
+  color: var(--aisle-ink);
+  font-weight: 560;
+  text-underline-offset: 3px;
+}
+
+/* A button that reads as a link. Real <button>, so it is announced as one. */
+.shop-linkish {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--aisle-ink);
+  font-weight: 560;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--shop-edge);
+}
+.shop-linkish:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── page stack ─────────────────────────────────────────────────────────── */
+
+.shop-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding-bottom: calc(var(--shop-dock-h) + var(--s-6));
+}
+
+.shop-page__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2 · BUTTONS
+
+   The design system's `.mnd-btn` geometry is kept — it is the product's
+   button — but its SOLID variant is re-coloured here onto the guaranteed
+   `--shop-fill` / `--shop-on-fill` pair, because `background: var(--aisle);
+   color: <anything>` cannot clear 4.5:1 for indigo or staples in light.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop .mnd-btn {
+  border-radius: var(--r-pill);
+  font-family: var(--body);
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  transition:
+    background-color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring),
+    box-shadow var(--t-micro) var(--ease);
+}
+
+.shop .mnd-btn--sm {
+  padding: 0.45rem 0.9rem;
+  font-size: var(--t-sm);
+  min-height: 36px;
+}
+.shop .mnd-btn--md {
+  padding: 0.7rem 1.3rem;
+  font-size: var(--t-md);
+  min-height: 46px;
+}
+.shop .mnd-btn--lg {
+  padding: 0.95rem 1.8rem;
+  font-size: var(--t-lg);
+  min-height: 54px;
+}
+
+.shop .mnd-btn--solid {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  border-color: transparent;
+  box-shadow: 0 6px 20px -10px var(--shop-glow);
+}
+.shop .mnd-btn--solid:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -14px var(--shop-glow);
+}
+
+.shop .mnd-btn--outline {
+  background: var(--card);
+  color: var(--aisle-ink);
+  border-color: var(--shop-edge);
+}
+.shop .mnd-btn--outline:hover:not(:disabled) {
+  background: var(--shop-wash);
+  border-color: var(--aisle);
+  transform: translateY(-2px);
+}
+
+.shop .mnd-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: transparent;
+}
+.shop .mnd-btn--ghost:hover:not(:disabled) {
+  background: var(--shop-wash);
+  color: var(--aisle-ink);
+}
+
+/* Squash on press — the Bento Pop feedback, on every control. */
+.shop .mnd-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+}
+
+.shop .mnd-btn:disabled,
+.shop .mnd-btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.shop .mnd-btn:focus-visible {
+  outline: 3px solid var(--aisle-ink);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+/* ── fields ─────────────────────────────────────────────────────────────── */
+
+.shop-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  font-weight: 560;
+  color: var(--ink-soft);
+  min-width: 0;
+}
+
+.shop .mnd-field__input,
+.shop-input {
+  width: 100%;
+  min-width: 0;
+  appearance: none;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-sm);
+  padding: 0.7rem 0.9rem;
+  min-height: 46px;
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 450;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+.shop .mnd-field__input::placeholder,
+.shop-input::placeholder {
+  color: var(--ink-faint);
+  opacity: 1;
+}
+.shop .mnd-field__input:focus-visible,
+.shop-input:focus-visible {
+  outline: none;
+  border-color: var(--aisle);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--aisle) 24%, transparent);
+}
+
+.shop ::selection {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   3 · THE HEAD — where you are, what you want, who you are
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-head {
   position: sticky;
   top: 0;
-  z-index: var(--z-topbar);
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: blur(12px);
+  z-index: 40;
+  background: color-mix(in oklab, var(--ground) 86%, transparent);
+  backdrop-filter: blur(14px) saturate(1.3);
   border-bottom: 1px solid var(--hairline);
 }
 .shop-head--placeholder {
-  height: 7.5rem;
+  min-height: var(--shop-head-h);
 }
 
 .shop-head__bar {
   display: grid;
-  grid-template-columns: auto auto 1fr auto;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'brand loc profile' 'search search search';
   align-items: center;
-  gap: var(--s-3);
-  min-height: 4rem;
-}
-@media (max-width: 760px) {
-  .shop-head__bar {
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'brand loc'
-      'search search';
-    row-gap: var(--s-2);
-    padding-block: var(--s-3);
-  }
-  .shop-head__brand { grid-area: brand; }
-  .shop-loc { grid-area: loc; justify-self: end; }
-  .shop-search { grid-area: search; }
-  .shop-head__links { display: none; }
+  gap: var(--s-2) var(--s-3);
+  padding-block: var(--s-3);
 }
 
-.shop-head__brand {
+@media (min-width: 900px) {
+  .shop-head__bar {
+    grid-template-columns: auto auto 1fr auto;
+    grid-template-areas: 'brand loc search profile';
+    gap: var(--s-4);
+  }
+}
+
+/* ── brand ──────────────────────────────────────────────────────────────── */
+
+.shop-brand {
+  grid-area: brand;
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
+  color: var(--ink);
   text-decoration: none;
   font-family: var(--display);
-  font-weight: 700;
-  font-size: 1.15rem;
-  letter-spacing: -0.03em;
+  font-weight: 800;
+  font-size: 1.3rem;
+  letter-spacing: var(--track-tight);
 }
-.shop-head__word { line-height: 1; }
+.shop-brand__mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  background: var(--shop-wash-deep);
+  color: var(--aisle-ink);
+  border: 1px solid var(--shop-edge-soft);
+  transition:
+    transform var(--t-move) var(--spring),
+    background-color var(--t-enter) var(--ease);
+}
+.shop-brand:hover .shop-brand__mark {
+  transform: rotate(-7deg) scale(1.06);
+}
+.shop-brand__word {
+  display: none;
+}
+@media (min-width: 520px) {
+  .shop-brand__word {
+    display: inline;
+  }
+}
 
-.shop-head__links {
-  display: inline-flex;
-  gap: var(--s-3);
-}
-.shop-head__link {
-  font-size: var(--fs-small);
-  text-decoration: none;
-  color: var(--muted);
-  padding: 0.3rem 0.1rem;
-  border-bottom: 2px solid transparent;
-}
-.shop-head__link:hover {
-  color: var(--ink);
-  border-bottom-color: var(--aisle);
-}
-
-/* ── location ─────────────────────────────────────────────────────────── */
+/* ── location ───────────────────────────────────────────────────────────── */
 
 .shop-loc {
+  grid-area: loc;
   position: relative;
+  justify-self: start;
+  min-width: 0;
 }
+
 .shop-loc__summary {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--hairline);
+  gap: var(--s-2);
+  max-width: 100%;
+  padding: 0.4rem 0.8rem;
   border-radius: var(--r-pill);
-  background: var(--surface);
-  font-size: var(--fs-small);
+  border: 1px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 560;
   cursor: pointer;
   list-style: none;
-  white-space: nowrap;
-  max-width: 14rem;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
 }
-.shop-loc__summary::-webkit-details-marker { display: none; }
-.shop-loc__summary:hover { border-color: var(--aisle-edge); }
-.shop-loc__summary svg { color: var(--aisle-ink); flex: none; }
+.shop-loc__summary::-webkit-details-marker {
+  display: none;
+}
+.shop-loc__summary:hover {
+  border-color: var(--shop-edge);
+  transform: translateY(-1px);
+}
+.shop-loc__summary svg {
+  flex: 0 0 auto;
+  color: var(--aisle-ink);
+}
 .shop-loc__label {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 11rem;
 }
 
 .shop-loc__panel {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  z-index: 50;
+  top: calc(100% + var(--s-2));
   left: 0;
-  z-index: var(--z-sheet);
-  width: min(22rem, calc(100vw - 2rem));
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-4);
-  background: var(--surface-2);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  box-shadow: var(--lift-2);
-}
-@media (max-width: 760px) {
-  .shop-loc__panel { left: auto; right: 0; }
-}
-.shop-loc__error {
-  font-size: var(--fs-small);
-  color: var(--crit-ink);
-  line-height: 1.45;
-}
-.shop-loc__pin { display: grid; gap: var(--s-2); }
-.shop-loc__pin-label { font-size: var(--fs-small); color: var(--muted); }
-.shop-loc__pin-row { display: flex; gap: var(--s-2); }
-.shop-loc__pin-input {
-  font-family: var(--data);
-  letter-spacing: 0.1em;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
-  padding: 0.5rem 0.7rem;
-  background: var(--paper);
-  min-width: 0;
-}
-.shop-loc__hint { font-size: var(--fs-micro); color: var(--muted); line-height: 1.5; }
-.shop-loc__clear {
-  justify-self: start;
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-}
-
-/* ── search ───────────────────────────────────────────────────────────── */
-
-.shop-search {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  max-width: 28rem;
-  width: 100%;
-}
-.shop-search:focus-within { border-color: var(--aisle); box-shadow: 0 0 0 3px var(--focus-halo); }
-.shop-search svg { color: var(--muted); flex: none; }
-.shop-search__input {
-  border: 0;
-  outline: none;
-  background: none;
-  width: 100%;
-  font-size: var(--fs-small);
-}
-
-/* ── the aisle rail ───────────────────────────────────────────────────── */
-
-.shop-head__rail { padding-bottom: 0.4rem; }
-
-.shop-rail__list {
-  display: flex;
-  gap: var(--s-2);
-  list-style: none;
-  margin: 0;
-  padding: 0 0 0.25rem;
-}
-.shop-rail__item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--hairline);
-  background: var(--surface);
-  font-size: var(--fs-small);
-  text-decoration: none;
-  white-space: nowrap;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease);
-}
-.shop-rail__item:hover { border-color: var(--aisle-edge); background: var(--aisle-wash); }
-.shop-rail__item[data-active='true'] {
-  border-color: var(--aisle);
-  background: var(--aisle-wash-strong);
-  color: var(--aisle-ink);
-  font-weight: 600;
-}
-.shop-rail__swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  flex: none;
-}
-.shop-rail__hindi { color: var(--muted); font-size: var(--fs-micro); }
-
-/* =============================================================================
-   2. PAGE FURNITURE
-   ============================================================================= */
-
-.shop-page {
-  display: grid;
-  gap: var(--s-6);
-  padding-top: var(--s-5);
-}
-.shop-page__head { display: grid; gap: var(--s-2); }
-.shop-page__title {
-  font-size: var(--fs-h1);
-  letter-spacing: -0.035em;
-}
-.shop-page__scope {
-  font-size: var(--fs-small);
-  color: var(--muted);
-  padding: var(--s-2) var(--s-3);
-  border-left: 3px solid var(--aisle);
-  background: var(--aisle-wash);
-  border-radius: 0 var(--r-soft) var(--r-soft) 0;
-}
-
-.shop-section { display: grid; gap: var(--s-4); }
-.shop-section__title {
-  font-size: var(--fs-h3);
-  letter-spacing: -0.02em;
-  padding-bottom: var(--s-2);
-  border-bottom: 1px solid var(--hairline);
-}
-
-.shop-empty {
-  padding: var(--s-6) var(--s-4);
-  text-align: center;
-  color: var(--muted);
-  border: 1px dashed var(--hairline-strong);
-  border-radius: var(--r-panel);
-  text-wrap: pretty;
-}
-
-.shop-linkish {
-  color: var(--aisle-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  padding: 0;
-  font: inherit;
-}
-
-/* =============================================================================
-   3. NOTICES — the honesty layer
-   ============================================================================= */
-
-.shop-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-soft);
-  border: 1px solid var(--hairline);
-  border-left-width: 4px;
-  background: var(--surface);
-  font-size: var(--fs-small);
-  line-height: 1.55;
-}
-.shop-notice svg { flex: none; margin-top: 0.15rem; }
-.shop-notice code {
-  font-family: var(--data);
-  font-size: 0.92em;
-  background: var(--sunken);
-  padding: 0.05em 0.35em;
-  border-radius: var(--r-nub);
-  word-break: break-word;
-}
-.shop-notice--fixture { border-left-color: var(--warn); color: var(--ink); }
-.shop-notice--fixture svg { color: var(--warn-ink); }
-.shop-notice--warn { border-left-color: var(--warn); }
-.shop-notice--error {
-  border-left-color: var(--crit);
-  justify-content: space-between;
-  align-items: center;
-}
-.shop-notice__title { font-weight: 600; }
-.shop-notice__body { color: var(--muted); }
-.shop-notice__code { font-family: var(--data); color: var(--muted); }
-
-/* ── connection banner ────────────────────────────────────────────────── */
-
-.shop-conn {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--fs-small);
-}
-.shop-conn__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--muted);
-  flex: none;
-}
-.shop-conn[data-tone='good'] .shop-conn__dot { background: var(--good); }
-.shop-conn[data-tone='warn'] .shop-conn__dot { background: var(--warn); }
-.shop-conn[data-tone='crit'] .shop-conn__dot { background: var(--crit); }
-.shop-conn__label { font-weight: 600; }
-.shop-conn[data-tone='good'] .shop-conn__label { color: var(--good-ink); }
-.shop-conn[data-tone='warn'] .shop-conn__label { color: var(--warn-ink); }
-.shop-conn[data-tone='crit'] .shop-conn__label { color: var(--crit-ink); }
-.shop-conn__seen,
-.shop-conn__detail { color: var(--muted); font-family: var(--data); font-size: var(--fs-micro); }
-.shop-conn__detail { font-family: var(--body); }
-.shop-conn__retry {
-  margin-left: auto;
-  font-size: var(--fs-micro);
-  text-decoration: underline;
-  color: var(--aisle-ink);
-  cursor: pointer;
-  padding: 0;
-}
-
-/* the live pulse — the ONE place a dot is allowed to breathe */
-@keyframes shop-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-.shop-conn[data-tone='good'] .shop-conn__dot { animation: shop-pulse 2.4s var(--ease) infinite; }
-
-/* ── stale flag chips ─────────────────────────────────────────────────── */
-
-.shop-flags {
-  list-style: none;
-  margin: var(--s-2) 0 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-}
-.shop-flag {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.18rem 0.55rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--hairline);
-  background: var(--surface);
-  font-size: var(--fs-micro);
-  line-height: 1.4;
-}
-.shop-flag[data-tone='warn'] { border-color: var(--warn); color: var(--warn-ink); }
-.shop-flag[data-tone='crit'] { border-color: var(--crit); color: var(--crit-ink); }
-
-/* =============================================================================
-   4. SKELETONS — cut to the shape of the real thing
-   ============================================================================= */
-
-.shop-skel {
-  display: block;
-  border-radius: var(--r-soft);
-  background:
-    linear-gradient(
-      90deg,
-      var(--sunken) 0%,
-      color-mix(in srgb, var(--aisle) 10%, var(--sunken)) 50%,
-      var(--sunken) 100%
-    );
-  background-size: 220% 100%;
-  animation: shop-sweep 1.5s var(--ease) infinite;
-  animation-delay: calc(var(--i, 0) * 90ms);
-}
-@keyframes shop-sweep {
-  from { background-position: 140% 0; }
-  to { background-position: -40% 0; }
-}
-.shop-skel--line { height: 1.05rem; border-radius: var(--r-nub); margin-bottom: 0.5rem; }
-.shop-skel--small { height: 0.8rem; }
-.shop-skel--block { height: 10rem; }
-.shop-skel--pill { width: 4.5rem; height: 2rem; border-radius: var(--r-pill); }
-
-@media (prefers-reduced-motion: reduce) {
-  .shop-skel { animation: none; background: var(--sunken); }
-}
-
-/* =============================================================================
-   5. PRODUCT GRID — PILLAR 5
-   -----------------------------------------------------------------------------
-   TWO-ACROSS ON MOBILE, NOT THREE. This one line is the whole argument with
-   every competitor: fewer products visible, each one desirable.
-   ============================================================================= */
-
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-4);
-}
-@media (min-width: 720px) {
-  .shop-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); }
-}
-@media (min-width: 1100px) {
-  .shop-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-.shop-card {
+  width: min(22rem, calc(100vw - var(--s-6)));
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
-  /* hairline rules, not boxes inside boxes */
-  border-top: 1px solid var(--hairline);
-  padding-top: var(--s-3);
-  min-width: 0;
-}
-.shop-card[data-out='true'] { opacity: 0.66; }
-
-.shop-card__media {
-  position: relative;
-  display: block;
-  aspect-ratio: 4 / 5;
-  border-radius: var(--r-panel);
-  overflow: hidden;
-  background: var(--surface);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--card-raised);
   border: 1px solid var(--hairline);
-  transition: border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease);
+  box-shadow: var(--lift-3);
+  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
 }
-.shop-card__media:hover {
-  border-color: var(--aisle-edge);
-  transform: translateY(-2px);
+
+.shop-loc__pin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--hairline);
 }
-.shop-media__img { width: 100%; height: 100%; object-fit: cover; }
-.shop-media__plate {
-  position: absolute;
-  inset: 0;
+.shop-loc__pin-row {
+  display: flex;
+  gap: var(--s-2);
+}
+.shop-loc__pin-row .shop-input {
+  font-family: var(--data);
+  letter-spacing: 0.12em;
+}
+.shop-loc__pin-label {
+  display: block;
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--ink-soft);
+}
+.shop-loc__error {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--crit);
+}
+.shop-loc__hint {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+.shop-loc__clear {
+  align-self: flex-start;
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* ── search ─────────────────────────────────────────────────────────────── */
+
+.shop-search {
+  grid-area: search;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  padding: 0 0.9rem;
+  border-radius: var(--r-pill);
+  background: var(--ground-sunk);
+  border: 1px solid transparent;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+.shop-search:focus-within {
+  background: var(--card);
+  border-color: var(--aisle);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--aisle) 22%, transparent);
+}
+.shop-search svg {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+}
+.shop-search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  background: none;
+  outline: none;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  padding-block: 0.65rem;
+  min-height: 42px;
+}
+.shop-search__input::placeholder {
+  color: var(--ink-faint);
+}
+.shop-search__input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+/* ── profile ────────────────────────────────────────────────────────────── */
+
+.shop-head__links {
+  grid-area: profile;
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+.shop-head__link {
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--r-pill);
+  font-size: var(--t-sm);
+  font-weight: 560;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+.shop-head__link:hover {
+  background: var(--shop-wash);
+  color: var(--aisle-ink);
+}
+.shop-head__link--strong {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+}
+.shop-head__link--strong:hover {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  filter: saturate(1.15);
+}
+
+.shop-profile {
+  grid-area: profile;
+  position: relative;
+}
+.shop-profile__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0.3rem 0.65rem 0.3rem 0.3rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-strong);
+  background: var(--card);
+  color: var(--ink);
+  font-size: var(--t-sm);
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+.shop-profile__button:hover {
+  border-color: var(--shop-edge);
+  transform: translateY(-1px);
+}
+.shop-profile__button:active {
+  transform: scale(0.96);
+}
+.shop-profile__initials {
   display: grid;
   place-items: center;
-  background: var(--surface);
-}
-.shop-media__plate-art { width: 72%; height: 72%; }
-.shop-media__plate-letter {
-  font-family: var(--display);
-  font-size: 34px;
-  font-weight: 700;
-  fill: var(--aisle-ink);
-}
-
-.shop-card__save,
-.shop-card__out {
-  position: absolute;
-  top: var(--s-2);
-  left: var(--s-2);
-  padding: 0.15rem 0.45rem;
-  border-radius: var(--r-nub);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
   font-family: var(--data);
-  font-size: var(--fs-micro);
-  font-weight: 600;
+  font-size: var(--t-2xs);
+  font-weight: 700;
   letter-spacing: 0.04em;
 }
-.shop-card__save { background: var(--aisle); color: var(--aisle-on); }
-.shop-card__out { background: var(--ink); color: var(--paper); font-family: var(--body); }
-
-.shop-card__body { display: grid; gap: 0.2rem; min-width: 0; }
-.shop-card__name {
-  font-family: var(--display);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-.shop-card__name a { text-decoration: none; }
-.shop-card__name a:hover { text-decoration: underline; text-decoration-color: var(--aisle); }
-.shop-card__unit { font-size: var(--fs-micro); color: var(--muted); }
-.shop-card__brand { color: var(--stone); }
-
-.shop-card__foot {
-  margin-top: var(--s-2);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
-}
-.shop-card__price { display: flex; align-items: baseline; gap: 0.4rem; }
-.shop-card__price .price { font-size: 1.02rem; }
-.shop-card__mrp { color: var(--muted); font-family: var(--data); font-size: var(--fs-micro); }
-.shop-card__disabled { font-size: var(--fs-micro); color: var(--muted); }
-
-.shop-card__add {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--aisle);
-  background: var(--aisle-wash);
-  color: var(--aisle-ink);
-  font-size: var(--fs-small);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease), transform var(--t-micro) var(--ease);
-}
-.shop-card__add:hover { background: var(--aisle); color: var(--aisle-on); }
-.shop-card__add:active { transform: scale(0.95); }
-
-.shop-card--skeleton .shop-card__media { border: 0; }
-
-/* =============================================================================
-   6. STORES
-   ============================================================================= */
-
-.shop-stores {
-  display: grid;
-  gap: var(--s-4);
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
-}
-
-.shop-store {
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
-}
-.shop-store:hover { border-color: var(--aisle-edge); box-shadow: var(--lift-aisle); }
-.shop-store[data-closed='true'] { background: var(--sunken); }
-.shop-store__hit { display: grid; gap: var(--s-2); text-decoration: none; }
-
-.shop-store__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-}
-.shop-store__name {
-  font-size: var(--fs-h3);
-  letter-spacing: -0.025em;
-}
-.shop-store__state {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  white-space: nowrap;
-}
-.shop-store__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--stone);
-}
-.shop-store__state[data-open='true'] .shop-store__dot,
-[data-open='true'] > .shop-store__dot { background: var(--good); }
-.shop-store__state[data-open='false'] .shop-store__dot { background: var(--crit); }
-
-.shop-store__blurb { font-size: var(--fs-small); color: var(--muted); }
-
-.shop-store__facts,
-.shop-front__facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-4);
-  margin: 0;
-}
-.shop-store__facts dt,
-.shop-front__facts dt {
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-}
-.shop-store__facts dd,
-.shop-front__facts dd {
-  margin: 0;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.shop-store__aisles {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-}
-.shop-store__aisle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: var(--fs-micro);
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  text-decoration: none;
-  color: var(--muted);
-}
-.shop-store__aisle:hover { color: var(--ink); border-color: var(--hairline-strong); }
-.shop-store__swatch { width: 8px; height: 8px; border-radius: 2px; }
-
-.shop-store__foot {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--s-2);
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--hairline);
-  font-size: var(--fs-micro);
-  color: var(--muted);
-}
-.shop-store__cod { font-family: var(--data); }
-
-/* ── locate prompt ────────────────────────────────────────────────────── */
-
-.shop-locate {
-  display: grid;
-  gap: var(--s-4);
-  padding: var(--s-5);
-  border: 1px solid var(--aisle-edge);
-  border-radius: var(--r-panel);
-  background: var(--aisle-wash);
-}
-.shop-locate__title { font-size: var(--fs-h3); letter-spacing: -0.02em; }
-.shop-locate__body { color: var(--muted); max-width: 56ch; margin-top: 0.25rem; }
-.shop-locate__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
-.shop-locate__pin { display: flex; gap: var(--s-2); }
-.shop-locate__pin input {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
-  padding: 0.55rem 0.8rem;
-  background: var(--surface-2);
-  font-family: var(--data);
-  width: 9rem;
-}
-.shop-locate__error { color: var(--crit-ink); font-size: var(--fs-small); }
-
-/* ── aisle tabs ───────────────────────────────────────────────────────── */
-
-.shop-tabs { display: flex; gap: var(--s-2); padding-bottom: 0.3rem; }
-.shop-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  font-size: var(--fs-small);
-  white-space: nowrap;
-  cursor: pointer;
-}
-.shop-tab:hover { border-color: var(--aisle-edge); }
-.shop-tab[data-active='true'] {
-  background: var(--aisle);
-  border-color: var(--aisle);
-  color: var(--aisle-on);
-  font-weight: 600;
-}
-.shop-tab__swatch { width: 9px; height: 9px; border-radius: 2px; }
-
-.shop-front__head { display: grid; gap: var(--s-3); }
-
-/* =============================================================================
-   7. AISLE PAGE — the demo moment
-   ============================================================================= */
-
-.shop-aisle__head {
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-6) var(--s-5);
-  border-radius: var(--r-panel);
-  background:
-    linear-gradient(180deg, var(--aisle-wash-strong), transparent 70%),
-    var(--surface);
-  border: 1px solid var(--aisle-edge);
-}
-.shop-aisle__title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--s-4);
-  font-size: var(--fs-hero);
-  letter-spacing: -0.045em;
-  color: var(--aisle-ink);
-}
-.shop-aisle__hindi {
-  font-size: 0.42em;
-  color: var(--muted);
-  font-family: var(--body);
-  letter-spacing: 0;
-}
-.shop-aisle__hue {
-  font-size: var(--fs-small);
-  color: var(--muted);
-  max-width: var(--measure);
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--aisle-edge);
-}
-
-/* =============================================================================
-   8. THE BASKET — PILLAR 3
-   ============================================================================= */
-
-.shop-dock-region {
-  position: fixed;
-  right: var(--s-4);
-  bottom: var(--s-4);
-  z-index: var(--z-dock);
-  display: grid;
-  gap: var(--s-2);
-  justify-items: end;
-  max-width: min(24rem, calc(100vw - 2rem));
-}
-
-.shop-dock {
-  display: grid;
-  gap: 0.3rem;
-  padding: 0.6rem 0.9rem 0.6rem 0.7rem;
-  border-radius: var(--r-panel);
-  border: 1px solid var(--aisle);
-  background: var(--surface-2);
-  box-shadow: var(--lift-2), var(--lift-aisle);
-  transition: transform var(--t-micro) var(--ease);
-}
-.shop-dock[data-empty='true'] {
-  border-color: var(--hairline);
-  box-shadow: var(--lift-1);
-}
-.shop-dock__link {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  text-decoration: none;
-}
-
-/* the vessel + the rising mass */
-.shop-dock__vessel {
-  position: relative;
-  display: block;
-  width: 46px;
-  height: 44px;
-  flex: none;
-  color: var(--aisle-ink);
-}
-.shop-dock__basket {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.shop-dock__mass {
-  position: absolute;
-  left: 7px;
-  right: 7px;
-  bottom: 3px;
-  /* The vessel is 44px tall and its interior runs roughly 25px of that, so a
-     full basket (--shop-fill: 100%) fills to the brim and no further. */
-  height: calc(var(--shop-fill, 0%) * 0.56);
-  max-height: 25px;
-  border-radius: 0 0 6px 6px;
-  background:
-    repeating-linear-gradient(
-      -50deg,
-      color-mix(in srgb, var(--aisle-on) 18%, transparent) 0 4px,
-      transparent 4px 9px
-    ),
-    var(--aisle);
-  transition: height var(--t-move) var(--ease-out);
-}
-
-.shop-dock__text { display: grid; line-height: 1.2; min-width: 0; }
-.shop-dock__count {
-  font-family: var(--display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.shop-dock__total {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--fs-micro);
-  color: var(--muted);
+.shop-profile__name {
+  display: none;
+  max-width: 9rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.shop-dock__warn {
-  font-size: var(--fs-micro);
-  color: var(--warn-ink);
-  max-width: 16rem;
-  line-height: 1.4;
+@media (min-width: 640px) {
+  .shop-profile__name {
+    display: inline;
+  }
 }
 
-/* the catch — the ONE spring in the product */
-@keyframes shop-squash {
+.shop-profile__panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + var(--s-2));
+  right: 0;
+  width: min(17rem, calc(100vw - var(--s-6)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: var(--card-raised);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-3);
+  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+}
+.shop-profile__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-2) var(--s-3) var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: var(--s-2);
+}
+.shop-profile__who {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--t-lg);
+  letter-spacing: var(--track-tight);
+}
+.shop-profile__contact {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.shop-profile__role {
+  align-self: flex-start;
+  margin-top: var(--s-1);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--shop-wash-deep);
+  color: var(--aisle-ink);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+.shop-profile__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 560;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+.shop-profile__item:hover {
+  background: var(--shop-wash);
+  transform: translateX(3px);
+}
+.shop-profile__item svg {
+  color: var(--ink-faint);
+}
+.shop-profile__item--danger {
+  color: var(--crit);
+}
+.shop-profile__item--danger:hover {
+  background: var(--crit-wash);
+}
+.shop-profile__item--danger svg {
+  color: var(--crit);
+}
+.shop-profile__note {
+  margin: var(--s-2) 0 0;
+  padding: 0 0.75rem;
+  font-size: var(--t-2xs);
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   4 · PILLAR 1 — THE AISLE RAIL
+
+   Eight swatches. Hovering previews the tint across the whole interface;
+   clicking commits it. `--aisle` is registered with @property, so the swap is
+   a genuine 420ms colour interpolation rather than a cut.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-head__rail {
+  padding-bottom: var(--s-3);
+}
+
+.shop-rail {
+  margin: 0;
+  padding: 0;
+}
+.shop-rail__list {
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0 0 var(--s-1);
+  list-style: none;
+  width: max-content;
+  min-width: 100%;
+}
+
+.shop-rail__item {
+  --rail-hue: var(--aisle);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0.4rem 0.8rem 0.4rem 0.4rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+  font-weight: 620;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+.shop-rail__item:hover,
+.shop-rail__item:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--shop-edge);
+  background: var(--shop-wash);
+  color: var(--ink);
+}
+.shop-rail__item:active {
+  transform: translateY(0) scale(0.96);
+}
+.shop-rail__item[data-active='true'] {
+  background: var(--shop-wash-deep);
+  border-color: var(--aisle);
+  color: var(--aisle-ink);
+}
+
+/* The swatch is the aisle's own hue, from its own token — never an inline
+   literal, so it tracks the dark-theme variants too. */
+.shop-rail__swatch {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  background: var(--ink-faint);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent);
+  transition: transform var(--t-micro) var(--spring);
+}
+.shop-rail__item:hover .shop-rail__swatch,
+.shop-rail__item[data-active='true'] .shop-rail__swatch {
+  transform: scale(1.14) rotate(-8deg);
+}
+.shop-rail__swatch[data-key='fruits'] { background: var(--aisle-fruits); }
+.shop-rail__swatch[data-key='vegetables'] { background: var(--aisle-vegetables); }
+.shop-rail__swatch[data-key='dairy'] { background: var(--aisle-dairy); }
+.shop-rail__swatch[data-key='bakery'] { background: var(--aisle-bakery); }
+.shop-rail__swatch[data-key='beverages'] { background: var(--aisle-beverages); }
+.shop-rail__swatch[data-key='snacks'] { background: var(--aisle-snacks); }
+.shop-rail__swatch[data-key='staples'] { background: var(--aisle-staples); }
+.shop-rail__swatch[data-key='frozen'] { background: var(--aisle-frozen); }
+
+.shop-rail__hindi {
+  font-size: var(--t-xs);
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5 · PILLAR 2 — THE BASKET, AS A PHYSICAL OBJECT
+
+   A vessel with a visible mass inside it that RISES with what you have put in.
+   Adding arcs the item across the viewport (`.shop-fly`, drawn by
+   BasketProvider) and the dock SQUASHES as it catches — the one spring the
+   product spends on delight.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-dock-region {
+  position: fixed;
+  z-index: 45;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  left: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+  pointer-events: none;
+}
+.shop-dock-region > * {
+  pointer-events: auto;
+}
+@media (min-width: 720px) {
+  .shop-dock-region {
+    left: auto;
+    right: var(--s-6);
+    bottom: var(--s-6);
+    max-width: 24rem;
+  }
+}
+
+.shop-dock {
+  width: 100%;
+  border-radius: var(--r-xl);
+  background: var(--card-raised);
+  border: 1px solid var(--shop-edge-soft);
+  box-shadow: var(--lift-3);
+  overflow: hidden;
+  transform-origin: 80% 100%;
+  transition:
+    border-color var(--t-enter) var(--ease),
+    transform var(--t-move) var(--spring);
+}
+.shop-dock[data-empty='true'] {
+  opacity: 0.94;
+  border-color: var(--hairline);
+}
+
+/* THE CATCH. `data-catch` is set by BasketProvider the instant the flying
+   item lands, and removed 420ms later. */
+@keyframes shop-dock-catch {
   0% { transform: scale(1, 1); }
-  35% { transform: scale(1.12, 0.86); }
-  70% { transform: scale(0.96, 1.05); }
+  28% { transform: scale(1.1, 0.86); }
+  58% { transform: scale(0.96, 1.07); }
   100% { transform: scale(1, 1); }
 }
 .shop-dock[data-catch='true'] {
-  animation: shop-squash 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: shop-dock-catch 420ms var(--spring) both;
 }
 
-/* the flying item */
+.shop-dock__link {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ── the vessel ─────────────────────────────────────────────────────────── */
+
+.shop-dock__vessel {
+  position: relative;
+  flex: 0 0 auto;
+  width: 54px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  color: var(--aisle-ink);
+}
+
+/* The mass. The ONLY thing that animates, so fullness is what you read. */
+.shop-dock__mass {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 4px;
+  height: var(--shop-fill, 0%);
+  min-height: 0;
+  border-radius: 0 0 var(--r-xs) var(--r-xs);
+  background:
+    repeating-linear-gradient(
+      -38deg,
+      color-mix(in oklab, var(--ground) 26%, transparent) 0 5px,
+      transparent 5px 11px
+    ),
+    var(--shop-vivid);
+  transition: height var(--t-slow) var(--spring-soft);
+}
+.shop-dock__mass::after {
+  /* the meniscus — a basket fills unevenly */
+  content: '';
+  position: absolute;
+  inset: -3px 0 auto 0;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--shop-vivid);
+  opacity: 0.85;
+}
+.shop-dock[data-empty='true'] .shop-dock__mass::after {
+  display: none;
+}
+
+.shop-dock__basket {
+  position: relative;
+  width: 48px;
+  height: 44px;
+  color: var(--ink);
+}
+.shop-dock[data-empty='true'] .shop-dock__basket {
+  color: var(--ink-faint);
+}
+/* The rim carries the aisle hue — the handle stays neutral ink — so the
+   object reads as tinted by where you are standing, not just its contents. */
+.shop-dock__rim {
+  stroke: var(--aisle-ink);
+  transition: stroke var(--t-enter) var(--ease);
+}
+.shop-dock[data-empty='true'] .shop-dock__rim {
+  stroke: var(--ink-faint);
+}
+
+.shop-dock__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.shop-dock__count {
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-dock__total {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-dock[data-empty='true'] .shop-dock__total {
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 560;
+  color: var(--ink-soft);
+}
+
+.shop-dock__go {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-pill);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  transition: transform var(--t-micro) var(--spring);
+}
+.shop-dock__link:hover .shop-dock__go {
+  transform: translateX(3px) scale(1.06);
+}
+.shop-dock[data-empty='true'] .shop-dock__go {
+  background: var(--ground-sunk);
+  color: var(--ink-faint);
+}
+
+.shop-dock__warn {
+  margin: 0;
+  padding: var(--s-2) var(--s-4) var(--s-3);
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--warn);
+  background: var(--warn-wash);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ── the flying item ────────────────────────────────────────────────────── */
+/* Appended to document.body by BasketProvider, so this rule is deliberately
+   NOT scoped under `.shop`. */
 .shop-fly {
   position: fixed;
-  z-index: calc(var(--z-dock) + 1);
-  pointer-events: none;
-  border-radius: 50%;
+  z-index: 80;
+  border-radius: var(--r-md);
   background-color: var(--aisle);
   background-size: cover;
   background-position: center;
-  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.55);
+  box-shadow: var(--lift-3);
+  pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .shop-dock[data-catch='true'] { animation: none; }
-  .shop-dock__mass { transition: none; }
-}
-
-/* ── parked basket ────────────────────────────────────────────────────── */
+/* ── the parked basket ──────────────────────────────────────────────────── */
 
 .shop-parked {
-  display: grid;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-panel);
-  border: 1px solid var(--hairline);
-  border-left: 4px solid var(--warn);
-  background: var(--surface-2);
-  box-shadow: var(--lift-1);
-  font-size: var(--fs-small);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card-raised);
+  border: 1px solid var(--pop-4);
+  box-shadow: var(--lift-2);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
 }
-.shop-parked--page { max-width: 34rem; box-shadow: none; }
-.shop-parked__title { font-weight: 600; }
-.shop-parked__body { color: var(--muted); line-height: 1.45; }
-.shop-parked__actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.shop-parked--page {
+  box-shadow: var(--lift-1);
+}
+.shop-parked__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--t-md);
+  letter-spacing: var(--track-tight);
+}
+.shop-parked__body {
+  margin: var(--s-1) 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 34ch;
+}
+.shop-parked__actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
 
-/* ── store switch dialog ──────────────────────────────────────────────── */
+/* ── the store switch ───────────────────────────────────────────────────── */
 
 .shop-switch {
   position: fixed;
   inset: 0;
-  z-index: var(--z-sheet);
+  z-index: 75;
   display: grid;
   place-items: center;
   padding: var(--s-4);
@@ -881,687 +1216,2115 @@
 .shop-switch__scrim {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--ink) 55%, transparent);
+  background: color-mix(in oklab, var(--ink) 55%, transparent);
+  backdrop-filter: blur(4px);
+  animation: shop-fade var(--t-move) var(--ease) both;
+}
+@keyframes shop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 .shop-switch__panel {
   position: relative;
-  display: grid;
-  gap: var(--s-3);
   width: min(32rem, 100%);
-  padding: var(--s-6) var(--s-5);
-  border-radius: var(--r-panel);
-  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-6);
+  border-radius: var(--r-xl);
+  background: var(--card-raised);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-2);
+  box-shadow: var(--lift-3);
+  animation: mnd-pop-in var(--t-enter) var(--spring) both;
 }
-.shop-switch__title { font-size: var(--fs-h2); letter-spacing: -0.03em; }
-.shop-switch__body { color: var(--muted); line-height: 1.55; }
-.shop-switch__why { display: inline-block; margin-top: var(--s-2); font-size: var(--fs-small); }
-.shop-switch__actions { display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.shop-switch__title {
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  line-height: var(--lh-snug);
+  margin: 0;
+}
+.shop-switch__body {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.shop-switch__why {
+  display: block;
+  margin-top: var(--s-2);
+  color: var(--ink-faint);
+  font-size: var(--t-xs);
+}
+.shop-switch__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
 
-/* =============================================================================
-   9. STEPPER
-   ============================================================================= */
+/* ═══════════════════════════════════════════════════════════════════════════
+   6 · PILLAR 4 — EDITORIAL PRODUCT CARDS
+   Two-across on mobile · three at 720 · four at 1100.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-.shop-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15rem;
-  border: 1px solid var(--aisle);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  padding: 0.12rem;
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+@media (min-width: 720px) {
+  .shop-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-4);
+  }
+}
+@media (min-width: 1100px) {
+  .shop-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--s-5);
+  }
+}
+
+.shop-card {
+  --card-hue: var(--aisle);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  overflow: hidden;
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 11) * var(--stagger));
+  transition:
+    transform var(--t-move) var(--spring-soft),
+    box-shadow var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease);
 }
-.shop-step__btn {
-  width: 2rem;
-  height: 2rem;
+.shop-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--lift-2);
+  border-color: color-mix(in oklab, var(--card-hue) 42%, var(--hairline));
+}
+/* Squash on press — the card is an object, and objects give. */
+.shop-card:active {
+  transform: translateY(-1px) scale(0.985);
+  transition-duration: var(--t-instant);
+}
+.shop-card[data-out='true'] {
+  opacity: 0.82;
+}
+
+/* Per-card aisle hue: an aisle shelf reads as one colour, a mixed shelf reads
+   as eight. The stamp is on the card, not the document. */
+.shop-card[data-card-aisle='fruits'] { --card-hue: var(--aisle-fruits); }
+.shop-card[data-card-aisle='vegetables'] { --card-hue: var(--aisle-vegetables); }
+.shop-card[data-card-aisle='dairy'] { --card-hue: var(--aisle-dairy); }
+.shop-card[data-card-aisle='bakery'] { --card-hue: var(--aisle-bakery); }
+.shop-card[data-card-aisle='beverages'] { --card-hue: var(--aisle-beverages); }
+.shop-card[data-card-aisle='snacks'] { --card-hue: var(--aisle-snacks); }
+.shop-card[data-card-aisle='staples'] { --card-hue: var(--aisle-staples); }
+.shop-card[data-card-aisle='frozen'] { --card-hue: var(--aisle-frozen); }
+
+.shop-card__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--card-hue) 9%, var(--ground-sunk));
+  border-bottom: 1px solid var(--hairline);
+}
+.shop-media__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--t-slow) var(--ease-out);
+}
+.shop-card:hover .shop-media__img {
+  transform: scale(1.055);
+}
+
+/* The drawn plate — every product without a photograph gets a composed
+   placeholder in its own aisle hue, not a grey box with a broken glyph. */
+.shop-media__plate {
+  position: absolute;
+  inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+}
+.shop-media__plate-art {
+  width: 72%;
+  height: 72%;
+  color: color-mix(in oklab, var(--card-hue) 70%, var(--ink));
+  transition: transform var(--t-slow) var(--spring-soft);
+}
+.shop-card:hover .shop-media__plate-art {
+  transform: rotate(-4deg) scale(1.05);
+}
+.shop-media__plate-letter {
+  font-family: var(--display);
+  font-size: 44px;
+  font-weight: 800;
+  fill: currentColor;
+}
+
+.shop-card__save,
+.shop-card__out {
+  position: absolute;
+  top: var(--s-2);
+  left: var(--s-2);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--r-pill);
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.shop-card__save {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+}
+.shop-card__out {
+  top: auto;
+  bottom: var(--s-2);
+  background: var(--ink);
+  color: var(--ground);
+  font-family: var(--body);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.shop-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  flex: 1 1 auto;
+  padding: var(--s-3);
+}
+@media (min-width: 720px) {
+  .shop-card__body {
+    padding: var(--s-4);
+  }
+}
+
+.shop-card__name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: var(--track-tight);
+}
+.shop-card__name a {
+  color: inherit;
+  text-decoration: none;
+}
+.shop-card__name a:hover {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--card-hue) 60%, transparent);
+  text-underline-offset: 3px;
+}
+.shop-card__unit {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-card__brand {
+  font-family: var(--body);
+  color: var(--ink-faint);
+}
+
+.shop-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-3);
+}
+.shop-card__price {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin: 0;
+  min-width: 0;
+}
+.shop-card__price .shop-price {
+  font-size: var(--t-lg);
+}
+.shop-card__mrp {
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+.shop-card__add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 0.42rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--t-micro) var(--spring),
+    filter var(--t-micro) var(--ease);
+}
+.shop-card__add:hover {
+  transform: translateY(-2px) scale(1.04);
+}
+.shop-card__add:active {
+  transform: scale(0.9);
+}
+.shop-card__disabled {
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--ink-faint);
+}
+
+/* ── the skeleton, cut to the real card ─────────────────────────────────── */
+
+.shop-skel {
+  display: block;
+  border-radius: var(--r-sm);
+  background: linear-gradient(
+    90deg,
+    var(--ground-sunk) 25%,
+    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
+    var(--ground-sunk) 75%
+  );
+  background-size: 200% 100%;
+  animation: mnd-shimmer 1.4s linear infinite;
+}
+.shop-skel--line {
+  height: 0.95rem;
+  border-radius: var(--r-pill);
+}
+.shop-skel--small {
+  height: 0.7rem;
+}
+.shop-skel--pill {
+  width: 4.5rem;
+  height: 2rem;
+  border-radius: var(--r-pill);
+}
+.shop-skel--block {
+  width: 100%;
+  height: 12rem;
+  border-radius: var(--r-lg);
+}
+
+.shop-card--skeleton {
+  box-shadow: none;
+  pointer-events: none;
+}
+.shop-card--skeleton .shop-card__media {
+  border-bottom-color: transparent;
+}
+.shop-card--skeleton .shop-card__body {
+  gap: var(--s-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   7 · THE QUANTITY STEPPER — bouncing, and honest about the ceiling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-step {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px;
+  border-radius: var(--r-pill);
+  background: var(--shop-wash-deep);
+  border: 1px solid var(--shop-edge-soft);
+}
+.shop-step[data-disabled='true'] {
+  opacity: 0.5;
+}
+
+.shop-step__btn {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--card);
   color: var(--aisle-ink);
   cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease);
+  box-shadow: var(--lift-1);
+  transition:
+    transform var(--t-instant) var(--spring),
+    background-color var(--t-micro) var(--ease),
+    opacity var(--t-micro) var(--ease);
 }
-.shop-step[data-size='md'] .shop-step__btn { width: 2.6rem; height: 2.6rem; }
-.shop-step__btn:hover:not(:disabled) { background: var(--aisle-wash-strong); }
-.shop-step__btn:disabled { color: var(--stone); cursor: not-allowed; }
+.shop-step[data-size='md'] .shop-step__btn {
+  width: 40px;
+  height: 40px;
+}
+.shop-step__btn:hover:not(:disabled) {
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  transform: scale(1.12);
+}
+.shop-step__btn:active:not(:disabled) {
+  transform: scale(0.84);
+}
+.shop-step__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .shop-step__value {
-  min-width: 1.8rem;
+  min-width: 2ch;
+  padding-inline: var(--s-1);
   text-align: center;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  color: var(--ink);
 }
-.shop-step__cap {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  right: 0;
-  white-space: nowrap;
-  font-size: var(--fs-micro);
-  color: var(--warn-ink);
+.shop-step[data-size='md'] .shop-step__value {
+  font-size: var(--t-lg);
+  min-width: 2.5ch;
+}
+/* The bounce fires on the value itself when it changes — the number is the
+   thing that moved, so the number is what reacts. */
+.shop-step__value[data-bounce='true'] {
+  animation: shop-bounce 320ms var(--spring) both;
+}
+@keyframes shop-bounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.34); }
+  100% { transform: scale(1); }
 }
 
-/* =============================================================================
-   10. PRODUCT PAGE
-   ============================================================================= */
+.shop-step__cap {
+  position: absolute;
+  top: calc(100% + var(--s-1));
+  right: 0;
+  width: max-content;
+  max-width: 12rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--r-xs);
+  background: var(--warn-wash);
+  color: var(--warn);
+  font-size: var(--t-2xs);
+  font-weight: 620;
+  line-height: 1.35;
+  animation: mnd-pop-in var(--t-micro) var(--spring-soft) both;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   8 · NOTICES — the honesty layer
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+}
+.shop-notice p {
+  margin: 0;
+}
+.shop-notice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.shop-notice code {
+  font-family: var(--data);
+  font-size: 0.92em;
+  padding: 0.1em 0.35em;
+  border-radius: var(--r-xs);
+  background: color-mix(in oklab, var(--ink) 8%, transparent);
+}
+
+.shop-notice--fixture {
+  background: var(--warn-wash);
+  border-color: color-mix(in oklab, var(--warn) 40%, transparent);
+  color: var(--warn);
+}
+.shop-notice--warn {
+  background: var(--warn-wash);
+  border-color: color-mix(in oklab, var(--warn) 34%, transparent);
+  color: var(--warn);
+}
+.shop-notice--error {
+  background: var(--crit-wash);
+  border-color: color-mix(in oklab, var(--crit) 40%, transparent);
+  color: var(--crit);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.shop-notice--info {
+  background: var(--info-wash);
+  border-color: color-mix(in oklab, var(--info) 34%, transparent);
+  color: var(--info);
+}
+.shop-notice__title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--t-md);
+  letter-spacing: var(--track-tight);
+}
+.shop-notice__body {
+  margin: var(--s-1) 0 0;
+  color: inherit;
+}
+.shop-notice__code {
+  font-family: var(--data);
+  opacity: 0.8;
+}
+
+/* ── connection banner ──────────────────────────────────────────────────── */
+
+.shop-conn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--ink-soft);
+}
+.shop-conn__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  background: var(--ink-faint);
+  flex: 0 0 auto;
+}
+.shop-conn[data-tone='good'] .shop-conn__dot {
+  background: var(--good);
+  animation: shop-pulse 2.2s var(--ease) infinite;
+}
+.shop-conn[data-tone='warn'] .shop-conn__dot { background: var(--warn); }
+.shop-conn[data-tone='crit'] .shop-conn__dot { background: var(--crit); }
+@keyframes shop-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.8); }
+}
+.shop-conn__label {
+  font-weight: 700;
+  color: var(--ink);
+}
+.shop-conn[data-tone='good'] .shop-conn__label { color: var(--good); }
+.shop-conn[data-tone='warn'] .shop-conn__label { color: var(--warn); }
+.shop-conn[data-tone='crit'] .shop-conn__label { color: var(--crit); }
+.shop-conn__seen,
+.shop-conn__detail {
+  color: var(--ink-faint);
+}
+.shop-conn__retry {
+  appearance: none;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: var(--card);
+  color: var(--ink);
+  padding: 0.15rem 0.6rem;
+  font: inherit;
+  font-size: var(--t-2xs);
+  font-weight: 620;
+  cursor: pointer;
+}
+.shop-conn__retry:hover {
+  border-color: var(--shop-edge);
+  color: var(--aisle-ink);
+}
+
+/* ── stale line flags ───────────────────────────────────────────────────── */
+
+.shop-flags {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-flag {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--r-xs);
+  font-size: var(--t-2xs);
+  font-weight: 560;
+  line-height: 1.45;
+}
+.shop-flag svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.shop-flag[data-tone='warn'] {
+  background: var(--warn-wash);
+  color: var(--warn);
+}
+.shop-flag[data-tone='crit'] {
+  background: var(--crit-wash);
+  color: var(--crit);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   9 · EMPTY STATES
+
+   The database is deliberately empty, so these are the screens the client
+   actually sees. An empty catalogue is a stage in a store's life, not an
+   error — it is drawn, titled and given the way forward.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-7) var(--s-5);
+  border-radius: var(--r-xl);
+  background: var(--card);
+  border: 1px dashed var(--shop-edge-soft);
+  text-align: center;
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+}
+.shop-empty__art {
+  width: 108px;
+  height: 108px;
+  color: var(--aisle);
+  animation: mnd-float 5s var(--ease) infinite;
+}
+.shop-empty__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.shop-empty__body {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.shop-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   10 · STORES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-stores {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  gap: var(--s-4);
+}
+
+.shop-store {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  overflow: hidden;
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 9) * var(--stagger));
+  transition:
+    transform var(--t-move) var(--spring-soft),
+    box-shadow var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease);
+}
+.shop-store:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--lift-2);
+  border-color: var(--shop-edge);
+}
+.shop-store:active {
+  transform: translateY(-1px) scale(0.99);
+}
+.shop-store[data-closed='true'] {
+  opacity: 0.86;
+}
+.shop-store--skeleton {
+  gap: var(--s-3);
+  padding: var(--s-5);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.shop-store__hit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: 1 1 auto;
+  padding: var(--s-5);
+  color: inherit;
+  text-decoration: none;
+}
+.shop-store__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.shop-store__name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: var(--track-tight);
+}
+.shop-store__state {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--r-pill);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.shop-store__state[data-open='true'] {
+  background: var(--good-wash);
+  color: var(--good);
+}
+.shop-store__state[data-open='false'] {
+  background: var(--ground-sunk);
+  color: var(--ink-faint);
+}
+.shop-store__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: currentColor;
+  flex: 0 0 auto;
+}
+.shop-store__blurb {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.shop-store__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  margin: auto 0 0;
+}
+.shop-store__facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.shop-store__facts dt {
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-store__facts dd {
+  margin: 0;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-md);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.shop-store__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--hairline);
+  background: var(--ground-sunk);
+  font-size: var(--t-xs);
+  color: var(--ink-soft);
+}
+.shop-store__addr {
+  font-weight: 560;
+  color: var(--ink);
+}
+.shop-store__cod {
+  margin-left: auto;
+  padding: 0.12rem 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--shop-wash-deep);
+  color: var(--aisle-ink);
+  font-weight: 700;
+  font-size: var(--t-2xs);
+}
+
+/* ── the locate prompt ──────────────────────────────────────────────────── */
+
+.shop-locate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--shop-wash);
+  border: 1px solid var(--shop-edge-soft);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+}
+.shop-locate__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.shop-locate__body {
+  margin: var(--s-1) 0 0;
+  max-width: 46ch;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.shop-locate__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+.shop-locate__pin {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.shop-locate__pin .shop-input {
+  width: 9rem;
+  font-family: var(--data);
+  letter-spacing: 0.12em;
+}
+.shop-locate__error {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--crit);
+}
+
+.shop-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--shop-wash);
+  border: 1px solid var(--shop-edge-soft);
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   11 · THE STOREFRONT + AISLE HEADS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* The chromatic band. `--aisle` is @property-registered, so this whole panel
+   genuinely CROSSFADES over --t-enter when the aisle changes. It is deliberately
+   the largest colour area on the page, because that is what makes the swap
+   land as an event rather than a detail. */
+.shop-band {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-6) var(--s-5);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(
+      120% 140% at 88% 0%,
+      color-mix(in oklab, var(--aisle) 34%, transparent) 0%,
+      transparent 62%
+    ),
+    color-mix(in oklab, var(--aisle) 12%, var(--card));
+  border: 1px solid var(--shop-edge-soft);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+}
+@media (min-width: 720px) {
+  .shop-band {
+    padding: var(--s-7) var(--s-6);
+  }
+}
+.shop-band__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h1);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+}
+.shop-band__hindi {
+  font-family: var(--display);
+  font-size: 0.5em;
+  font-weight: 700;
+  color: var(--aisle-ink);
+}
+.shop-band__hue {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin: 0;
+  max-width: 54ch;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.shop-band__chip {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: var(--aisle);
+  box-shadow: 0 6px 18px -8px var(--shop-glow);
+}
+
+.shop-front__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: var(--s-4);
+  margin: 0;
+}
+.shop-front__facts div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.shop-front__facts dt {
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-front__facts dd {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+}
+.shop-front__facts dd.shop-num {
+  font-family: var(--data);
+}
+.shop-front__facts dd[data-open='true'] {
+  color: var(--good);
+}
+.shop-front__facts dd[data-open='false'] {
+  color: var(--ink-faint);
+}
+
+/* ── aisle tabs ─────────────────────────────────────────────────────────── */
+
+.shop-tabs {
+  margin: 0;
+}
+.shop-tabs__list {
+  display: flex;
+  gap: var(--s-2);
+  width: max-content;
+  min-width: 100%;
+  padding-bottom: var(--s-1);
+}
+.shop-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--card);
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 620;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--t-micro) var(--spring),
+    background-color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+.shop-tab:hover {
+  transform: translateY(-2px);
+  border-color: var(--shop-edge);
+  color: var(--ink);
+}
+.shop-tab:active {
+  transform: scale(0.95);
+}
+.shop-tab[data-active='true'] {
+  background: var(--shop-fill);
+  border-color: transparent;
+  color: var(--shop-on-fill);
+}
+.shop-tab__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--r-xs);
+  background: var(--ink-faint);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 20%, transparent);
+}
+.shop-tab__swatch[data-key='fruits'] { background: var(--aisle-fruits); }
+.shop-tab__swatch[data-key='vegetables'] { background: var(--aisle-vegetables); }
+.shop-tab__swatch[data-key='dairy'] { background: var(--aisle-dairy); }
+.shop-tab__swatch[data-key='bakery'] { background: var(--aisle-bakery); }
+.shop-tab__swatch[data-key='beverages'] { background: var(--aisle-beverages); }
+.shop-tab__swatch[data-key='snacks'] { background: var(--aisle-snacks); }
+.shop-tab__swatch[data-key='staples'] { background: var(--aisle-staples); }
+.shop-tab__swatch[data-key='frozen'] { background: var(--aisle-frozen); }
+.shop-tab__count {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-xs);
+  opacity: 0.75;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   12 · THE PRODUCT PAGE
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-product {
   display: grid;
-  gap: var(--s-6);
+  gap: var(--s-5);
+  align-items: start;
 }
 @media (min-width: 900px) {
-  .shop-product { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-7); align-items: start; }
+  .shop-product {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--s-7);
+  }
 }
-.shop-product__crumbs a { text-decoration: none; }
 
 .shop-product__media {
   position: relative;
   margin: 0;
-  aspect-ratio: 1 / 1;
-  border-radius: var(--r-panel);
+  aspect-ratio: 4 / 3;
+  border-radius: var(--r-xl);
   overflow: hidden;
-  border: 1px solid var(--hairline);
-  background: var(--surface);
+  background: color-mix(in oklab, var(--aisle) 10%, var(--ground-sunk));
+  border: 1px solid var(--shop-edge-soft);
+  box-shadow: var(--lift-2);
+  /* The shared-element feel: the media arrives with the same spring the grid
+     card leaves on, so a tap from the shelf reads as one object opening. */
+  animation: shop-open var(--t-slow) var(--spring-soft) both;
+}
+@keyframes shop-open {
+  from { opacity: 0; transform: scale(0.9) translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@media (min-width: 900px) {
+  .shop-product__media {
+    aspect-ratio: 1 / 1;
+    position: sticky;
+    top: calc(var(--shop-head-h) + var(--s-4));
+  }
+}
+.shop-product__crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-1);
+  margin: 0 0 var(--s-4);
+}
+.shop-product__crumbs a {
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+.shop-product__crumbs a:hover {
+  color: var(--aisle-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.shop-product__desc-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 .shop-product__save {
   position: absolute;
   top: var(--s-3);
   left: var(--s-3);
-  padding: 0.2rem 0.6rem;
-  background: var(--aisle);
-  color: var(--aisle-on);
-  border-radius: var(--r-nub);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--r-pill);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
   font-family: var(--data);
-  font-weight: 600;
+  font-size: var(--t-sm);
+  font-weight: 700;
 }
 
-.shop-product__body { display: grid; gap: var(--s-3); align-content: start; }
-.shop-product__name { font-size: var(--fs-h1); letter-spacing: -0.04em; }
-.shop-product__meta { color: var(--muted); font-size: var(--fs-small); }
+.shop-product__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+  animation: mnd-rise var(--t-enter) var(--spring-soft) 80ms both;
+}
+.shop-product__name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h1);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+}
+.shop-product__meta {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.shop-product__meta a {
+  color: var(--aisle-ink);
+}
 .shop-product__price {
   display: flex;
-  align-items: baseline;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: var(--s-3);
+  margin: 0;
 }
-.shop-product__price .price { font-size: var(--fs-h2); }
-.shop-product__mrp { color: var(--muted); font-family: var(--data); }
-.shop-product__per { color: var(--muted); font-size: var(--fs-small); }
+.shop-product__price .shop-price {
+  font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.shop-product__mrp {
+  font-family: var(--data);
+  font-size: var(--t-lg);
+  color: var(--ink-faint);
+}
+.shop-product__per {
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
 .shop-product__stock {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: var(--fs-small);
+  gap: var(--s-2);
+  margin: 0;
+  align-self: flex-start;
+  padding: 0.28rem 0.7rem;
+  border-radius: var(--r-pill);
+  font-size: var(--t-sm);
+  font-weight: 620;
 }
-.shop-product__stock[data-in='true'] .shop-store__dot { background: var(--good); }
-.shop-product__stock[data-in='false'] .shop-store__dot { background: var(--crit); }
+.shop-product__stock[data-in='true'] {
+  background: var(--good-wash);
+  color: var(--good);
+}
+.shop-product__stock[data-in='false'] {
+  background: var(--crit-wash);
+  color: var(--crit);
+}
 .shop-product__buy {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-3);
   align-items: center;
-  padding-top: var(--s-2);
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
 }
-.shop-product__inbasket { font-size: var(--fs-small); color: var(--muted); }
+.shop-product__inbasket {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
 .shop-product__desc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
   padding-top: var(--s-4);
   border-top: 1px solid var(--hairline);
-  color: var(--muted);
-  max-width: var(--measure);
 }
-.shop-product__desc-title {
-  font-size: var(--fs-small);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--ink);
-  margin-bottom: var(--s-2);
+.shop-product__desc p {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: var(--prose-max);
 }
 
-/* =============================================================================
-   11. CART
-   ============================================================================= */
+/* ═══════════════════════════════════════════════════════════════════════════
+   13 · CART, CHECKOUT, SUMMARY
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-.shop-cart__grid { display: grid; gap: var(--s-5); }
-@media (min-width: 900px) {
-  .shop-cart__grid { grid-template-columns: minmax(0, 1fr) 22rem; align-items: start; }
+.shop-split {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
 }
-.shop-cart__cta { display: flex; }
+@media (min-width: 960px) {
+  .shop-split {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+}
 
-.shop-cart__lines { list-style: none; margin: 0; padding: 0; display: grid; }
+.shop-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .shop-line {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s-3);
+  align-items: center;
   justify-content: space-between;
-  padding: var(--s-4) 0;
-  border-bottom: 1px solid var(--hairline);
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
+  transition: border-color var(--t-micro) var(--ease);
 }
-.shop-line:first-child { border-top: 1px solid var(--hairline); }
-.shop-line__main { min-width: 12rem; flex: 1; }
+.shop-line:hover {
+  border-color: var(--shop-edge-soft);
+}
+.shop-line__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 12rem;
+  flex: 1 1 14rem;
+}
 .shop-line__name {
   font-family: var(--display);
-  font-weight: 600;
-  font-size: var(--fs-h3);
-  letter-spacing: -0.02em;
+  font-size: var(--t-md);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+  color: inherit;
   text-decoration: none;
 }
-.shop-line__meta { font-size: var(--fs-small); color: var(--muted); }
+.shop-line__name:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--shop-edge);
+}
+.shop-line__meta {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
 .shop-line__controls {
   display: flex;
   align-items: center;
   gap: var(--s-4);
   flex-wrap: wrap;
 }
-.shop-line__total { font-size: 1.05rem; min-width: 5rem; text-align: right; }
-.shop-line__remove {
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
+.shop-line__total {
+  min-width: 5rem;
+  text-align: right;
+  font-size: var(--t-lg);
 }
-.shop-line__remove:hover { color: var(--crit-ink); }
+.shop-line__remove {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--ink-faint);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.shop-line__remove:hover {
+  color: var(--crit);
+}
 
-/* ── summary ──────────────────────────────────────────────────────────── */
+/* ── the summary ────────────────────────────────────────────────────────── */
 
 .shop-summary {
-  display: grid;
-  gap: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
   padding: var(--s-5);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
+  border-radius: var(--r-xl);
+  background: var(--card-raised);
+  border: 1px solid var(--shop-edge-soft);
+  box-shadow: var(--lift-2);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) 120ms both;
 }
-@media (min-width: 900px) {
-  .shop-summary--sticky { position: sticky; top: 8.5rem; }
+@media (min-width: 960px) {
+  .shop-summary--sticky {
+    position: sticky;
+    top: calc(var(--shop-head-h) + var(--s-4));
+  }
 }
-.shop-summary__title { font-size: var(--fs-h3); letter-spacing: -0.02em; }
-.shop-summary__items {
-  list-style: none;
+.shop-summary__title {
   margin: 0;
-  padding: 0 0 var(--s-3);
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+.shop-summary__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0 0 var(--s-4);
   border-bottom: 1px solid var(--hairline);
-  display: grid;
-  gap: 0.4rem;
-  font-size: var(--fs-small);
+  list-style: none;
+  font-size: var(--t-sm);
 }
-.shop-summary__items li { display: flex; justify-content: space-between; gap: var(--s-3); }
-.shop-summary__items li[data-unfulfilled='true'] { color: var(--muted); text-decoration: line-through; }
-.shop-summary__missing { text-decoration: none; color: var(--crit-ink); }
-.shop-summary__rows { display: grid; gap: 0.4rem; margin: 0; }
-.shop-summary__rows > div { display: flex; justify-content: space-between; gap: var(--s-3); }
-.shop-summary__rows dt { color: var(--muted); font-size: var(--fs-small); }
-.shop-summary__rows dd { margin: 0; }
-.shop-summary__pending { color: var(--muted); font-size: var(--fs-small); font-style: italic; }
-.shop-summary__total {
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--hairline);
+.shop-summary__items li {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.shop-summary__items li[data-unfulfilled='true'] {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--crit);
+}
+.shop-summary__missing {
+  color: var(--crit);
+  font-size: var(--t-2xs);
+  text-decoration: none;
+}
+.shop-summary__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-sm);
+}
+.shop-summary__rows > div {
+  display: flex;
   align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
 }
-.shop-summary__total dt { color: var(--ink); font-weight: 600; font-size: var(--fs-body); }
-.shop-summary__total dd .price { font-size: var(--fs-h3); }
-.shop-summary__note { font-size: var(--fs-micro); color: var(--muted); line-height: 1.5; }
-.shop-summary__addr {
+.shop-summary__rows dt {
+  color: var(--ink-soft);
+}
+.shop-summary__rows dd {
+  margin: 0;
+}
+.shop-summary__total {
+  margin-top: var(--s-2);
   padding-top: var(--s-3);
+  border-top: 2px solid var(--shop-edge-soft);
+}
+.shop-summary__total dt {
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+  color: var(--ink) !important;
+}
+.shop-summary__total dd .shop-price {
+  font-size: var(--t-h3);
+  letter-spacing: -0.04em;
+}
+.shop-summary__pending {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.shop-summary__note {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+.shop-summary__addr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-top: var(--s-4);
   border-top: 1px solid var(--hairline);
-  font-size: var(--fs-small);
+  font-size: var(--t-sm);
 }
 .shop-summary__addr h3 {
-  font-family: var(--body);
-  font-size: var(--fs-micro);
+  margin: 0;
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--muted);
-  margin-bottom: 0.25rem;
+  color: var(--ink-faint);
+}
+.shop-summary__addr p {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
 }
 
-/* =============================================================================
-   12. CHECKOUT
-   ============================================================================= */
+/* ── checkout panels ────────────────────────────────────────────────────── */
 
-.shop-checkout__grid { display: grid; gap: var(--s-5); }
-@media (min-width: 980px) {
-  .shop-checkout__grid { grid-template-columns: minmax(0, 1fr) 23rem; align-items: start; }
+.shop-checkout__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
 }
-.shop-checkout__main { display: grid; gap: var(--s-4); }
 
 .shop-panel {
-  display: grid;
-  gap: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
   padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--card);
   border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
+  box-shadow: var(--lift-1);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--stagger));
 }
 .shop-panel__title {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  font-size: var(--fs-h3);
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 .shop-panel__step {
   display: grid;
   place-items: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 50%;
-  background: var(--aisle);
-  color: var(--aisle-on);
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: var(--r-pill);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
   font-family: var(--data);
-  font-size: var(--fs-small);
-  flex: none;
+  font-size: var(--t-sm);
+  font-weight: 700;
 }
-.shop-panel__note { font-size: var(--fs-small); color: var(--muted); line-height: 1.55; }
+.shop-panel__note {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
 
-.shop-addresses { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
-.shop-address,
-.shop-pay,
-.shop-slot {
+/* selectable rows — address, payment, slot */
+.shop-choice {
   display: flex;
-  gap: var(--s-3);
   align-items: flex-start;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
-  background: var(--paper);
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  border: 1.5px solid var(--hairline);
+  background: var(--card);
   cursor: pointer;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
 }
-.shop-address input[type='radio'],
-.shop-pay input[type='radio'] {
-  flex: none;
-  margin-top: 0.3rem;
-  accent-color: var(--aisle);
+.shop-choice:hover {
+  border-color: var(--shop-edge);
+  transform: translateY(-2px);
 }
-.shop-address[data-selected='true'],
-.shop-pay[data-selected='true'],
-.shop-slot[data-selected='true'] {
+.shop-choice[data-selected='true'] {
   border-color: var(--aisle);
-  background: var(--aisle-wash);
+  background: var(--shop-wash);
 }
-.shop-address > span,
-.shop-pay > span { display: grid; gap: 0.15rem; }
-.shop-address__label { font-family: var(--display); }
-.shop-address__lines { font-size: var(--fs-small); color: var(--muted); }
-.shop-address__phone { font-size: var(--fs-micro); color: var(--muted); }
-.shop-pay__note { font-size: var(--fs-small); color: var(--muted); line-height: 1.5; }
-.shop-slot {
-  justify-content: space-between;
-  align-items: baseline;
-  cursor: default;
+.shop-choice input {
+  margin-top: 3px;
+  accent-color: var(--aisle);
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+.shop-choice__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.shop-choice__label {
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+}
+.shop-choice__lines,
+.shop-choice__note {
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.shop-choice__phone {
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
 }
 
-.shop-addrform { display: grid; gap: var(--s-3); }
+.shop-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* address form */
+.shop-addrform {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--ground-sunk);
+  border: 1px solid var(--hairline);
+  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+}
 .shop-addrform__fields {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   gap: var(--s-3);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
 }
-.shop-addrform__fields label {
-  display: grid;
-  gap: 0.25rem;
-  font-size: var(--fs-small);
-  color: var(--muted);
+.shop-addrform__wide {
+  grid-column: 1 / -1;
 }
-.shop-addrform__fields input {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
-  padding: 0.55rem 0.7rem;
-  background: var(--paper);
-  color: var(--ink);
-}
-.shop-addrform__fields input:focus-visible { border-color: var(--aisle); }
-.shop-addrform__wide { grid-column: 1 / -1; }
-.shop-addrform__map { display: grid; gap: var(--s-2); }
-.shop-addrform__maplabel { font-size: var(--fs-small); color: var(--muted); }
-.shop-addrform__pin { font-size: var(--fs-micro); color: var(--muted); }
-.shop-addrform__actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-
-.shop-coupon { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.shop-coupon input {
-  flex: 1;
-  min-width: 9rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
-  padding: 0.55rem 0.8rem;
-  background: var(--paper);
-  font-family: var(--data);
-  letter-spacing: 0.08em;
-}
-.shop-coupon__ok { font-size: var(--fs-small); color: var(--good-ink); }
-.shop-coupon__bad { font-size: var(--fs-small); color: var(--crit-ink); }
-
-/* =============================================================================
-   13. ORDERS
-   ============================================================================= */
-
-.shop-orders { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
-.shop-order {
-  display: grid;
+.shop-addrform__map {
+  display: flex;
+  flex-direction: column;
   gap: var(--s-2);
-  padding: var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
 }
-.shop-order[data-live='true'] { border-color: var(--aisle); box-shadow: var(--lift-aisle); }
+.shop-addrform__maplabel {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.shop-addrform__pin {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.shop-addrform__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+/* coupon */
+.shop-coupon {
+  display: flex;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.shop-coupon .shop-input {
+  flex: 1 1 10rem;
+  font-family: var(--data);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.shop-coupon__ok,
+.shop-coupon__bad {
+  margin: 0;
+  font-size: var(--t-sm);
+  font-weight: 620;
+}
+.shop-coupon__ok {
+  color: var(--good);
+}
+.shop-coupon__bad {
+  color: var(--crit);
+}
+
+/* ── the delivery code ──────────────────────────────────────────────────── */
+
+.shop-otp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  align-items: center;
+  text-align: center;
+  padding: var(--s-6) var(--s-5);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(
+      100% 120% at 50% 0%,
+      color-mix(in oklab, var(--aisle) 26%, transparent) 0%,
+      transparent 70%
+    ),
+    var(--card-raised);
+  border: 2px solid var(--aisle);
+  box-shadow: var(--lift-3);
+  animation: mnd-pop-in var(--t-enter) var(--spring) both;
+}
+.shop-otp__digits {
+  display: flex;
+  gap: var(--s-2);
+}
+.shop-otp__digit {
+  display: grid;
+  place-items: center;
+  min-width: 3rem;
+  padding: var(--s-3) var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--ink);
+  color: var(--ground);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.8rem, 1.2rem + 3vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+  animation: shop-stamp 520ms var(--spring) backwards;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+@keyframes shop-stamp {
+  from { opacity: 0; transform: translateY(-16px) scale(1.4) rotate(-6deg); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   14 · ORDERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-orders {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shop-order {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 9) * var(--stagger));
+  transition:
+    transform var(--t-move) var(--spring-soft),
+    box-shadow var(--t-move) var(--ease);
+}
+.shop-order:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--lift-2);
+}
+.shop-order[data-live='true'] {
+  border-color: var(--aisle);
+  background: var(--shop-wash);
+}
+.shop-order--skeleton {
+  gap: var(--s-3);
+  box-shadow: none;
+}
 .shop-order__head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: var(--s-3);
   flex-wrap: wrap;
 }
-.shop-order__no { font-size: var(--fs-small); letter-spacing: 0.06em; color: var(--muted); }
-.shop-order__store { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
-.shop-order__when { color: var(--muted); font-weight: 400; font-size: var(--fs-small); }
-.shop-order__items { font-size: var(--fs-small); color: var(--muted); }
+.shop-order__no {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+.shop-order__store {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: var(--track-tight);
+}
+.shop-order__when {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-faint);
+}
+.shop-order__items {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
 .shop-order__foot {
   display: flex;
-  align-items: center;
-  gap: var(--s-3);
   flex-wrap: wrap;
-  padding-top: var(--s-2);
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin-top: auto;
+  padding-top: var(--s-3);
   border-top: 1px solid var(--hairline);
 }
-.shop-order__foot .price { font-size: 1.05rem; }
-.shop-order__pay { font-size: var(--fs-micro); color: var(--muted); }
-.shop-order__foot > :last-child { margin-left: auto; }
+.shop-order__foot .shop-price {
+  font-size: var(--t-lg);
+}
+.shop-order__pay {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.shop-order__foot a {
+  margin-left: auto;
+}
 
 .shop-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--s-1);
   padding: 0.18rem 0.6rem;
   border-radius: var(--r-pill);
-  border: 1px solid var(--hairline);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  background: var(--paper);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
-.shop-pill__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stone); }
-.shop-pill[data-tone='live'] { border-color: var(--aisle); color: var(--aisle-ink); }
-.shop-pill[data-tone='live'] .shop-pill__dot { background: var(--aisle); }
-.shop-pill[data-tone='done'] { color: var(--good-ink); }
-.shop-pill[data-tone='done'] .shop-pill__dot { background: var(--good); }
-.shop-pill[data-tone='crit'] { border-color: var(--crit); color: var(--crit-ink); }
-.shop-pill[data-tone='crit'] .shop-pill__dot { background: var(--crit); }
-
-/* =============================================================================
-   14. TRACKING — the ribbon is the hero, the map is context
-   ============================================================================= */
-
-.shop-track__grid { display: grid; gap: var(--s-5); }
-@media (min-width: 980px) {
-  .shop-track__grid { grid-template-columns: minmax(0, 1fr) 23rem; align-items: start; }
+.shop-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: currentColor;
 }
-.shop-track__ribbon { display: grid; gap: var(--s-4); }
-.shop-track__closed { font-size: var(--fs-small); color: var(--muted); }
+.shop-pill[data-tone='live'] {
+  background: var(--shop-wash-deep);
+  color: var(--aisle-ink);
+}
+.shop-pill[data-tone='live'] .shop-pill__dot {
+  animation: shop-pulse 2s var(--ease) infinite;
+}
+.shop-pill[data-tone='done'] {
+  background: var(--good-wash);
+  color: var(--good);
+}
+.shop-pill[data-tone='crit'] {
+  background: var(--crit-wash);
+  color: var(--crit);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   15 · PILLAR 3 — TRACKING
+
+   The JourneyRibbon is the hero. The map sits BELOW it, collapsed, and every
+   fact on this screen survives the map never loading at all — which is the
+   normal case, because Maps billing is not enabled.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* `.shop-track` is the page-level marker only — layout comes from `.shop-page`
+   (a flex column: the header stacks above this). The two-column layout
+   belongs to the grid wrapper INSIDE it, `.shop-track__grid`, or the header
+   would become a grid column beside the ribbon. */
+.shop-track__grid {
+  display: grid;
+  gap: var(--s-5);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .shop-track__grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: var(--s-6);
+  }
+}
+.shop-track__ribbon {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+/* The ribbon ships its own CSS against the previous token names; the compat
+   layer covers those, and these three rules put its coloured surfaces back on
+   the guaranteed-contrast pair. */
+.shop .mnd-ribbon {
+  background: var(--card-raised);
+  border-radius: var(--r-xl);
+  border-color: var(--shop-edge-soft);
+  box-shadow: var(--lift-2);
+}
+.shop .mnd-ribbon__headline {
+  font-weight: 800;
+}
+.shop .mnd-ribbon__item[data-state='done'] .mnd-ribbon__stamp,
+.shop .mnd-ribbon__item[data-state='current'] .mnd-ribbon__stamp {
+  background: var(--shop-fill);
+  border-color: var(--shop-fill);
+  color: var(--shop-on-fill);
+}
+.shop .mnd-ribbon__item[data-state='failed'] .mnd-ribbon__stamp {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: var(--on-accent);
+}
 
 .shop-rider {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--s-3);
   flex-wrap: wrap;
-  padding: var(--s-3) var(--s-4);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--card);
   border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
+  box-shadow: var(--lift-1);
 }
-.shop-rider__name { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
-.shop-rider__pos { font-size: var(--fs-small); color: var(--muted); line-height: 1.45; }
-.shop-rider__pos[data-stale='true'] { color: var(--warn-ink); }
-.shop-rider__phone { font-size: var(--fs-small); color: var(--muted); }
-
-.shop-track__map { display: grid; gap: var(--s-3); }
-.shop-track__maptoggle {
-  display: grid;
-  gap: 0.15rem;
-  justify-items: start;
-  text-align: left;
-  padding: var(--s-3) var(--s-4);
-  border: 1px dashed var(--hairline-strong);
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  cursor: pointer;
-  width: 100%;
-}
-.shop-track__maptoggle:hover { border-color: var(--aisle-edge); }
-.shop-track__maptoggle > span:first-child { font-weight: 600; }
-.shop-track__mapnote { font-size: var(--fs-micro); color: var(--muted); }
-.shop-track__mapbody { display: grid; gap: var(--s-2); }
-/* A stale feed reads stale. The map desaturates rather than pretending. */
-.shop-track__mapbody[data-stale='true'] { filter: saturate(0.45); }
-.shop-track__stale { font-size: var(--fs-micro); color: var(--warn-ink); }
-
-/* =============================================================================
-   15. FOOTER
-   ============================================================================= */
-
-.shop-foot {
-  border-top: 1px solid var(--hairline);
-  background: var(--surface);
-  padding-block: var(--s-7);
-  margin-top: var(--s-8);
-}
-.shop-foot__inner {
-  display: grid;
-  gap: var(--s-5);
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
-}
-.shop-foot__mark {
+.shop-rider__name {
+  margin: 0;
   font-family: var(--display);
-  font-size: var(--fs-h2);
-  color: var(--aisle-ink);
-  letter-spacing: -0.02em;
+  font-size: var(--t-md);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
 }
-.shop-foot__line { color: var(--muted); font-size: var(--fs-small); max-width: 24ch; }
-.shop-foot__nav { display: grid; gap: 0.35rem; align-content: start; }
-.shop-foot__nav a { font-size: var(--fs-small); text-decoration: none; color: var(--muted); }
-.shop-foot__nav a:hover { color: var(--ink); text-decoration: underline; }
-.shop-foot__title {
-  font-family: var(--body);
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--ink);
-  margin-bottom: 0.2rem;
-}
-.shop-foot__note { font-size: var(--fs-micro); color: var(--muted); line-height: 1.6; }
-
-/* =============================================================================
-   16. GLOBAL MOTION GUARD
-   ============================================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  .shop-card__media,
-  .shop-store,
-  .shop-dock,
-  .shop-rail__item,
-  .shop-card__add {
-    transition: none;
-  }
-  .shop-conn[data-tone='good'] .shop-conn__dot { animation: none; }
-}
-
-/* =============================================================================
-   17. THE PROFILE MENU
-   -----------------------------------------------------------------------------
-   Signed-in identity in the header: name, email, a role pill, Orders,
-   Addresses and Sign out. Every colour is a token, so it is legible in light
-   and dark and under all eight aisle tints without a single hard-coded hex.
-   ============================================================================= */
-
-.shop-profile {
-  position: relative;
-  justify-self: end;
-}
-
-.shop-profile__button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.6rem 0.3rem 0.3rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: var(--fs-small);
-  cursor: pointer;
-  max-width: 14rem;
-}
-.shop-profile__button:hover { border-color: var(--aisle-edge); }
-.shop-profile__button svg { color: var(--muted); flex: none; }
-
-.shop-profile__initials {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  flex: none;
-  border-radius: 50%;
-  background: var(--aisle-wash-strong);
-  color: var(--aisle-ink);
-  font-family: var(--data);
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.shop-profile__name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.shop-profile__panel {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  z-index: 40;
-  min-width: 15rem;
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.4rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
-  box-shadow: 0 14px 34px color-mix(in oklab, var(--ink) 16%, transparent);
-}
-
-.shop-profile__head {
-  display: grid;
-  gap: 0.2rem;
-  justify-items: start;
-  padding: 0.5rem 0.6rem 0.6rem;
-  border-bottom: 1px solid var(--hairline);
-  margin-bottom: 0.25rem;
-}
-.shop-profile__who {
-  font-weight: 600;
-  line-height: 1.2;
-}
-.shop-profile__contact {
-  font-size: var(--fs-micro);
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
-.shop-profile__role {
-  margin-top: 0.2rem;
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--aisle-edge);
-  border-radius: var(--r-pill);
-  background: var(--aisle-wash);
-  color: var(--aisle-ink);
-  font-family: var(--data);
-  font-size: var(--fs-micro);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-
-.shop-profile__item {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  width: 100%;
-  padding: 0.5rem 0.6rem;
-  border: 0;
-  border-radius: var(--r-soft);
-  background: none;
-  color: var(--ink);
-  font: inherit;
-  font-size: var(--fs-small);
-  text-align: left;
-  text-decoration: none;
-  cursor: pointer;
-}
-.shop-profile__item svg { color: var(--muted); flex: none; }
-.shop-profile__item:hover,
-.shop-profile__item:focus-visible {
-  background: var(--aisle-wash);
-  color: var(--aisle-ink);
-}
-.shop-profile__item:hover svg { color: currentColor; }
-.shop-profile__item[disabled] { opacity: 0.6; cursor: progress; }
-.shop-profile__item--danger:hover,
-.shop-profile__item--danger:focus-visible {
-  background: color-mix(in oklab, var(--crit) 12%, transparent);
-  color: var(--crit-ink);
-}
-
-.shop-profile__note {
-  padding: 0.45rem 0.6rem 0.25rem;
-  border-top: 1px solid var(--hairline);
-  margin-top: 0.25rem;
-  font-size: var(--fs-micro);
-  color: var(--muted);
+.shop-rider__pos {
+  margin: var(--s-1) 0 0;
+  max-width: 44ch;
+  font-size: var(--t-xs);
   line-height: 1.5;
+  color: var(--ink-soft);
+}
+.shop-rider__pos[data-stale='true'] {
+  color: var(--warn);
+}
+.shop-rider__phone {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--shop-edge);
+  color: var(--aisle-ink);
+  font-family: var(--data);
+  font-weight: 700;
+  font-size: var(--t-sm);
+  text-decoration: none;
+}
+.shop-rider__phone:hover {
+  background: var(--shop-wash);
 }
 
-@media (max-width: 760px) {
-  .shop-profile { display: none; }
+.shop-track__map {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.shop-track__maptoggle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--hairline-strong);
+  background: var(--ground-sunk);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 620;
+  cursor: pointer;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease);
+}
+.shop-track__maptoggle:hover:not(:disabled) {
+  border-color: var(--shop-edge);
+}
+.shop-track__maptoggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.shop-track__mapnote {
+  font-size: var(--t-2xs);
+  font-weight: 450;
+  color: var(--ink-faint);
+}
+.shop-track__mapbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  animation: mnd-rise var(--t-move) var(--ease-out) both;
+}
+.shop-track__mapbody[data-stale='true'] {
+  filter: saturate(0.6);
+}
+.shop-track__stale,
+.shop-track__closed {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.5;
+  color: var(--ink-faint);
 }
 
-/* ── the address book ─────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   16 · THE ADDRESS BOOK
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-addrbook {
   display: grid;
-  gap: var(--s-3);
-  list-style: none;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--s-4);
+  margin: 0;
   padding: 0;
-  margin: 0 0 var(--s-4);
+  list-style: none;
 }
 .shop-addrbook__row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--s-3);
-  padding: var(--s-3);
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--card);
   border: 1px solid var(--hairline);
-  border-radius: var(--r-panel);
-  background: var(--surface);
+  box-shadow: var(--lift-1);
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--stagger));
 }
-.shop-addrbook__row[data-default='true'] { border-color: var(--aisle-edge); }
+.shop-addrbook__row[data-default='true'] {
+  border-color: var(--aisle);
+  background: var(--shop-wash);
+}
 .shop-addrbook__label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
+  gap: var(--s-2);
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 .shop-addrbook__default {
-  padding: 0.05rem 0.45rem;
-  border: 1px solid var(--aisle-edge);
+  padding: 0.12rem 0.5rem;
   border-radius: var(--r-pill);
-  background: var(--aisle-wash);
-  color: var(--aisle-ink);
-  font-family: var(--data);
-  font-size: var(--fs-micro);
+  background: var(--shop-fill);
+  color: var(--shop-on-fill);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
-.shop-addrbook__lines { display: block; color: var(--muted); font-size: var(--fs-small); }
-.shop-addrbook__actions { display: inline-flex; gap: var(--s-2); }
+.shop-addrbook__lines {
+  display: block;
+  font-size: var(--t-sm);
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.shop-addrbook__lines + .shop-addrbook__lines {
+  margin-top: var(--s-1);
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.shop-addrbook__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-top: auto;
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   17 · THE FOOT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop-foot {
+  margin-top: var(--s-8);
+  border-top: 1px solid var(--hairline);
+  background: var(--ground-sunk);
+}
+.shop-foot__inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--s-6);
+  padding-block: var(--s-7) calc(var(--shop-dock-h) + var(--s-5));
+}
+@media (min-width: 720px) {
+  .shop-foot__inner {
+    padding-bottom: var(--s-7);
+  }
+}
+.shop-foot__mark {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  color: var(--aisle-ink);
+}
+.shop-foot__line {
+  margin: var(--s-2) 0 0;
+  max-width: 28ch;
+  font-size: var(--t-sm);
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.shop-foot__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  align-items: flex-start;
+}
+.shop-foot__title {
+  margin: 0 0 var(--s-1);
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-foot__nav a {
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+  text-decoration: none;
+  transition:
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring);
+}
+.shop-foot__nav a:hover {
+  color: var(--aisle-ink);
+  transform: translateX(3px);
+}
+.shop-foot__note {
+  margin: 0;
+  font-size: var(--t-xs);
+  line-height: 1.6;
+  color: var(--ink-faint);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   18 · BENTO, tuned for the shop
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.shop .mnd-cell--act:hover {
+  border-color: color-mix(in oklab, var(--aisle) 45%, var(--hairline));
+}
+.shop .mnd-cell__title {
+  font-weight: 800;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   19 · REDUCED MOTION
+
+   Every animation above is reduced to an instant state change. None of them
+   are removed: a control that appears to do nothing is worse than one that
+   moves too much, and the dock still has to visibly CATCH.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .shop *,
+  .shop *::before,
+  .shop *::after,
+  .shop-fly {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+
+  /* Feedback that must survive: these swap instantly instead of easing, and
+     the hover/press transforms are dropped so nothing lurches. */
+  .shop-card:hover,
+  .shop-store:hover,
+  .shop-order:hover,
+  .shop-rail__item:hover,
+  .shop-tab:hover,
+  .shop-choice:hover,
+  .shop-profile__item:hover,
+  .shop-foot__nav a:hover,
+  .shop .mnd-btn:hover:not(:disabled) {
+    transform: none;
+  }
+  .shop-card:active,
+  .shop-step__btn:active:not(:disabled),
+  .shop-card__add:active,
+  .shop .mnd-btn:active:not(:disabled) {
+    transform: none;
+  }
+  .shop-card:hover .shop-media__img,
+  .shop-card:hover .shop-media__plate-art {
+    transform: none;
+  }
+  .shop-empty__art {
+    animation: none !important;
+  }
+  .shop-conn[data-tone='good'] .shop-conn__dot,
+  .shop-pill[data-tone='live'] .shop-pill__dot {
+    animation: none !important;
+    opacity: 1;
+  }
+  /* The catch still reads as a catch — it just happens at once. */
+  .shop-dock[data-catch='true'] {
+    outline: 3px solid var(--aisle);
+    outline-offset: 2px;
+  }
+}

@@ -1,19 +1,13 @@
 import type { Metadata } from 'next';
 
 /*
-  The admin stylesheet comes first, and deliberately.
-
-  The vendor panel reuses the admin component layer wholesale — DataTable,
-  KpiTile, StatusPill, Money, DetailDrawer, ConfirmDialog, EmptyState, the inline
-  SVG charts. Those components carry `.adm-*` class names and their styles live
-  in admin.css, which this surface imports and never edits. vendor.css then adds
-  only what the shop panel has and the console does not: the board, the lanes,
-  the order cards, the new-order alert, the stock board, the earnings equation.
-
-  The shell root carries BOTH `.adm` and `.ven` so the `--adm-*` locals those
-  shared components read are in scope here too.
+  The vendor panel is self-contained ("Bento Pop"): it draws on the shared
+  design-system tokens and Bento primitives (imported globally by the root
+  layout) and nothing else from another surface. vendor.css is the panel's own
+  stylesheet — the shell, the board, the lanes, the order cards, the new-order
+  alert, the stock board, the earnings equation, and every local component's
+  class names.
 */
-import '@/styles/admin.css';
 import './vendor.css';
 
 import { VendorShell, VendorAlertProvider } from '@/components/vendor';

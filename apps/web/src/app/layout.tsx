@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, Instrument_Sans, Azeret_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
+import { Space_Mono } from 'next/font/google';
 import { THEME_INIT_SCRIPT } from '@mandi/design-system';
 
 import '@mandi/design-system/tokens.css';
@@ -10,33 +11,50 @@ import { Providers } from '@/components/shared/Providers';
 import { SITE_URL } from '@/config/env';
 
 /* ---------------------------------------------------------------------------
-   Type (plan section 2.3)
+   Type — "Bento Pop"
 
-   All three load through next/font/google: self-hosted at build time, zero
-   layout shift, and no external font request at runtime - which is also what
-   lets the CSP keep `font-src 'self'`.
+     display   Cabinet Grotesk   chunky, wide, high-impact headings
+     body      General Sans      warm, legible running text
+     data      Space Mono        every number, with tabular figures
 
-   Every face declares a real fallback stack, so the page is legible in the
-   moment before the woff2 lands and on any network that never delivers it.
+   Cabinet Grotesk and General Sans are Fontshare faces, not Google ones, so
+   they cannot come from next/font/google. They are VENDORED as woff2 under
+   src/fonts and loaded with next/font/local: self-hosted, zero layout shift,
+   no runtime request to a third party, and the CSP stays `font-src 'self'`.
+   Linking Fontshare's CDN instead would have meant a render-blocking request
+   to a host the CSP would then have to admit.
+
+   Every face declares a real fallback stack, so the page stays legible in the
+   moment before the woff2 lands, and on a network that never delivers it.
 --------------------------------------------------------------------------- */
 
-const display = Bricolage_Grotesque({
-  subsets: ['latin'],
+const display = localFont({
+  src: [
+    { path: '../fonts/CabinetGrotesk-Bold.woff2', weight: '700', style: 'normal' },
+    { path: '../fonts/CabinetGrotesk-Extrabold.woff2', weight: '800', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-display',
-  fallback: ['Trebuchet MS', 'Segoe UI', 'sans-serif'],
+  fallback: ['Arial Black', 'Trebuchet MS', 'Segoe UI', 'sans-serif'],
+  // Cabinet Grotesk is far wider than the fallback; letting Next synthesise
+  // metric overrides from Arial makes the swap jump badly.
   adjustFontFallback: false,
 });
 
-const body = Instrument_Sans({
-  subsets: ['latin'],
+const body = localFont({
+  src: [
+    { path: '../fonts/GeneralSans-Regular.woff2', weight: '400', style: 'normal' },
+    { path: '../fonts/GeneralSans-Medium.woff2', weight: '500', style: 'normal' },
+    { path: '../fonts/GeneralSans-Semibold.woff2', weight: '600', style: 'normal' },
+  ],
   display: 'swap',
   variable: '--font-body',
   fallback: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
 });
 
-const data = Azeret_Mono({
+const data = Space_Mono({
   subsets: ['latin'],
+  weight: ['400', '700'],
   display: 'swap',
   variable: '--font-data',
   fallback: ['ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace'],

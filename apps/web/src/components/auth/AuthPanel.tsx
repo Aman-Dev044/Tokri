@@ -31,21 +31,21 @@ export function AuthPanel({ kicker, line }: { kicker: string; line: string }) {
             className="crate"
             data-on={a.key === activeKey}
             style={{
-              ['--w' as string]: a.swatch,
+              ['--w' as string]: `var(--aisle-${a.key})`,
               ['--i' as string]: String(i),
             }}
             onMouseEnter={() => preview(a.key)}
           >
             <span className="crate__slats" />
             <span className="crate__heap" />
-            <span className="crate__label mono">{a.name}</span>
+            <span className="crate__label">{a.name}</span>
           </span>
         ))}
         <span className="authpanel__plank" />
       </div>
 
       <blockquote className="authpanel__quote">
-        <p className="eyebrow authpanel__kicker">{kicker}</p>
+        <p className="auth-eyebrow authpanel__kicker">{kicker}</p>
         <p className="authpanel__line">{line}</p>
       </blockquote>
     </aside>

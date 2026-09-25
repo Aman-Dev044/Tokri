@@ -12,7 +12,8 @@
  * the operators visible, every figure in the mono face so the digits line up
  * under each other and the subtraction can be checked by eye. If the numbers do
  * not add up on screen, the reader can see that they do not, which is the whole
- * point of showing the working.
+ * point of showing the working. It sits inside a hero bento cell: this and the
+ * dashboard are the two bento surfaces in the panel.
  *
  * ── FOUR ENDPOINTS, NOT ONE ─────────────────────────────────────────────────
  * This page used to expect a single fat `/vendor/earnings` payload carrying the
@@ -49,23 +50,8 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import {
-  AdminPage,
-  AdminSection,
-  BarChart,
-  DataTable,
-  EmptyState,
-  IconInbox,
-  KpiTile,
-  LineChart,
-  Money,
-  RelativeTime,
-  StatusPill,
-  type ChartRow,
-  type Column,
-} from '@/components/admin';
+import { BentoCard, BentoGrid, BentoHead } from '@mandi/design-system';
 import { useVendorQuery } from '@/hooks';
-import { formatDate, formatPaise, formatPaiseCompact } from '@/lib/admin/format';
 import {
   PERIOD_OPTIONS,
   PERIOD_WORD,
@@ -81,7 +67,22 @@ import type {
   SettlementRow,
   TopProductsReport,
 } from '@/lib/vendor/types';
-import { EndpointError, Segmented } from '../primitives';
+import { AreaChart, RankedBars, type BarDatum } from '../charts';
+import { formatCount, formatDate, formatPaise, formatPaiseCompact } from '../format';
+import { IconInbox } from '../icons';
+import { VenPage, VenSection } from '../Page';
+import {
+  EmptyState,
+  EndpointError,
+  KpiCell,
+  Money,
+  Pill,
+  Segmented,
+  SettlementStatusPill,
+  SkelChart,
+  SkelStat,
+} from '../primitives';
+import { type Column, VenTable } from '../table';
 
 const LEDGER_LIMIT = 25;
 const SETTLEMENT_LIMIT = 10;
@@ -123,21 +124,21 @@ export function EarningsView() {
 
   const data = earnings.data;
 
-  const salesRows: ChartRow[] = useMemo(
+  const salesRows: BarDatum[] = useMemo(
     () =>
       (sales.data?.buckets ?? []).map((bucket) => ({
-        bucket: formatDate(bucket.periodStart, 'day'),
-        revenue: bucket.gross,
-        orders: bucket.orders,
+        label: formatDate(bucket.periodStart, 'day'),
+        value: bucket.gross,
+        fullLabel: formatDate(bucket.periodStart, 'long'),
       })),
     [sales.data],
   );
 
-  const topRows: ChartRow[] = useMemo(
+  const topRows: BarDatum[] = useMemo(
     () =>
       (top.data?.products ?? []).map((product) => ({
-        name: product.name,
-        revenue: product.revenue,
+        label: product.name,
+        value: product.revenue,
       })),
     [top.data],
   );
@@ -179,219 +180,196 @@ export function EarningsView() {
   const loading = earnings.loading && !earnings.hasLoadedOnce;
 
   return (
-    <AdminPage
+    <VenPage
       title="Earnings"
       description="What you sold, what Mandi took, and what lands in your account."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
-        <Segmented
-          label="Period"
-          value={period}
-          options={PERIOD_OPTIONS}
-          onChange={setPeriod}
-        />
+        <Segmented label="Period" value={period} options={PERIOD_OPTIONS} onChange={setPeriod} />
       }
     >
       {/* ------------------------------------------- equation ---- */}
-      <AdminSection>
-        {loading ? (
-          <div className="adm-skel adm-skel--tile" />
-        ) : earnings.error && data === null ? (
-          <EndpointError
-            path="/vendor/earnings"
-            message={earnings.error.friendlyMessage}
-            status={earnings.error.status}
-            onRetry={earnings.refetch}
-          />
-        ) : data === null ? (
-          <EmptyState
-            title="No earnings data"
-            body="Nothing has been recorded for this period."
-            icon={<IconInbox />}
-          />
-        ) : (
-          <>
-            <div className="ven-eq">
-              <div className="ven-eq__term">
-                <span className="ven-eq__label">Gross sales</span>
-                <span className="ven-eq__value">{formatPaise(data.gross)}</span>
-                <span className="ven-eq__note">
-                  {data.orderCount} delivered {data.orderCount === 1 ? 'order' : 'orders'}{' '}
-                  {PERIOD_WORD[period]}
+      <BentoGrid dense>
+        <BentoCard span="hero" index={0}>
+          {loading ? (
+            <SkelStat />
+          ) : earnings.error && data === null ? (
+            <EndpointError
+              path="/vendor/earnings"
+              message={earnings.error.friendlyMessage}
+              status={earnings.error.status}
+              onRetry={earnings.refetch}
+            />
+          ) : data === null ? (
+            <EmptyState
+              title="No earnings data"
+              body="Nothing has been recorded for this period."
+              icon={<IconInbox />}
+            />
+          ) : (
+            <>
+              <div className="ven-eq">
+                <div className="ven-eq__term">
+                  <span className="ven-eq__label">Gross sales</span>
+                  <span className="ven-eq__value">{formatPaise(data.gross)}</span>
+                  <span className="ven-eq__note">
+                    {data.orderCount} delivered {data.orderCount === 1 ? 'order' : 'orders'}{' '}
+                    {PERIOD_WORD[period]}
+                  </span>
+                </div>
+
+                <span className="ven-eq__op" aria-hidden="true">
+                  −
                 </span>
-              </div>
 
-              <span className="ven-eq__op" aria-hidden="true">
-                −
-              </span>
+                <div className="ven-eq__term" data-role="minus">
+                  <span className="ven-eq__label">Mandi commission</span>
+                  <span className="ven-eq__value">{formatPaise(data.commission)}</span>
+                  <span className="ven-eq__note">
+                    {effectivePct === null
+                      ? 'fixed on each order when it was placed'
+                      : `${effectivePct.toFixed(1)}% effective — each order keeps the rate it was placed at`}
+                  </span>
+                </div>
 
-              <div className="ven-eq__term" data-role="minus">
-                <span className="ven-eq__label">Mandi commission</span>
-                <span className="ven-eq__value">{formatPaise(data.commission)}</span>
-                <span className="ven-eq__note">
-                  {effectivePct === null
-                    ? 'fixed on each order when it was placed'
-                    : `${effectivePct.toFixed(1)}% effective — each order keeps the rate it was placed at`}
+                <span className="ven-eq__op" aria-hidden="true">
+                  −
                 </span>
-              </div>
 
-              <span className="ven-eq__op" aria-hidden="true">
-                −
-              </span>
+                <div className="ven-eq__term" data-role="minus">
+                  <span className="ven-eq__label">Refunds</span>
+                  <span className="ven-eq__value">{formatPaise(data.refunds)}</span>
+                  <span className="ven-eq__note">Cancellations and short orders</span>
+                </div>
 
-              <div className="ven-eq__term" data-role="minus">
-                <span className="ven-eq__label">Refunds</span>
-                <span className="ven-eq__value">{formatPaise(data.refunds)}</span>
-                <span className="ven-eq__note">Cancellations and short orders</span>
-              </div>
-
-              <span className="ven-eq__op" aria-hidden="true">
-                =
-              </span>
-
-              <div className="ven-eq__term" data-role="net">
-                <span className="ven-eq__label">You receive</span>
-                <span className="ven-eq__value">{formatPaise(data.net)}</span>
-                <span className="ven-eq__note">
-                  <Money value={data.payoutPending} /> still to be paid out
-                  {data.lastSettlement === null
-                    ? ' · nothing settled yet'
-                    : ` · last settlement ${data.lastSettlement.status}`}
+                <span className="ven-eq__op" aria-hidden="true">
+                  =
                 </span>
-              </div>
-            </div>
 
-            {!reconciles ? (
-              <p className="ven-field__error" role="alert" style={{ marginTop: 'var(--s-2)' }}>
-                These figures do not reconcile: gross − commission − refunds comes to{' '}
-                {formatPaise(data.gross - data.commission - data.refunds)}, but the server
-                reports {formatPaise(data.net)}. Do not act on this screen — report it.
-              </p>
-            ) : null}
-          </>
-        )}
-      </AdminSection>
+                <div className="ven-eq__term" data-role="net">
+                  <span className="ven-eq__label">You receive</span>
+                  <span className="ven-eq__value">{formatPaise(data.net)}</span>
+                  <span className="ven-eq__note">
+                    <Money value={data.payoutPending} /> still to be paid out
+                    {data.lastSettlement === null
+                      ? ' · nothing settled yet'
+                      : ` · last settlement ${data.lastSettlement.status}`}
+                  </span>
+                </div>
+              </div>
+
+              {!reconciles ? (
+                <p className="ven-field__error" role="alert" style={{ marginTop: 'var(--s-3)' }}>
+                  These figures do not reconcile: gross − commission − refunds comes to{' '}
+                  {formatPaise(data.gross - data.commission - data.refunds)}, but the server
+                  reports {formatPaise(data.net)}. Do not act on this screen — report it.
+                </p>
+              ) : null}
+            </>
+          )}
+        </BentoCard>
+      </BentoGrid>
 
       {/* ----------------------------------------------- KPIs ---- */}
-      <AdminSection>
-        <div className="adm-grid adm-grid--3">
-          <KpiTile
-            label="Gross sales"
-            value={data?.gross ?? 0}
-            unit="paise"
-            tone="good"
-            index={0}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-          <KpiTile
-            label="Average order"
-            value={averageOrderValue}
-            unit="paise"
-            index={1}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-          <KpiTile
-            label="Orders"
-            value={data?.orderCount ?? 0}
-            index={2}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-          <KpiTile
-            label="Commission taken"
-            value={data?.commission ?? 0}
-            unit="paise"
-            tone="warn"
-            index={3}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-          <KpiTile
-            label="Awaiting payout"
-            value={data?.payoutPending ?? 0}
-            unit="paise"
-            tone="neutral"
-            index={4}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-          <KpiTile
-            label="Refunded"
-            value={data?.refunds ?? 0}
-            unit="paise"
-            tone="crit"
-            invertDelta
-            index={5}
-            loading={loading}
-            isFixture={earnings.isFixture}
-          />
-        </div>
-      </AdminSection>
+      <BentoGrid dense>
+        <KpiCell
+          label="Gross sales"
+          value={data?.gross ?? 0}
+          format={formatPaiseCompact}
+          tone="good"
+          index={0}
+          loading={loading}
+        />
+        <KpiCell
+          label="Average order"
+          value={averageOrderValue}
+          format={formatPaiseCompact}
+          index={1}
+          loading={loading}
+        />
+        <KpiCell
+          label="Orders"
+          value={data?.orderCount ?? 0}
+          format={formatCount}
+          index={2}
+          loading={loading}
+        />
+        <KpiCell
+          label="Commission taken"
+          value={data?.commission ?? 0}
+          format={formatPaiseCompact}
+          tone="warn"
+          index={3}
+          loading={loading}
+        />
+        <KpiCell
+          label="Awaiting payout"
+          value={data?.payoutPending ?? 0}
+          format={formatPaiseCompact}
+          index={4}
+          loading={loading}
+        />
+        <KpiCell
+          label="Refunded"
+          value={data?.refunds ?? 0}
+          format={formatPaiseCompact}
+          tone="crit"
+          index={5}
+          loading={loading}
+        />
+      </BentoGrid>
 
       {/* --------------------------------------------- charts ---- */}
-      <div className="adm-grid adm-grid--split">
-        <AdminSection title="Sales" description={`Revenue ${PERIOD_WORD[period]}, by day.`} panel>
-          <div className="adm-panel--pad">
-            {sales.loading && !sales.hasLoadedOnce ? (
-              <div className="adm-skel adm-skel--chart" />
-            ) : sales.error && sales.data === null ? (
-              <EndpointError
-                path="/vendor/reports/sales"
-                message={sales.error.friendlyMessage}
-                status={sales.error.status}
-                onRetry={sales.refetch}
-              />
-            ) : salesRows.length === 0 ? (
-              <EmptyState
-                title="Nothing delivered in this window"
-                body="Revenue is counted on delivery, not on placement."
-                icon={<IconInbox />}
-              />
-            ) : (
-              <LineChart
-                data={salesRows}
-                xKey="bucket"
-                series={[{ key: 'revenue', label: 'Revenue' }]}
-                formatValue={formatPaiseCompact}
-                area
-                label={`Revenue ${PERIOD_WORD[period]}`}
-              />
-            )}
-          </div>
-        </AdminSection>
+      <BentoGrid dense>
+        <BentoCard span="half" index={0}>
+          <BentoHead title="Sales" eyebrow={`Revenue ${PERIOD_WORD[period]}, by day`} />
+          {sales.loading && !sales.hasLoadedOnce ? (
+            <SkelChart />
+          ) : sales.error && sales.data === null ? (
+            <EndpointError
+              path="/vendor/reports/sales"
+              message={sales.error.friendlyMessage}
+              status={sales.error.status}
+              onRetry={sales.refetch}
+            />
+          ) : salesRows.length === 0 ? (
+            <EmptyState
+              title="Nothing delivered in this window"
+              body="Revenue is counted on delivery, not on placement."
+              icon={<IconInbox />}
+              tight
+            />
+          ) : (
+            <AreaChart
+              data={salesRows}
+              format={formatPaiseCompact}
+              label={`Revenue ${PERIOD_WORD[period]}`}
+            />
+          )}
+        </BentoCard>
 
-        <AdminSection title="Top products" description="By revenue, not by units." panel>
-          <div className="adm-panel--pad">
-            {top.loading && !top.hasLoadedOnce ? (
-              <div className="adm-skel adm-skel--chart" />
-            ) : top.error && top.data === null ? (
-              <EndpointError
-                path="/vendor/reports/top-products"
-                message={top.error.friendlyMessage}
-                status={top.error.status}
-                onRetry={top.refetch}
-              />
-            ) : topRows.length === 0 ? (
-              <EmptyState title="Nothing sold yet" icon={<IconInbox />} />
-            ) : (
-              <BarChart
-                data={topRows}
-                xKey="name"
-                series={[{ key: 'revenue', label: 'Revenue' }]}
-                horizontal
-                formatValue={formatPaiseCompact}
-                label="Top products by revenue"
-              />
-            )}
-          </div>
-        </AdminSection>
-      </div>
+        <BentoCard span="half" index={1}>
+          <BentoHead title="Top products" eyebrow="By revenue, not by units" />
+          {top.loading && !top.hasLoadedOnce ? (
+            <SkelChart />
+          ) : top.error && top.data === null ? (
+            <EndpointError
+              path="/vendor/reports/top-products"
+              message={top.error.friendlyMessage}
+              status={top.error.status}
+              onRetry={top.refetch}
+            />
+          ) : topRows.length === 0 ? (
+            <EmptyState title="Nothing sold yet" icon={<IconInbox />} tight />
+          ) : (
+            <RankedBars data={topRows} format={formatPaiseCompact} label="Top products by revenue" />
+          )}
+        </BentoCard>
+      </BentoGrid>
 
       {/* --------------------------------------------- ledger ---- */}
-      <AdminSection
+      <VenSection
         title="Ledger"
         description="Every entry the server wrote. A commission is a negative amount against the sale it came from — the two lines belong to the same order."
       >
@@ -408,9 +386,9 @@ export function EarningsView() {
             loading={ledger.loading && !ledger.hasLoadedOnce}
           />
         )}
-      </AdminSection>
+      </VenSection>
 
-      <AdminSection
+      <VenSection
         title="Settlements"
         description="A settlement is a window closed off and paid. Until it says paid, the money is still with Mandi. Shown in full, whatever period is selected above."
       >
@@ -427,8 +405,8 @@ export function EarningsView() {
             loading={settlements.loading && !settlements.hasLoadedOnce}
           />
         )}
-      </AdminSection>
-    </AdminPage>
+      </VenSection>
+    </VenPage>
   );
 }
 
@@ -441,17 +419,12 @@ function LedgerTable({ rows, loading }: { rows: LedgerEntryRow[]; loading: boole
     {
       key: 'at',
       header: 'When',
-      render: (row) => (row.at === null ? '—' : <RelativeTime value={row.at} live={false} />),
+      render: (row) => (row.at === null ? '—' : formatDate(row.at, 'short')),
     },
     {
       key: 'type',
       header: 'Type',
-      render: (row) => (
-        <span className="adm-pill" data-tone={toneForLedger(row.type)}>
-          <span className="adm-pill__glyph" aria-hidden="true" />
-          {row.type}
-        </span>
-      ),
+      render: (row) => <Pill tone={toneForLedger(row.type)}>{row.type}</Pill>,
     },
     {
       key: 'orderId',
@@ -483,7 +456,7 @@ function LedgerTable({ rows, loading }: { rows: LedgerEntryRow[]; loading: boole
   ];
 
   return (
-    <DataTable
+    <VenTable
       columns={columns}
       rows={rows}
       loading={loading}
@@ -500,7 +473,7 @@ function LedgerTable({ rows, loading }: { rows: LedgerEntryRow[]; loading: boole
   );
 }
 
-function toneForLedger(type: LedgerEntryRow['type']): string {
+function toneForLedger(type: LedgerEntryRow['type']): 'good' | 'warn' | 'crit' | 'info' | 'neutral' {
   switch (type) {
     case 'sale':
       return 'good';
@@ -521,7 +494,7 @@ function SettlementTable({ rows, loading }: { rows: SettlementRow[]; loading: bo
       key: 'period',
       header: 'Period',
       render: (row) => (
-        <span className="adm-num">
+        <span className="ven-num">
           {row.periodStart === null ? '—' : formatDate(row.periodStart, 'day')} →{' '}
           {row.periodEnd === null ? '—' : formatDate(row.periodEnd, 'day')}
         </span>
@@ -564,7 +537,7 @@ function SettlementTable({ rows, loading }: { rows: SettlementRow[]; loading: bo
       header: 'Status',
       render: (row) => (
         <span title={row.failureReason ?? undefined}>
-          <StatusPill status={row.status} kind="settlement" />
+          <SettlementStatusPill status={row.status} />
         </span>
       ),
     },
@@ -577,7 +550,7 @@ function SettlementTable({ rows, loading }: { rows: SettlementRow[]; loading: bo
   ];
 
   return (
-    <DataTable
+    <VenTable
       columns={columns}
       rows={rows}
       loading={loading}

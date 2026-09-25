@@ -37,23 +37,8 @@
  */
 
 import { useMemo, useState } from 'react';
-import {
-  AdminPage,
-  AdminSection,
-  ConfirmDialog,
-  DataTable,
-  EmptyState,
-  FilterBar,
-  IconInbox,
-  Money,
-  RelativeTime,
-  Toolbar,
-  type Column,
-  type FilterDef,
-  type FilterValues,
-} from '@/components/admin';
 import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
-import { humanise } from '@/lib/admin/format';
+import { humanise } from '../format';
 import type {
   InventoryAdjust,
   InventoryBulkAdjust,
@@ -61,7 +46,26 @@ import type {
   InventoryRow,
   Paged,
 } from '@/lib/vendor/types';
-import { EndpointError } from '../primitives';
+import { VenPage, VenSection } from '../Page';
+import { IconInbox } from '../icons';
+import {
+  Btn,
+  EmptyState,
+  EndpointError,
+  Money,
+  RelativeTime,
+  SkelStat,
+  WriteFailure,
+} from '../primitives';
+import { ConfirmDialog } from '../overlay';
+import {
+  SearchBox,
+  SelectBox,
+  Toolbar,
+  ToolbarSpacer,
+  VenTable,
+  type Column,
+} from '../table';
 
 const LIMIT = 25;
 
@@ -172,18 +176,10 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
     setConfirmBulk(false);
   };
 
-  const filterDefs: FilterDef[] = [
-    { key: 'q', label: 'Search', type: 'search', placeholder: 'Product or SKU…' },
-    {
-      key: 'lowStock',
-      label: 'Show',
-      type: 'select',
-      options: [
-        { label: 'Everything', value: 'all' },
-        { label: 'Low or out of stock only', value: 'true' },
-      ],
-    },
-  ];
+  const resetFilters = () => {
+    setPage(1);
+    setFilters(EMPTY_FILTERS);
+  };
 
   const columns: Column<InventoryRow>[] = [
     {
@@ -193,7 +189,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         <span>
           <strong>{row.name}</strong>
           <br />
-          <span className="adm-dim">
+          <span className="ven-dim">
             {row.sku}
             {row.brand ? ` · ${row.brand}` : ''}
           </span>
@@ -215,7 +211,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
             <span className="ven-stock__bar" aria-hidden="true">
               <span className="ven-stock__fill" style={{ width: `${Math.max(fill, 0)}%` }} />
             </span>
-            <span className="adm-sr">
+            <span className="ven-sr">
               {level === 'out'
                 ? 'out of stock'
                 : level === 'low'
@@ -278,7 +274,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
       // that opens a 404 is worse than a timestamp that is only a timestamp.
       render: (row) =>
         row.updatedAt === null ? (
-          <span className="adm-dim">never</span>
+          <span className="ven-dim">never</span>
         ) : (
           <RelativeTime value={row.updatedAt} live={false} />
         ),
@@ -295,20 +291,13 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
   const fixturePaths = inventory.isFixture ? ['/vendor/inventory'] : [];
 
   return (
-    <AdminPage
+    <VenPage
       title="Inventory"
       description="Stock is adjusted by a delta, never set to a total — that is what keeps a sale made while you were typing from being overwritten."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
     >
-      {failure ? (
-        <div className="adm-fixture" role="alert" style={{ marginBottom: 'var(--s-3)' }}>
-          <div>
-            <p className="adm-fixture__title">That adjustment did not save</p>
-            <p className="adm-fixture__body">{failure}</p>
-          </div>
-        </div>
-      ) : null}
+      {failure ? <WriteFailure message={failure} /> : null}
 
       {inventory.error && inventory.data === null ? (
         <EndpointError
@@ -319,12 +308,12 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         />
       ) : null}
 
-      <AdminSection
+      <VenSection
         title="Running low"
         description="Out of stock first — a zero is money you are not taking right now. Counted over the products on this page."
       >
         {inventory.loading && !inventory.hasLoadedOnce ? (
-          <div className="adm-skel adm-skel--tile" />
+          <SkelStat />
         ) : sortedLow.length === 0 ? (
           <EmptyState
             title="Nothing is low"
@@ -342,52 +331,54 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
                   {row.stock}
                   <span className="ven-field__hint"> / {row.lowStockThreshold} threshold</span>
                 </p>
-                <button
-                  type="button"
-                  className="adm-btn adm-btn--sm"
-                  onClick={() => setDelta(row.productId, (pending[row.productId] ?? 0) + 10)}
-                >
+                <Btn size="sm" onClick={() => setDelta(row.productId, (pending[row.productId] ?? 0) + 10)}>
                   Queue +10
-                </button>
+                </Btn>
               </article>
             ))}
           </div>
         )}
-      </AdminSection>
+      </VenSection>
 
-      <AdminSection title="All stock">
+      <VenSection title="All stock">
         <Toolbar>
-          <FilterBar
-            filters={filterDefs}
-            values={filters}
-            onChange={(values: FilterValues) => {
+          <SearchBox
+            label="Search inventory"
+            placeholder="Product or SKU…"
+            value={filters.q}
+            onChange={(value) => {
               setPage(1);
-              setFilters({ q: values['q'] ?? '', lowStock: values['lowStock'] ?? 'all' });
-            }}
-            onReset={() => {
-              setPage(1);
-              setFilters(EMPTY_FILTERS);
+              setFilters((previous) => ({ ...previous, q: value }));
             }}
           />
-          <Toolbar.Spacer />
-          <label className="ven-field__label" htmlFor="ven-reason-select">
-            Reason for these changes
-          </label>
-          <select
-            id="ven-reason-select"
-            className="ven-select"
-            style={{ width: 'auto' }}
+          <SelectBox
+            label="Show"
+            value={filters.lowStock}
+            onChange={(value) => {
+              setPage(1);
+              setFilters((previous) => ({ ...previous, lowStock: value }));
+            }}
+            options={[
+              { label: 'Everything', value: 'all' },
+              { label: 'Low or out of stock only', value: 'true' },
+            ]}
+          />
+          <Btn variant="ghost" size="sm" onClick={resetFilters}>
+            Clear filters
+          </Btn>
+          <ToolbarSpacer />
+          <SelectBox
+            label="Reason for these changes"
             value={reason}
-            onChange={(event) =>
-              setReason(event.target.value as InventoryAdjust['reason'])
-            }
-          >
-            <option value="restock">Restock — new delivery arrived</option>
-            <option value="manual">Manual — count correction, damage, waste</option>
-          </select>
+            onChange={(value) => setReason(value as InventoryAdjust['reason'])}
+            options={[
+              { label: 'Restock — new delivery arrived', value: 'restock' },
+              { label: 'Manual — count correction, damage, waste', value: 'manual' },
+            ]}
+          />
         </Toolbar>
 
-        <DataTable
+        <VenTable
           columns={columns}
           rows={rows}
           loading={inventory.loading && !inventory.hasLoadedOnce}
@@ -404,7 +395,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
             />
           }
         />
-      </AdminSection>
+      </VenSection>
 
       {pendingEntries.length > 0 ? (
         <div className="ven-dirty" role="status">
@@ -418,17 +409,14 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
             </span>
           </span>
           <span className="ven-dirty__actions">
-            <button type="button" className="adm-btn" onClick={() => setPending({})}>
-              Discard
-            </button>
-            <button
-              type="button"
-              className="adm-btn adm-btn--primary"
+            <Btn onClick={() => setPending({})}>Discard</Btn>
+            <Btn
+              variant="primary"
               onClick={() => setConfirmBulk(true)}
               disabled={adjust.loading || bulk.loading}
             >
               Apply all
-            </button>
+            </Btn>
           </span>
         </div>
       ) : null}
@@ -443,7 +431,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
           void applyAll();
         }}
         body={
-          <div className="adm-stack">
+          <div className="ven-stack">
             <p>
               All of them go in ONE transaction with the reason{' '}
               <strong>{humanise(reason)}</strong>. Either every line lands or none of them do —
@@ -451,7 +439,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
             </p>
             <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
               {pendingEntries.slice(0, 8).map(([productId, delta]) => (
-                <li key={productId} className="adm-num">
+                <li key={productId} className="ven-num">
                   {productId}: {delta > 0 ? '+' : ''}
                   {delta}
                 </li>
@@ -460,8 +448,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
           </div>
         }
       />
-
-    </AdminPage>
+    </VenPage>
   );
 }
 
@@ -516,9 +503,8 @@ function AdjustCell({
       >
         +
       </button>
-      <button
-        type="button"
-        className="adm-btn adm-btn--sm"
+      <Btn
+        size="sm"
         onClick={onApply}
         disabled={value === 0 || busy || result < 0}
         title={
@@ -530,7 +516,7 @@ function AdjustCell({
         }
       >
         Apply
-      </button>
+      </Btn>
       {value !== 0 ? (
         <span className="ven-field__hint" style={{ whiteSpace: 'nowrap' }}>
           → {result}

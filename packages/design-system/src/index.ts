@@ -84,3 +84,13 @@ export type {
   InlineLoaderProps,
   SkeletonLoaderProps,
 } from './components/GroceryLoader';
+
+/* ── bento layout primitives (Bento Pop) ─────────────────────────────────── */
+export { BentoGrid, BentoCard, BentoHead } from './components/Bento';
+export type {
+  BentoGridProps,
+  BentoCardProps,
+  BentoHeadProps,
+  BentoSpan,
+  BentoTone,
+} from './components/Bento';

@@ -44,33 +44,36 @@ import { useVendorSession } from '@/lib/vendor/session';
 import type { VendorProfile, VendorStoreStatus } from '@/lib/vendor/types';
 import {
   IconAlert,
-  IconCatalog,
   IconChevronLeft,
   IconClose,
+  IconDashboard,
+  IconEarnings,
   IconExternal,
   IconLock,
   IconMoon,
   IconOrders,
-  IconOverview,
+  IconProducts,
   IconRiders,
   IconSettings,
-  IconSettlements,
   IconSignOut,
+  IconSoundOff,
+  IconSoundOn,
   IconStock,
   IconSun,
   IconUser,
-} from '@/components/admin';
+} from './icons';
+import { Pill } from './primitives';
 import { useVendorAlerts } from './VendorAlertProvider';
 
 const COLLAPSE_KEY = 'mandi.vendor.railCollapsed';
 
 const NAV_ICON: Record<VendorNavIcon, (props: { className?: string }) => ReactNode> = {
-  dashboard: IconOverview,
+  dashboard: IconDashboard,
   orders: IconOrders,
-  products: IconCatalog,
+  products: IconProducts,
   inventory: IconStock,
   partners: IconRiders,
-  earnings: IconSettlements,
+  earnings: IconEarnings,
   settings: IconSettings,
 };
 
@@ -134,7 +137,7 @@ export function VendorShell({ children }: { children: ReactNode }) {
 
   if (session.status === 'checking') {
     return (
-      <div className="adm ven ven-gate">
+      <div className="ven ven-gate">
         <div className="ven-gate__card" aria-busy="true">
           <p className="ven-gate__title">Checking your session…</p>
           <p className="ven-gate__body">Exchanging the refresh cookie for an access token.</p>
@@ -145,7 +148,7 @@ export function VendorShell({ children }: { children: ReactNode }) {
 
   if (session.status === 'forbidden') {
     return (
-      <div className="adm ven ven-gate">
+      <div className="ven ven-gate">
         <div className="ven-gate__card">
           <p className="ven-gate__title">
             <IconLock style={{ width: 20, height: 20, verticalAlign: '-3px', marginRight: 8 }} />
@@ -156,11 +159,11 @@ export function VendorShell({ children }: { children: ReactNode }) {
             panel is for shop owners. If you run a shop on Mandi and are seeing this, your account
             has not been linked to a store yet — ask an admin to check it.
           </p>
-          <div className="adm-row">
-            <Link className="adm-btn adm-btn--primary" href="/">
+          <div className="ven-row">
+            <Link className="ven-btn" data-variant="primary" data-size="md" href="/">
               Back to Mandi
             </Link>
-            <Link className="adm-btn" href="/login">
+            <Link className="ven-btn" data-variant="plain" data-size="md" href="/login">
               Sign in as someone else
             </Link>
           </div>
@@ -176,7 +179,7 @@ export function VendorShell({ children }: { children: ReactNode }) {
   const preview = session.status === 'anonymous';
 
   return (
-    <div className="adm ven ven-shell" data-collapsed={collapsed ? 'true' : 'false'}>
+    <div className="ven ven-shell" data-collapsed={collapsed ? 'true' : 'false'}>
       <VendorRail collapsed={collapsed} pathname={pathname} onToggle={toggleCollapsed} />
 
       <div className="ven-main">
@@ -218,9 +221,9 @@ function VendorRail({
           <path
             d="M3 9h18l-1.6 10.2A2 2 0 0 1 17.4 21H6.6a2 2 0 0 1-2-1.8L3 9Z"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="1.75"
           />
-          <path d="M8 9V6.5a4 4 0 0 1 8 0V9" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M8 9V6.5a4 4 0 0 1 8 0V9" stroke="currentColor" strokeWidth="1.75" />
         </svg>
         <span className="ven-rail__store">
           <span className="ven-rail__name">{storeName}</span>
@@ -250,7 +253,7 @@ function VendorRail({
             ) : (
               <span className="ven-rail__count">
                 {badge}
-                <span className="adm-sr"> orders waiting to be accepted</span>
+                <span className="ven-sr"> orders waiting to be accepted</span>
               </span>
             )}
           </Link>
@@ -287,10 +290,9 @@ function VendorTopBar({
       <StoreOpenToggle />
       <span className="ven-top__spacer" />
       {preview ? (
-        <span className="adm-pill" data-tone="warn" title="No session — the API is not reachable">
-          <span className="adm-pill__glyph" aria-hidden="true" />
+        <Pill tone="warn" title="No session — the API is not reachable">
           Preview
-        </span>
+        </Pill>
       ) : null}
       <NewOrderAlert />
       <SoundToggle />
@@ -351,7 +353,7 @@ function StoreOpenToggle() {
   }
 
   return (
-    <div className="adm-row" style={{ gap: 'var(--s-2)' }}>
+    <div className="ven-row">
       <button
         type="button"
         className="ven-openstate"
@@ -378,16 +380,14 @@ function StoreOpenToggle() {
         </span>
       </button>
       {failed ? (
-        <span className="adm-pill" data-tone="crit" role="status">
-          <span className="adm-pill__glyph" aria-hidden="true" />
+        <Pill tone="crit">
           Not saved — {toggle.error?.friendlyMessage ?? 'the API did not respond'}
-        </span>
+        </Pill>
       ) : null}
       {profile.isFixture ? (
-        <span className="adm-pill" data-tone="warn" title="Sample data — the API is not reachable">
-          <span className="adm-pill__glyph" aria-hidden="true" />
+        <Pill tone="warn" title="Sample data — the API is not reachable">
           Sample
-        </span>
+        </Pill>
       ) : null}
     </div>
   );
@@ -422,7 +422,7 @@ function NewOrderAlert() {
         {fresh > 0 ? ` · ${fresh} new` : null}
       </span>
       {soundOn && soundBlocked ? (
-        <span className="adm-sr">
+        <span className="ven-sr">
           Sound is on but this browser blocked it until you interact with the page.
         </span>
       ) : null}
@@ -436,7 +436,7 @@ function NewOrderAlert() {
         }}
       >
         <IconClose />
-        <span className="adm-sr">Dismiss the new-order highlight</span>
+        <span className="ven-sr">Dismiss the new-order highlight</span>
       </button>
     </Link>
   );
@@ -457,7 +457,7 @@ function SoundToggle() {
   return (
     <button
       type="button"
-      className="adm-iconbtn ven-soundbtn"
+      className="ven-iconbtn ven-soundbtn"
       data-on={soundOn ? 'true' : 'false'}
       onClick={() => {
         primeAudio();
@@ -472,15 +472,8 @@ function SoundToggle() {
       }
       aria-pressed={soundOn}
     >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-        <path d="M11 5 6.5 9H3v6h3.5L11 19V5Z" strokeLinejoin="round" />
-        {soundOn ? (
-          <path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" strokeLinecap="round" />
-        ) : (
-          <path d="m16 10 4 4m0-4-4 4" strokeLinecap="round" />
-        )}
-      </svg>
-      <span className="adm-sr">
+      {soundOn ? <IconSoundOn /> : <IconSoundOff />}
+      <span className="ven-sr">
         {soundOn ? 'New-order sound is on. Activate to mute.' : 'New-order sound is off. Activate to turn on.'}
       </span>
     </button>
@@ -492,11 +485,11 @@ function ThemeToggle() {
   const label = theme === 'system' ? 'Theme: follows your system' : `Theme: ${theme}`;
 
   return (
-    <button type="button" className="adm-iconbtn" onClick={cycleTheme} title={label}>
+    <button type="button" className="ven-iconbtn" onClick={cycleTheme} title={label}>
       {/* `resolved` is null until the client effect runs; rendering the sun
           until then keeps the server and client markup identical. */}
       {resolved === 'dark' ? <IconMoon /> : <IconSun />}
-      <span className="adm-sr">{label}. Activate to change.</span>
+      <span className="ven-sr">{label}. Activate to change.</span>
     </button>
   );
 }
@@ -568,13 +561,13 @@ function UserMenu({
     <div className="ven-usermenu" ref={ref}>
       <button
         type="button"
-        className="adm-user"
+        className="ven-user"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="adm-user__initials">{initials}</span>
-        <span className="adm-user__name">{name || 'Signed out'}</span>
+        <span className="ven-user__initials">{initials}</span>
+        <span className="ven-user__name">{name || 'Signed out'}</span>
       </button>
 
       {open ? (
@@ -582,14 +575,11 @@ function UserMenu({
           <div className="ven-usermenu__head">
             <strong>{name || 'No session'}</strong>
             <p className="ven-usermenu__contact">{contact || 'Not signed in'}</p>
-            <span
-              className="adm-pill"
-              data-tone={apiRole === 'vendor' ? 'good' : 'warn'}
-              style={{ marginTop: 'var(--s-1)' }}
-            >
-              <span className="adm-pill__glyph" aria-hidden="true" />
-              {(apiRole ?? 'no role').toUpperCase()}
-            </span>
+            <div style={{ marginTop: 'var(--s-1)' }}>
+              <Pill tone={apiRole === 'vendor' ? 'good' : 'warn'}>
+                {(apiRole ?? 'no role').toUpperCase()}
+              </Pill>
+            </div>
           </div>
 
           <Link className="ven-usermenu__item" href="/vendor/settings" role="menuitem">

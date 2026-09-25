@@ -1096,3 +1096,132 @@
     background: var(--aisle-wash);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   BENTO POP — grid + cell
+   Shared by every surface. A cell looks the same in the shop, the vendor
+   console and the rider app, which is what makes them one product.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.mnd-bento {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--s-5);
+  width: 100%;
+}
+.mnd-bento--dense { gap: var(--s-4); }
+
+/* Spans are named by role. Mobile collapses everything to full width -
+   a bento that keeps its mosaic at 360px is unreadable, not clever. */
+.mnd-cell { grid-column: span 12; }
+
+@media (min-width: 680px) {
+  .mnd-cell--quarter { grid-column: span 6; }
+  .mnd-cell--third   { grid-column: span 6; }
+  .mnd-cell--half    { grid-column: span 12; }
+  .mnd-cell--wide    { grid-column: span 12; }
+  .mnd-cell--hero    { grid-column: span 12; }
+  .mnd-cell--tall    { grid-column: span 6; grid-row: span 2; }
+}
+@media (min-width: 1040px) {
+  .mnd-cell--quarter { grid-column: span 3; }
+  .mnd-cell--third   { grid-column: span 4; }
+  .mnd-cell--half    { grid-column: span 6; }
+  .mnd-cell--wide    { grid-column: span 8; }
+  .mnd-cell--hero    { grid-column: span 12; }
+  .mnd-cell--tall    { grid-column: span 4; grid-row: span 2; }
+}
+
+.mnd-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;                 /* or long content blows the track out */
+  padding: var(--s-5);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+
+/* A cell inside a cell: no shadow, or the nesting reads as two objects. */
+.mnd-cell--flat {
+  box-shadow: none;
+  background: var(--ground-sunk);
+  border-color: transparent;
+}
+
+/* Tone washes the cell and colours its edge. Text still uses --ink; only
+   the surface changes, so contrast is not at the mercy of the hue. */
+.mnd-cell--accent { background: var(--accent-wash); border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+.mnd-cell--pop-1  { background: var(--pop-1-wash);  border-color: color-mix(in oklab, var(--pop-1) 30%, transparent); }
+.mnd-cell--pop-2  { background: var(--pop-2-wash);  border-color: color-mix(in oklab, var(--pop-2) 30%, transparent); }
+.mnd-cell--pop-3  { background: var(--pop-3-wash);  border-color: color-mix(in oklab, var(--pop-3) 30%, transparent); }
+.mnd-cell--pop-4  { background: var(--pop-4-wash);  border-color: color-mix(in oklab, var(--pop-4) 30%, transparent); }
+.mnd-cell--good   { background: var(--good-wash);   border-color: color-mix(in oklab, var(--good) 30%, transparent); }
+.mnd-cell--warn   { background: var(--warn-wash);   border-color: color-mix(in oklab, var(--warn) 30%, transparent); }
+.mnd-cell--crit   { background: var(--crit-wash);   border-color: color-mix(in oklab, var(--crit) 32%, transparent); }
+
+/* Only cells that actually do something get the affordance. */
+.mnd-cell--act {
+  cursor: pointer;
+  transition:
+    transform var(--t-micro) var(--spring-soft),
+    box-shadow var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
+}
+.mnd-cell--act:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--lift-2);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--hairline));
+}
+/* Squash on press - the signature Bento Pop feedback. */
+.mnd-cell--act:active { transform: translateY(-1px) scale(0.985); }
+
+.mnd-cell__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.mnd-cell__head-text { display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.mnd-cell__title {
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+  margin: 0;
+}
+.mnd-cell__head-act { flex: 0 0 auto; }
+
+/* Wide content never widens the page: it scrolls inside its own cell. */
+.mnd-cell__scroll { overflow-x: auto; margin-inline: calc(var(--s-5) * -1); padding-inline: var(--s-5); }
+
+/* Big figure, for a KPI cell. */
+.mnd-stat {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+/* Skeleton shaped like the real thing, not a grey rectangle. */
+.mnd-skel {
+  border-radius: var(--r-sm);
+  background: linear-gradient(
+    90deg,
+    var(--ground-sunk) 25%,
+    color-mix(in oklab, var(--ground-sunk) 60%, var(--card)) 50%,
+    var(--ground-sunk) 75%
+  );
+  background-size: 200% 100%;
+  animation: mnd-shimmer 1.4s linear infinite;
+}
