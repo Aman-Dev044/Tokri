@@ -1,24 +1,34 @@
 'use client';
 
 /**
- * Stores near you — and the search results, when there is a query.
+ * Stores near you — and the store search, when there is a query.
  *
  * ── LOCATION IS NEVER A WALL ────────────────────────────────────────────────
  * The list loads before a location is chosen. Picking one re-sorts it by
  * distance; refusing the prompt swaps in the PIN-code path. There is no screen
  * in this flow that says "enable location to continue", because that is a dead
  * end dressed as a feature.
+ *
+ * ── WHAT `q` ACTUALLY SEARCHES ──────────────────────────────────────────────
+ * `GET /stores?q=` matches STORE NAMES (`BrowseStoresQueryDto.q`). This view
+ * used to also fire `GET /products?q=` for a market-wide item search — that
+ * endpoint does not exist and answers 404, so the whole results section was a
+ * permanent fixture banner. It is gone, and the copy now says what the search
+ * really does.
+ *   TODO(api): add `GET /products?q=&lat=&lng=` for market-wide item search.
+ *   The catalogue API only exposes products scoped to one store today
+ *   (`GET /stores/:id/products?q=`), so until that lands the only way to search
+ *   items is from inside a storefront.
  */
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
-import { useGeolocation, locationQuery } from '@/hooks/useGeolocation';
+import { useGeolocation, locationQuery, isLocationFiltered } from '@/hooks/useGeolocation';
 import { useShopQuery } from '@/hooks/useShopQuery';
-import { readPaged, readProduct, readStore, type Paged, type Product, type Store } from '@/lib/shop/types';
+import { readPaged, readStore, type Paged, type Store } from '@/lib/shop/types';
 import { FixtureBanner, ErrorNotice } from './notices';
 import { StoreCard, StoreCardSkeleton } from './StoreCard';
-import { ProductCard, ProductCardSkeleton } from './ProductCard';
 
 export function StoresView() {
   const params = useSearchParams();
@@ -26,9 +36,11 @@ export function StoresView() {
   const geo = useGeolocation();
   const [pincode, setPincode] = useState('');
 
+  /* Only parameters `BrowseStoresQueryDto` declares. The API runs
+     `forbidNonWhitelisted`, so one extra key here is a 400 for the whole page. */
   const storeParams = useMemo(
-    () => ({ ...locationQuery(geo.location), limit: 20 }),
-    [geo.location],
+    () => ({ ...locationQuery(geo.location), q: query === '' ? undefined : query, limit: 20 }),
+    [geo.location, query],
   );
 
   const stores = useShopQuery<Paged<Store>>('/stores', storeParams, {
@@ -37,27 +49,15 @@ export function StoresView() {
     read: useCallback((raw: unknown) => readPaged(raw, readStore), []),
   });
 
-  /* Cross-store search. `GET /products?q=` is a PROPOSED endpoint — plan §6.2
-     only specs search scoped to one store (`/stores/:id/products?q=`). Until
-     Worker B adds it this falls through to the fixture, clearly labelled.
-     TODO(worker-b): GET /products?q=&lat=&lng= for market-wide search. */
-  const results = useShopQuery<Paged<Product>>(
-    query === '' ? null : '/products',
-    useMemo(() => ({ q: query, limit: 12 }), [query]),
-    {
-      anonymous: true,
-      read: useCallback((raw: unknown) => readPaged(raw, readProduct), []),
-    },
-  );
-
   const needsLocation = geo.ready && geo.location === null;
+  const rows = stores.data?.data ?? [];
 
   return (
     <div className="shell shop-page">
       <header className="shop-page__head">
         <p className="eyebrow">The market near you</p>
         <h1 className="shop-page__title">
-          {query === '' ? 'Stores' : <>Results for “{query}”</>}
+          {query === '' ? 'Stores' : <>Stores matching “{query}”</>}
         </h1>
         <p className="lede">
           Every shop here is a real vendor with its own stock and its own hours. One store per
@@ -77,8 +77,8 @@ export function StoresView() {
             </h2>
             <p className="shop-locate__body">
               {geo.status === 'denied'
-                ? 'No problem — a PIN code does the same job. We only ever use it to work out which shops can reach you.'
-                : 'Share your location for distances and delivery times, or type a PIN code. Either works; neither is required to browse.'}
+                ? 'No problem — you can still browse every store below and order from any of them. Sharing a position is only what lets us sort them by how far away they are.'
+                : 'Share your location and the list is sorted by distance and filtered to the shops that can actually reach you. Neither is required to browse.'}
             </p>
           </div>
 
@@ -117,7 +117,7 @@ export function StoresView() {
                 }}
               />
               <button type="submit" className="mnd-btn mnd-btn--outline mnd-btn--md">
-                Use this PIN
+                Remember this PIN
               </button>
             </form>
           </div>
@@ -130,52 +130,27 @@ export function StoresView() {
         </section>
       ) : null}
 
+      {/* A PIN code is remembered for the header, but it does not filter the
+          list — the API has no `pincode` parameter. Saying so is the whole
+          point; sending it anyway was a 400. */}
       {geo.location?.source === 'pincode' ? (
         <p className="shop-page__scope" role="status">
-          Showing stores for PIN <strong className="mono">{geo.location.pincode}</strong>.{' '}
+          Saved PIN <strong className="mono">{geo.location.pincode}</strong>. This list is not
+          narrowed to it yet — share your location to sort by distance.{' '}
+          <button type="button" className="shop-linkish" onClick={geo.request}>
+            Use my location
+          </button>{' '}
+          ·{' '}
           <button type="button" className="shop-linkish" onClick={geo.clear}>
-            Change
+            Clear
           </button>
         </p>
-      ) : null}
-
-      {/* ── search results ───────────────────────────────────────────────── */}
-      {query !== '' ? (
-        <section className="shop-section" aria-labelledby="shop-results-title">
-          <h2 id="shop-results-title" className="shop-section__title">
-            Items matching “{query}”
-          </h2>
-
-          {results.isFixture ? <FixtureBanner endpoint="GET /products?q=" /> : null}
-          {results.error !== null ? (
-            <ErrorNotice error={results.error} onRetry={results.refetch} what="the search results" />
-          ) : null}
-
-          {results.loading && !results.hasLoadedOnce ? (
-            <div className="shop-grid">
-              {[0, 1, 2, 3].map((i) => (
-                <ProductCardSkeleton key={i} index={i} />
-              ))}
-            </div>
-          ) : results.data !== null && results.data.data.length > 0 ? (
-            <div className="shop-grid">
-              {results.data.data.map((product, index) => (
-                <ProductCard key={product.id} product={product} priority={index < 2} />
-              ))}
-            </div>
-          ) : results.error === null ? (
-            <p className="shop-empty">
-              Nothing matched “{query}”. Try a shorter word — “atta” finds more than “aashirvaad
-              atta 5kg”.
-            </p>
-          ) : null}
-        </section>
       ) : null}
 
       {/* ── the stores ───────────────────────────────────────────────────── */}
       <section className="shop-section" aria-labelledby="shop-stores-title">
         <h2 id="shop-stores-title" className="shop-section__title">
-          {geo.location !== null ? 'Stores that reach you' : 'Stores on Mandi'}
+          {isLocationFiltered(geo.location) ? 'Stores that reach you' : 'Stores on Mandi'}
         </h2>
 
         {stores.isFixture ? <FixtureBanner endpoint="GET /stores" /> : null}
@@ -189,16 +164,29 @@ export function StoresView() {
               <StoreCardSkeleton key={i} index={i} />
             ))}
           </div>
-        ) : stores.data !== null && stores.data.data.length > 0 ? (
+        ) : rows.length > 0 ? (
           <div className="shop-stores">
-            {stores.data.data.map((store) => (
+            {rows.map((store) => (
               <StoreCard key={store.id} store={store} />
             ))}
           </div>
         ) : stores.error === null ? (
           <p className="shop-empty">
-            No store on Mandi reaches this address yet. We are onboarding vendors daily —{' '}
-            <Link href="/for-vendors">know a shop that should be here?</Link>
+            {query !== '' ? (
+              <>
+                No store matched “{query}”. <Link href="/stores">See every store</Link>.
+              </>
+            ) : isLocationFiltered(geo.location) ? (
+              <>
+                No store on Mandi reaches this address yet. We are onboarding vendors daily —{' '}
+                <Link href="/for-vendors">know a shop that should be here?</Link>
+              </>
+            ) : (
+              <>
+                No stores are listed yet. We are onboarding vendors daily —{' '}
+                <Link href="/for-vendors">know a shop that should be here?</Link>
+              </>
+            )}
           </p>
         ) : null}
       </section>

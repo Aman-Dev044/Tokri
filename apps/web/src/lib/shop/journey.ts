@@ -16,7 +16,20 @@
  */
 
 import type { JourneyMilestone, JourneyState } from '@mandi/design-system/journey-ribbon';
-import type { Order, OrderStatus } from './types';
+import type { OrderStatus, StatusChange } from './types';
+
+/**
+ * The only three things the ribbon needs.
+ *
+ * Deliberately NOT `Order`: `GET /orders/:id/track` returns a `TrackView`,
+ * which carries a status and a status history but no items, pricing or
+ * address. Typing this on the whole order forced the track screen to fake one.
+ */
+export interface JourneySource {
+  status: OrderStatus;
+  statusHistory: readonly StatusChange[];
+  placedAt: string | null;
+}
 
 /** How far along the ribbon each backend state sits. */
 const RANK: Record<OrderStatus, number> = {
@@ -80,12 +93,12 @@ const STEPS: readonly Step[] = [
   },
 ];
 
-function firstTimeFor(order: Order, stamps: readonly OrderStatus[]): string | null {
-  for (const event of order.statusHistory) {
+function firstTimeFor(source: JourneySource, stamps: readonly OrderStatus[]): string | null {
+  for (const event of source.statusHistory) {
     if (stamps.includes(event.to)) return event.at === '' ? null : event.at;
   }
   // The first step has no transition row when the history starts at PLACED.
-  if (stamps.includes('PLACED')) return order.placedAt;
+  if (stamps.includes('PLACED')) return source.placedAt;
   return null;
 }
 
@@ -97,10 +110,10 @@ export interface Journey {
   failed: boolean;
 }
 
-export function buildJourney(order: Order): Journey {
-  const rank = RANK[order.status];
-  const cancelled = order.status === 'CANCELLED' || order.status === 'REJECTED';
-  const failed = order.status === 'DELIVERY_FAILED';
+export function buildJourney(source: JourneySource): Journey {
+  const rank = RANK[source.status];
+  const cancelled = source.status === 'CANCELLED' || source.status === 'REJECTED';
+  const failed = source.status === 'DELIVERY_FAILED';
 
   const milestones: JourneyMilestone[] = STEPS.map((step, index) => {
     let state: JourneyState;
@@ -111,7 +124,7 @@ export function buildJourney(order: Order): Journey {
     } else if (index < rank) {
       state = 'done';
     } else if (index === rank) {
-      state = order.status === 'DELIVERED' ? 'done' : 'current';
+      state = source.status === 'DELIVERED' ? 'done' : 'current';
     } else {
       state = 'pending';
     }
@@ -120,7 +133,7 @@ export function buildJourney(order: Order): Journey {
       key: step.key,
       label: step.label,
       caption: state === 'pending' ? step.caption : step.caption,
-      at: firstTimeFor(order, step.stamps),
+      at: firstTimeFor(source, step.stamps),
       state,
     };
   });

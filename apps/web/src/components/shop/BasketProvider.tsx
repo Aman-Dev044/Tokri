@@ -15,12 +15,23 @@
  * so in words, and a restore link stays available. Nobody loses a basket
  * because they tapped the wrong shop.
  *
- * ── THE API MAY NOT BE THERE YET ────────────────────────────────────────────
- * Worker B is building `/cart` in parallel. Every mutation is optimistic
- * locally and then mirrored to the API; when the API refuses or is missing, the
- * basket keeps working locally and `isLocalOnly` goes true — which the dock and
- * the cart page state plainly. A basket that silently stops saving is worse
- * than one that says it is only on this device.
+ * ── OPTIMISTIC LOCALLY, MIRRORED TO THE API ─────────────────────────────────
+ * Every mutation lands in local state first and is then mirrored to `/cart`.
+ * `isLocalOnly` goes true ONLY when the API could not be reached at all — a
+ * network failure — which the dock and the cart page state plainly. A basket
+ * that silently stops saving is worse than one that says it is only on this
+ * device.
+ *
+ * A 4xx is NOT a reason to go local-only: it means the server considered the
+ * request and refused it (409 `INSUFFICIENT_STOCK`, for instance). That is
+ * surfaced as a toast and the server stays the authority. Treating a refusal as
+ * "the API is missing" is how a genuine stock conflict turned into a banner
+ * claiming the cart service was down.
+ *
+ * ── THE VENDOR COMES FROM THE SHELF, NOT THE PRODUCT ────────────────────────
+ * `ProductRow` (`GET /stores/:id/products`) carries no `vendorId`; only
+ * `ProductDetail` carries a `store`. So `add()` takes the store explicitly and
+ * every caller passes the one it fetched from.
  */
 
 import {
@@ -37,6 +48,13 @@ import { useToast } from '@mandi/design-system';
 import { api, ApiError } from '@/lib/api-client';
 import { invalidateShop } from '@/hooks/useShopQuery';
 import type { Product } from '@/lib/shop/types';
+
+/**
+ * The server's per-line ceiling (`MAX_QTY_PER_LINE` in the cart DTO). Asking
+ * for more is a 400, so the stepper stops here rather than letting the
+ * customer type their way into a rejected request.
+ */
+export const MAX_QTY_PER_LINE = 20;
 
 /* ───────────────────────────────── model ───────────────────────────────── */
 
@@ -79,7 +97,7 @@ interface BasketValue {
   isLocalOnly: boolean;
   hydrated: boolean;
 
-  add: (product: Product, qty: number, origin?: HTMLElement | null) => void;
+  add: (product: Product, store: BasketStore, qty: number, origin?: HTMLElement | null) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
@@ -253,25 +271,44 @@ export function BasketProvider({ children }: { children: ReactNode }) {
           invalidateShop('/cart');
         })
         .catch((cause: unknown) => {
+          if (!(cause instanceof ApiError)) {
+            setIsLocalOnly(true);
+            return;
+          }
           // 401 is not a cart problem — it is a sign-in problem, and the cart
-          // route is behind middleware anyway. Anything else means the endpoint
-          // is not there yet, which the UI states rather than hides.
-          if (cause instanceof ApiError && cause.status === 401) return;
-          setIsLocalOnly(true);
+          // route is behind middleware anyway.
+          if (cause.status === 401) return;
+
+          // Unreachable API ⇒ the basket is genuinely only on this device.
+          if (cause.isNetworkError) {
+            setIsLocalOnly(true);
+            return;
+          }
+
+          // The server considered it and refused: a stock conflict, a closed
+          // store, a line at the per-line ceiling. It is still the authority,
+          // so say what it said and re-read the real cart.
+          toast({
+            tone: 'warn',
+            title: 'The store could not take that change',
+            description: cause.friendlyMessage,
+          });
+          invalidateShop('/cart');
         });
     },
-    [],
+    [toast],
   );
 
   const applyAdd = useCallback(
     (nextStore: BasketStore, product: Product, qty: number, origin?: HTMLElement | null) => {
+      const ceiling = Math.min(product.availableQty, MAX_QTY_PER_LINE);
       setStore(nextStore);
       setLines((prev) => {
         const existing = prev.find((line) => line.productId === product.id);
         if (existing) {
           return prev.map((line) =>
             line.productId === product.id
-              ? { ...line, qty: Math.min(line.qty + qty, line.maxQty ?? Number.MAX_SAFE_INTEGER) }
+              ? { ...line, qty: Math.min(line.qty + qty, line.maxQty ?? MAX_QTY_PER_LINE) }
               : line,
           );
         }
@@ -282,9 +319,9 @@ export function BasketProvider({ children }: { children: ReactNode }) {
             name: product.name,
             image: product.images[0] ?? null,
             unit: product.unit,
-            pricePaise: product.pricePaise,
-            qty,
-            maxQty: product.stock,
+            pricePaise: product.price,
+            qty: Math.min(qty, ceiling),
+            maxQty: ceiling,
           },
         ];
       });
@@ -301,13 +338,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
   );
 
   const add = useCallback(
-    (product: Product, qty: number, origin?: HTMLElement | null) => {
-      const target: BasketStore = {
-        vendorId: product.vendorId,
-        storeName: product.storeName ?? 'this store',
-        storeSlug: null,
-      };
-
+    (product: Product, target: BasketStore, qty: number, origin?: HTMLElement | null) => {
       if (store !== null && lines.length > 0 && store.vendorId !== target.vendorId) {
         // Do not merge, do not destroy. Ask.
         setPendingSwitch({ from: store, to: target, product, qty });

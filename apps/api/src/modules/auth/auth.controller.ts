@@ -37,11 +37,18 @@ export class AuthController {
    * The access token is returned in the body and held in memory only.
    */
   private setRefreshCookie(res: Response, token: string) {
+    const domain = this.config.getOrThrow<string>('cookie.domain');
+
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
       secure: this.config.getOrThrow<boolean>('cookie.secure'),
       sameSite: 'strict',
-      domain: this.config.getOrThrow<string>('cookie.domain'),
+      // Omit Domain for localhost. `Domain=localhost` is accepted by curl
+      // but is a hostname with no dot, which browsers treat inconsistently;
+      // a rejected cookie looks exactly like a failed login. Omitting the
+      // attribute yields a host-only cookie, which is both stricter and
+      // what every browser handles the same way.
+      ...(domain === 'localhost' ? {} : { domain }),
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

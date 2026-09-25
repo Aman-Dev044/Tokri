@@ -233,11 +233,38 @@
   color: var(--rd-ink);
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  min-width: 0;
+}
+
+/* The account button. 44px in the header is the ONE place a 64px target does
+   not fit — the header is deliberately short so the thumb zone stays free —
+   so it is padded to 44 and its real destructive action lives on the sheet it
+   opens, at 64px+, in the dock. Opening a sheet is not a destructive act. */
+.accountBtn {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-soft);
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  cursor: pointer;
+  padding: 0;
+}
+
 .conn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  margin-left: auto;
+  min-width: 0;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1111,6 +1138,153 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ===========================================================================
+   The account sheet — who is signed in, and the way out.
+
+   Full-screen and opaque: it is not a popover over a live job, because a
+   half-visible delivery behind a sign-out confirm is exactly the ambiguity
+   that produces the mis-tap. Its own dock holds the one action.
+   =========================================================================== */
+
+.profileSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  overflow-x: clip;
+}
+
+.profileScroll {
+  overflow-y: auto;
+  padding: max(0.875rem, env(safe-area-inset-top)) 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.profileHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.profileMark {
+  flex: none;
+  width: 3rem;
+  height: 3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--rd-line-strong);
+  border-radius: 50%;
+  color: var(--rd-ink);
+}
+
+.profileWho {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profileName {
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+/* The role, stated. Not a colour: a word, in a box. */
+.rolePill {
+  align-self: flex-start;
+  font-family: var(--data);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.5rem;
+  border: 2px solid var(--rd-line-strong);
+  border-radius: var(--r-pill);
+  color: var(--rd-ink);
+  background: var(--rd-panel);
+}
+
+.profileClose {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-soft);
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  cursor: pointer;
+  padding: 0;
+}
+
+.profileRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rd-line);
+  min-width: 0;
+}
+
+.profileRow:last-child {
+  border-bottom: 0;
+}
+
+.profileRowLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+  flex: none;
+}
+
+.profileRowValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--rd-ink);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* The way out. Outlined in crit, not filled: it is the only action in this
+   dock, so it must be unmistakable, but it is the FIRST of two taps and a
+   filled red button reads as already-done. The confirm's button is filled. */
+.signOut {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 3px solid var(--rd-crit-fill);
+  border-radius: var(--r-panel);
+  background: var(--rd-ground);
+  color: var(--rd-crit);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 /* Focus is never subtle here. Sunlight. */

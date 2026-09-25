@@ -16,6 +16,17 @@
  *   3. The fixture fallback comes from `lib/shop/fixtures` and is always
  *      surfaced through `isFixture`, which every screen turns into a visible
  *      banner. Sample data is never presented as real.
+ *
+ * ── ★ WHEN THE FIXTURE IS ALLOWED TO FIRE ───────────────────────────────────
+ * ONLY on a genuine network failure — `ApiError.isNetworkError`: the API is
+ * down, unreachable, CORS-blocked, or timed out. Nothing else.
+ *
+ * It used to fire on ANY thrown error, which quietly papered over the two
+ * failures that matter most. The API runs `forbidNonWhitelisted: true`, so an
+ * unknown query parameter is a hard 400 — a bug in THIS app, which a banner
+ * full of sample tomatoes hides instead of reporting. And a 404 on a path means
+ * the endpoint does not exist, which must look like a missing endpoint. Both
+ * now surface as a real `ApiError` and a readable error state.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -119,7 +130,12 @@ export function useShopQuery<T>(
         const apiError =
           cause instanceof ApiError ? cause : new ApiError('Unexpected failure', 0, {}, true);
 
-        const fixture = resolveShopFixture(path, stableParams);
+        // ★ See the header: a fixture stands in for an UNREACHABLE API, never
+        //   for one that answered with a refusal.
+        const fixture = apiError.isNetworkError
+          ? resolveShopFixture(path, stableParams)
+          : null;
+
         if (fixture !== null) {
           setData(readRef.current(fixture));
           setError(null);

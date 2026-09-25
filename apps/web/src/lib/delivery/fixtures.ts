@@ -1,10 +1,18 @@
 /**
  * Sample rider data — NEVER presented as real.
  *
- * Worker C's `/delivery/*` endpoints are landing alongside this app, so every
- * screen would otherwise be an error state and none of it would be reviewable.
- * The rule that makes this safe is absolute and is enforced at the call site,
- * not here:
+ * ── WHEN THIS IS ALLOWED ON SCREEN ──────────────────────────────────────────
+ * ONLY on a genuine network failure: `ApiError.isNetworkError`, which covers
+ * the API being unreachable, a CORS block and a timeout. That is the one case
+ * where a rider gets a blank app through no fault of the code.
+ *
+ * A 400, a 404, a 403 or a 500 is a BUG, not a reason to show sample data.
+ * Papering over a wrong query parameter with plausible rows is how a contract
+ * mismatch survives a review — the earlier version of this app did exactly
+ * that, and `/delivery/orders?status=DELIVERED` 404'd for weeks behind a
+ * banner that looked like a known limitation.
+ *
+ * The rule that makes this safe is absolute and enforced at the call site:
  *
  *   whenever these rows are on screen, `<FixtureBanner>` is on screen.
  *
@@ -14,27 +22,27 @@
  */
 
 import type {
-  ActiveJob,
-  Availability,
+  ActiveOrder,
+  DeliveryHistoryRow,
   EarningsSummary,
-  HistoryEntry,
   Offer,
+  Waypoint,
 } from './types';
 
 /** Bengaluru, roughly — far enough apart to make the distances plausible. */
-const STORE = {
+const STORE: Waypoint = {
   label: 'Sample Store — Anand Kirana',
   address: 'SAMPLE DATA · 14, 6th Cross, Indiranagar, Bengaluru 560038',
-  point: { lat: 12.9784, lng: 77.6408 },
-  phone: '+910000000000',
-} as const;
+  lat: 12.9784,
+  lng: 77.6408,
+};
 
-const DROP = {
+const DROP: Waypoint = {
   label: 'Sample Drop — Flat 402, Sunrise Apartments',
   address: 'SAMPLE DATA · 88, 12th Main, Domlur, Bengaluru 560071',
-  point: { lat: 12.9611, lng: 77.6387 },
-  note: 'Sample note — second gate, ring the bell twice.',
-} as const;
+  lat: 12.9611,
+  lng: 77.6387,
+};
 
 /**
  * A live offer has to expire, so this is a factory rather than a constant:
@@ -43,16 +51,19 @@ const DROP = {
  */
 export function sampleOffer(nowMs: number = Date.now()): Offer {
   return {
-    assignmentId: 'sample-assignment-1',
+    id: 'sample-assignment-1',
     orderId: 'sample-order-1',
     orderNo: 'SAMPLE-4417',
+    attemptNo: 1,
+    offeredAt: new Date(nowMs).toISOString(),
+    expiresAt: new Date(nowMs + 45_000).toISOString(),
+    expiresInMs: 45_000,
     pickup: { ...STORE },
     drop: { ...DROP },
-    payoutPaise: 4_200,
-    distanceMeters: 2_900,
+    distanceKm: 2.9,
     itemCount: 7,
-    expiresAt: new Date(nowMs + 45_000).toISOString(),
     codAmountPaise: 78_500,
+    payoutPaise: 4_200,
   };
 }
 
@@ -60,29 +71,29 @@ export function sampleOffers(nowMs: number = Date.now()): Offer[] {
   return [sampleOffer(nowMs)];
 }
 
-export const SAMPLE_ACTIVE_JOB: ActiveJob = {
+export const SAMPLE_ACTIVE_ORDER: ActiveOrder = {
   orderId: 'sample-order-1',
   orderNo: 'SAMPLE-4417',
   status: 'ASSIGNED',
+  assignmentId: 'sample-assignment-1',
+  placedAt: new Date(0).toISOString(),
   pickup: { ...STORE },
   drop: { ...DROP },
-  items: [
-    { id: 'sample-i1', name: 'Sample — Tomatoes', qty: 2, unit: 'kg' },
-    { id: 'sample-i2', name: 'Sample — Toned milk 1L', qty: 3, unit: 'pc' },
-    { id: 'sample-i3', name: 'Sample — Atta 5kg', qty: 1, unit: 'pc' },
-    { id: 'sample-i4', name: 'Sample — Bananas', qty: 1, unit: 'dozen' },
-  ],
-  payoutPaise: 4_200,
-  distanceMeters: 2_900,
-  codAmountPaise: 78_500,
   customerName: 'Sample Customer',
   customerPhone: '+910000000000',
-  otpAttemptsRemaining: 5,
+  items: [
+    { name: 'Sample — Tomatoes', qty: 2, unit: 'kg', image: null },
+    { name: 'Sample — Toned milk 1L', qty: 3, unit: 'pc', image: null },
+    { name: 'Sample — Atta 5kg', qty: 1, unit: 'pc', image: null },
+    { name: 'Sample — Bananas', qty: 1, unit: 'dozen', image: null },
+  ],
+  itemCount: 4,
+  payment: { method: 'cod', status: 'pending', codAmountPaise: 78_500 },
+  distanceKm: 2.9,
   etaMinutes: 18,
-  assignedAt: new Date().toISOString(),
+  payoutPaise: 4_200,
+  otp: { attemptsUsed: 0, attemptsRemaining: 5, locked: false },
 };
-
-export const SAMPLE_AVAILABILITY: Availability = { isOnline: false, isAvailable: false };
 
 function isoDaysAgo(days: number, hour: number): string {
   const d = new Date();
@@ -91,56 +102,50 @@ function isoDaysAgo(days: number, hour: number): string {
   return d.toISOString();
 }
 
-export const SAMPLE_HISTORY: HistoryEntry[] = [
+export const SAMPLE_HISTORY: DeliveryHistoryRow[] = [
   {
     orderId: 'sample-h1',
     orderNo: 'SAMPLE-4390',
-    completedAt: isoDaysAgo(0, 13),
     status: 'DELIVERED',
+    deliveredAt: isoDaysAgo(0, 13),
+    city: 'SAMPLE — Bengaluru',
+    pincode: '560034',
+    distanceKm: 2.1,
     payoutPaise: 3_800,
-    distanceMeters: 2_100,
-    dropLabel: 'Sample — Koramangala 5th Block',
     codCollectedPaise: 45_000,
   },
   {
     orderId: 'sample-h2',
     orderNo: 'SAMPLE-4382',
-    completedAt: isoDaysAgo(0, 11),
     status: 'DELIVERED',
+    deliveredAt: isoDaysAgo(0, 11),
+    city: 'SAMPLE — Bengaluru',
+    pincode: '560102',
+    distanceKm: 3.6,
     payoutPaise: 4_500,
-    distanceMeters: 3_600,
-    dropLabel: 'Sample — HSR Layout Sector 2',
-    codCollectedPaise: null,
+    codCollectedPaise: 0,
   },
   {
     orderId: 'sample-h3',
     orderNo: 'SAMPLE-4361',
-    completedAt: isoDaysAgo(1, 19),
     status: 'DELIVERY_FAILED',
+    deliveredAt: null,
+    city: 'SAMPLE — Bengaluru',
+    pincode: '560047',
+    distanceKm: 2.8,
     payoutPaise: 1_500,
-    distanceMeters: 2_800,
-    dropLabel: 'Sample — Ejipura Main Road',
-    codCollectedPaise: null,
+    codCollectedPaise: 0,
   },
   {
     orderId: 'sample-h4',
     orderNo: 'SAMPLE-4344',
-    completedAt: isoDaysAgo(1, 16),
     status: 'DELIVERED',
+    deliveredAt: isoDaysAgo(1, 16),
+    city: 'SAMPLE — Bengaluru',
+    pincode: '560035',
+    distanceKm: 4.4,
     payoutPaise: 5_200,
-    distanceMeters: 4_400,
-    dropLabel: 'Sample — Sarjapur Road',
     codCollectedPaise: 112_000,
-  },
-  {
-    orderId: 'sample-h5',
-    orderNo: 'SAMPLE-4310',
-    completedAt: isoDaysAgo(2, 12),
-    status: 'DELIVERED',
-    payoutPaise: 3_600,
-    distanceMeters: 1_900,
-    dropLabel: 'Sample — Old Airport Road',
-    codCollectedPaise: null,
   },
 ];
 
@@ -151,19 +156,18 @@ function dayKey(offset: number): string {
 }
 
 export const SAMPLE_EARNINGS: EarningsSummary = {
-  todayPaise: 8_300,
-  todayDeliveries: 2,
-  weekPaise: 46_700,
-  weekDeliveries: 12,
-  unpaidPaise: 46_700,
-  nextPayoutAt: undefined,
-  days: [
-    { date: dayKey(0), deliveries: 2, payoutPaise: 8_300, tipsPaise: 0, distanceMeters: 5_700 },
-    { date: dayKey(1), deliveries: 3, payoutPaise: 11_300, tipsPaise: 2_000, distanceMeters: 9_100 },
-    { date: dayKey(2), deliveries: 1, payoutPaise: 3_600, tipsPaise: 0, distanceMeters: 1_900 },
-    { date: dayKey(3), deliveries: 2, payoutPaise: 7_900, tipsPaise: 1_000, distanceMeters: 6_200 },
-    { date: dayKey(4), deliveries: 0, payoutPaise: 0, tipsPaise: 0, distanceMeters: 0 },
-    { date: dayKey(5), deliveries: 2, payoutPaise: 8_100, tipsPaise: 0, distanceMeters: 5_400 },
-    { date: dayKey(6), deliveries: 2, payoutPaise: 7_500, tipsPaise: 500, distanceMeters: 4_800 },
+  from: `${dayKey(6)}T00:00:00.000Z`,
+  to: `${dayKey(0)}T23:59:59.999Z`,
+  deliveries: 12,
+  payoutPaise: 46_700,
+  codCollectedPaise: 157_000,
+  byDay: [
+    { date: dayKey(6), deliveries: 2, payoutPaise: 7_500 },
+    { date: dayKey(5), deliveries: 2, payoutPaise: 8_100 },
+    { date: dayKey(4), deliveries: 0, payoutPaise: 0 },
+    { date: dayKey(3), deliveries: 2, payoutPaise: 7_900 },
+    { date: dayKey(2), deliveries: 1, payoutPaise: 3_600 },
+    { date: dayKey(1), deliveries: 3, payoutPaise: 11_300 },
+    { date: dayKey(0), deliveries: 2, payoutPaise: 8_300 },
   ],
 };

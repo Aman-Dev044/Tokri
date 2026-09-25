@@ -222,20 +222,29 @@ export function useGeolocation(): UseGeolocation {
 /**
  * The query the store list sends.
  *
- * `lat`/`lng` is the specced shape (plan §6.2). `pincode` is an addition the
- * manual fallback needs — the API has to resolve it server-side, because
- * geocoding in the browser would need the Maps key we may not have.
+ * `GET /stores` accepts EXACTLY `lat`, `lng`, `radius`, `q`, `page`, `limit`
+ * and `sort` (`BrowseStoresQueryDto`). The API runs `forbidNonWhitelisted`, so
+ * anything else is a hard 400, not an ignored extra — this used to send
+ * `?pincode=560076` and every PIN-code search answered
+ * `400 property pincode should not exist`, which the fixture fallback then hid
+ * behind a "sample data" banner.
  *
- * TODO(worker-b): accept `?pincode=` on GET /stores and resolve it to a centre
- * point. Until then a PIN-code search returns whatever the unfiltered list
- * returns, which the UI states plainly rather than pretending to have filtered.
+ * So a PIN code contributes NO parameter. The list still loads, unfiltered, and
+ * `StoresView` says so in words rather than implying a filter that never ran.
+ *
+ * TODO(api): accept `?pincode=` on `GET /stores` and resolve it to a centre
+ * point server-side (geocoding in the browser would need a Maps key we may not
+ * have). Until that endpoint exists, `hasServerSideFilter` below stays false
+ * for the PIN-code path and the UI is honest about it.
  */
 export function locationQuery(
   location: ShopLocation | null,
 ): Record<string, string | number | undefined> {
-  if (location === null) return {};
-  if (location.coords !== null) {
-    return { lat: location.coords.lat, lng: location.coords.lng, radius: 5 };
-  }
-  return location.pincode !== null ? { pincode: location.pincode } : {};
+  if (location === null || location.coords === null) return {};
+  return { lat: location.coords.lat, lng: location.coords.lng, radius: 5 };
+}
+
+/** True when the chosen location actually narrowed the server-side query. */
+export function isLocationFiltered(location: ShopLocation | null): boolean {
+  return location !== null && location.coords !== null;
 }

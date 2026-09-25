@@ -28,7 +28,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRef } from 'react';
 import { formatPaise, type AisleKey } from '@mandi/design-system';
-import { useBasket } from './BasketProvider';
+import { useBasket, type BasketStore } from './BasketProvider';
 import { QuantityStepper } from './QuantityStepper';
 import type { Product } from '@/lib/shop/types';
 
@@ -92,20 +92,28 @@ export function ProductMedia({
 
 export interface ProductCardProps {
   product: Product;
+  /**
+   * Which store this shelf belongs to.
+   *
+   * A `ProductRow` carries NO `vendorId` — the caller already knows which store
+   * it asked for its catalogue. The basket needs one (one vendor per cart), so
+   * the shelf that fetched the row hands it down rather than reading a field
+   * that is not in the response.
+   */
+  store: BasketStore;
   /** overrides the product's own aisle — used inside an aisle route */
   aisleKey?: AisleKey | null;
   priority?: boolean;
 }
 
-export function ProductCard({ product, aisleKey, priority = false }: ProductCardProps) {
+export function ProductCard({ product, store, aisleKey, priority = false }: ProductCardProps) {
   const { add, setQty, qtyOf } = useBasket();
   const addRef = useRef<HTMLButtonElement | null>(null);
   const qty = qtyOf(product.id);
 
-  const discount =
-    product.mrpPaise !== null && product.mrpPaise > product.pricePaise
-      ? Math.round(((product.mrpPaise - product.pricePaise) / product.mrpPaise) * 100)
-      : null;
+  // `discountPct` is computed server-side; the MRP comparison is only a guard
+  // against a catalogue row where the two prices are equal.
+  const discount = product.mrp > product.price ? product.discountPct : null;
 
   return (
     <article
@@ -134,9 +142,9 @@ export function ProductCard({ product, aisleKey, priority = false }: ProductCard
 
         <div className="shop-card__foot">
           <p className="shop-card__price">
-            <span className="price">{formatPaise(product.pricePaise)}</span>
-            {product.mrpPaise !== null ? (
-              <s className="shop-card__mrp">{formatPaise(product.mrpPaise)}</s>
+            <span className="price">{formatPaise(product.price)}</span>
+            {product.mrp > product.price ? (
+              <s className="shop-card__mrp">{formatPaise(product.mrp)}</s>
             ) : null}
           </p>
 
@@ -148,7 +156,7 @@ export function ProductCard({ product, aisleKey, priority = false }: ProductCard
               type="button"
               className="shop-card__add"
               onClick={() => {
-                add(product, 1, addRef.current);
+                add(product, store, 1, addRef.current);
               }}
             >
               <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
@@ -160,7 +168,7 @@ export function ProductCard({ product, aisleKey, priority = false }: ProductCard
           ) : (
             <QuantityStepper
               value={qty}
-              max={product.stock}
+              max={product.availableQty}
               label={product.name}
               size="sm"
               onChange={(next) => {

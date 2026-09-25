@@ -12,7 +12,12 @@
  * With a live job it becomes a single bottom-anchored "Continue delivery" and
  * the nav is hidden — a rider mid-delivery has one thing to do. With no job it
  * is a calm resting state, not a spinner and not an empty dashboard: waiting
- * is the normal condition of this screen and it should not feel like a fault.
+ * is the NORMAL condition of this screen and it must not feel like a fault.
+ *
+ * ── TODAY'S NUMBERS COME FROM THE PROFILE ───────────────────────────────────
+ * `GET /delivery/me` returns `today: { deliveries, earningsPaise,
+ * onlineMinutes }`. The earnings endpoint has no concept of "today" — it is a
+ * window statement — so reading today's figures from it was always wrong.
  */
 
 import Link from 'next/link';
@@ -23,26 +28,28 @@ import { Dock, PrimaryLink } from './Dock';
 import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
 import { IconBox, IconResting } from './icons';
-import { distance, money } from '@/lib/delivery/format';
-import { useRiderEarnings } from '@/lib/delivery/useRiderData';
+import { distanceKm, money } from '@/lib/delivery/format';
 
 export function HomeView() {
   const {
-    availability,
-    activeJob,
+    profile,
+    activeOrder,
     jobIsSample,
     jobFromCache,
     offers,
     offersAreSample,
     loading,
     sampleEndpoints,
+    loadError,
     refresh,
   } = useRider();
-  const earnings = useRiderEarnings();
 
-  const hasJob = activeJob !== null;
+  const hasJob = activeOrder !== null;
   // A live job takes the dock; otherwise the nav keeps it.
   useHideNav(hasJob);
+
+  const today = profile?.today ?? null;
+  const online = profile?.isOnline ?? false;
 
   if (loading && !hasJob) {
     return (
@@ -56,44 +63,60 @@ export function HomeView() {
         <FixtureBanner endpoints={sampleEndpoints} onRetry={refresh} />
       ) : null}
       {jobFromCache && !jobIsSample ? <CachedBanner onRetry={refresh} /> : null}
+      {loadError === null ? null : (
+        <Notice tone="crit" title="Mandi did not answer properly">
+          {loadError}
+        </Notice>
+      )}
 
       <div className={styles.summaryGrid}>
         <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>{money(earnings.value.todayPaise)}</div>
+          <div className={styles.summaryValue}>
+            {today === null ? '—' : money(today.earningsPaise)}
+          </div>
           <div className={styles.summaryLabel}>Earned today</div>
         </div>
         <div className={styles.summaryTile}>
-          <div className={styles.summaryValue}>{earnings.value.todayDeliveries}</div>
+          <div className={styles.summaryValue}>
+            {today === null ? '—' : today.deliveries}
+          </div>
           <div className={styles.summaryLabel}>Deliveries today</div>
         </div>
       </div>
 
-      {hasJob && activeJob !== null ? (
+      {activeOrder !== null ? (
         <>
           <section className={styles.panel}>
             <span className={styles.stepTag}>
               <IconBox size={14} /> Delivery in progress
             </span>
             <h1 className={styles.h1} style={{ marginTop: '0.35rem' }}>
-              {activeJob.drop.label}
+              {activeOrder.drop.label}
             </h1>
-            <p className={styles.lede}>{activeJob.drop.address}</p>
+            <p className={styles.lede}>
+              {activeOrder.drop.address === ''
+                ? 'No address on this order — call before you set off.'
+                : activeOrder.drop.address}
+            </p>
             <p className={styles.rowMeta}>
-              {distance(activeJob.distanceMeters)} · you earn{' '}
-              {money(activeJob.payoutPaise)}
+              {distanceKm(activeOrder.distanceKm)} · you earn{' '}
+              {money(activeOrder.payoutPaise)}
             </p>
           </section>
 
           <Dock>
             <PrimaryLink
-              href={`/delivery/active/${encodeURIComponent(activeJob.orderId)}`}
+              href={`/delivery/active/${encodeURIComponent(activeOrder.orderId)}`}
             >
               Continue delivery
             </PrimaryLink>
           </Dock>
         </>
       ) : offers.length > 0 ? (
-        <Notice tone="warn" title={`${offers.length} offer waiting`}>
+        <Notice
+          tone="warn"
+          title={`${offers.length} offer${offers.length === 1 ? '' : 's'} waiting`}
+        >
           <Link href="/delivery/offers" style={{ color: 'inherit' }}>
             Open it before the countdown runs out.
           </Link>
@@ -102,10 +125,10 @@ export function HomeView() {
         <div className={styles.resting}>
           <IconResting size={72} className={styles.restingMark} />
           <h1 className={styles.h1}>
-            {availability.isOnline ? 'Waiting for offers' : "You're offline"}
+            {online ? 'Waiting for offers' : "You're offline"}
           </h1>
           <p className={styles.lede}>
-            {availability.isOnline
+            {online
               ? 'Keep this screen open. The next job arrives with a 45-second countdown.'
               : 'Tap the button above to go online and start receiving offers.'}
           </p>

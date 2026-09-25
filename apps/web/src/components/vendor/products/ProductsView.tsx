@@ -19,6 +19,16 @@
  * yet, so the presign call is expected to fail — and it fails into a plain
  * sentence, with the product still saveable without a photo. A wiring gap must
  * never look like a broken screen.
+ *
+ * Only `https:` URLs are ever sent: `CreateProductDto.images` validates each
+ * entry against `/^https:\/\/\S{3,500}$/`, so the `blob:` preview a browser
+ * hands back before an upload is stripped at save time rather than posted and
+ * rejected as a 400 the vendor cannot interpret.
+ *
+ * ── CREATE IS NOT UPDATE ────────────────────────────────────────────────────
+ * `sku` is required on create and ABSENT from `UpdateProductDto` — a SKU is an
+ * immutable code, and sending one on an edit is a 400. Edits go out as
+ * `PATCH`, not `PUT`; there is no PUT route for a product.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -44,13 +54,42 @@ import { isAisleKey } from '@mandi/design-system';
 import { ImageUploadError, formatBytes, uploadProductImage } from '@/lib/vendor/image';
 import type {
   Paged,
+  ProductCreate,
   ProductDraft,
   ProductUnit,
+  ProductUpdate,
   VendorCategory,
   VendorProduct,
 } from '@/lib/vendor/types';
 import { ProductPreviewCard } from '../ProductPreviewCard';
-import { Field, RupeeInput } from '../primitives';
+import { EndpointError, Field, RupeeInput } from '../primitives';
+
+/** Only an absolute https URL survives `CreateProductDto`'s validator. */
+const isUploadedImage = (url: string): boolean => url.startsWith('https://');
+
+/** The draft, narrowed to what `CreateProductDto` accepts. */
+function toCreateBody(draft: ProductDraft): ProductCreate {
+  return {
+    name: draft.name.trim(),
+    categoryId: draft.categoryId,
+    description: draft.description.trim() || undefined,
+    images: draft.images.filter(isUploadedImage),
+    brand: draft.brand.trim() || undefined,
+    unit: draft.unit,
+    // `unitValue` is @IsInt() — a fractional pack size is a 400.
+    unitValue: Math.max(1, Math.round(draft.unitValue)),
+    sku: draft.sku.trim(),
+    mrp: draft.mrp,
+    price: draft.price,
+    isActive: draft.isActive,
+  };
+}
+
+/** The same, minus the fields `UpdateProductDto` refuses. */
+function toUpdateBody(draft: ProductDraft): ProductUpdate {
+  const { sku: _sku, ...rest } = toCreateBody(draft);
+  return rest;
+}
 
 const UNITS: readonly ProductUnit[] = ['kg', 'g', 'l', 'ml', 'piece', 'pack'];
 const LIMIT = 20;
@@ -83,14 +122,18 @@ export function ProductsView() {
   const [page, setPage] = useState(1);
   const debouncedQuery = useDebounced(filters.q, 300);
 
+  // `GET /vendor/categories` returns a BARE ARRAY — it is the one vendor list
+  // endpoint that is not paginated.
   const categories = useVendorQuery<VendorCategory[]>('/vendor/categories');
 
+  // `ListProductsQueryDto`: q, page, limit, sort, from, to, categoryId,
+  // isActive, lowStock. Nothing else survives `forbidNonWhitelisted`.
   const params = useMemo(
     () => ({
       q: debouncedQuery || undefined,
       categoryId: filters.categoryId === 'all' ? undefined : filters.categoryId,
-      isActive: filters.isActive === 'all' ? undefined : filters.isActive,
-      lowStock: filters.lowStock === 'true' ? 'true' : undefined,
+      isActive: filters.isActive === 'all' ? undefined : filters.isActive === 'true',
+      lowStock: filters.lowStock === 'true' ? true : undefined,
       page,
       limit: LIMIT,
     }),
@@ -105,8 +148,12 @@ export function ProductsView() {
   const [draft, setDraft] = useState<ProductDraft>(EMPTY_DRAFT);
   const [deleting, setDeleting] = useState<VendorProduct | null>(null);
 
-  const create = useVendorMutation<ProductDraft, VendorProduct>('/vendor/products', 'POST');
-  const update = useVendorMutation<ProductDraft, VendorProduct>('/vendor/products/:id', 'PUT');
+  const create = useVendorMutation<ProductCreate, VendorProduct>('/vendor/products', 'POST');
+  // PATCH, not PUT: there is no PUT route for a product.
+  const update = useVendorMutation<ProductUpdate, VendorProduct>(
+    '/vendor/products/:id',
+    'PATCH',
+  );
   const remove = useVendorMutation<never, void>('/vendor/products/:id', 'DELETE');
 
   const openCreate = () => {
@@ -121,9 +168,9 @@ export function ProductsView() {
     setDraft({
       id: product.id,
       name: product.name,
-      description: product.description,
+      description: product.description ?? '',
       sku: product.sku,
-      brand: product.brand,
+      brand: product.brand ?? '',
       categoryId: product.categoryId,
       images: [...product.images],
       unit: product.unit,
@@ -148,13 +195,13 @@ export function ProductsView() {
       products.refetch();
     };
     if (editing) {
-      void update.mutate(draft, {
+      void update.mutate(toUpdateBody(draft), {
         params: { id: editing.id },
         invalidate: ['/vendor/products', '/vendor/inventory'],
         onSuccess: done,
       });
     } else {
-      void create.mutate(draft, {
+      void create.mutate(toCreateBody(draft), {
         invalidate: ['/vendor/products', '/vendor/inventory'],
         onSuccess: done,
       });
@@ -206,13 +253,14 @@ export function ProductsView() {
           <strong>{row.name}</strong>
           <br />
           <span className="adm-dim">
-            {row.brand} · {row.unitValue} {row.unit}
+            {row.brand ? `${row.brand} · ` : ''}
+            {row.unitValue} {row.unit}
           </span>
         </span>
       ),
     },
     { key: 'sku', header: 'SKU', numeric: true },
-    { key: 'categoryName', header: 'Category' },
+    { key: 'categoryName', header: 'Category', render: (row) => row.categoryName ?? '—' },
     {
       key: 'price',
       header: 'Price',
@@ -233,9 +281,8 @@ export function ProductsView() {
       align: 'right',
       numeric: true,
       render: (row) => {
-        if (row.stock === undefined) return '—';
-        const level =
-          row.stock <= 0 ? 'out' : row.stock <= (row.lowStockThreshold ?? 0) ? 'low' : 'ok';
+        // `isLowStock` is the server's own verdict; `stock` alone is not.
+        const level = row.stock <= 0 ? 'out' : row.isLowStock ? 'low' : 'ok';
         return (
           <Link href="/vendor/inventory" className="ven-stock" data-level={level}>
             <span className="ven-stock__n">{row.stock}</span>
@@ -279,6 +326,15 @@ export function ProductsView() {
         </button>
       }
     >
+      {products.error && products.data === null ? (
+        <EndpointError
+          path="/vendor/products"
+          message={products.error.friendlyMessage}
+          status={products.error.status}
+          onRetry={products.refetch}
+        />
+      ) : null}
+
       <Toolbar>
         <FilterBar
           filters={filterDefs}
@@ -348,7 +404,13 @@ export function ProductsView() {
               type="button"
               className="adm-btn adm-btn--primary"
               onClick={save}
-              disabled={create.loading || update.loading || draft.name.trim() === ''}
+              disabled={
+                create.loading ||
+                update.loading ||
+                draft.name.trim() === '' ||
+                draft.categoryId === '' ||
+                (!editing && draft.sku.trim() === '')
+              }
             >
               {create.loading || update.loading ? 'Saving…' : editing ? 'Save changes' : 'Create'}
             </button>
@@ -453,13 +515,21 @@ function ProductForm({
             )}
           </Field>
 
-          <Field label="SKU" hint="Your own code. Must be unique in this shop.">
+          <Field
+            label="SKU"
+            hint={
+              productId === null
+                ? 'Your own code. Letters, digits, dot, underscore and hyphen. Unique in this shop, and fixed once saved.'
+                : 'Fixed once the product exists — a SKU that moves breaks every record that points at it.'
+            }
+          >
             {(id) => (
               <input
                 id={id}
                 className="ven-input"
                 value={draft.sku}
                 onChange={(event) => set('sku', event.target.value)}
+                disabled={productId !== null}
                 maxLength={40}
               />
             )}
@@ -485,17 +555,19 @@ function ProductForm({
         </Field>
 
         <div className="ven-form__row">
-          <Field label="Pack size">
+          <Field label="Pack size" hint="A whole number of the unit beside it — 500 g, not 0.5 kg.">
             {(id) => (
               <input
                 id={id}
                 className="ven-input"
                 data-num="true"
                 type="number"
-                min={0}
-                step="0.01"
+                min={1}
+                step="1"
                 value={draft.unitValue}
-                onChange={(event) => set('unitValue', Number(event.target.value) || 0)}
+                onChange={(event) =>
+                  set('unitValue', Math.max(1, Math.round(Number(event.target.value) || 1)))
+                }
               />
             )}
           </Field>

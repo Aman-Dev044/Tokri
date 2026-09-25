@@ -4,10 +4,17 @@
  * One order, as a card on the board.
  *
  * ── WHAT IS ON IT, AND WHY ──────────────────────────────────────────────────
- * Order number, customer, the lines, the total, and — the one a shop owner
+ * Order number, customer, how much and how many, and — the one a shop owner
  * actually reads first — how many minutes this has been waiting. Everything
  * else was cut. A card that shows the address, the payment id and the coupon
  * code is a card nobody can scan during a rush.
+ *
+ * ── NO LINE PREVIEW ─────────────────────────────────────────────────────────
+ * This card used to list the first four product names from a `preview` array.
+ * `OrderRow` carries no such field — the list endpoint deliberately does not
+ * ship every line for every card, because an order board with sixty cards
+ * would be shipping several hundred line items to draw a summary. The item
+ * COUNT is on the card; the lines are one click away on the detail screen.
  *
  * ── COLOUR ──────────────────────────────────────────────────────────────────
  * The left rule carries the aisle hue of the order's STATUS (lib/vendor/orders
@@ -42,6 +49,9 @@ export interface OrderCardProps {
 export function OrderCard({ order, now, index, fresh = false, actions }: OrderCardProps) {
   const minutes = minutesWaiting(order, now);
   const urgency = urgencyOf(order.status, minutes);
+  // Every party field on the wire is nullable: a customer whose account was
+  // removed still has orders in the history.
+  const customerName = order.customer.name ?? 'Customer';
 
   return (
     <article
@@ -65,34 +75,32 @@ export function OrderCard({ order, now, index, fresh = false, actions }: OrderCa
         </span>
       </div>
 
-      <p className="ven-card__customer">{order.customerName}</p>
+      <p className="ven-card__customer">{customerName}</p>
 
       <ul className="ven-card__items">
-        {order.preview.slice(0, 4).map((line, i) => (
-          <li key={`${line.name}-${i}`}>
-            <span className="ven-card__qty">{line.qty}×</span>
-            <span className="ven-card__line">{line.name}</span>
-          </li>
-        ))}
-        {order.preview.length > 4 ? (
+        <li>
+          <span className="ven-card__qty">{order.itemCount}×</span>
+          <span className="ven-card__line">
+            {order.itemCount === 1 ? 'item' : 'items'} in the bag
+          </span>
+        </li>
+        {order.deliveryPartner?.name ? (
           <li>
             <span className="ven-card__qty" aria-hidden="true">
-              +
+              →
             </span>
-            <span className="ven-card__line">
-              {order.preview.length - 4} more {order.preview.length - 4 === 1 ? 'line' : 'lines'}
-            </span>
+            <span className="ven-card__line">{order.deliveryPartner.name}</span>
           </li>
         ) : null}
       </ul>
 
       <div className="ven-card__foot">
         <StatusPill status={order.status} kind="order" />
-        <span className="ven-paytag" data-method={order.paymentMethod}>
-          {order.paymentMethod === 'cod' ? 'COD' : 'PAID'}
+        <span className="ven-paytag" data-method={order.payment.method}>
+          {order.payment.method === 'cod' ? 'COD' : 'PAID'}
         </span>
         <span className="ven-card__total">
-          <Money value={order.total} />
+          <Money value={order.grandTotal} />
         </span>
       </div>
 

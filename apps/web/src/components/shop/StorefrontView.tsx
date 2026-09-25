@@ -6,14 +6,39 @@
  * Picking an aisle tab here tints the interface exactly as the `/aisle/[key]`
  * route does — the chromatic system is a property of where you are standing,
  * not of which URL you took to get there.
+ *
+ * ── THREE ENDPOINTS, EACH FOR WHAT IT ACTUALLY RETURNS ──────────────────────
+ *   GET /stores/:slug            → StoreDetail: address, hours, delivery fee,
+ *                                  free-delivery threshold, productCount
+ *   GET /stores/:id/categories   → AisleGroup[]: which of the eight aisles this
+ *                                  store really stocks. The tabs come from
+ *                                  here. They used to come from `store.aisles`,
+ *                                  a field the API has never returned, so the
+ *                                  fallback showed all eight and half of them
+ *                                  led to an empty shelf.
+ *   GET /stores/:id/products     → ProductRow[]. The aisle filter is
+ *                                  `?aisleKey=`, NOT `?aisle=` — the API runs
+ *                                  `forbidNonWhitelisted`, so `?aisle=fruits`
+ *                                  was a flat 400 and every tab press blanked
+ *                                  the shelf.
  */
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AISLES, getAisle, useAisle, type AisleKey } from '@mandi/design-system';
+import { getAisle, useAisle, type AisleKey } from '@mandi/design-system';
 import { useShopQuery } from '@/hooks/useShopQuery';
-import { formatDistance, formatEta } from '@/lib/shop/format';
-import { readPaged, readProduct, readStore, type Paged, type Product, type Store } from '@/lib/shop/types';
+import { formatDistance } from '@/lib/shop/format';
+import {
+  readAisleGroups,
+  readPaged,
+  readProduct,
+  readStoreDetail,
+  type AisleGroup,
+  type Paged,
+  type Product,
+  type StoreDetail,
+} from '@/lib/shop/types';
+import type { BasketStore } from './BasketProvider';
 import { ErrorNotice, FixtureBanner } from './notices';
 import { ProductCard, ProductCardSkeleton } from './ProductCard';
 
@@ -21,20 +46,29 @@ export function StorefrontView({ slug }: { slug: string }) {
   const { setAisle } = useAisle();
   const [aisleKey, setAisleKey] = useState<AisleKey | null>(null);
 
-  const store = useShopQuery<Store | null>(
+  const store = useShopQuery<StoreDetail | null>(
     `/stores/${encodeURIComponent(slug)}`,
     undefined,
     {
       anonymous: true,
-      read: useCallback((raw: unknown) => readStore(raw), []),
+      read: useCallback((raw: unknown) => readStoreDetail(raw), []),
     },
   );
 
   const vendorId = store.data?.id ?? null;
 
+  const categories = useShopQuery<AisleGroup[]>(
+    vendorId === null ? null : `/stores/${encodeURIComponent(vendorId)}/categories`,
+    undefined,
+    {
+      anonymous: true,
+      read: useCallback((raw: unknown) => readAisleGroups(raw), []),
+    },
+  );
+
   const products = useShopQuery<Paged<Product>>(
     vendorId === null ? null : `/stores/${encodeURIComponent(vendorId)}/products`,
-    useMemo(() => ({ aisle: aisleKey ?? undefined, limit: 24 }), [aisleKey]),
+    useMemo(() => ({ aisleKey: aisleKey ?? undefined, limit: 24 }), [aisleKey]),
     {
       anonymous: true,
       read: useCallback((raw: unknown) => readPaged(raw, readProduct), []),
@@ -49,11 +83,6 @@ export function StorefrontView({ slug }: { slug: string }) {
       setAisle(null);
     };
   }, [aisleKey, setAisle]);
-
-  const available: readonly AisleKey[] =
-    store.data !== null && store.data.aisles.length > 0
-      ? store.data.aisles
-      : AISLES.map((a) => a.key);
 
   if (store.loading && !store.hasLoadedOnce) {
     return (
@@ -79,7 +108,8 @@ export function StorefrontView({ slug }: { slug: string }) {
     );
   }
 
-  if (store.data === null) {
+  const shop = store.data;
+  if (shop === null) {
     return (
       <div className="shell shop-page">
         <h1 className="shop-page__title">Store not found</h1>
@@ -91,9 +121,16 @@ export function StorefrontView({ slug }: { slug: string }) {
     );
   }
 
-  const shop = store.data;
+  /* The basket needs a vendor and a name; a product row does not carry one. */
+  const basketStore: BasketStore = {
+    vendorId: shop.id,
+    storeName: shop.storeName,
+    storeSlug: shop.slug,
+  };
+
   const distance = formatDistance(shop.distanceKm);
-  const eta = formatEta(shop.etaMinutes);
+  const stocked = categories.data ?? [];
+  const productRows = products.data?.data ?? [];
 
   return (
     <div className="shell shop-page">
@@ -101,9 +138,9 @@ export function StorefrontView({ slug }: { slug: string }) {
 
       <header className="shop-front__head">
         <p className="eyebrow">
-          <Link href="/stores">Stores</Link> · {shop.address.city || 'Mandi'}
+          <Link href="/stores">Stores</Link> · {shop.address.city || shop.city || 'Mandi'}
         </p>
-        <h1 className="shop-page__title">{shop.name}</h1>
+        <h1 className="shop-page__title">{shop.storeName}</h1>
         {shop.description !== null ? <p className="lede">{shop.description}</p> : null}
 
         <dl className="shop-front__facts">
@@ -120,12 +157,10 @@ export function StorefrontView({ slug }: { slug: string }) {
               <dd className="mono">{distance}</dd>
             </div>
           ) : null}
-          {eta !== null ? (
-            <div>
-              <dt>Typical delivery</dt>
-              <dd className="mono">{eta}</dd>
-            </div>
-          ) : null}
+          <div>
+            <dt>Delivers within</dt>
+            <dd className="mono">{shop.serviceRadiusKm} km</dd>
+          </div>
           <div>
             <dt>Payment</dt>
             <dd>{shop.codEnabled ? 'Card, UPI or cash' : 'Card or UPI'}</dd>
@@ -141,35 +176,38 @@ export function StorefrontView({ slug }: { slug: string }) {
       </header>
 
       {/* ── aisle tabs — the tint follows the tab ────────────────────────── */}
-      <nav className="shop-tabs scroll-x" aria-label="Aisles in this store">
-        <button
-          type="button"
-          className="shop-tab"
-          data-active={aisleKey === null ? 'true' : undefined}
-          onClick={() => {
-            setAisleKey(null);
-          }}
-        >
-          Everything
-        </button>
-        {available.map((key) => {
-          const aisle = getAisle(key);
-          return (
-            <button
-              key={key}
-              type="button"
-              className="shop-tab"
-              data-active={aisleKey === key ? 'true' : undefined}
-              onClick={() => {
-                setAisleKey(key);
-              }}
-            >
-              <span className="shop-tab__swatch" style={{ background: aisle.swatch }} aria-hidden="true" />
-              {aisle.name}
-            </button>
-          );
-        })}
-      </nav>
+      {stocked.length > 0 ? (
+        <nav className="shop-tabs scroll-x" aria-label="Aisles in this store">
+          <button
+            type="button"
+            className="shop-tab"
+            data-active={aisleKey === null ? 'true' : undefined}
+            onClick={() => {
+              setAisleKey(null);
+            }}
+          >
+            Everything
+          </button>
+          {stocked.map((group) => {
+            const aisle = getAisle(group.aisleKey);
+            return (
+              <button
+                key={group.aisleKey}
+                type="button"
+                className="shop-tab"
+                data-active={aisleKey === group.aisleKey ? 'true' : undefined}
+                onClick={() => {
+                  setAisleKey(group.aisleKey);
+                }}
+              >
+                <span className="shop-tab__swatch" style={{ background: aisle.swatch }} aria-hidden="true" />
+                {aisle.name}
+                <span className="mono"> {group.productCount}</span>
+              </button>
+            );
+          })}
+        </nav>
+      ) : null}
 
       {products.isFixture ? (
         <FixtureBanner endpoint={`GET /stores/${vendorId ?? slug}/products`} />
@@ -184,25 +222,42 @@ export function StorefrontView({ slug }: { slug: string }) {
             <ProductCardSkeleton key={i} index={i} />
           ))}
         </div>
-      ) : products.data !== null && products.data.data.length > 0 ? (
+      ) : productRows.length > 0 ? (
         <div className="shop-grid">
-          {products.data.data.map((product, index) => (
-            <ProductCard key={product.id} product={product} aisleKey={aisleKey} priority={index < 2} />
+          {productRows.map((product, index) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              store={basketStore}
+              aisleKey={aisleKey}
+              priority={index < 2}
+            />
           ))}
         </div>
       ) : products.error === null ? (
+        /* An empty catalogue is the normal state for a store that has just been
+           approved. It is not an error and must not read like one. */
         <p className="shop-empty">
-          Nothing listed in this aisle yet.{' '}
-          <button
-            type="button"
-            className="shop-linkish"
-            onClick={() => {
-              setAisleKey(null);
-            }}
-          >
-            See everything this store stocks
-          </button>
-          .
+          {aisleKey !== null ? (
+            <>
+              Nothing listed in {getAisle(aisleKey).name.toLowerCase()} yet.{' '}
+              <button
+                type="button"
+                className="shop-linkish"
+                onClick={() => {
+                  setAisleKey(null);
+                }}
+              >
+                See everything this store stocks
+              </button>
+              .
+            </>
+          ) : (
+            <>
+              {shop.storeName} has not listed any products yet. The shop is on Mandi and
+              approved — the shelves are simply still being filled.
+            </>
+          )}
         </p>
       ) : null}
     </div>

@@ -74,8 +74,13 @@ export function groupByLane(orders: readonly VendorOrder[]): Record<LaneKey, Ven
   }
   // Oldest first inside a lane. The card that has been waiting longest is the
   // one that is about to become a complaint, so it belongs at the top.
+  //
+  // `placedAt` is nullable on the wire, and `Date.parse(null)` is NaN — a NaN
+  // comparator does not merely mis-sort, it makes the sort non-deterministic.
+  // An order with no timestamp is treated as infinitely old and pinned to the
+  // top, where a human will notice it.
   for (const key of Object.keys(out) as LaneKey[]) {
-    out[key].sort((a, b) => Date.parse(a.placedAt) - Date.parse(b.placedAt));
+    out[key].sort((a, b) => placedMs(a) - placedMs(b));
   }
   return out;
 }
@@ -93,9 +98,17 @@ export function groupByLane(orders: readonly VendorOrder[]): Record<LaneKey, Ven
  */
 export function minutesWaiting(order: VendorOrder, now: number | null): number | null {
   if (now === null) return null;
+  if (order.placedAt === null) return null;
   const placed = Date.parse(order.placedAt);
   if (Number.isNaN(placed)) return null;
   return Math.max(0, Math.floor((now - placed) / 60_000));
+}
+
+/** Epoch ms for sorting. A missing timestamp sorts oldest, never NaN. */
+function placedMs(order: VendorOrder): number {
+  if (order.placedAt === null) return 0;
+  const parsed = Date.parse(order.placedAt);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export type Urgency = 'calm' | 'warn' | 'late';

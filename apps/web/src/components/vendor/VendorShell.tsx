@@ -41,7 +41,7 @@ import { useVendorMutation, useVendorQuery } from '@/hooks';
 import { VENDOR_NAV, isActiveHref, type VendorNavIcon } from '@/lib/vendor/nav';
 import { primeAudio } from '@/lib/vendor/alert';
 import { useVendorSession } from '@/lib/vendor/session';
-import type { VendorProfile } from '@/lib/vendor/types';
+import type { VendorProfile, VendorStoreStatus } from '@/lib/vendor/types';
 import {
   IconAlert,
   IconCatalog,
@@ -180,7 +180,12 @@ export function VendorShell({ children }: { children: ReactNode }) {
       <VendorRail collapsed={collapsed} pathname={pathname} onToggle={toggleCollapsed} />
 
       <div className="ven-main">
-        <VendorTopBar preview={preview} name={session.name} contact={session.contact} />
+        <VendorTopBar
+          preview={preview}
+          name={session.name}
+          contact={session.contact}
+          apiRole={session.apiRole}
+        />
         <main className="ven-content" id="main">
           {children}
         </main>
@@ -270,10 +275,12 @@ function VendorTopBar({
   preview,
   name,
   contact,
+  apiRole,
 }: {
   preview: boolean;
   name: string;
   contact: string;
+  apiRole: string | null;
 }) {
   return (
     <header className="ven-top">
@@ -288,7 +295,7 @@ function VendorTopBar({
       <NewOrderAlert />
       <SoundToggle />
       <ThemeToggle />
-      <UserMenu name={name} contact={contact} />
+      <UserMenu name={name} contact={contact} apiRole={apiRole} />
     </header>
   );
 }
@@ -311,13 +318,17 @@ function VendorTopBar({
 function StoreOpenToggle() {
   const profile = useVendorQuery<VendorProfile>('/vendor/profile');
   const [failed, setFailed] = useState(false);
-  const toggle = useVendorMutation<{ isOpen: boolean }, { isOpen: boolean }>(
+  // The reply is the full `StoreStatus` — id, isOpen, status, updatedAt.
+  const toggle = useVendorMutation<{ isOpen: boolean }, VendorStoreStatus>(
     '/vendor/store/status',
     'PATCH',
   );
 
   const isOpen = profile.data?.isOpen ?? false;
   const unknown = profile.data === null;
+  // Only an APPROVED store may open — the API answers 400 otherwise, and a
+  // button that is guaranteed to fail is worse than one that explains itself.
+  const approved = profile.data?.status === 'approved';
 
   const onClick = () => {
     setFailed(false);
@@ -346,13 +357,24 @@ function StoreOpenToggle() {
         className="ven-openstate"
         data-open={isOpen ? 'true' : 'false'}
         onClick={onClick}
-        disabled={toggle.loading}
+        disabled={toggle.loading || (!isOpen && !approved)}
         aria-pressed={isOpen}
+        title={
+          !isOpen && !approved
+            ? `This store is ${profile.data?.status ?? 'not approved'} — only an approved store can open.`
+            : undefined
+        }
       >
         <span className="ven-openstate__dot" aria-hidden="true" />
         <span className="ven-openstate__word">{isOpen ? 'Open' : 'Closed'}</span>
         <span className="ven-openstate__hint">
-          {toggle.loading ? 'saving…' : isOpen ? 'tap to close' : 'tap to open'}
+          {toggle.loading
+            ? 'saving…'
+            : !isOpen && !approved
+              ? `${profile.data?.status ?? 'not approved'} — an admin must approve you`
+              : isOpen
+                ? 'tap to close'
+                : 'tap to open'}
         </span>
       </button>
       {failed ? (
@@ -481,9 +503,39 @@ function ThemeToggle() {
 
 /* ---- user menu --------------------------------------------------- */
 
-function UserMenu({ name, contact }: { name: string; contact: string }) {
+/**
+ * ★ WHO IS SIGNED IN, AND THE WAY OUT.
+ *
+ * Name, contact and the role the API itself reported — not a role this
+ * component assumed from the fact that it is rendering inside `/vendor`. If
+ * the pill ever says something other than VENDOR, the session and the surface
+ * disagree and the person looking at it needs to know that.
+ *
+ * ── SIGNING OUT ─────────────────────────────────────────────────────────────
+ * `logout()` POSTs `/auth/logout` (which revokes the whole refresh-token
+ * family server-side) and clears the in-memory access token in its `finally`,
+ * so a failed request still ends the client session. This component then
+ * navigates to `/login` with `replace`, not `push`: the back button must not
+ * return a signed-out person to a dashboard shell that will immediately start
+ * firing 401s.
+ *
+ * `router.refresh()` afterwards drops the cached Server Component payload for
+ * the vendor layout, so nothing of the previous session survives in the RSC
+ * cache.
+ */
+function UserMenu({
+  name,
+  contact,
+  apiRole,
+}: {
+  name: string;
+  contact: string;
+  apiRole: string | null;
+}) {
   const { logout } = useAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -530,6 +582,14 @@ function UserMenu({ name, contact }: { name: string; contact: string }) {
           <div className="ven-usermenu__head">
             <strong>{name || 'No session'}</strong>
             <p className="ven-usermenu__contact">{contact || 'Not signed in'}</p>
+            <span
+              className="adm-pill"
+              data-tone={apiRole === 'vendor' ? 'good' : 'warn'}
+              style={{ marginTop: 'var(--s-1)' }}
+            >
+              <span className="adm-pill__glyph" aria-hidden="true" />
+              {(apiRole ?? 'no role').toUpperCase()}
+            </span>
           </div>
 
           <Link className="ven-usermenu__item" href="/vendor/settings" role="menuitem">
@@ -544,12 +604,22 @@ function UserMenu({ name, contact }: { name: string; contact: string }) {
             type="button"
             className="ven-usermenu__item"
             role="menuitem"
+            disabled={signingOut}
             onClick={() => {
-              void logout();
+              void (async () => {
+                setSigningOut(true);
+                // `logout` clears the in-memory token in its own `finally`, so
+                // this resolves even when the network call fails — and the
+                // redirect must happen either way.
+                await logout();
+                setOpen(false);
+                router.replace('/login');
+                router.refresh();
+              })();
             }}
           >
             <IconSignOut />
-            Sign out
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
           <p className="ven-usermenu__contact" style={{ padding: 'var(--s-2)' }}>
             <IconUser style={{ width: 12, height: 12, verticalAlign: '-2px' }} /> Signing out

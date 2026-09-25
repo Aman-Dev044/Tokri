@@ -1,15 +1,20 @@
 'use client';
 
 /**
- * The rider shell: the online toggle, today's line, the connection state, and
- * the bottom navigation.
+ * The rider shell: the online toggle, today's line, the connection state, the
+ * account button, and the bottom navigation.
  *
  * ── LAYOUT ──────────────────────────────────────────────────────────────────
  * Three rows: a short sticky header, the scrolling screen, and the dock. The
  * header is short on purpose — everything a thumb needs lives at the BOTTOM
- * (plan §2.4, one-handed). The only exception is the online toggle, which is
- * the app's single most important control and belongs where it cannot be
- * missed or hit by accident: under the title, full width, 72px tall.
+ * (one-handed). The only exception is the online toggle, which is the app's
+ * single most important control and belongs where it cannot be missed or hit
+ * by accident: under the title, full width, 72px tall.
+ *
+ * ── TODAY'S NUMBERS ─────────────────────────────────────────────────────────
+ * From `GET /delivery/me` → `profile.today`, which is the only endpoint that
+ * knows what "today" means for this rider. The strip used to read them off the
+ * earnings window statement, which has no such field, so it showed ₹0 always.
  *
  * ── THE DOCK IS EXCLUSIVE ───────────────────────────────────────────────────
  * A screen with a primary action calls `useHideNav()`, and the nav disappears
@@ -17,9 +22,11 @@
  * action button: during a job, the job owns the phone.
  *
  * ── THE ROLE GATE IS UX, NOT SECURITY ───────────────────────────────────────
- * See `lib/delivery/session.ts` for the full note. The API guard chain (§4.2)
- * with `@Roles('delivery')` is what actually stops anyone. This gate only
- * stops a customer who typed the URL from watching an empty dashboard render.
+ * See `lib/delivery/session.ts` for the full note. The API guard chain with
+ * `@Roles(Role.DELIVERY)` on the whole delivery controller is what actually
+ * stops anyone — verified: a customer's token gets 403 on every rider route.
+ * This gate only stops a customer who typed the URL from watching an empty
+ * dashboard render.
  */
 
 import Link from 'next/link';
@@ -36,11 +43,11 @@ import {
 
 import styles from './delivery.module.css';
 import { Dock, RiderNav } from './Dock';
+import { RiderProfileSheet } from './RiderProfileSheet';
 import { RiderProvider, useRider } from './RiderProvider';
 import { useRiderSession } from '@/lib/delivery/session';
-import { useRiderEarnings } from '@/lib/delivery/useRiderData';
 import { money } from '@/lib/delivery/format';
-import { IconShield } from './icons';
+import { IconShield, IconUser } from './icons';
 
 /* ------------------------------------------------------------------ */
 /* Dock exclusivity                                                    */
@@ -104,19 +111,20 @@ const CONN_COPY: Record<string, string> = {
   failed: 'No signal',
 };
 
-function Header({ riderName }: { riderName: string }) {
+function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
   const {
-    availability,
+    profile,
     availabilityPending,
     setOnline,
     connection,
     networkOnline,
     reconnect,
   } = useRider();
-  const earnings = useRiderEarnings();
   const [toggleError, setToggleError] = useState<string | null>(null);
 
-  const online = availability.isOnline;
+  const online = profile?.isOnline ?? false;
+  const today = profile?.today ?? null;
+  const riderName = profile?.name ?? '';
 
   const onToggle = useCallback(() => {
     setToggleError(null);
@@ -145,15 +153,27 @@ function Header({ riderName }: { riderName: string }) {
         >
           Mandi <span className={styles.brandRole}>RIDER</span>
         </Link>
-        <button
-          type="button"
-          className={`${styles.conn} ${connClass}`}
-          onClick={reconnect}
-          aria-label={`Connection: ${CONN_COPY[phase] ?? phase}. Tap to reconnect.`}
-        >
-          <span className={styles.connDot} />
-          {networkOnline ? (CONN_COPY[phase] ?? phase) : 'No network'}
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={`${styles.conn} ${connClass}`}
+            onClick={reconnect}
+            aria-label={`Connection: ${CONN_COPY[phase] ?? phase}. Tap to reconnect.`}
+          >
+            <span className={styles.connDot} />
+            {networkOnline ? (CONN_COPY[phase] ?? phase) : 'No network'}
+          </button>
+          <button
+            type="button"
+            className={styles.accountBtn}
+            onClick={onOpenAccount}
+            aria-label={
+              riderName === '' ? 'Your account and sign out' : `${riderName} — account and sign out`
+            }
+          >
+            <IconUser size={24} />
+          </button>
+        </div>
       </div>
 
       {/* THE control. Everything else on this surface is secondary to it. */}
@@ -186,17 +206,16 @@ function Header({ riderName }: { riderName: string }) {
       <div className={styles.todayStrip}>
         <span className={styles.todayCell}>
           TODAY
-          <span className={styles.todayValue}>{money(earnings.value.todayPaise)}</span>
+          <span className={styles.todayValue}>
+            {today === null ? '—' : money(today.earningsPaise)}
+          </span>
         </span>
         <span className={styles.todayCell}>
           DELIVERIES
-          <span className={styles.todayValue}>{earnings.value.todayDeliveries}</span>
-        </span>
-        {earnings.isSample ? (
-          <span className={styles.todayCell} style={{ color: 'var(--rd-warn)' }}>
-            SAMPLE
+          <span className={styles.todayValue}>
+            {today === null ? '—' : today.deliveries}
           </span>
-        ) : null}
+        </span>
         {riderName === '' ? null : (
           <span className={styles.todayCell} style={{ marginLeft: 'auto' }}>
             {riderName}
@@ -211,22 +230,35 @@ function Header({ riderName }: { riderName: string }) {
 /* Chrome                                                              */
 /* ------------------------------------------------------------------ */
 
-function Chrome({ children, riderName }: { children: ReactNode; riderName: string }) {
+function Chrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [hideNav, setHideNav] = useState(false);
-  const { offers, activeJob } = useRider();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const { offers, activeOrder } = useRider();
 
   const value = useMemo<ChromeValue>(() => ({ hideNav, setHideNav }), [hideNav]);
 
+  const closeAccount = useCallback(() => setAccountOpen(false), []);
+
+  /* Escape closes the sheet — a keyboard is rare here but never a dead end. */
+  useEffect(() => {
+    if (!accountOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAccountOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [accountOpen]);
+
   const activeHref =
-    activeJob === null
+    activeOrder === null
       ? '/delivery'
-      : `/delivery/active/${encodeURIComponent(activeJob.orderId)}`;
+      : `/delivery/active/${encodeURIComponent(activeOrder.orderId)}`;
 
   return (
     <ChromeContext.Provider value={value}>
       <div className={styles.shell}>
-        <Header riderName={riderName} />
+        <Header onOpenAccount={() => setAccountOpen(true)} />
         <main className={styles.main} id="main">
           {children}
         </main>
@@ -242,6 +274,7 @@ function Chrome({ children, riderName }: { children: ReactNode; riderName: strin
             />
           </Dock>
         )}
+        {accountOpen ? <RiderProfileSheet onClose={closeAccount} /> : null}
       </div>
     </ChromeContext.Provider>
   );
@@ -296,7 +329,7 @@ export function RiderShell({ children }: { children: ReactNode }) {
 
   return (
     <RiderProvider>
-      <Chrome riderName={session.name}>{children}</Chrome>
+      <Chrome>{children}</Chrome>
     </RiderProvider>
   );
 }

@@ -8,14 +8,23 @@
  * two-across on mobile, never three, with skeletons cut to the real card's
  * shape so nothing jumps when the data lands.
  *
- * ── WHERE THE PRODUCTS COME FROM ────────────────────────────────────────────
- * If there is a basket open at a store, the aisle shows THAT store's shelf —
- * one vendor per basket (plan decision #1), so browsing another store's fruit
- * while holding a half-full basket is a trap. With no basket, it asks for a
- * market-wide aisle listing.
- *   TODO(worker-b): GET /products?aisle=&lat=&lng= — plan §6.2 currently only
- *   specs product listing scoped to one store. Until it exists this path falls
- *   through to the labelled fixture.
+ * ── WHERE THE PRODUCTS COME FROM, AND WHERE THEY CANNOT ─────────────────────
+ * With a basket open at a store, this shows THAT store's shelf for the aisle:
+ * `GET /stores/:id/products?aisleKey=` — one vendor per basket (decision #1),
+ * so browsing another store's fruit while holding a half-full basket is a trap.
+ *
+ * With NO basket there is nothing to show. The catalogue API has no
+ * market-wide product listing: this view used to call `GET /products?aisle=…`,
+ * which answers `404 Cannot GET /api/v1/products` — and the old fixture
+ * fallback dressed that 404 up as a shelf full of sample groceries. So the page
+ * now says plainly that an aisle is something you walk into inside a shop, and
+ * sends you to pick one. No invented endpoint, no sample shelf.
+ *   TODO(api): add `GET /products?aisleKey=&lat=&lng=` for a market-wide aisle,
+ *   and this branch becomes a real shelf.
+ *
+ * Note the parameter name: `aisleKey`, not `aisle`. `BrowseProductsQueryDto`
+ * whitelists `category`, `aisleKey`, `q`, `page`, `limit` and `sort`, and the
+ * API runs `forbidNonWhitelisted` — `?aisle=` was a hard 400.
  */
 
 import Link from 'next/link';
@@ -56,19 +65,18 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
     };
   }, [aisleKey, setAisle]);
 
-  const scopedToStore = store !== null;
-  const path = scopedToStore
-    ? `/stores/${encodeURIComponent(store.vendorId)}/products`
-    : '/products';
+  const path = store === null ? null : `/stores/${encodeURIComponent(store.vendorId)}/products`;
 
   const products = useShopQuery<Paged<Product>>(
     path,
-    useMemo(() => ({ aisle: aisleKey, limit: 24 }), [aisleKey]),
+    useMemo(() => ({ aisleKey, limit: 24 }), [aisleKey]),
     {
       anonymous: true,
       read: useCallback((raw: unknown) => readPaged(raw, readProduct), []),
     },
   );
+
+  const rows = products.data?.data ?? [];
 
   return (
     <div className="shell shop-page shop-aisle">
@@ -87,41 +95,65 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
         </p>
       </header>
 
-      {scopedToStore ? (
-        <p className="shop-page__scope" role="status">
-          Showing <strong>{store.storeName}</strong> only — one store per basket keeps your order
-          to one pickup.{' '}
-          <Link href="/stores" className="shop-linkish">
-            Browse other stores
-          </Link>
-        </p>
-      ) : null}
+      {store === null ? (
+        /* No basket ⇒ no store ⇒ no shelf. Say so, and offer the way in. */
+        <section className="shop-section">
+          <p className="shop-page__scope" role="status">
+            An aisle belongs to a shop. Pick a store and its {aisle.name.toLowerCase()} shelf
+            opens here, in this colour.
+          </p>
+          <p className="shop-cart__cta">
+            <Link href="/stores" className="mnd-btn mnd-btn--solid mnd-btn--md">
+              Find a store near you
+            </Link>
+          </p>
+        </section>
+      ) : (
+        <>
+          <p className="shop-page__scope" role="status">
+            Showing <strong>{store.storeName}</strong> only — one store per basket keeps your
+            order to one pickup.{' '}
+            <Link href="/stores" className="shop-linkish">
+              Browse other stores
+            </Link>
+          </p>
 
-      {products.isFixture ? (
-        <FixtureBanner endpoint={`GET ${path}?aisle=${aisleKey}`} />
-      ) : null}
-      {products.error !== null ? (
-        <ErrorNotice error={products.error} onRetry={products.refetch} what="this aisle" />
-      ) : null}
+          {products.isFixture && path !== null ? (
+            <FixtureBanner endpoint={`GET ${path}?aisleKey=${aisleKey}`} />
+          ) : null}
+          {products.error !== null ? (
+            <ErrorNotice error={products.error} onRetry={products.refetch} what="this aisle" />
+          ) : null}
 
-      {products.loading && !products.hasLoadedOnce ? (
-        <div className="shop-grid">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <ProductCardSkeleton key={i} index={i} />
-          ))}
-        </div>
-      ) : products.data !== null && products.data.data.length > 0 ? (
-        <div className="shop-grid">
-          {products.data.data.map((product, index) => (
-            <ProductCard key={product.id} product={product} aisleKey={aisleKey} priority={index < 2} />
-          ))}
-        </div>
-      ) : products.error === null ? (
-        <p className="shop-empty">
-          No {aisle.name.toLowerCase()} listed near you yet.{' '}
-          <Link href="/stores">See which stores reach you</Link>.
-        </p>
-      ) : null}
+          {products.loading && !products.hasLoadedOnce ? (
+            <div className="shop-grid">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <ProductCardSkeleton key={i} index={i} />
+              ))}
+            </div>
+          ) : rows.length > 0 ? (
+            <div className="shop-grid">
+              {rows.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  store={store}
+                  aisleKey={aisleKey}
+                  priority={index < 2}
+                />
+              ))}
+            </div>
+          ) : products.error === null ? (
+            <p className="shop-empty">
+              {store.storeName} does not stock {aisle.name.toLowerCase()} yet.{' '}
+              <Link href={store.storeSlug === null ? '/stores' : `/stores/${store.storeSlug}`}>
+                See everything they do stock
+              </Link>
+              .
+            </p>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

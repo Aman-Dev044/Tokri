@@ -1,21 +1,41 @@
 /**
- * The shapes the customer app reads, and the tolerant readers that produce them.
+ * The shapes the customer app reads — mirrored from the RUNNING API.
  *
- * ── WHY THERE ARE NORMALISERS AT ALL ────────────────────────────────────────
- * Workers B and C are building `/stores`, `/cart`, `/checkout` and `/orders` in
- * parallel with this surface. The contract is plan §6.2 and the data model is
- * §5.1, but until those endpoints land, every field is a promise rather than a
- * fact. Casting `await res.json()` straight to an interface would mean a
- * renamed field shows up as a blank page or a thrown render.
+ * ── WHY THIS FILE IS NOW A MIRROR, NOT A GUESS ──────────────────────────────
+ * The first version of this file was written while `apps/api/src/modules/shop`
+ * was still being built, so it accepted "the handful of spellings the API might
+ * reasonably use" and invented a few fields outright (`etaMinutes` on a store,
+ * `aisles` on a store row, `couponCode` on a cart, a `route` on tracking). The
+ * API has landed and none of those exist. Worse, the API runs
+ * `forbidNonWhitelisted: true`, so an invented QUERY PARAM is a hard 400 rather
+ * than an ignored extra.
  *
- * So the boundary is explicit: every response passes through a reader that
- * takes `unknown`, accepts the handful of spellings the API might reasonably
- * use, and returns a fully-populated view model. A missing field degrades to a
- * known-empty value; it never produces `undefined.map is not a function`.
+ * So every interface below is the exact response shape of a real endpoint, with
+ * the API's own field names, nesting and nullability:
+ *
+ *   Store          GET /stores                        → StoreRow
+ *   StoreDetail    GET /stores/:slug                  → StoreDetail
+ *   AisleGroup     GET /stores/:id/categories         → AisleGroup[]
+ *   Product        GET /stores/:id/products           → ProductRow
+ *   ProductDetail  GET /products/:id                  → ProductDetail
+ *   Cart           GET /cart                          → CartView
+ *   Address        GET /addresses                     → AddressView[]
+ *   OrderSummary   GET /orders                        → Paginated<OrderSummary>
+ *   OrderDetail    GET /orders/:id                    → OrderDetail
+ *   Track          GET /orders/:id/track              → TrackView
+ *   CheckoutQuote  POST /checkout/validate            → CheckoutQuote
+ *   PlacedOrder    POST /checkout                     → PlacedOrder
+ *
+ * The readers stay — but they are now NARROWING, not translating. They accept
+ * `unknown`, check the one spelling the API actually uses, and fall back to a
+ * safe empty value so a partial payload degrades instead of throwing inside a
+ * render. What they no longer do is guess at alternative names, because a name
+ * that does not match is now a bug to fix here rather than a shape to tolerate.
  *
  * ── MONEY ───────────────────────────────────────────────────────────────────
- * Integer paise everywhere (plan §5.2). Nothing in this app divides by 100
- * except `formatPaise` from the design system.
+ * INTEGER PAISE everywhere, under the API's own field names (`price`, `mrp`,
+ * `lineTotal`, `grandTotal`…). Nothing in this app divides by 100 except
+ * `formatPaise` from the design system.
  */
 
 import { isAisleKey, type AisleKey } from '@mandi/design-system';
@@ -47,335 +67,490 @@ export function isDict(value: unknown): value is Dict {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function str(source: Dict, ...keys: string[]): string | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'string' && value.trim() !== '') return value;
-  }
-  return null;
+function str(source: Dict, key: string): string | null {
+  const value = source[key];
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
 
-function num(source: Dict, ...keys: string[]): number | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'number' && Number.isFinite(value)) return value;
-    if (typeof value === 'string' && value.trim() !== '' && !Number.isNaN(Number(value))) {
-      return Number(value);
-    }
-  }
-  return null;
+function num(source: Dict, key: string): number | null {
+  const value = source[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function bool(source: Dict, ...keys: string[]): boolean | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'boolean') return value;
-  }
-  return null;
+/** For the money and count fields the API always sends. Absent ⇒ 0, never NaN. */
+function int(source: Dict, key: string): number {
+  return num(source, key) ?? 0;
 }
 
-function dict(source: Dict, ...keys: string[]): Dict | null {
-  for (const key of keys) {
-    const value = source[key];
-    if (isDict(value)) return value;
-  }
-  return null;
+function bool(source: Dict, key: string): boolean | null {
+  const value = source[key];
+  return typeof value === 'boolean' ? value : null;
 }
 
-function list(source: Dict, ...keys: string[]): unknown[] {
-  for (const key of keys) {
-    const value = source[key];
-    if (Array.isArray(value)) return value;
-  }
-  return [];
+function dict(source: Dict, key: string): Dict | null {
+  const value = source[key];
+  return isDict(value) ? value : null;
 }
 
-function strings(source: Dict, ...keys: string[]): string[] {
-  return list(source, ...keys).filter((v): v is string => typeof v === 'string');
+function list(source: Dict, key: string): unknown[] {
+  const value = source[key];
+  return Array.isArray(value) ? value : [];
 }
 
-/** `{ type:'Point', coordinates:[lng,lat] }` (plan §5.1) or a plain `{lat,lng}`. */
-function readLocation(value: unknown): LatLng | null {
+function strings(source: Dict, key: string): string[] {
+  return list(source, key).filter((v): v is string => typeof v === 'string');
+}
+
+/** Every location the customer API returns is already `{ lat, lng }`. */
+function readLatLng(value: unknown): LatLng | null {
   if (!isDict(value)) return null;
-  const coords = value['coordinates'];
-  if (Array.isArray(coords) && coords.length >= 2) {
-    const lng = coords[0];
-    const lat = coords[1];
-    if (typeof lat === 'number' && typeof lng === 'number') return { lat, lng };
-  }
-  const lat = num(value, 'lat', 'latitude');
-  const lng = num(value, 'lng', 'lon', 'longitude');
-  if (lat !== null && lng !== null) return { lat, lng };
-  return null;
+  const lat = num(value, 'lat');
+  const lng = num(value, 'lng');
+  return lat !== null && lng !== null ? { lat, lng } : null;
 }
 
-function readId(source: Dict): string {
-  return str(source, 'id', '_id', 'productId', 'orderId') ?? '';
-}
-
-function readAisle(value: unknown): AisleKey | null {
+function readAisleKey(value: unknown): AisleKey | null {
   return typeof value === 'string' && isAisleKey(value) ? value : null;
+}
+
+/** Turns `T | null` rows into a dense array, dropping anything unreadable. */
+function compact<T>(rows: readonly unknown[], reader: (row: unknown) => T | null): T[] {
+  const out: T[] = [];
+  for (const row of rows) {
+    const parsed = reader(row);
+    if (parsed !== null) out.push(parsed);
+  }
+  return out;
 }
 
 /* ══════════════════════════════ store ══════════════════════════════════ */
 
+/** `GET /stores` → `StoreRow`. Note: `city` is flat; there is no `address` here. */
+export interface Store {
+  id: string;
+  slug: string;
+  storeName: string;
+  description: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  city: string;
+  location: LatLng | null;
+  isOpen: boolean;
+  rating: number;
+  serviceRadiusKm: number;
+  codEnabled: boolean;
+  /** Null when the caller sent no `lat`/`lng`. The API never guesses one. */
+  distanceKm: number | null;
+}
+
 export interface StoreAddress {
   line1: string;
+  line2: string | null;
   city: string;
   state: string;
   pincode: string;
 }
 
-export interface Store {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  logoUrl: string | null;
-  bannerUrl: string | null;
+export interface OpeningHour {
+  /** 0 = Sunday. */
+  day: number;
+  open: string;
+  close: string;
+}
+
+/** `GET /stores/:slug` → `StoreDetail`. */
+export interface StoreDetail extends Store {
   address: StoreAddress;
-  location: LatLng | null;
-  /** straight-line km from the customer, when the API computed it */
-  distanceKm: number | null;
-  etaMinutes: number | null;
-  isOpen: boolean;
-  rating: number | null;
-  codEnabled: boolean;
-  /** which chromatic aisles this store actually stocks */
-  aisles: AisleKey[];
-  productCount: number | null;
+  openingHours: OpeningHour[];
+  /** INTEGER PAISE. */
+  codMaxAmount: number;
+  deliveryFee: number;
+  freeDeliveryThreshold: number;
+  productCount: number;
 }
 
 export function readStore(value: unknown): Store | null {
   if (!isDict(value)) return null;
-  const address = dict(value, 'address') ?? {};
-  const id = readId(value) || (str(value, 'slug') ?? '');
-  if (id === '') return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
 
   return {
     id,
     slug: str(value, 'slug') ?? id,
-    name: str(value, 'storeName', 'name', 'title') ?? 'Unnamed store',
-    description: str(value, 'description', 'tagline'),
-    logoUrl: str(value, 'logoUrl', 'logo'),
-    bannerUrl: str(value, 'bannerUrl', 'banner'),
-    address: {
-      line1: str(address, 'line1', 'street') ?? '',
-      city: str(address, 'city') ?? '',
-      state: str(address, 'state') ?? '',
-      pincode: str(address, 'pincode', 'zip') ?? '',
-    },
-    location: readLocation(value['location']),
-    distanceKm: num(value, 'distanceKm', 'distance_km', 'distance'),
-    etaMinutes: num(value, 'etaMinutes', 'eta', 'etaMins'),
-    isOpen: bool(value, 'isOpen', 'open') ?? true,
-    rating: num(value, 'rating'),
-    codEnabled: bool(value, 'codEnabled', 'cod') ?? false,
-    aisles: list(value, 'aisles', 'aisleKeys', 'categories')
-      .map((entry) => (isDict(entry) ? readAisle(entry['aisleKey']) : readAisle(entry)))
-      .filter((k): k is AisleKey => k !== null),
-    productCount: num(value, 'productCount', 'products'),
+    storeName: str(value, 'storeName') ?? 'Unnamed store',
+    description: str(value, 'description'),
+    logoUrl: str(value, 'logoUrl'),
+    bannerUrl: str(value, 'bannerUrl'),
+    city: str(value, 'city') ?? '',
+    location: readLatLng(value['location']),
+    isOpen: bool(value, 'isOpen') ?? false,
+    rating: int(value, 'rating'),
+    serviceRadiusKm: int(value, 'serviceRadiusKm'),
+    codEnabled: bool(value, 'codEnabled') ?? false,
+    distanceKm: num(value, 'distanceKm'),
   };
+}
+
+export function readStoreDetail(value: unknown): StoreDetail | null {
+  const base = readStore(value);
+  if (base === null || !isDict(value)) return null;
+  const address = dict(value, 'address');
+
+  return {
+    ...base,
+    address: {
+      line1: address === null ? '' : (str(address, 'line1') ?? ''),
+      line2: address === null ? null : str(address, 'line2'),
+      city: address === null ? base.city : (str(address, 'city') ?? base.city),
+      state: address === null ? '' : (str(address, 'state') ?? ''),
+      pincode: address === null ? '' : (str(address, 'pincode') ?? ''),
+    },
+    openingHours: compact(list(value, 'openingHours'), (row): OpeningHour | null => {
+      if (!isDict(row)) return null;
+      const day = num(row, 'day');
+      const open = str(row, 'open');
+      const close = str(row, 'close');
+      return day === null || open === null || close === null ? null : { day, open, close };
+    }),
+    codMaxAmount: int(value, 'codMaxAmount'),
+    deliveryFee: int(value, 'deliveryFee'),
+    freeDeliveryThreshold: int(value, 'freeDeliveryThreshold'),
+    productCount: int(value, 'productCount'),
+  };
+}
+
+/* ═════════════════════════ categories / aisles ═════════════════════════ */
+
+/** A row of `GET /stores/:id/categories` → `CategoryRow`. */
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  imageUrl: string | null;
+  sortOrder: number;
+  productCount: number;
+}
+
+/** `GET /stores/:id/categories` → `AisleGroup[]`. Empty aisles are omitted. */
+export interface AisleGroup {
+  aisleKey: AisleKey;
+  categories: Category[];
+  productCount: number;
+}
+
+function readCategory(value: unknown): Category | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
+  return {
+    id,
+    name: str(value, 'name') ?? 'Category',
+    slug: str(value, 'slug') ?? id,
+    imageUrl: str(value, 'imageUrl'),
+    sortOrder: int(value, 'sortOrder'),
+    productCount: int(value, 'productCount'),
+  };
+}
+
+export function readAisleGroup(value: unknown): AisleGroup | null {
+  if (!isDict(value)) return null;
+  const aisleKey = readAisleKey(value['aisleKey']);
+  if (aisleKey === null) return null;
+  return {
+    aisleKey,
+    categories: compact(list(value, 'categories'), readCategory),
+    productCount: int(value, 'productCount'),
+  };
+}
+
+/** The endpoint returns a bare array, not a `{ data, meta }` envelope. */
+export function readAisleGroups(value: unknown): AisleGroup[] {
+  return compact(Array.isArray(value) ? value : [], readAisleGroup);
 }
 
 /* ══════════════════════════════ product ════════════════════════════════ */
 
+/**
+ * `GET /stores/:id/products` → `ProductRow`.
+ *
+ * There is NO `vendorId` on a row — the caller already knows which store it
+ * asked. Anything that needs the vendor (the basket) is handed it explicitly
+ * rather than reading a field that does not exist.
+ */
 export interface Product {
   id: string;
-  vendorId: string;
-  storeName: string | null;
   name: string;
   slug: string;
   brand: string | null;
-  description: string | null;
   images: string[];
   unit: string;
-  unitValue: number | null;
-  pricePaise: number;
-  mrpPaise: number | null;
-  discountPct: number | null;
+  unitValue: number;
+  /** INTEGER PAISE. */
+  mrp: number;
+  /** INTEGER PAISE. */
+  price: number;
+  discountPct: number;
+  categoryId: string;
   aisleKey: AisleKey | null;
   inStock: boolean;
-  /** null when the API does not expose an exact count publicly */
-  stock: number | null;
+  /** Live available stock, clamped for display by the API. */
+  availableQty: number;
+}
+
+/** `GET /products/:id` → `ProductDetail`. This one DOES carry its store. */
+export interface ProductDetail extends Product {
+  description: string | null;
+  sku: string;
+  category: { id: string; name: string; slug: string; aisleKey: AisleKey } | null;
+  store: {
+    id: string;
+    slug: string;
+    storeName: string;
+    isOpen: boolean;
+    rating: number;
+  };
 }
 
 export function readProduct(value: unknown): Product | null {
   if (!isDict(value)) return null;
-  const id = readId(value);
-  if (id === '') return null;
-
-  const price = num(value, 'pricePaise', 'price') ?? 0;
-  const mrp = num(value, 'mrpPaise', 'mrp');
-  const stock = num(value, 'stock', 'available');
-  const inStockFlag = bool(value, 'inStock', 'isAvailable', 'isActive');
+  const id = str(value, 'id');
+  if (id === null) return null;
 
   return {
     id,
-    vendorId: str(value, 'vendorId', 'storeId') ?? '',
-    storeName: str(value, 'storeName', 'vendorName'),
-    name: str(value, 'name', 'title') ?? 'Unnamed item',
+    name: str(value, 'name') ?? 'Unnamed item',
     slug: str(value, 'slug') ?? id,
     brand: str(value, 'brand'),
-    description: str(value, 'description'),
-    images: strings(value, 'images', 'photos'),
+    images: strings(value, 'images'),
     unit: str(value, 'unit') ?? 'pack',
-    unitValue: num(value, 'unitValue'),
-    pricePaise: price,
-    mrpPaise: mrp !== null && mrp > price ? mrp : null,
-    discountPct: num(value, 'discountPct'),
-    aisleKey: readAisle(value['aisleKey']) ?? readAisle(dict(value, 'category')?.['aisleKey']),
-    inStock: inStockFlag ?? (stock === null ? true : stock > 0),
-    stock,
+    unitValue: int(value, 'unitValue'),
+    mrp: int(value, 'mrp'),
+    price: int(value, 'price'),
+    discountPct: int(value, 'discountPct'),
+    categoryId: str(value, 'categoryId') ?? '',
+    aisleKey: readAisleKey(value['aisleKey']),
+    inStock: bool(value, 'inStock') ?? false,
+    availableQty: int(value, 'availableQty'),
+  };
+}
+
+export function readProductDetail(value: unknown): ProductDetail | null {
+  const base = readProduct(value);
+  if (base === null || !isDict(value)) return null;
+
+  const store = dict(value, 'store');
+  // A product with no store is not orderable and not renderable as one.
+  if (store === null) return null;
+  const storeId = str(store, 'id');
+  if (storeId === null) return null;
+
+  const category = dict(value, 'category');
+  const categoryAisle = category === null ? null : readAisleKey(category['aisleKey']);
+  const categoryId = category === null ? null : str(category, 'id');
+
+  return {
+    ...base,
+    // `aisleKey` is on the row already; the category echoes it. Prefer the row,
+    // fall back to the category, never assume either is present.
+    aisleKey: base.aisleKey ?? categoryAisle,
+    description: str(value, 'description'),
+    sku: str(value, 'sku') ?? '',
+    category:
+      category === null || categoryId === null || categoryAisle === null
+        ? null
+        : {
+            id: categoryId,
+            name: str(category, 'name') ?? 'Category',
+            slug: str(category, 'slug') ?? categoryId,
+            aisleKey: categoryAisle,
+          },
+    store: {
+      id: storeId,
+      slug: str(store, 'slug') ?? storeId,
+      storeName: str(store, 'storeName') ?? 'This store',
+      isOpen: bool(store, 'isOpen') ?? false,
+      rating: int(store, 'rating'),
+    },
   };
 }
 
 /* ═══════════════════════════════ cart ══════════════════════════════════ */
 
 /**
- * The honest flags (plan decision #9 and §6.2 `/checkout/validate`).
+ * The four honest flags, EXACTLY as `CartService` emits them — a flat array of
+ * string codes on each line, with no detail object.
  *
- * These are shown as inline chips ON the line they belong to — never as a modal.
- * A modal makes the customer dismiss the information before they can act on it,
- * and then the basket looks correct while it is not.
+ * `unavailable` was missing from the old union entirely, so a delisted product
+ * rendered as no chip at all: the basket looked fine and checkout refused.
  */
-export type StaleFlagCode = 'price_changed' | 'out_of_stock' | 'reduced_qty';
+export const CART_LINE_FLAGS = [
+  'price_changed',
+  'out_of_stock',
+  'reduced_qty',
+  'unavailable',
+] as const;
 
-export interface StaleFlag {
-  code: StaleFlagCode;
-  /** previous / current, in the unit that makes sense for the code */
-  fromPaise?: number;
-  toPaise?: number;
-  fromQty?: number;
-  toQty?: number;
-  message?: string;
+export type CartLineFlag = (typeof CART_LINE_FLAGS)[number];
+
+export function isCartLineFlag(value: unknown): value is CartLineFlag {
+  return typeof value === 'string' && (CART_LINE_FLAGS as readonly string[]).includes(value);
 }
 
-const FLAG_CODES: readonly StaleFlagCode[] = ['price_changed', 'out_of_stock', 'reduced_qty'];
-
-function isFlagCode(value: unknown): value is StaleFlagCode {
-  return typeof value === 'string' && FLAG_CODES.includes(value as StaleFlagCode);
-}
-
-/** Accepts `['out_of_stock']`, `[{code,...}]`, or `{ price_changed: {...} }`. */
-function readFlags(value: unknown): StaleFlag[] {
-  const out: StaleFlag[] = [];
-
-  const push = (code: StaleFlagCode, detail: Dict | null) => {
-    out.push({
-      code,
-      fromPaise: detail ? (num(detail, 'fromPaise', 'from', 'previousPrice') ?? undefined) : undefined,
-      toPaise: detail ? (num(detail, 'toPaise', 'to', 'currentPrice') ?? undefined) : undefined,
-      fromQty: detail ? (num(detail, 'fromQty', 'requestedQty') ?? undefined) : undefined,
-      toQty: detail ? (num(detail, 'toQty', 'availableQty') ?? undefined) : undefined,
-      message: detail ? (str(detail, 'message', 'detail') ?? undefined) : undefined,
-    });
-  };
-
-  if (Array.isArray(value)) {
-    for (const entry of value) {
-      if (isFlagCode(entry)) push(entry, null);
-      else if (isDict(entry) && isFlagCode(entry['code'])) push(entry['code'], entry);
-    }
-    return out;
-  }
-  if (isDict(value)) {
-    for (const [key, detail] of Object.entries(value)) {
-      if (!isFlagCode(key)) continue;
-      if (detail === false || detail === null || detail === undefined) continue;
-      push(key, isDict(detail) ? detail : null);
-    }
-  }
-  return out;
-}
-
+/** `CartLine`. The DETAIL behind a flag is the pair of price/qty fields below. */
 export interface CartLine {
   productId: string;
   name: string;
   image: string | null;
-  unit: string | null;
-  pricePaise: number;
+  /** INTEGER PAISE — the price when the line was added. */
+  price: number;
+  /** INTEGER PAISE — the price right now. `price_changed` compares these two. */
+  currentPrice: number;
   qty: number;
-  lineTotalPaise: number;
-  /** null when the API does not say; used to cap the stepper */
-  maxQty: number | null;
-  flags: StaleFlag[];
+  /** currentPrice × qty, INTEGER PAISE. */
+  lineTotal: number;
+  /** Live stock. `qty` above this is what raises `reduced_qty`. */
+  availableQty: number;
+  flags: CartLineFlag[];
 }
 
+/** Cart pricing has NO discount field — a coupon only exists at checkout. */
 export interface CartPricing {
-  itemsSubtotalPaise: number;
-  discountPaise: number;
-  deliveryFeePaise: number;
-  taxesPaise: number;
-  grandTotalPaise: number;
+  /** All INTEGER PAISE. */
+  itemsSubtotal: number;
+  deliveryFee: number;
+  taxes: number;
+  grandTotal: number;
 }
 
+export interface CartStore {
+  id: string;
+  slug: string;
+  storeName: string;
+  isOpen: boolean;
+}
+
+export interface ParkedCart {
+  id: string;
+  vendorId: string;
+  storeName: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
+/** `GET /cart` → `CartView`. `id` is null when there is no cart at all. */
 export interface Cart {
   id: string | null;
-  vendorId: string;
-  storeName: string | null;
-  storeSlug: string | null;
-  lines: CartLine[];
+  vendorId: string | null;
+  store: CartStore | null;
+  status: string | null;
+  items: CartLine[];
+  itemCount: number;
   pricing: CartPricing;
-  couponCode: string | null;
+  hasIssues: boolean;
+  parkedCarts: ParkedCart[];
 }
+
+export const EMPTY_CART_PRICING: CartPricing = {
+  itemsSubtotal: 0,
+  deliveryFee: 0,
+  taxes: 0,
+  grandTotal: 0,
+};
 
 export function readCartLine(value: unknown): CartLine | null {
   if (!isDict(value)) return null;
-  const productId = str(value, 'productId', 'id', '_id');
+  const productId = str(value, 'productId');
   if (productId === null) return null;
 
-  const price = num(value, 'pricePaise', 'price') ?? 0;
-  const qty = num(value, 'qty', 'quantity') ?? 1;
+  const price = int(value, 'price');
+  const currentPrice = num(value, 'currentPrice') ?? price;
+  const qty = num(value, 'qty') ?? 1;
 
   return {
     productId,
-    name: str(value, 'name', 'title') ?? 'Item',
-    image: str(value, 'image', 'imageUrl') ?? strings(value, 'images')[0] ?? null,
-    unit: str(value, 'unit'),
-    pricePaise: price,
+    name: str(value, 'name') ?? 'Item',
+    image: str(value, 'image'),
+    price,
+    currentPrice,
     qty,
-    lineTotalPaise: num(value, 'lineTotalPaise', 'lineTotal') ?? price * qty,
-    maxQty: num(value, 'maxQty', 'availableQty', 'stock'),
-    flags: readFlags(value['flags'] ?? value['issues'] ?? value['warnings']),
+    lineTotal: num(value, 'lineTotal') ?? currentPrice * qty,
+    availableQty: int(value, 'availableQty'),
+    flags: list(value, 'flags').filter(isCartLineFlag),
+  };
+}
+
+function readCartPricing(value: Dict | null): CartPricing {
+  if (value === null) return EMPTY_CART_PRICING;
+  return {
+    itemsSubtotal: int(value, 'itemsSubtotal'),
+    deliveryFee: int(value, 'deliveryFee'),
+    taxes: int(value, 'taxes'),
+    grandTotal: int(value, 'grandTotal'),
+  };
+}
+
+function readCartStore(value: unknown): CartStore | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
+  return {
+    id,
+    slug: str(value, 'slug') ?? id,
+    storeName: str(value, 'storeName') ?? 'This store',
+    isOpen: bool(value, 'isOpen') ?? false,
+  };
+}
+
+function readParkedCart(value: unknown): ParkedCart | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  const vendorId = str(value, 'vendorId');
+  if (id === null || vendorId === null) return null;
+  return {
+    id,
+    vendorId,
+    storeName: str(value, 'storeName') ?? 'A store',
+    itemCount: int(value, 'itemCount'),
+    updatedAt: str(value, 'updatedAt') ?? '',
   };
 }
 
 export function readCart(value: unknown): Cart | null {
   if (!isDict(value)) return null;
-  const payload = dict(value, 'data') ?? value;
-  const lines = list(payload, 'items', 'lines')
-    .map(readCartLine)
-    .filter((l): l is CartLine => l !== null);
-
-  const pricing = dict(payload, 'pricing', 'totals');
-  const subtotal =
-    (pricing ? num(pricing, 'itemsSubtotal', 'itemsSubtotalPaise', 'subtotal') : null) ??
-    lines.reduce((sum, line) => sum + line.lineTotalPaise, 0);
+  const items = compact(list(value, 'items'), readCartLine);
 
   return {
-    id: str(payload, 'id', '_id'),
-    vendorId: str(payload, 'vendorId', 'storeId') ?? '',
-    storeName: str(payload, 'storeName', 'vendorName'),
-    storeSlug: str(payload, 'storeSlug', 'vendorSlug'),
-    lines,
-    pricing: {
-      itemsSubtotalPaise: subtotal,
-      discountPaise: pricing ? (num(pricing, 'discount', 'discountPaise') ?? 0) : 0,
-      deliveryFeePaise: pricing ? (num(pricing, 'deliveryFee', 'deliveryFeePaise') ?? 0) : 0,
-      taxesPaise: pricing ? (num(pricing, 'taxes', 'taxesPaise') ?? 0) : 0,
-      grandTotalPaise:
-        (pricing ? num(pricing, 'grandTotal', 'grandTotalPaise') : null) ??
-        subtotal +
-          (pricing ? (num(pricing, 'deliveryFee', 'deliveryFeePaise') ?? 0) : 0) -
-          (pricing ? (num(pricing, 'discount', 'discountPaise') ?? 0) : 0),
-    },
-    couponCode: str(payload, 'couponCode', 'coupon'),
+    // An empty cart legitimately answers `{ id: null, … }`, so a null id is a
+    // state to render, not a reason to return null from the reader.
+    id: str(value, 'id'),
+    vendorId: str(value, 'vendorId'),
+    store: readCartStore(value['store']),
+    status: str(value, 'status'),
+    items,
+    itemCount: num(value, 'itemCount') ?? items.reduce((sum, line) => sum + line.qty, 0),
+    pricing: readCartPricing(dict(value, 'pricing')),
+    hasIssues: bool(value, 'hasIssues') ?? items.some((line) => line.flags.length > 0),
+    parkedCarts: compact(list(value, 'parkedCarts'), readParkedCart),
+  };
+}
+
+/** `POST /cart/items` → `{ cart, parked }`. */
+export interface AddItemResult {
+  cart: Cart | null;
+  parked: ParkedCart | null;
+}
+
+export function readAddItemResult(value: unknown): AddItemResult {
+  if (!isDict(value)) return { cart: null, parked: null };
+  return {
+    cart: readCart(value['cart']),
+    parked: readParkedCart(value['parked']),
   };
 }
 
 /* ══════════════════════════════ address ════════════════════════════════ */
 
+/** `GET /addresses` → `AddressView[]` (a bare array, no envelope). */
 export interface Address {
   id: string;
   label: string;
@@ -383,15 +558,15 @@ export interface Address {
   line2: string | null;
   city: string;
   pincode: string;
-  phone: string | null;
   location: LatLng | null;
+  phone: string;
   isDefault: boolean;
 }
 
 export function readAddress(value: unknown): Address | null {
   if (!isDict(value)) return null;
-  const id = readId(value);
-  if (id === '') return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
   return {
     id,
     label: str(value, 'label') ?? 'Address',
@@ -399,10 +574,14 @@ export function readAddress(value: unknown): Address | null {
     line2: str(value, 'line2'),
     city: str(value, 'city') ?? '',
     pincode: str(value, 'pincode') ?? '',
-    phone: str(value, 'phone'),
-    location: readLocation(value['location']),
+    location: readLatLng(value['location']),
+    phone: str(value, 'phone') ?? '',
     isDefault: bool(value, 'isDefault') ?? false,
   };
+}
+
+export function readAddresses(value: unknown): Address[] {
+  return compact(Array.isArray(value) ? value : [], readAddress);
 }
 
 /* ═══════════════════════════════ order ═════════════════════════════════ */
@@ -427,172 +606,478 @@ export function isOrderStatus(value: unknown): value is OrderStatus {
   return typeof value === 'string' && (ORDER_STATUSES as readonly string[]).includes(value);
 }
 
+export type PaymentMethod = 'cod' | 'online';
+
+export function isPaymentMethod(value: unknown): value is PaymentMethod {
+  return value === 'cod' || value === 'online';
+}
+
+export interface OrderPayment {
+  method: PaymentMethod | null;
+  status: string | null;
+}
+
+/** The store stub carried by every order row. Null on a deleted vendor. */
+export interface OrderStore {
+  id: string;
+  storeName: string;
+  slug: string;
+}
+
+/** Every field INTEGER PAISE. Unlike the cart, an ORDER does carry `discount`. */
+export interface OrderPricing {
+  itemsSubtotal: number;
+  discount: number;
+  deliveryFee: number;
+  taxes: number;
+  grandTotal: number;
+}
+
+/**
+ * `GET /orders` → `OrderSummary`.
+ *
+ * A row has NO `items[]` and NO `pricing` object — it carries `itemCount`, a
+ * flat `grandTotal`, and `preview`: the first few item NAMES as plain strings.
+ */
+export interface OrderSummary {
+  id: string;
+  orderNo: string;
+  status: OrderStatus;
+  placedAt: string | null;
+  itemCount: number;
+  /** INTEGER PAISE. */
+  grandTotal: number;
+  payment: OrderPayment;
+  store: OrderStore | null;
+  preview: string[];
+}
+
 export interface OrderItem {
   productId: string;
   name: string;
   image: string | null;
-  unit: string | null;
-  pricePaise: number;
+  unit: string;
+  /** INTEGER PAISE. */
+  price: number;
   qty: number;
-  lineTotalPaise: number;
+  /** INTEGER PAISE. */
+  lineTotal: number;
   fulfilled: boolean;
 }
 
-export interface OrderStatusEvent {
+/** The address as FROZEN ONTO the order. It has no id and no `isDefault`. */
+export interface OrderAddress {
+  label: string | null;
+  line1: string;
+  line2: string | null;
+  city: string;
+  pincode: string;
+  location: LatLng | null;
+  phone: string;
+}
+
+export interface StatusChange {
   from: OrderStatus | null;
   to: OrderStatus;
-  at: string;
-  actorRole: string | null;
+  byRole: string | null;
   reason: string | null;
+  at: string;
 }
 
-export interface Order {
-  id: string;
-  orderNo: string;
-  status: OrderStatus;
-  statusHistory: OrderStatusEvent[];
-  vendorId: string;
-  storeName: string | null;
-  storeSlug: string | null;
-  storeLocation: LatLng | null;
+/** `GET /orders/:id` → `OrderDetail`. */
+export interface OrderDetail extends OrderSummary {
   items: OrderItem[];
-  pricing: CartPricing;
-  address: Address | null;
-  paymentMethod: 'cod' | 'online' | null;
-  paymentStatus: string | null;
-  placedAt: string | null;
+  pricing: OrderPricing;
+  address: OrderAddress | null;
+  statusHistory: StatusChange[];
+  cancellation: { by: string | null; reason: string | null; at: string | null } | null;
+  canCancel: boolean;
+  acceptedAt: string | null;
   deliveredAt: string | null;
-  etaMinutes: number | null;
-  /** primary aisle of the basket — tints the whole tracking screen */
-  aisleKey: AisleKey | null;
-  rider: { name: string | null; phoneMasked: string | null } | null;
 }
 
-function readOrderItem(value: unknown): OrderItem | null {
-  const line = readCartLine(value);
-  if (line === null) return null;
+function readOrderStore(value: unknown): OrderStore | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
   return {
-    productId: line.productId,
-    name: line.name,
-    image: line.image,
-    unit: line.unit,
-    pricePaise: line.pricePaise,
-    qty: line.qty,
-    lineTotalPaise: line.lineTotalPaise,
-    fulfilled: isDict(value) ? (bool(value, 'fulfilled') ?? true) : true,
+    id,
+    storeName: str(value, 'storeName') ?? 'Store',
+    slug: str(value, 'slug') ?? id,
   };
 }
 
-export function readOrder(value: unknown): Order | null {
+function readOrderPayment(value: unknown): OrderPayment {
+  if (!isDict(value)) return { method: null, status: null };
+  const method = value['method'];
+  return {
+    method: isPaymentMethod(method) ? method : null,
+    status: str(value, 'status'),
+  };
+}
+
+export function readStatusChange(value: unknown): StatusChange | null {
   if (!isDict(value)) return null;
-  const payload = dict(value, 'data', 'order') ?? value;
-  const id = readId(payload);
-  if (id === '') return null;
+  const to = value['to'];
+  if (!isOrderStatus(to)) return null;
+  const from = value['from'];
+  return {
+    from: isOrderStatus(from) ? from : null,
+    to,
+    byRole: str(value, 'byRole'),
+    reason: str(value, 'reason'),
+    at: str(value, 'at') ?? '',
+  };
+}
 
-  const status = isOrderStatus(payload['status']) ? payload['status'] : 'PLACED';
-  const pricing = dict(payload, 'pricing') ?? {};
-  const payment = dict(payload, 'payment') ?? {};
-  const method = str(payment, 'method');
-  const rider = dict(payload, 'deliveryPartner', 'rider');
-
-  const items = list(payload, 'items')
-    .map(readOrderItem)
-    .filter((i): i is OrderItem => i !== null);
-  const subtotal =
-    num(pricing, 'itemsSubtotal', 'itemsSubtotalPaise') ??
-    items.reduce((sum, item) => sum + item.lineTotalPaise, 0);
+export function readOrderSummary(value: unknown): OrderSummary | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
+  const status = value['status'];
 
   return {
     id,
-    orderNo: str(payload, 'orderNo', 'number') ?? id,
-    status,
-    statusHistory: list(payload, 'statusHistory')
-      .map((entry): OrderStatusEvent | null => {
-        if (!isDict(entry) || !isOrderStatus(entry['to'])) return null;
-        return {
-          from: isOrderStatus(entry['from']) ? entry['from'] : null,
-          to: entry['to'],
-          at: str(entry, 'at', 'createdAt') ?? '',
-          actorRole: str(entry, 'byRole', 'actorRole'),
-          reason: str(entry, 'reason'),
-        };
-      })
-      .filter((e): e is OrderStatusEvent => e !== null),
-    vendorId: str(payload, 'vendorId') ?? '',
-    storeName: str(payload, 'storeName', 'vendorName'),
-    storeSlug: str(payload, 'storeSlug', 'vendorSlug'),
-    storeLocation: readLocation(payload['storeLocation'] ?? dict(payload, 'store')?.['location']),
-    items,
+    orderNo: str(value, 'orderNo') ?? id,
+    status: isOrderStatus(status) ? status : 'PLACED',
+    placedAt: str(value, 'placedAt'),
+    itemCount: int(value, 'itemCount'),
+    grandTotal: int(value, 'grandTotal'),
+    payment: readOrderPayment(value['payment']),
+    store: readOrderStore(value['store']),
+    preview: strings(value, 'preview'),
+  };
+}
+
+function readOrderItem(value: unknown): OrderItem | null {
+  if (!isDict(value)) return null;
+  const productId = str(value, 'productId');
+  if (productId === null) return null;
+  const price = int(value, 'price');
+  const qty = num(value, 'qty') ?? 1;
+  return {
+    productId,
+    name: str(value, 'name') ?? 'Item',
+    image: str(value, 'image'),
+    unit: str(value, 'unit') ?? '',
+    price,
+    qty,
+    lineTotal: num(value, 'lineTotal') ?? price * qty,
+    fulfilled: bool(value, 'fulfilled') ?? true,
+  };
+}
+
+function readOrderAddress(value: unknown): OrderAddress | null {
+  if (!isDict(value)) return null;
+  const line1 = str(value, 'line1');
+  if (line1 === null) return null;
+  return {
+    label: str(value, 'label'),
+    line1,
+    line2: str(value, 'line2'),
+    city: str(value, 'city') ?? '',
+    pincode: str(value, 'pincode') ?? '',
+    location: readLatLng(value['location']),
+    phone: str(value, 'phone') ?? '',
+  };
+}
+
+export function readOrderDetail(value: unknown): OrderDetail | null {
+  const summary = readOrderSummary(value);
+  if (summary === null || !isDict(value)) return null;
+  const pricing = dict(value, 'pricing');
+  const cancellation = dict(value, 'cancellation');
+
+  return {
+    ...summary,
+    items: compact(list(value, 'items'), readOrderItem),
     pricing: {
-      itemsSubtotalPaise: subtotal,
-      discountPaise: num(pricing, 'discount', 'discountPaise') ?? 0,
-      deliveryFeePaise: num(pricing, 'deliveryFee', 'deliveryFeePaise') ?? 0,
-      taxesPaise: num(pricing, 'taxes', 'taxesPaise') ?? 0,
-      grandTotalPaise: num(pricing, 'grandTotal', 'grandTotalPaise') ?? subtotal,
+      itemsSubtotal: pricing === null ? 0 : int(pricing, 'itemsSubtotal'),
+      discount: pricing === null ? 0 : int(pricing, 'discount'),
+      deliveryFee: pricing === null ? 0 : int(pricing, 'deliveryFee'),
+      taxes: pricing === null ? 0 : int(pricing, 'taxes'),
+      grandTotal: pricing === null ? summary.grandTotal : int(pricing, 'grandTotal'),
     },
-    address: readAddress(payload['address']),
-    paymentMethod: method === 'cod' || method === 'online' ? method : null,
-    paymentStatus: str(payment, 'status'),
-    placedAt: str(payload, 'placedAt', 'createdAt'),
-    deliveredAt: str(payload, 'deliveredAt'),
-    etaMinutes: num(payload, 'etaMinutes', 'eta'),
-    aisleKey: readAisle(payload['aisleKey']),
-    rider:
-      rider === null
+    address: readOrderAddress(value['address']),
+    statusHistory: compact(list(value, 'statusHistory'), readStatusChange),
+    cancellation:
+      cancellation === null
         ? null
-        : { name: str(rider, 'name'), phoneMasked: str(rider, 'phoneMasked', 'phone') },
+        : {
+            by: str(cancellation, 'by'),
+            reason: str(cancellation, 'reason'),
+            at: str(cancellation, 'at'),
+          },
+    canCancel: bool(value, 'canCancel') ?? false,
+    acceptedAt: str(value, 'acceptedAt'),
+    deliveredAt: str(value, 'deliveredAt'),
   };
 }
 
 /* ════════════════════════════ order tracking ═══════════════════════════ */
 
-export interface TrackSnapshot {
-  order: Order;
-  /** last known rider position — `at` is what makes staleness honest */
-  rider: { position: LatLng; at: string; etaMinutes: number | null } | null;
-  route: LatLng[];
+/**
+ * `GET /orders/:id/track` → `TrackView`.
+ *
+ * This is NOT an order. It does not carry items, pricing or an aisle key, and
+ * there is no route polyline — the API never invents a road. The rider block is
+ * reported exactly as last received, with `lastSeenAt` and `ageSeconds`, so the
+ * UI can say "40s ago" without extrapolating anything.
+ */
+export type EtaBasis = 'sla' | 'delivered' | 'closed';
+
+function isEtaBasis(value: unknown): value is EtaBasis {
+  return value === 'sla' || value === 'delivered' || value === 'closed';
 }
 
-export function readTrack(value: unknown): TrackSnapshot | null {
-  if (!isDict(value)) return null;
-  const payload = dict(value, 'data') ?? value;
-  const order = readOrder(payload['order'] ?? payload);
-  if (order === null) return null;
+export interface TrackEta {
+  /** Minutes remaining against the promise. Null once terminal. */
+  minutes: number | null;
+  at: string | null;
+  basis: EtaBasis;
+}
 
-  const riderRaw = dict(payload, 'rider', 'partner', 'location');
-  const position = riderRaw === null ? null : (readLocation(riderRaw) ?? readLocation(riderRaw['location']));
+export interface TrackRider {
+  name: string;
+  phone: string;
+  location: LatLng | null;
+  lastSeenAt: string | null;
+  ageSeconds: number | null;
+}
+
+export interface Track {
+  orderId: string;
+  orderNo: string;
+  status: OrderStatus;
+  statusHistory: StatusChange[];
+  eta: TrackEta;
+  vendor: { id: string; name: string; location: LatLng | null } | null;
+  drop: { location: LatLng | null; line1: string; city: string; pincode: string } | null;
+  rider: TrackRider | null;
+}
+
+export function readTrack(value: unknown): Track | null {
+  if (!isDict(value)) return null;
+  const orderId = str(value, 'orderId');
+  if (orderId === null) return null;
+
+  const status = value['status'];
+  const eta = dict(value, 'eta');
+  const vendor = dict(value, 'vendor');
+  const vendorId = vendor === null ? null : str(vendor, 'id');
+  const drop = dict(value, 'drop');
+  const rider = dict(value, 'rider');
 
   return {
-    order,
+    orderId,
+    orderNo: str(value, 'orderNo') ?? orderId,
+    status: isOrderStatus(status) ? status : 'PLACED',
+    statusHistory: compact(list(value, 'statusHistory'), readStatusChange),
+    eta: {
+      minutes: eta === null ? null : num(eta, 'minutes'),
+      at: eta === null ? null : str(eta, 'at'),
+      basis: eta !== null && isEtaBasis(eta['basis']) ? eta['basis'] : 'sla',
+    },
+    vendor:
+      vendor === null || vendorId === null
+        ? null
+        : {
+            id: vendorId,
+            name: str(vendor, 'name') ?? 'Store',
+            location: readLatLng(vendor['location']),
+          },
+    drop:
+      drop === null
+        ? null
+        : {
+            location: readLatLng(drop['location']),
+            line1: str(drop, 'line1') ?? '',
+            city: str(drop, 'city') ?? '',
+            pincode: str(drop, 'pincode') ?? '',
+          },
     rider:
-      riderRaw !== null && position !== null
-        ? {
-            position,
-            at: str(riderRaw, 'at', 'locationAt', 'updatedAt') ?? new Date().toISOString(),
-            etaMinutes: num(riderRaw, 'etaMinutes', 'eta'),
-          }
-        : null,
-    route: list(payload, 'route', 'polyline')
-      .map(readLocation)
-      .filter((p): p is LatLng => p !== null),
+      rider === null
+        ? null
+        : {
+            name: str(rider, 'name') ?? 'Your rider',
+            phone: str(rider, 'phone') ?? '',
+            location: readLatLng(rider['location']),
+            lastSeenAt: str(rider, 'lastSeenAt'),
+            ageSeconds: num(rider, 'ageSeconds'),
+          },
+  };
+}
+
+/* ═════════════════════════════ checkout ════════════════════════════════ */
+
+export const CHECKOUT_ISSUE_CODES = [
+  'OUT_OF_STOCK',
+  'REDUCED_QTY',
+  'PRICE_CHANGED',
+  'UNAVAILABLE',
+  'STORE_CLOSED',
+  'OUT_OF_SERVICE_AREA',
+  'NO_ADDRESS',
+  'COD_UNAVAILABLE',
+  'COD_LIMIT',
+  'COUPON',
+] as const;
+
+export type CheckoutIssueCode = (typeof CHECKOUT_ISSUE_CODES)[number];
+
+export interface CheckoutIssue {
+  code: CheckoutIssueCode | 'UNKNOWN';
+  message: string;
+  productId: string | null;
+}
+
+export interface PaymentAvailability {
+  available: boolean;
+  reason: string | null;
+}
+
+/** `POST /checkout/validate` → `CheckoutQuote`. The server's own arithmetic. */
+export interface CheckoutQuote {
+  vendorId: string;
+  store: CartStore | null;
+  items: CartLine[];
+  pricing: OrderPricing;
+  coupon: { code: string; discount: number } | null;
+  couponProblem: { code: string; message: string } | null;
+  address: Address | null;
+  delivery: { serviceable: boolean; distanceKm: number | null; radiusKm: number };
+  payment: { cod: PaymentAvailability; online: PaymentAvailability };
+  issues: CheckoutIssue[];
+  checkoutReady: boolean;
+}
+
+function isCheckoutIssueCode(value: unknown): value is CheckoutIssueCode {
+  return (
+    typeof value === 'string' && (CHECKOUT_ISSUE_CODES as readonly string[]).includes(value)
+  );
+}
+
+function readCheckoutIssue(value: unknown): CheckoutIssue | null {
+  if (!isDict(value)) return null;
+  const message = str(value, 'message');
+  if (message === null) return null;
+  return {
+    code: isCheckoutIssueCode(value['code']) ? value['code'] : 'UNKNOWN',
+    message,
+    productId: str(value, 'productId'),
+  };
+}
+
+function readPaymentAvailability(value: unknown): PaymentAvailability {
+  if (!isDict(value)) return { available: false, reason: null };
+  return { available: bool(value, 'available') ?? false, reason: str(value, 'reason') };
+}
+
+export function readCheckoutQuote(value: unknown): CheckoutQuote | null {
+  if (!isDict(value)) return null;
+  const vendorId = str(value, 'vendorId');
+  if (vendorId === null) return null;
+
+  const pricing = dict(value, 'pricing');
+  const coupon = dict(value, 'coupon');
+  const couponCode = coupon === null ? null : str(coupon, 'code');
+  const couponProblem = dict(value, 'couponProblem');
+  const delivery = dict(value, 'delivery');
+  const payment = dict(value, 'payment');
+
+  return {
+    vendorId,
+    store: readCartStore(value['store']),
+    items: compact(list(value, 'items'), readCartLine),
+    pricing: {
+      itemsSubtotal: pricing === null ? 0 : int(pricing, 'itemsSubtotal'),
+      discount: pricing === null ? 0 : int(pricing, 'discount'),
+      deliveryFee: pricing === null ? 0 : int(pricing, 'deliveryFee'),
+      taxes: pricing === null ? 0 : int(pricing, 'taxes'),
+      grandTotal: pricing === null ? 0 : int(pricing, 'grandTotal'),
+    },
+    coupon:
+      coupon === null || couponCode === null
+        ? null
+        : { code: couponCode, discount: int(coupon, 'discount') },
+    couponProblem:
+      couponProblem === null
+        ? null
+        : {
+            code: str(couponProblem, 'code') ?? 'COUPON',
+            message: str(couponProblem, 'message') ?? 'That code did not apply.',
+          },
+    address: readAddress(value['address']),
+    delivery: {
+      serviceable: delivery === null ? false : (bool(delivery, 'serviceable') ?? false),
+      distanceKm: delivery === null ? null : num(delivery, 'distanceKm'),
+      radiusKm: delivery === null ? 0 : int(delivery, 'radiusKm'),
+    },
+    payment: {
+      cod: readPaymentAvailability(payment?.['cod']),
+      online: readPaymentAvailability(payment?.['online']),
+    },
+    issues: compact(list(value, 'issues'), readCheckoutIssue),
+    checkoutReady: bool(value, 'checkoutReady') ?? false,
+  };
+}
+
+/**
+ * `POST /checkout` → `{ order, deliveryOtp, payment }`.
+ *
+ * `deliveryOtp` is the plaintext proof-of-delivery code and this response is
+ * the ONLY place it is ever readable — the database stores a hash. If the
+ * confirmation screen does not show it, the customer cannot take delivery.
+ */
+export interface PlacedOrder {
+  order: OrderDetail | null;
+  deliveryOtp: string | null;
+  payment: {
+    method: PaymentMethod | null;
+    status: string | null;
+    next: 'pay_on_delivery' | 'gateway' | null;
+  };
+}
+
+export function readPlacedOrder(value: unknown): PlacedOrder {
+  if (!isDict(value)) {
+    return { order: null, deliveryOtp: null, payment: { method: null, status: null, next: null } };
+  }
+  const payment = dict(value, 'payment');
+  const next = payment === null ? null : str(payment, 'next');
+
+  return {
+    order: readOrderDetail(value['order']),
+    deliveryOtp: str(value, 'deliveryOtp'),
+    payment: {
+      method: payment !== null && isPaymentMethod(payment['method']) ? payment['method'] : null,
+      status: payment === null ? null : str(payment, 'status'),
+      next: next === 'pay_on_delivery' || next === 'gateway' ? next : null,
+    },
   };
 }
 
 /* ═════════════════════════════ list envelope ═══════════════════════════ */
 
-/** `{ data, meta }` (plan §6.1) — or a bare array, which some handlers return. */
+/**
+ * `{ data, meta }` — the envelope every PAGINATED endpoint returns.
+ *
+ * `/addresses` and `/stores/:id/categories` return BARE ARRAYS and have their
+ * own readers above; this one no longer pretends an array is a page, because
+ * silently synthesising `meta` from an array hid exactly that difference.
+ */
 export function readPaged<T>(value: unknown, reader: (item: unknown) => T | null): Paged<T> {
-  const rows = Array.isArray(value) ? value : isDict(value) ? list(value, 'data', 'items') : [];
-  const data = rows.map(reader).filter((row): row is T => row !== null);
-  const metaRaw = isDict(value) ? dict(value, 'meta') : null;
+  const source = isDict(value) ? value : null;
+  const data = compact(source === null ? [] : list(source, 'data'), reader);
+  const meta = source === null ? null : dict(source, 'meta');
 
   return {
     data,
     meta: {
-      page: metaRaw ? (num(metaRaw, 'page') ?? 1) : 1,
-      limit: metaRaw ? (num(metaRaw, 'limit') ?? data.length) : data.length,
-      total: metaRaw ? (num(metaRaw, 'total') ?? data.length) : data.length,
-      pages: metaRaw ? (num(metaRaw, 'pages') ?? 1) : 1,
+      page: meta === null ? 1 : (num(meta, 'page') ?? 1),
+      limit: meta === null ? data.length : (num(meta, 'limit') ?? data.length),
+      total: meta === null ? data.length : (num(meta, 'total') ?? data.length),
+      pages: meta === null ? 1 : (num(meta, 'pages') ?? 1),
     },
   };
 }

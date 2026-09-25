@@ -17,7 +17,19 @@
  * The arithmetic lives in `lib/vendor/orders.ts → previewFulfilment`, which
  * documents why the discount scales and the delivery fee does not. It is a
  * PREVIEW: the server recomputes the same figures inside the transaction that
- * writes the status, and its answer is the one that reaches the ledger.
+ * writes the refund, and its answer is the one that reaches the ledger.
+ *
+ * ── ★ IT IS ITS OWN ENDPOINT ────────────────────────────────────────────────
+ * `PATCH /vendor/orders/:id/items` with `{ items, reason? }`, and NOTHING
+ * else. This screen used to post the item array to `/status`, where
+ * `UpdateOrderStatusDto` accepts `{ status, reason? }` only — with
+ * `forbidNonWhitelisted: true` that is a 400, so the lines were never dropped
+ * and no refund was ever raised. Re-picking and advancing are two writes
+ * because they are two decisions: confirm the bag, then move the order.
+ *
+ * The reply is `{ order, refundDelta, payoutDelta, droppedLineCount,
+ * ledgerEntryId }` — the server's own numbers, which is what the screen shows
+ * afterwards rather than continuing to trust its own preview.
  *
  * ── THE TIMELINE ────────────────────────────────────────────────────────────
  * Every transition the backend recorded, with actor and reason (plan §5.3,
@@ -38,13 +50,25 @@ import {
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import { formatDate } from '@/lib/admin/format';
 import { NEXT_STATUS, REJECT_REASONS, STATUS_AISLE, previewFulfilment } from '@/lib/vendor/orders';
-import type { OrderStatus, VendorOrderDetail, VendorPartner } from '@/lib/vendor/types';
+import type {
+  FulfilmentUpdate,
+  OrderStatusUpdate,
+  Paged,
+  PartialFulfilmentResult,
+  VendorOrderDetail,
+  VendorPartner,
+} from '@/lib/vendor/types';
 import { EndpointError } from '../primitives';
+
+/** Re-picking is only legal while the order is still in the shop's hands. */
+const REPICKABLE = new Set(['ACCEPTED', 'PACKING']);
 
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const path = `/vendor/orders/${orderId}`;
   const order = useVendorQuery<VendorOrderDetail>(path, undefined, { refreshMs: 20_000 });
-  const partners = useVendorQuery<VendorPartner[]>('/vendor/delivery-partners');
+  const partners = useVendorQuery<Paged<VendorPartner>>('/vendor/delivery-partners', {
+    limit: 100,
+  });
 
   /* ---- which lines are still going in the bag ---- */
   const [kept, setKept] = useState<ReadonlySet<string> | null>(null);
@@ -62,13 +86,20 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
 
   const [dialog, setDialog] = useState<'confirm' | 'reject' | 'assign' | null>(null);
   const [reason, setReason] = useState('');
+  const [dropReason, setDropReason] = useState('');
   const [partnerId, setPartnerId] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
+  const [settled, setSettled] = useState<PartialFulfilmentResult | null>(null);
 
-  const advance = useVendorMutation<
-    { status: OrderStatus; items?: Array<{ productId: string; fulfilled: boolean }> },
-    VendorOrderDetail
-  >('/vendor/orders/:id/status', 'PATCH');
+  const advance = useVendorMutation<OrderStatusUpdate, VendorOrderDetail>(
+    '/vendor/orders/:id/status',
+    'PATCH',
+  );
+  // Partial fulfilment has its OWN endpoint. Items never ride on /status.
+  const repick = useVendorMutation<FulfilmentUpdate, PartialFulfilmentResult>(
+    '/vendor/orders/:id/items',
+    'PATCH',
+  );
   const accept = useVendorMutation<{ etaMinutes?: number }, VendorOrderDetail>(
     '/vendor/orders/:id/accept',
     'PATCH',
@@ -97,6 +128,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
         <EndpointError
           path={path}
           message={order.error.friendlyMessage}
+          status={order.error.status}
           onRetry={order.refetch}
         />
       </AdminPage>
@@ -123,6 +155,11 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   const invalidate = ['/vendor/orders'] as const;
   const nextStatus = NEXT_STATUS[data.status];
   const changed = preview.droppedCount > 0;
+  // The API refuses a re-pick outside ACCEPTED/PACKING with a 409, so the
+  // checkboxes go read-only at exactly the point the server stops listening.
+  const canRepick = REPICKABLE.has(data.status);
+  const customerName = data.customer.name ?? 'Customer';
+  const customerPhone = data.customer.phone;
 
   const toggleLine = (productId: string) => {
     setKept((previous) => {
@@ -133,17 +170,47 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     });
   };
 
-  const submitFulfilment = () => {
-    if (!nextStatus) return;
+  /**
+   * Two separate writes, in the order that keeps the money right.
+   *
+   * The re-pick goes first: it is the one that raises the refund and rewrites
+   * the totals, and a status move that happened before it would push the order
+   * past the window in which the API still accepts an item change. If the
+   * re-pick fails, the status is left alone — an order marked READY over lines
+   * the shop cannot supply is worse than one that did not move.
+   */
+  const submitFulfilment = async () => {
     setFailure(null);
-    void advance.mutate(
-      {
-        status: nextStatus,
-        items: data.items.map((item) => ({
-          productId: item.productId,
-          fulfilled: kept.has(item.productId),
-        })),
-      },
+
+    if (changed) {
+      const result = await repick.mutate(
+        {
+          items: data.items.map((item) => ({
+            productId: item.productId,
+            fulfilled: kept.has(item.productId),
+          })),
+          // The DTO validates 3–300 characters, so a blank note is omitted
+          // rather than sent as an empty string that would be a 400.
+          ...(dropReason.trim().length >= 3 ? { reason: dropReason.trim() } : {}),
+        },
+        {
+          params: { id: data.id },
+          invalidate,
+          onError: (error) => setFailure(error.friendlyMessage),
+        },
+      );
+      if (result === null) return;
+      setSettled(result);
+    }
+
+    if (!nextStatus) {
+      setDialog(null);
+      order.refetch();
+      return;
+    }
+
+    await advance.mutate(
+      { status: nextStatus },
       {
         params: { id: data.id },
         invalidate,
@@ -153,14 +220,14 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     );
   };
 
-  const availablePartners = (partners.data ?? []).filter(
-    (partner) => partner.isOnline && partner.isAvailable,
+  const availablePartners = (partners.data?.data ?? []).filter(
+    (partner) => partner.status === 'active' && partner.isOnline && partner.isAvailable,
   );
 
   return (
     <AdminPage
       title={data.orderNo}
-      description={`${data.customerName} · placed ${formatDate(data.placedAt, 'long')}`}
+      description={`${customerName} · placed ${data.placedAt === null ? 'at an unrecorded time' : formatDate(data.placedAt, 'long')}`}
       breadcrumbs={[{ label: 'Orders', href: '/vendor/orders' }, { label: data.orderNo }]}
       isFixture={order.isFixture || partners.isFixture}
       fixturePaths={[order.isFixture ? path : null, partners.isFixture ? '/vendor/delivery-partners' : null].filter(
@@ -198,13 +265,17 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               </button>
             </>
           ) : null}
-          {nextStatus ? (
+          {nextStatus || (canRepick && changed) ? (
             <button
               type="button"
               className="adm-btn adm-btn--primary"
               onClick={() => setDialog('confirm')}
             >
-              {nextStatus === 'PACKING' ? 'Start packing' : 'Confirm items & mark ready'}
+              {!nextStatus
+                ? 'Confirm the short order'
+                : nextStatus === 'PACKING'
+                  ? 'Start packing'
+                  : 'Confirm items & mark ready'}
             </button>
           ) : null}
           {data.status === 'READY_FOR_PICKUP' ? (
@@ -231,7 +302,9 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             description={
               data.status === 'DELIVERED' || data.status === 'REJECTED' || data.status === 'CANCELLED'
                 ? 'This order is closed. The lines are shown as they were fulfilled.'
-                : 'Untick anything you cannot supply. The totals below recompute before you confirm.'
+                : canRepick
+                  ? 'Untick anything you cannot supply. The totals below recompute before you confirm.'
+                  : 'Lines can only be re-picked while the order is accepted or packing. This one has moved on.'
             }
           >
             <div className="ven-lines">
@@ -244,7 +317,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                         type="checkbox"
                         checked={on}
                         onChange={() => toggleLine(item.productId)}
-                        disabled={!nextStatus}
+                        disabled={!canRepick}
                       />
                       <span className="adm-sr">
                         {on ? 'Included' : 'Dropped'} — {item.name}
@@ -265,8 +338,20 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             {changed ? (
               <p className="ven-note" style={{ marginTop: 'var(--s-3)' }}>
                 {preview.droppedCount} {preview.droppedCount === 1 ? 'line' : 'lines'} dropped.{' '}
-                The customer will be refunded <Money value={preview.refundDelta} /> when you
-                confirm. Nothing has been sent yet.
+                The customer will be refunded about <Money value={preview.refundDelta} /> when you
+                confirm. Nothing has been sent yet — the server recomputes the exact figure.
+              </p>
+            ) : null}
+
+            {settled ? (
+              <p className="ven-note" style={{ marginTop: 'var(--s-3)' }} role="status">
+                <strong>Settled by the server.</strong> {settled.droppedLineCount}{' '}
+                {settled.droppedLineCount === 1 ? 'line' : 'lines'} dropped, refund{' '}
+                <Money value={settled.refundDelta} />, your payout down by{' '}
+                <Money value={settled.payoutDelta} />.
+                {settled.ledgerEntryId === null
+                  ? ' No ledger entry was needed.'
+                  : ' A ledger entry was written.'}
               </p>
             ) : null}
           </AdminSection>
@@ -290,8 +375,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                       {event.to}
                     </p>
                     <p className="ven-tl__meta">
-                      {formatDate(event.at, 'long')} · by {event.byName ?? event.byRole} (
-                      {event.byRole})
+                      {event.at === null ? 'time unrecorded' : formatDate(event.at, 'long')} · by{' '}
+                      {event.byRole ?? 'the system'}
                     </p>
                     {event.reason ? <p className="ven-tl__reason">“{event.reason}”</p> : null}
                   </div>
@@ -360,10 +445,14 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             <div className="adm-panel--pad">
               <dl className="adm-dl">
                 <dt>Name</dt>
-                <dd>{data.customerName}</dd>
+                <dd>{customerName}</dd>
                 <dt>Phone</dt>
                 <dd>
-                  <a href={`tel:${data.customerPhone}`}>{data.customerPhone}</a>
+                  {customerPhone === null ? (
+                    'not on file'
+                  ) : (
+                    <a href={`tel:${customerPhone}`}>{customerPhone}</a>
+                  )}
                 </dd>
                 <dt>Address</dt>
                 <dd>
@@ -374,24 +463,34 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 </dd>
                 <dt>Payment</dt>
                 <dd>
-                  {data.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'} ·{' '}
-                  {data.paymentStatus}
+                  {data.payment.method === 'cod' ? 'Cash on delivery' : 'Paid online'} ·{' '}
+                  {data.payment.status}
+                  {data.payment.refundedAmount > 0 ? (
+                    <>
+                      {' '}
+                      · refunded <Money value={data.payment.refundedAmount} />
+                    </>
+                  ) : null}
                 </dd>
                 <dt>Placed</dt>
                 <dd>
-                  <RelativeTime value={data.placedAt} />
+                  {data.placedAt === null ? '—' : <RelativeTime value={data.placedAt} />}
                 </dd>
-                {data.partnerName ? (
+                {data.deliveryPartner?.name ? (
                   <>
                     <dt>Rider</dt>
-                    <dd>{data.partnerName}</dd>
+                    <dd>{data.deliveryPartner.name}</dd>
                   </>
                 ) : null}
               </dl>
 
-              {data.note ? (
+              {data.cancellation?.reason ? (
                 <p className="ven-note" style={{ marginTop: 'var(--s-3)' }}>
-                  <strong>Note from the customer:</strong> {data.note}
+                  <strong>
+                    {data.status === 'REJECTED' ? 'Rejected' : 'Cancelled'} by{' '}
+                    {data.cancellation.by ?? 'the platform'}:
+                  </strong>{' '}
+                  {data.cancellation.reason}
                 </p>
               ) : null}
             </div>
@@ -409,9 +508,11 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
         title={changed ? 'Confirm a short order' : `Move to ${nextStatus ?? ''}`}
         confirmLabel={changed ? 'Confirm and refund' : 'Confirm'}
         destructive={changed}
-        loading={advance.loading}
+        loading={advance.loading || repick.loading}
         onCancel={() => setDialog(null)}
-        onConfirm={submitFulfilment}
+        onConfirm={() => {
+          void submitFulfilment();
+        }}
         body={
           changed ? (
             <div className="adm-stack">
@@ -434,14 +535,27 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 </span>
               </div>
               <p>
-                The customer is notified and the refund is raised by the server. Your payout drops
-                to <Money value={preview.vendorPayout} />.
+                The customer is notified and the refund is raised by the server, which recomputes
+                these figures itself — the numbers above are this screen&rsquo;s preview. Your payout
+                drops to about <Money value={preview.vendorPayout} />.
               </p>
+              <div className="ven-field">
+                <label className="ven-field__label" htmlFor="ven-drop-reason">
+                  Why are these lines missing? (optional, 3–300 characters)
+                </label>
+                <textarea
+                  id="ven-drop-reason"
+                  className="ven-textarea"
+                  value={dropReason}
+                  onChange={(event) => setDropReason(event.target.value)}
+                  maxLength={300}
+                />
+              </div>
             </div>
           ) : (
             <p>
               All {data.items.length} lines are going in the bag. The order moves to{' '}
-              {nextStatus ?? ''} and the customer is told.
+              {nextStatus ?? 'the next stage'} and the customer is told.
             </p>
           )
         }

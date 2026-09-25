@@ -32,8 +32,12 @@ const LENGTH = 4;
 export interface OtpEntryProps {
   value: string;
   onChange: (next: string) => void;
-  /** Counts down from 5. `undefined` ⇒ the API has not told us. */
-  attemptsRemaining?: number;
+  /**
+   * Counts down from 5, straight off the active order's nested
+   * `otp.attemptsRemaining`. `null` ⇒ the API has not told us, and the line is
+   * hidden rather than guessed at.
+   */
+  attemptsRemaining?: number | null;
   /** true after a rejected attempt — boxes go red until the next keystroke. */
   invalid?: boolean;
   disabled?: boolean;
@@ -42,7 +46,7 @@ export interface OtpEntryProps {
 export function OtpEntry({
   value,
   onChange,
-  attemptsRemaining,
+  attemptsRemaining = null,
   invalid = false,
   disabled = false,
 }: OtpEntryProps) {
@@ -94,7 +98,7 @@ export function OtpEntry({
     [value, onChange],
   );
 
-  const low = attemptsRemaining !== undefined && attemptsRemaining <= 2;
+  const low = attemptsRemaining !== null && attemptsRemaining <= 2;
 
   return (
     <div>
@@ -137,7 +141,7 @@ export function OtpEntry({
         })}
       </div>
 
-      {attemptsRemaining === undefined ? null : (
+      {attemptsRemaining === null ? null : (
         <p
           className={`${styles.attempts} ${low ? styles.attemptsLow : ''}`}
           role={low ? 'alert' : 'status'}

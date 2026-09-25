@@ -25,19 +25,25 @@ export function rupeesOnly(paise: number): string {
   }).format(rupees);
 }
 
-/** "800 m" under a kilometre, "2.4 km" above it. Never "0.8 km". */
-export function distance(meters: number | undefined): string {
-  if (meters === undefined || !Number.isFinite(meters)) return '—';
-  if (meters < 1000) return `${Math.round(meters / 10) * 10} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
+/**
+ * Distance, from the KILOMETRES the API sends.
+ *
+ * "800 m" under a kilometre, "2.4 km" above it. Never "0.8 km", and never a
+ * fabricated zero: a null distance means the address was never geocoded, and
+ * an em-dash says so honestly.
+ */
+export function distanceKm(km: number | null | undefined): string {
+  if (km === null || km === undefined || !Number.isFinite(km)) return '—';
+  if (km < 1) return `${Math.max(0, Math.round((km * 1000) / 10) * 10)} m`;
+  return `${km.toFixed(1)} km`;
 }
 
 /**
  * The big mono ETA. Minutes only under an hour — a rider does not need
  * "1h 04m" to decide anything, and two units at that size do not fit 360px.
  */
-export function etaMinutes(minutes: number | undefined): string {
-  if (minutes === undefined || !Number.isFinite(minutes)) return '--';
+export function etaMinutes(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) return '--';
   const m = Math.max(0, Math.round(minutes));
   if (m < 60) return String(m);
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}`;
@@ -66,8 +72,14 @@ export function ago(fromMs: number, nowMs: number): string {
   return `${hours}h ago`;
 }
 
-/** "14:32" — 24h, because a rider glancing at a timestamp wants no am/pm. */
-export function timeOfDay(iso: string): string {
+/**
+ * "14:32" — 24h, because a rider glancing at a timestamp wants no am/pm.
+ *
+ * Takes `string | null` because `deliveredAt` IS null on a failed attempt, and
+ * a failed attempt still has to render a row.
+ */
+export function timeOfDay(iso: string | null): string {
+  if (iso === null) return '--:--';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '--:--';
   return new Intl.DateTimeFormat('en-IN', {
@@ -77,8 +89,9 @@ export function timeOfDay(iso: string): string {
   }).format(d);
 }
 
-/** "Thu 25 Sep". */
+/** "Thu 25 Sep". Accepts a `YYYY-MM-DD` key or a full ISO timestamp. */
 export function dayLabel(isoDate: string): string {
+  if (isoDate === '') return '—';
   const d = new Date(`${isoDate.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(d.getTime())) return isoDate;
   return new Intl.DateTimeFormat('en-IN', {
@@ -109,8 +122,8 @@ export function secondsUntil(iso: string, nowMs: number): number {
 }
 
 /** `tel:` href with everything a dialler chokes on stripped out. */
-export function telHref(phone: string | undefined): string | null {
-  if (!phone) return null;
+export function telHref(phone: string | null | undefined): string | null {
+  if (phone === null || phone === undefined || phone === '') return null;
   const cleaned = phone.replace(/[^\d+]/g, '');
   return cleaned.length >= 6 ? `tel:${cleaned}` : null;
 }

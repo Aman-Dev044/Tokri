@@ -6,19 +6,24 @@
  *   Go to store  →  Picked up  →  Out for delivery  →  Deliver
  *
  * Each step shows only what that step needs and exactly one bottom-anchored
- * primary action (plan §2.4). "Can't deliver" exists, but it lives in the body
- * as a quiet outline button: it must never be reachable by the same thumb
- * sweep that confirms a delivery.
+ * primary action. "Can't deliver" exists, but it lives in the body as a quiet
+ * outline button: it must never be reachable by the same thumb sweep that
+ * confirms a delivery.
  *
- * ── THE FOUR THINGS THAT MUST NOT BE GOT WRONG ──────────────────────────────
+ * ── THE FIVE THINGS THAT MUST NOT BE GOT WRONG ──────────────────────────────
  * 1. The COD amount is the largest thing on the delivery screen. A rider who
- *    collects the wrong cash has a problem no refund fixes cleanly.
- * 2. Location tracking runs ONLY while `OUT_FOR_DELIVERY` — see `tracking.ts`.
- *    It is started by the status, not by arriving on this screen.
- * 3. The OTP is typed, never displayed. This app does not know it. The API
- *    counts attempts and locks after five; the count here is advisory.
+ *    collects the wrong cash has a problem no refund fixes cleanly. It comes
+ *    from `payment.codAmountPaise`, and 0 means PREPAID.
+ * 2. Location tracking runs ONLY while `OUT_FOR_DELIVERY`. It is started by
+ *    the status, not by arriving on this screen.
+ * 3. The OTP is typed, never displayed. This app does not know it. Attempt
+ *    state is nested under `otp: { attemptsUsed, attemptsRemaining, locked }`
+ *    on the active order, and the API is the authority on all three.
  * 4. Every transition is a request the API may reject with 409. The rider is
  *    told what happened rather than being left on a dead button.
+ * 5. A wrong code is 400 with `errors: { attemptsRemaining, locked }`; the
+ *    FIFTH wrong code is 423 LOCKED, not 429. Reading 429 as the lock (the
+ *    previous build did) meant the rider hit the real lock with no warning.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,10 +45,17 @@ import {
   failDelivery,
   markOutForDelivery,
   markPickedUp,
+  readOtpFailure,
 } from '@/lib/delivery/api';
-import { distance, etaMinutes, money, rupeesOnly } from '@/lib/delivery/format';
+import { distanceKm, etaMinutes, money, rupeesOnly } from '@/lib/delivery/format';
 import { useLocationTracking, useTicker, useWakeLock } from '@/lib/delivery/tracking';
-import { STEP_LABEL, STEP_ORDER, stepForStatus, type JobStep } from '@/lib/delivery/types';
+import {
+  STEP_LABEL,
+  STEP_ORDER,
+  stepForStatus,
+  type ActiveOrder,
+  type JobStep,
+} from '@/lib/delivery/types';
 
 const FAIL_REASONS = [
   'Customer not reachable',
@@ -52,24 +64,28 @@ const FAIL_REASONS = [
   'Cannot reach the location',
 ] as const;
 
+/** The OTP the customer reads out is four digits — `randomInt(0, 10_000)`. */
+const OTP_LENGTH = 4;
+
 export function ActiveJobView({ orderId }: { orderId: string }) {
   useHideNav();
   const router = useRouter();
   const {
-    activeJob,
+    activeOrder,
     jobIsSample,
     jobFromCache,
     loading,
     refresh,
     sampleEndpoints,
-    setActiveJob,
+    loadError,
+    setActiveOrder,
   } = useRider();
 
   /**
    * "I'm at the store" is a LOCAL step. The API has no ASSIGNED→at-store
-   * transition (§5.3), so nothing is written until the pickup is confirmed —
-   * which is the real transition. Keeping it local means a mis-tap costs a tap
-   * to undo, not a 409.
+   * transition, so nothing is written until the pickup is confirmed — which is
+   * the real transition. Keeping it local means a mis-tap costs a tap to undo,
+   * not a 409.
    */
   const [arrived, setArrived] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -77,13 +93,14 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
 
   const [otp, setOtp] = useState('');
   const [otpWrong, setOtpWrong] = useState(false);
-  const [attempts, setAttempts] = useState<number | undefined>(undefined);
-  const [locked, setLocked] = useState(false);
+  /** Overrides the server figure between a rejection and the next refresh. */
+  const [attemptsOverride, setAttemptsOverride] = useState<number | null>(null);
+  const [lockedOverride, setLockedOverride] = useState(false);
 
   const [failOpen, setFailOpen] = useState(false);
   const [done, setDone] = useState(false);
 
-  const job = activeJob;
+  const job: ActiveOrder | null = activeOrder;
   const status = job?.status;
   const step: JobStep = status === undefined ? 'GO_TO_STORE' : stepForStatus(status, arrived);
 
@@ -93,9 +110,18 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
   const wakeLock = useWakeLock(job !== null && !jobIsSample);
   const now = useTicker(trackingActive || step === 'DELIVER');
 
+  // The nested OTP block. Guarded field by field, not just object by object:
+  // `job && job.otp.locked` still throws when `otp` is missing.
+  const otpState = job?.otp ?? null;
+  const serverAttempts = otpState?.attemptsRemaining ?? null;
+  const serverLocked = otpState?.locked ?? false;
+  const attemptsRemaining = attemptsOverride ?? serverAttempts;
+  const locked = lockedOverride || serverLocked || attemptsRemaining === 0;
+
+  /* A fresh server figure supersedes anything this screen was holding. */
   useEffect(() => {
-    setAttempts(job?.otpAttemptsRemaining);
-  }, [job?.otpAttemptsRemaining]);
+    setAttemptsOverride(null);
+  }, [serverAttempts]);
 
   /* Moving forward clears the local "arrived" flag for the next job. */
   useEffect(() => {
@@ -103,21 +129,19 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
   }, [status]);
 
   const advance = useCallback(
-    async (action: () => Promise<void>, optimisticStatus: 'PICKED_UP' | 'OUT_FOR_DELIVERY') => {
+    async (action: () => Promise<ActiveOrder | null>) => {
       if (busy || job === null) return;
       setBusy(true);
       setProblem(null);
       try {
-        await action();
-        // Move the local job forward immediately — the rider is already
-        // walking. The refresh behind it reconciles with the API.
-        setActiveJob({ ...job, status: optimisticStatus });
+        // Every transition answers with the refreshed order, so the screen
+        // moves to whatever the API says — not to what it hoped for.
+        const next = await action();
+        if (next !== null) setActiveOrder(next);
         refresh();
       } catch (cause) {
         if (cause instanceof ApiError && cause.status === 409) {
-          setProblem(
-            'This order has already moved on. Pulling the latest from Mandi…',
-          );
+          setProblem('This order has already moved on. Pulling the latest from Mandi…');
           refresh();
         } else {
           setProblem(
@@ -130,11 +154,11 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         setBusy(false);
       }
     },
-    [busy, job, refresh, setActiveJob],
+    [busy, job, refresh, setActiveOrder],
   );
 
   const onDeliver = useCallback(async () => {
-    if (busy || job === null || otp.length !== 4) return;
+    if (busy || job === null || otp.length !== OTP_LENGTH) return;
     setBusy(true);
     setProblem(null);
     setOtpWrong(false);
@@ -144,17 +168,22 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
       await deliverOrder(job.orderId, otp);
       setOtp('');
       setDone(true);
-      setActiveJob(null);
+      setActiveOrder(null);
       refresh();
     } catch (cause) {
       setOtp('');
-      if (cause instanceof ApiError && (cause.status === 400 || cause.status === 422)) {
-        setOtpWrong(true);
-        setAttempts((prev) => (prev === undefined ? undefined : Math.max(0, prev - 1)));
-        setProblem('That code did not match. Ask the customer to read it again.');
-      } else if (cause instanceof ApiError && cause.status === 429) {
-        setLocked(true);
-        setProblem(null);
+      const failure = readOtpFailure(cause);
+      if (failure !== null) {
+        setOtpWrong(!failure.locked);
+        if (failure.attemptsRemaining !== null) {
+          setAttemptsOverride(failure.attemptsRemaining);
+        }
+        if (failure.locked) {
+          setLockedOverride(true);
+          setProblem(null);
+        } else {
+          setProblem('That code did not match. Ask the customer to read it again.');
+        }
       } else {
         setProblem(
           cause instanceof ApiError
@@ -165,7 +194,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
     } finally {
       setBusy(false);
     }
-  }, [busy, job, otp, refresh, setActiveJob]);
+  }, [busy, job, otp, refresh, setActiveOrder]);
 
   const onFail = useCallback(
     async (reason: string) => {
@@ -173,7 +202,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
       setBusy(true);
       try {
         await failDelivery(job.orderId, reason);
-        setActiveJob(null);
+        setActiveOrder(null);
         setFailOpen(false);
         refresh();
         router.push('/delivery');
@@ -187,10 +216,11 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         setBusy(false);
       }
     },
-    [busy, job, refresh, router, setActiveJob],
+    [busy, job, refresh, router, setActiveOrder],
   );
 
-  const codAmount = job?.codAmountPaise ?? null;
+  // 0 IS prepaid: the API sends 0, not null, for an order already paid for.
+  const codAmount = job?.payment.codAmountPaise ?? 0;
 
   const progress = useMemo(() => {
     const index = STEP_ORDER.indexOf(step);
@@ -225,6 +255,11 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
   if (job === null) {
     return (
       <>
+        {loadError === null ? null : (
+          <Notice tone="crit" title="Mandi did not answer properly">
+            {loadError}
+          </Notice>
+        )}
         <div className={styles.resting}>
           <IconBox size={64} className={styles.restingMark} />
           <h1 className={styles.h1}>No active delivery</h1>
@@ -282,13 +317,13 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         <>
           <div className={styles.etaRow}>
             <span className={styles.mega}>{etaMinutes(job.etaMinutes)}</span>
-            <span className={styles.megaUnit}>min to store</span>
+            <span className={styles.megaUnit}>min to the door</span>
           </div>
           <p className={styles.lede}>
-            {distance(job.distanceMeters)} total · you earn {money(job.payoutPaise)}
+            {distanceKm(job.distanceKm)} total · you earn {money(job.payoutPaise)}
           </p>
 
-          <PlaceCard kind="pickup" place={job.pickup} showMap phoneLabel="Call store" />
+          <PlaceCard kind="pickup" place={job.pickup} showMap />
 
           <Dock>
             <PrimaryButton onClick={() => setArrived(true)}>
@@ -300,14 +335,18 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
 
       {step === 'AT_STORE' ? (
         <>
-          <h1 className={styles.h1}>Collect {job.items.length} items</h1>
+          <h1 className={styles.h1}>
+            Collect {job.itemCount} item{job.itemCount === 1 ? '' : 's'}
+          </h1>
           <section className={styles.panel}>
             <ul className={styles.items}>
-              {job.items.map((item) => (
-                <li key={item.id} className={styles.item}>
+              {job.items.map((item, index) => (
+                // The API sends no item id — name, qty, unit and image only.
+                // The index is the right key for a list that never reorders.
+                <li key={`${item.name}-${index}`} className={styles.item}>
                   <span className={styles.itemQty}>
                     {item.qty}
-                    {item.unit === undefined ? '' : ` ${item.unit}`}
+                    {item.unit === '' ? '' : ` ${item.unit}`}
                   </span>
                   <span className={styles.itemName}>{item.name}</span>
                 </li>
@@ -315,8 +354,8 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
               {job.items.length === 0 ? (
                 <li className={styles.item}>
                   <span className={styles.itemName}>
-                    The order list did not load. Check the packed bag against the order
-                    number with the store.
+                    The order list did not load. Check the packed bag against order{' '}
+                    {job.orderNo === '' ? 'number' : job.orderNo} with the store.
                   </span>
                 </li>
               ) : null}
@@ -329,7 +368,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
 
           <Dock>
             <PrimaryButton
-              onClick={() => void advance(() => markPickedUp(job.orderId), 'PICKED_UP')}
+              onClick={() => void advance(() => markPickedUp(job.orderId))}
               disabled={busy}
             >
               <IconCheck size={24} /> {busy ? 'Saving…' : 'Picked up'}
@@ -346,13 +385,16 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
             sharing your location.
           </p>
 
-          <PlaceCard kind="drop" place={job.drop} />
+          <PlaceCard
+            kind="drop"
+            place={job.drop}
+            phone={job.customerPhone}
+            phoneLabel={job.customerName === null ? 'Call' : 'Call customer'}
+          />
 
           <Dock>
             <PrimaryButton
-              onClick={() =>
-                void advance(() => markOutForDelivery(job.orderId), 'OUT_FOR_DELIVERY')
-              }
+              onClick={() => void advance(() => markOutForDelivery(job.orderId))}
               disabled={busy}
             >
               {busy ? 'Starting…' : 'Start delivery'}
@@ -369,10 +411,11 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
             kind="drop"
             place={job.drop}
             showMap
-            phoneLabel={job.customerName === undefined ? 'Call' : 'Call customer'}
+            phone={job.customerPhone}
+            phoneLabel={job.customerName === null ? 'Call' : `Call ${job.customerName}`}
           />
 
-          {codAmount === null ? (
+          {codAmount <= 0 ? (
             <div className={styles.prepaid}>
               <IconCheck size={20} /> Prepaid — collect nothing.
             </div>
@@ -386,10 +429,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
             </div>
           )}
 
-          {/* Locked either because the API said so (429 / rate-limited), or
-              because the attempt counter it gave us has run out. Both are the
-              same thing to a rider standing at a door. */}
-          {locked || attempts === 0 ? (
+          {locked ? (
             <div className={styles.locked} role="alert">
               This order is locked after too many wrong codes. Call the store or support
               — you cannot complete it from here.
@@ -402,7 +442,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
                   setOtp(next);
                   setOtpWrong(false);
                 }}
-                attemptsRemaining={attempts}
+                attemptsRemaining={attemptsRemaining}
                 invalid={otpWrong}
                 disabled={busy}
               />
@@ -449,7 +489,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
           <Dock>
             <PrimaryButton
               onClick={() => void onDeliver()}
-              disabled={busy || locked || attempts === 0 || otp.length !== 4}
+              disabled={busy || locked || otp.length !== OTP_LENGTH}
             >
               <IconCheck size={24} />
               {busy ? 'Confirming…' : 'Confirm delivery'}

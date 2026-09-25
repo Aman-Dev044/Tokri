@@ -29,7 +29,7 @@ import { PlaceCard } from './PlaceCard';
 import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
 import { IconBox, IconCheck, IconResting, IconX } from './icons';
-import { clock, distance, money, rupeesOnly, secondsUntil } from '@/lib/delivery/format';
+import { clock, distanceKm, money, rupeesOnly, secondsUntil } from '@/lib/delivery/format';
 import { useTicker } from '@/lib/delivery/tracking';
 import type { Offer } from '@/lib/delivery/types';
 
@@ -38,8 +38,16 @@ const URGENT_SECONDS = 15;
 
 export function OffersView() {
   const router = useRouter();
-  const { offers, offersAreSample, accept, decline, expire, refresh, sampleEndpoints } =
-    useRider();
+  const {
+    offers,
+    offersAreSample,
+    accept,
+    decline,
+    expire,
+    refresh,
+    sampleEndpoints,
+    loadError,
+  } = useRider();
   const now = useTicker(true);
 
   // The nav is hidden only while an offer is actually on screen. Waiting is
@@ -60,11 +68,11 @@ export function OffersView() {
   useEffect(() => {
     if (offer === undefined || remaining > 0) return;
     setExpired(true);
-    expire(offer.assignmentId);
+    expire(offer.id);
   }, [offer, remaining, expire]);
 
   /* A fresh offer clears every previous outcome message. */
-  const assignmentId = offer?.assignmentId;
+  const assignmentId = offer?.id;
   useEffect(() => {
     if (assignmentId === undefined) return;
     setExpired(false);
@@ -96,17 +104,14 @@ export function OffersView() {
   const facts = useMemo(() => {
     if (offer === undefined) return null;
     return [
-      { label: 'Distance', value: distance(offer.distanceMeters) },
+      // KILOMETRES. The API sends `distanceKm`; there is no metres field.
+      { label: 'Distance', value: distanceKm(offer.distanceKm) },
+      { label: 'Items', value: String(offer.itemCount) },
       {
-        label: 'Items',
-        value: offer.itemCount === undefined ? '—' : String(offer.itemCount),
-      },
-      {
+        // A COD amount of 0 IS "prepaid" — the API sends 0, not null, for an
+        // order that is already paid for.
         label: 'Collect',
-        value:
-          offer.codAmountPaise === null || offer.codAmountPaise === undefined
-            ? 'Prepaid'
-            : money(offer.codAmountPaise),
+        value: offer.codAmountPaise > 0 ? money(offer.codAmountPaise) : 'Prepaid',
       },
     ];
   }, [offer]);
@@ -119,6 +124,11 @@ export function OffersView() {
         {offersAreSample ? (
           <FixtureBanner endpoints={sampleEndpoints} onRetry={refresh} />
         ) : null}
+        {loadError === null ? null : (
+          <Notice tone="crit" title="Could not load your offers">
+            {loadError}
+          </Notice>
+        )}
 
         {expired ? (
           <Notice tone="warn" title="That offer expired">
@@ -159,7 +169,7 @@ export function OffersView() {
             <span className={styles.stepTag}>You earn</span>
             {/* The payout, before accepting. Never after. */}
             <span className={styles.payoutValue}>{money(offer.payoutPaise)}</span>
-            {offer.orderNo === undefined ? null : (
+            {offer.orderNo === '' ? null : (
               <span className={styles.stepTag}>Order {offer.orderNo}</span>
             )}
           </div>
@@ -196,12 +206,12 @@ export function OffersView() {
       <PlaceCard kind="pickup" place={offer.pickup} />
       <PlaceCard kind="drop" place={offer.drop} />
 
-      {offer.codAmountPaise === null || offer.codAmountPaise === undefined ? null : (
+      {offer.codAmountPaise > 0 ? (
         <div className={styles.prepaid}>
           <IconBox size={18} /> Cash on delivery — you collect{' '}
           {money(offer.codAmountPaise)} at the door.
         </div>
-      )}
+      ) : null}
 
       {failed ? (
         <Notice tone="crit" title="Could not accept">

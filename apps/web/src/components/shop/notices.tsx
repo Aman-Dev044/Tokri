@@ -9,7 +9,8 @@
  *   FixtureBanner   — "this is sample data", named endpoint, impossible to miss
  *   ErrorNotice     — a real failure, in plain words, with the way out
  *   ConnectionBanner— live / reconnecting / last seen 2m ago
- *   StaleFlagChips  — the cart's price_changed / out_of_stock / reduced_qty
+ *   StaleFlagChips  — the cart's price_changed / out_of_stock / reduced_qty /
+ *                     unavailable
  *
  * None of them are modals. A modal is dismissed before it is read, and then the
  * screen looks correct while it is not.
@@ -20,7 +21,7 @@ import { formatPaise } from '@mandi/design-system';
 import type { ApiError } from '@/lib/api-client';
 import type { ConnectionState } from '@/hooks/useSocket';
 import { formatAgo } from '@/lib/shop/format';
-import type { StaleFlag } from '@/lib/shop/types';
+import type { CartLine, CartLineFlag } from '@/lib/shop/types';
 
 /* ───────────────────────────── fixture banner ───────────────────────────── */
 
@@ -129,45 +130,59 @@ export function ConnectionBanner({
 
 /* ─────────────────────────── stale line flags ───────────────────────────── */
 
-function flagCopy(flag: StaleFlag): { label: string; tone: 'warn' | 'crit' } {
-  switch (flag.code) {
+/**
+ * The API sends `flags` as a FLAT ARRAY OF CODES on each cart line — no detail
+ * object, no from/to pair. The numbers behind a chip live on the line itself:
+ * `price` (what it cost when it went in) against `currentPrice` (what it costs
+ * now), and `qty` against `availableQty`.
+ *
+ * The old version expected `[{ code, fromPaise, toPaise, … }]` and a
+ * three-value union. Against the real payload every chip fell through to its
+ * bare label, and a `unavailable` flag — missing from the union entirely —
+ * rendered as nothing at all, so a delisted item looked perfectly fine in a
+ * basket that could not be checked out.
+ */
+function flagCopy(flag: CartLineFlag, line: CartLine): { label: string; tone: 'warn' | 'crit' } {
+  switch (flag) {
     case 'price_changed': {
-      const from = flag.fromPaise;
-      const to = flag.toPaise;
-      if (typeof from === 'number' && typeof to === 'number') {
-        const up = to > from;
-        return {
-          label: `Price ${up ? 'up' : 'down'} — was ${formatPaise(from)}, now ${formatPaise(to)}`,
-          tone: 'warn',
-        };
-      }
-      return { label: flag.message ?? 'Price changed since you added it', tone: 'warn' };
+      const up = line.currentPrice > line.price;
+      return {
+        label: `Price ${up ? 'up' : 'down'} — was ${formatPaise(line.price)}, now ${formatPaise(line.currentPrice)}`,
+        tone: 'warn',
+      };
     }
     case 'out_of_stock':
-      return { label: flag.message ?? 'Out of stock — remove it to check out', tone: 'crit' };
-    case 'reduced_qty': {
-      const to = flag.toQty;
-      const from = flag.fromQty;
-      if (typeof to === 'number' && typeof from === 'number') {
-        return { label: `Only ${to} left — you asked for ${from}`, tone: 'warn' };
-      }
-      return { label: flag.message ?? 'Fewer available than you wanted', tone: 'warn' };
-    }
+      return { label: 'Out of stock — remove it to check out', tone: 'crit' };
+    case 'reduced_qty':
+      return {
+        label: `Only ${line.availableQty} left — you asked for ${line.qty}`,
+        tone: 'warn',
+      };
+    case 'unavailable':
+      return {
+        label: 'No longer sold by this store — remove it to check out',
+        tone: 'crit',
+      };
   }
+}
+
+/** The two flags that genuinely block a checkout, per `CheckoutService`. */
+export function blocksCheckout(flag: CartLineFlag): boolean {
+  return flag === 'out_of_stock' || flag === 'unavailable';
 }
 
 /**
  * Inline on the line they belong to. A chip carries an icon and a full sentence
  * — never a bare colour, never a bare exclamation mark.
  */
-export function StaleFlagChips({ flags }: { flags: readonly StaleFlag[] }) {
-  if (flags.length === 0) return null;
+export function StaleFlagChips({ line }: { line: CartLine }) {
+  if (line.flags.length === 0) return null;
   return (
     <ul className="shop-flags">
-      {flags.map((flag) => {
-        const { label, tone } = flagCopy(flag);
+      {line.flags.map((flag) => {
+        const { label, tone } = flagCopy(flag, line);
         return (
-          <li key={flag.code} className="shop-flag" data-tone={tone}>
+          <li key={flag} className="shop-flag" data-tone={tone}>
             <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
               {tone === 'crit' ? (
                 <path d="M4 4 L12 12 M12 4 L4 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

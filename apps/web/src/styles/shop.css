@@ -1385,3 +1385,183 @@
   }
   .shop-conn[data-tone='good'] .shop-conn__dot { animation: none; }
 }
+
+/* =============================================================================
+   17. THE PROFILE MENU
+   -----------------------------------------------------------------------------
+   Signed-in identity in the header: name, email, a role pill, Orders,
+   Addresses and Sign out. Every colour is a token, so it is legible in light
+   and dark and under all eight aisle tints without a single hard-coded hex.
+   ============================================================================= */
+
+.shop-profile {
+  position: relative;
+  justify-self: end;
+}
+
+.shop-profile__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem 0.3rem 0.3rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+  max-width: 14rem;
+}
+.shop-profile__button:hover { border-color: var(--aisle-edge); }
+.shop-profile__button svg { color: var(--muted); flex: none; }
+
+.shop-profile__initials {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--aisle-wash-strong);
+  color: var(--aisle-ink);
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.shop-profile__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-profile__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 40;
+  min-width: 15rem;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.4rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: 0 14px 34px color-mix(in oklab, var(--ink) 16%, transparent);
+}
+
+.shop-profile__head {
+  display: grid;
+  gap: 0.2rem;
+  justify-items: start;
+  padding: 0.5rem 0.6rem 0.6rem;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 0.25rem;
+}
+.shop-profile__who {
+  font-weight: 600;
+  line-height: 1.2;
+}
+.shop-profile__contact {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.shop-profile__role {
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--aisle-edge);
+  border-radius: var(--r-pill);
+  background: var(--aisle-wash);
+  color: var(--aisle-ink);
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.shop-profile__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: var(--r-soft);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.shop-profile__item svg { color: var(--muted); flex: none; }
+.shop-profile__item:hover,
+.shop-profile__item:focus-visible {
+  background: var(--aisle-wash);
+  color: var(--aisle-ink);
+}
+.shop-profile__item:hover svg { color: currentColor; }
+.shop-profile__item[disabled] { opacity: 0.6; cursor: progress; }
+.shop-profile__item--danger:hover,
+.shop-profile__item--danger:focus-visible {
+  background: color-mix(in oklab, var(--crit) 12%, transparent);
+  color: var(--crit-ink);
+}
+
+.shop-profile__note {
+  padding: 0.45rem 0.6rem 0.25rem;
+  border-top: 1px solid var(--hairline);
+  margin-top: 0.25rem;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .shop-profile { display: none; }
+}
+
+/* ── the address book ─────────────────────────────────────────────────── */
+
+.shop-addrbook {
+  display: grid;
+  gap: var(--s-3);
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--s-4);
+}
+.shop-addrbook__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+.shop-addrbook__row[data-default='true'] { border-color: var(--aisle-edge); }
+.shop-addrbook__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+.shop-addrbook__default {
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--aisle-edge);
+  border-radius: var(--r-pill);
+  background: var(--aisle-wash);
+  color: var(--aisle-ink);
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.shop-addrbook__lines { display: block; color: var(--muted); font-size: var(--fs-small); }
+.shop-addrbook__actions { display: inline-flex; gap: var(--s-2); }

@@ -3,8 +3,20 @@
 /**
  * Order history.
  *
- * Live orders sit at the top with a Track link; everything else is a plain,
- * scannable record. Status is a word and a shape, never a colour on its own.
+ * Live orders get a Track link; everything else is a plain, scannable record.
+ * Status is a word and a shape, never a colour on its own.
+ *
+ * ── WHAT AN ORDER ROW ACTUALLY IS ───────────────────────────────────────────
+ * `GET /orders` returns `OrderSummary`, which is deliberately thin:
+ *
+ *   { id, orderNo, status, placedAt, itemCount, grandTotal,
+ *     payment{method,status}, store{id,storeName,slug}|null, preview[] }
+ *
+ * No `items[]`, no `pricing` object, no top-level `storeName`. This screen read
+ * `order.items`, `order.pricing.grandTotalPaise` and `order.storeName` — so
+ * every row rendered an empty item line and a total of ₹0.00 while the API was
+ * answering perfectly. It now reads `preview` (the first few item NAMES),
+ * `itemCount`, the flat `grandTotal` and `store.storeName`.
  */
 
 import Link from 'next/link';
@@ -13,35 +25,38 @@ import { formatPaise } from '@mandi/design-system';
 import { useShopQuery } from '@/hooks/useShopQuery';
 import { formatDateTime } from '@/lib/shop/format';
 import { ORDER_STATUS_LABEL, isLiveOrder } from '@/lib/shop/journey';
-import { readOrder, readPaged, type Order, type Paged } from '@/lib/shop/types';
+import { readOrderSummary, readPaged, type OrderSummary, type Paged } from '@/lib/shop/types';
 import { ErrorNotice, FixtureBanner } from './notices';
 
-function StatusPill({ order }: { order: Order }) {
-  const live = isLiveOrder(order.status);
-  const bad =
-    order.status === 'CANCELLED' ||
-    order.status === 'REJECTED' ||
-    order.status === 'DELIVERY_FAILED';
+function StatusPill({ status }: { status: OrderSummary['status'] }) {
+  const live = isLiveOrder(status);
+  const bad = status === 'CANCELLED' || status === 'REJECTED' || status === 'DELIVERY_FAILED';
 
   return (
     <span className="shop-pill" data-tone={bad ? 'crit' : live ? 'live' : 'done'}>
       <span className="shop-pill__dot" aria-hidden="true" />
-      {ORDER_STATUS_LABEL[order.status]}
+      {ORDER_STATUS_LABEL[status]}
     </span>
   );
 }
 
+/** "Tomatoes, Curd and 2 more" — built from `preview` plus `itemCount`. */
+function previewLine(order: OrderSummary): string {
+  if (order.preview.length === 0) {
+    return `${order.itemCount} ${order.itemCount === 1 ? 'item' : 'items'}`;
+  }
+  const shown = order.preview.join(', ');
+  const rest = order.itemCount - order.preview.length;
+  return rest > 0 ? `${shown} and ${rest} more` : shown;
+}
+
 export function OrdersView() {
-  const orders = useShopQuery<Paged<Order>>(
-    '/orders',
-    undefined,
-    {
-      read: useCallback((raw: unknown) => readPaged(raw, readOrder), []),
-      // A live order on this screen should not need a reload to move on. The
-      // socket is only opened on the track page; a slow poll is enough here.
-      refreshMs: 60_000,
-    },
-  );
+  const orders = useShopQuery<Paged<OrderSummary>>('/orders', undefined, {
+    read: useCallback((raw: unknown) => readPaged(raw, readOrderSummary), []),
+    // A live order on this screen should not need a reload to move on. The
+    // socket is only opened on the track page; a slow poll is enough here.
+    refreshMs: 60_000,
+  });
 
   const rows = orders.data?.data ?? [];
 
@@ -75,26 +90,28 @@ export function OrdersView() {
               <li key={order.id} className="shop-order" data-live={live ? 'true' : undefined}>
                 <div className="shop-order__head">
                   <p className="shop-order__no mono">{order.orderNo}</p>
-                  <StatusPill order={order} />
+                  <StatusPill status={order.status} />
                 </div>
 
                 <p className="shop-order__store">
-                  {order.storeName ?? 'Store'}
+                  {order.store?.storeName ?? 'Store'}
                   {placed !== null ? <span className="shop-order__when"> · {placed}</span> : null}
                 </p>
 
-                <p className="shop-order__items">
-                  {order.items
-                    .slice(0, 3)
-                    .map((item) => `${item.name} × ${item.qty}`)
-                    .join(', ')}
-                  {order.items.length > 3 ? ` and ${order.items.length - 3} more` : ''}
-                </p>
+                <p className="shop-order__items">{previewLine(order)}</p>
 
                 <div className="shop-order__foot">
-                  <span className="price">{formatPaise(order.pricing.grandTotalPaise)}</span>
+                  <span className="price">{formatPaise(order.grandTotal)}</span>
                   <span className="shop-order__pay">
-                    {order.paymentMethod === 'cod' ? 'Cash on delivery' : 'Paid online'}
+                    {order.payment.method === 'cod'
+                      ? order.payment.status === 'paid'
+                        ? 'Paid on delivery'
+                        : 'Cash on delivery'
+                      : order.payment.method === 'online'
+                        ? order.payment.status === 'paid'
+                          ? 'Paid online'
+                          : 'Online payment pending'
+                        : 'Payment method unknown'}
                   </span>
                   <Link
                     href={`/orders/${encodeURIComponent(order.id)}/track`}

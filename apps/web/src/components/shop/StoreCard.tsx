@@ -3,26 +3,37 @@
 /**
  * A shop, as a card.
  *
- * Distance, ETA and open/closed, each with a word beside the colour. A closed
- * store is still shown — knowing the dairy shuts at nine is information, and
- * hiding it just makes the list change shape every evening for no stated
- * reason. It is simply not linked to as "order from here".
+ * Distance, rating and open/closed, each with a word beside the colour. A
+ * closed store is still shown — knowing the dairy shuts at nine is information,
+ * and hiding it just makes the list change shape every evening for no stated
+ * reason. It is simply not presented as "order from here".
+ *
+ * ── WHAT A STORE ROW ACTUALLY CARRIES ───────────────────────────────────────
+ * `GET /stores` returns `StoreRow`: id, slug, storeName, description, logo,
+ * banner, city, location, isOpen, rating, serviceRadiusKm, codEnabled and
+ * distanceKm. That is all of it.
+ *
+ * This card used to also render `etaMinutes`, a `productCount` and a strip of
+ * aisle chips from `store.aisles`. None of the three exist on a row — the
+ * delivery estimate is computed at checkout, the count only appears on
+ * `GET /stores/:slug`, and the aisles a store stocks come from
+ * `GET /stores/:id/categories`. They have been removed rather than defaulted:
+ * a fact with a fabricated value is worse than an absent one. The storefront
+ * shows all three, from the endpoints that really return them.
  */
 
 import Link from 'next/link';
-import { getAisle } from '@mandi/design-system';
-import { formatDistance, formatEta } from '@/lib/shop/format';
+import { formatDistance } from '@/lib/shop/format';
 import type { Store } from '@/lib/shop/types';
 
 export function StoreCard({ store }: { store: Store }) {
   const distance = formatDistance(store.distanceKm);
-  const eta = formatEta(store.etaMinutes);
 
   return (
     <article className="shop-store" data-closed={store.isOpen ? undefined : 'true'}>
       <Link href={`/stores/${encodeURIComponent(store.slug)}`} className="shop-store__hit">
         <header className="shop-store__head">
-          <h3 className="shop-store__name">{store.name}</h3>
+          <h3 className="shop-store__name">{store.storeName}</h3>
           <span className="shop-store__state" data-open={store.isOpen ? 'true' : 'false'}>
             <span className="shop-store__dot" aria-hidden="true" />
             {store.isOpen ? 'Open now' : 'Closed'}
@@ -40,53 +51,25 @@ export function StoreCard({ store }: { store: Store }) {
               <dd className="mono">{distance}</dd>
             </div>
           ) : null}
-          {eta !== null ? (
-            <div>
-              <dt>Typical delivery</dt>
-              <dd className="mono">{eta}</dd>
-            </div>
-          ) : null}
-          {store.rating !== null ? (
+          {/* A brand-new store has rating 0 and has simply not been rated yet.
+              Printing "0.0" reads as a bad shop rather than a new one. */}
+          {store.rating > 0 ? (
             <div>
               <dt>Rating</dt>
               <dd className="mono">{store.rating.toFixed(1)}</dd>
             </div>
           ) : null}
-          {store.productCount !== null ? (
+          {store.serviceRadiusKm > 0 ? (
             <div>
-              <dt>Listed</dt>
-              <dd className="mono">{store.productCount}</dd>
+              <dt>Delivers within</dt>
+              <dd className="mono">{store.serviceRadiusKm} km</dd>
             </div>
           ) : null}
         </dl>
       </Link>
 
-      {store.aisles.length > 0 ? (
-        <ul className="shop-store__aisles">
-          {store.aisles.map((key) => {
-            const aisle = getAisle(key);
-            return (
-              <li key={key}>
-                <Link href={`/aisle/${key}`} className="shop-store__aisle">
-                  <span
-                    className="shop-store__swatch"
-                    style={{ background: aisle.swatch }}
-                    aria-hidden="true"
-                  />
-                  {aisle.name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-
       <footer className="shop-store__foot">
-        <span className="shop-store__addr">
-          {[store.address.line1, store.address.city, store.address.pincode]
-            .filter((part) => part !== '')
-            .join(' · ')}
-        </span>
+        <span className="shop-store__addr">{store.city}</span>
         {store.codEnabled ? <span className="shop-store__cod">Cash on delivery</span> : null}
       </footer>
     </article>

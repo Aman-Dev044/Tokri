@@ -128,6 +128,22 @@ export async function resizeForUpload(file: File): Promise<ResizedImage> {
  * Resize, ask the API for a presigned PUT, send the bytes to S3, return the
  * public URL.
  *
+ * ── THE REQUEST BODY IS `{ contentType, sizeBytes }` ────────────────────────
+ * And nothing else. `PresignImageDto` has exactly those two fields, so the
+ * `{ bytes, width, height }` this function used to send was a 400 before the
+ * request ever reached storage.
+ *
+ * `sizeBytes` is required because it is SIGNED INTO THE URL as
+ * `content-length`. That is what makes the 5 MB cap real rather than a
+ * client-side suggestion: an upload of any other length fails the signature
+ * check at S3. It therefore has to be the byte length of the RESIZED blob —
+ * the thing actually being sent — not of the original file.
+ *
+ * ── THE RETURNED HEADERS ARE PART OF THE SIGNATURE ──────────────────────────
+ * They are replayed verbatim on the PUT. Substituting a hand-built
+ * `Content-Type` header, as this used to, changes the canonical request and
+ * S3 rejects the signature.
+ *
  * ── THE 503 ─────────────────────────────────────────────────────────────────
  * S3 is not wired up yet. The presign endpoint is expected to answer 503 (or
  * 501/404 while it does not exist at all) and this turns that into
@@ -149,9 +165,7 @@ export async function uploadProductImage(
   try {
     presigned = await api.post<PresignedUpload>(`/vendor/products/${productId}/images`, {
       contentType: resized.contentType,
-      bytes: resized.blob.size,
-      width: resized.width,
-      height: resized.height,
+      sizeBytes: resized.blob.size,
     });
   } catch (cause) {
     if (cause instanceof ApiError) {
@@ -181,9 +195,11 @@ export async function uploadProductImage(
     // Bare fetch, no credentials: a presigned URL carries its own signature and
     // S3 rejects the request if extra auth headers ride along.
     response = await fetch(presigned.uploadUrl, {
-      method: 'PUT',
+      method: presigned.method,
       body: resized.blob,
-      headers: { 'Content-Type': presigned.contentType },
+      // VERBATIM. These headers were signed; altering or adding one invalidates
+      // the signature and S3 answers 403.
+      headers: presigned.headers,
     });
   } catch {
     throw new ImageUploadError('The photo could not be sent. Check the connection and retry.');

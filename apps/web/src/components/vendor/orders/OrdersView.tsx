@@ -23,6 +23,14 @@
  * possible version of that message. The server validates the field too — this
  * dialog is convenience, not validation.
  *
+ * ── ONE REQUEST, SPLIT HERE ─────────────────────────────────────────────────
+ * `ListOrdersQueryDto.status` is `@IsEnum(OrderStatus)` — ONE status, or none
+ * at all. This board used to send `?status=PLACED,ACCEPTED,PACKING,…`, which
+ * is a hard 400 rather than a multi-select. So the board asks for the recent
+ * page unfiltered and sorts the rows into lanes in the browser: three lanes
+ * and a closed list out of a single response, instead of two requests one of
+ * which could never succeed.
+ *
  * ── POLLING ─────────────────────────────────────────────────────────────────
  * Every 15 seconds, paused while the tab is hidden, with the age of the data
  * printed on screen. See <FreshLine/>: a board that silently stops polling
@@ -53,18 +61,22 @@ import {
   groupByLane,
   type LaneKey,
 } from '@/lib/vendor/orders';
-import type { OrderStatus, Paged, VendorOrder, VendorPartner } from '@/lib/vendor/types';
+import type {
+  OrderStatus,
+  Paged,
+  VendorOrder,
+  VendorOrderDetail,
+  VendorPartner,
+} from '@/lib/vendor/types';
 import { ORDER_POLL_MS, useVendorAlerts } from '../VendorAlertProvider';
 import { OrderCard, OrderCardSkeleton } from '../OrderCard';
-import { FreshLine } from '../primitives';
+import { EndpointError, FreshLine } from '../primitives';
 
-const BOARD_STATUSES: readonly OrderStatus[] = [
-  'PLACED',
-  'ACCEPTED',
-  'PACKING',
-  'READY_FOR_PICKUP',
-  'ASSIGNED',
-];
+/** One page of the board. `PaginationQueryDto` hard-caps `limit` at 100. */
+const BOARD_LIMIT = 100;
+
+/** How many closed orders the history table keeps on screen. */
+const HISTORY_LIMIT = 12;
 
 /** One interval for the whole board, rather than one timer per card. */
 function useNow(everyMs: number): number | null {
@@ -87,22 +99,27 @@ export function OrdersView() {
   const now = useNow(20_000);
   const { freshIds, acknowledge } = useVendorAlerts();
 
+  // One unfiltered page, split below. `status` takes a single value, so a
+  // multi-status board has to be assembled here rather than asked for.
   const board = useVendorQuery<Paged<VendorOrder>>(
     '/vendor/orders',
-    { status: BOARD_STATUSES.join(','), limit: 60 },
+    { limit: BOARD_LIMIT, sort: '-placedAt' },
     { refreshMs: ORDER_POLL_MS },
   );
 
-  const history = useVendorQuery<Paged<VendorOrder>>('/vendor/orders', {
-    status: CLOSED_STATUSES.join(','),
-    limit: 12,
+  // `/vendor/delivery-partners` is PAGINATED — `{ data, meta }`, not an array.
+  const partners = useVendorQuery<Paged<VendorPartner>>('/vendor/delivery-partners', {
+    limit: 100,
   });
-
-  const partners = useVendorQuery<VendorPartner[]>('/vendor/delivery-partners');
 
   const freshness = useFreshness(board.marker, ORDER_POLL_MS * 2.5);
 
-  const lanes = useMemo(() => groupByLane(board.data?.data ?? []), [board.data]);
+  const rows = useMemo(() => board.data?.data ?? [], [board.data]);
+  const lanes = useMemo(() => groupByLane(rows), [rows]);
+  const history = useMemo(
+    () => rows.filter((order) => CLOSED_STATUSES.includes(order.status)).slice(0, HISTORY_LIMIT),
+    [rows],
+  );
 
   const [dialog, setDialog] = useState<DialogState>(null);
   const [eta, setEta] = useState('');
@@ -111,19 +128,20 @@ export function OrdersView() {
   const [partnerId, setPartnerId] = useState('');
   const [failure, setFailure] = useState<string | null>(null);
 
-  const accept = useVendorMutation<{ etaMinutes?: number }, VendorOrder>(
+  // Every one of these returns the full `OrderDetail`, not the list row.
+  const accept = useVendorMutation<{ etaMinutes?: number }, VendorOrderDetail>(
     '/vendor/orders/:id/accept',
     'PATCH',
   );
-  const reject = useVendorMutation<{ reason: string }, VendorOrder>(
+  const reject = useVendorMutation<{ reason: string }, VendorOrderDetail>(
     '/vendor/orders/:id/reject',
     'PATCH',
   );
-  const advance = useVendorMutation<{ status: OrderStatus }, VendorOrder>(
+  const advance = useVendorMutation<{ status: OrderStatus }, VendorOrderDetail>(
     '/vendor/orders/:id/status',
     'PATCH',
   );
-  const assign = useVendorMutation<{ partnerId: string }, VendorOrder>(
+  const assign = useVendorMutation<{ partnerId: string }, VendorOrderDetail>(
     '/vendor/orders/:id/assign',
     'POST',
   );
@@ -197,8 +215,10 @@ export function OrdersView() {
     );
   };
 
-  const availablePartners = (partners.data ?? []).filter(
-    (partner) => partner.isOnline && partner.isAvailable,
+  // A suspended or still-pending rider cannot take an order — the API answers
+  // 409 — so offering them here would only manufacture a failed write.
+  const availablePartners = (partners.data?.data ?? []).filter(
+    (partner) => partner.status === 'active' && partner.isOnline && partner.isAvailable,
   );
 
   const fixturePaths = [
@@ -230,6 +250,15 @@ export function OrdersView() {
             <p className="adm-fixture__body">{failure}</p>
           </div>
         </div>
+      ) : null}
+
+      {board.error && board.data === null ? (
+        <EndpointError
+          path="/vendor/orders"
+          message={board.error.friendlyMessage}
+          status={board.error.status}
+          onRetry={board.refetch}
+        />
       ) : null}
 
       <div className="ven-board" role="list" aria-label="Order lanes">
@@ -303,7 +332,8 @@ export function OrdersView() {
 
               return (
                 <Link className="adm-btn adm-btn--sm" href={`/vendor/orders/${order.id}`}>
-                  Open {order.partnerName ? `· ${order.partnerName}` : ''}
+                  Open{' '}
+                  {order.deliveryPartner?.name ? `· ${order.deliveryPartner.name}` : ''}
                 </Link>
               );
             }}
@@ -315,10 +345,7 @@ export function OrdersView() {
         title="Recently closed"
         description="Delivered, rejected and cancelled. Here so the board above stays about what still needs doing."
       >
-        <HistoryTable
-          rows={history.data?.data ?? []}
-          loading={history.loading && !history.hasLoadedOnce}
-        />
+        <HistoryTable rows={history} loading={board.loading && !board.hasLoadedOnce} />
       </AdminSection>
 
       {/* ---------------------------------------------- accept ---- */}
@@ -332,9 +359,10 @@ export function OrdersView() {
         body={
           <div className="ven-form">
             <p>
-              The customer is told immediately. {dialog?.order.customerName} ordered{' '}
-              {dialog?.order.itemCount} {dialog?.order.itemCount === 1 ? 'item' : 'items'} worth{' '}
-              {dialog ? <Money value={dialog.order.total} /> : null}.
+              The customer is told immediately. {dialog?.order.customer.name ?? 'The customer'}{' '}
+              ordered {dialog?.order.itemCount}{' '}
+              {dialog?.order.itemCount === 1 ? 'item' : 'items'} worth{' '}
+              {dialog ? <Money value={dialog.order.grandTotal} /> : null}.
             </p>
             <div className="ven-field">
               <label className="ven-field__label" htmlFor="ven-eta">
@@ -442,7 +470,8 @@ export function OrdersView() {
                   <option value="">Choose a rider…</option>
                   {availablePartners.map((partner) => (
                     <option key={partner.id} value={partner.id}>
-                      {partner.name} · {partner.vehicleType} · {partner.completedCount} deliveries
+                      {partner.name ?? 'Rider'} · {partner.vehicleType} ·{' '}
+                      {partner.completedCount} deliveries
                     </option>
                   ))}
                 </select>
@@ -536,7 +565,11 @@ function HistoryTable({ rows, loading }: { rows: VendorOrder[]; loading: boolean
       numeric: true,
       render: (row) => <Link href={`/vendor/orders/${row.id}`}>{row.orderNo}</Link>,
     },
-    { key: 'customerName', header: 'Customer' },
+    {
+      key: 'customer',
+      header: 'Customer',
+      render: (row) => row.customer.name ?? '—',
+    },
     {
       key: 'status',
       header: 'Outcome',
@@ -549,16 +582,17 @@ function HistoryTable({ rows, loading }: { rows: VendorOrder[]; loading: boolean
       numeric: true,
     },
     {
-      key: 'total',
+      key: 'grandTotal',
       header: 'Total',
       align: 'right',
       numeric: true,
-      render: (row) => <Money value={row.total} />,
+      render: (row) => <Money value={row.grandTotal} />,
     },
     {
       key: 'placedAt',
       header: 'Placed',
-      render: (row) => <RelativeTime value={row.placedAt} live={false} />,
+      render: (row) =>
+        row.placedAt === null ? '—' : <RelativeTime value={row.placedAt} live={false} />,
     },
   ];
 

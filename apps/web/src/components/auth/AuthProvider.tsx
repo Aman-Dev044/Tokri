@@ -41,7 +41,10 @@ export const HOME_FOR_ROLE: Record<Role, string> = {
   admin: '/admin',
   vendor: '/vendor',
   delivery: '/delivery',
-  customer: '/',
+  // `/stores`, not `/`. The root route is the marketing landing page, so
+  // sending a signed-in customer there drops them back on the page they
+  // just signed in from — indistinguishable from the login having failed.
+  customer: '/stores',
 };
 
 export interface SessionUser {
@@ -102,11 +105,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const restore = useCallback(async () => {
     try {
-      const res = await api.post<LoginResponse>('/auth/refresh', undefined, {
-        anonymous: true,
-      });
-      setAccessToken(res.accessToken);
-      setUser(res.user);
+      // POST /auth/refresh returns `{ accessToken }` and nothing else — it
+      // rotates the token, it does not describe the account. Reading
+      // `res.user` here set `user` to undefined, and because the old
+      // `isAuthenticated` test was `user !== null`, undefined passed it:
+      // the app believed it was signed in while every `user.role` read
+      // threw. The account comes from /auth/me, which is the one endpoint
+      // that reports it, and which re-checks status on every call.
+      const { accessToken } = await api.post<{ accessToken: string }>(
+        '/auth/refresh',
+        undefined,
+        { anonymous: true },
+      );
+      setAccessToken(accessToken);
+
+      const me = await api.get<SessionUser>('/auth/me');
+      setUser(me);
       return true;
     } catch {
       setAccessToken(null);
@@ -116,7 +130,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, isAuthenticated: user !== null, login, logout, restore }),
+    // Truthiness, not `!== null`: a half-restored session that left `user`
+    // undefined used to read as authenticated.
+    () => ({ user, isAuthenticated: Boolean(user), login, logout, restore }),
     [user, login, logout, restore],
   );
 

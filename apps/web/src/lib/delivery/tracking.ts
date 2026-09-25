@@ -33,7 +33,22 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { postLocation, type LocationFix } from './api';
+import { ApiError } from '@/lib/api-client';
+import { postLocation } from './api';
+import type { LocationPing } from './types';
+
+/**
+ * A fix as the DEVICE produced it. `at` is local bookkeeping for the "sent 40s
+ * ago" badge and is DELIBERATELY not part of the request body: the API's
+ * `LocationPingDto` whitelists `lat`, `lng`, `accuracy` and `heading` only,
+ * with `forbidNonWhitelisted: true`, so one extra property is a hard 400.
+ * An earlier version posted `{ lat, lng, at, fixes }` and every single ping
+ * was rejected with "property at should not exist".
+ */
+interface LocalFix extends LocationPing {
+  /** epoch ms of when the handset took the fix. Never sent. */
+  atMs: number;
+}
 
 /** Plan §6.2: "← every 10s". */
 const FLUSH_MS = 10_000;
@@ -103,7 +118,7 @@ export function useLocationTracking(active: boolean): TrackingState {
   const [state, setState] = useState<TrackingState>(IDLE_STATE);
 
   // Refs, not state: a fix arriving every second must not re-render the tree.
-  const queue = useRef<LocationFix[]>([]);
+  const queue = useRef<LocalFix[]>([]);
   const watchId = useRef<number | null>(null);
   const flushTimer = useRef<number | null>(null);
   const sending = useRef(false);
@@ -112,32 +127,48 @@ export function useLocationTracking(active: boolean): TrackingState {
     setState((prev) => ({ ...prev, ...next }));
   }, []);
 
+  /**
+   * Send the NEWEST fix and drop the rest.
+   *
+   * There is no batch endpoint — `POST /delivery/location` takes exactly one
+   * position — and that is the right shape anyway: the customer's map wants
+   * where the rider IS, not where they were four fixes ago. A rider coming out
+   * of an underpass sends their current position, once, and the backlog goes.
+   */
   const flush = useCallback(async () => {
     if (sending.current) return;
     const batch = queue.current;
-    if (batch.length === 0) return;
+    const newest = batch[batch.length - 1];
+    if (newest === undefined) return;
 
     sending.current = true;
-    // Take the queue optimistically; on failure the fixes go back in front of
-    // whatever arrived while the request was in flight.
     queue.current = [];
     try {
-      await postLocation(batch);
-      const newest = batch[batch.length - 1];
-      patch({
-        lastSentAt: newest === undefined ? null : Date.parse(newest.at),
-        queued: queue.current.length,
-        error: null,
+      await postLocation({
+        lat: newest.lat,
+        lng: newest.lng,
+        ...(newest.accuracy === undefined ? {} : { accuracy: newest.accuracy }),
+        ...(newest.heading === undefined ? {} : { heading: newest.heading }),
       });
-    } catch {
-      const merged = [...batch, ...queue.current].slice(-MAX_QUEUE);
-      queue.current = merged;
-      patch({
-        queued: merged.length,
-        // Not an alarm: a failed ping on a moving scooter is ordinary. The
-        // rider sees the stale "sent Ns ago" badge, which is the honest signal.
-        error: null,
-      });
+      patch({ lastSentAt: newest.atMs, queued: queue.current.length, error: null });
+    } catch (cause) {
+      // 400 here means "no order is out for delivery" — the delivery ended
+      // between the tick and the request. Not a failure to retry, and never a
+      // red banner over a rider who has just finished.
+      const spent = cause instanceof ApiError && cause.status === 400;
+      if (spent) {
+        patch({ queued: 0, error: null });
+      } else {
+        const merged = [...batch, ...queue.current].slice(-MAX_QUEUE);
+        queue.current = merged;
+        patch({
+          queued: merged.length,
+          // Not an alarm: a failed ping on a moving scooter is ordinary. The
+          // rider sees the stale "sent Ns ago" badge, which is the honest
+          // signal.
+          error: null,
+        });
+      }
     } finally {
       sending.current = false;
     }
@@ -185,12 +216,20 @@ export function useLocationTracking(active: boolean): TrackingState {
 
     const id = navigator.geolocation.watchPosition(
       (position) => {
-        const fix: LocationFix = {
+        const heading = position.coords.heading;
+        const accuracy = position.coords.accuracy;
+        const fix: LocalFix = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-          at: new Date(position.timestamp).toISOString(),
-          ...(Number.isFinite(position.coords.accuracy)
-            ? { accuracy: Math.round(position.coords.accuracy) }
+          atMs: position.timestamp,
+          // The DTO caps accuracy at 10,000 m and takes an INTEGER heading in
+          // 0-359. A value outside either range is a 400, so a wild reading is
+          // dropped rather than sent and rejected.
+          ...(typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy >= 0 && accuracy <= 10_000
+            ? { accuracy: Math.round(accuracy) }
+            : {}),
+          ...(typeof heading === 'number' && Number.isFinite(heading)
+            ? { heading: ((Math.round(heading) % 360) + 360) % 360 }
             : {}),
         };
         const next = [...queue.current, fix].slice(-MAX_QUEUE);

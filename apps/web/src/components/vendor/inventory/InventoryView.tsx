@@ -22,6 +22,18 @@
  * Out of stock first, then low. A zero is lost revenue right now; a low is a
  * warning about tomorrow, and mixing them in one alphabetical list makes both
  * invisible.
+ *
+ * ── ONE REQUEST, TWO VIEWS ──────────────────────────────────────────────────
+ * The rail and the table used to be two calls to the same endpoint with
+ * different filters. The API decides low-stock itself and stamps every row
+ * with `isLowStock` and `isOutOfStock`, so the rail is a filter over the rows
+ * already on screen. One request, and the two halves of the page can never
+ * disagree about which products are short.
+ *
+ * ── WHAT IS NOT HERE ────────────────────────────────────────────────────────
+ * Per-product movement history. `GET /vendor/inventory/:productId/logs` does
+ * not exist — see the TODO by `InventoryHistory`. The affordance is disabled
+ * rather than pointed at a 404.
  */
 
 import { useMemo, useState } from 'react';
@@ -30,7 +42,6 @@ import {
   AdminSection,
   ConfirmDialog,
   DataTable,
-  DetailDrawer,
   EmptyState,
   FilterBar,
   IconInbox,
@@ -45,10 +56,12 @@ import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
 import { humanise } from '@/lib/admin/format';
 import type {
   InventoryAdjust,
-  InventoryLogEntry,
+  InventoryBulkAdjust,
+  InventoryBulkResult,
   InventoryRow,
   Paged,
 } from '@/lib/vendor/types';
+import { EndpointError } from '../primitives';
 
 const LIMIT = 25;
 
@@ -59,9 +72,14 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = { q: '', lowStock: 'all' };
 
+/**
+ * The server already decided. `isOutOfStock` and `isLowStock` come down on
+ * every row, and re-deriving them here from `stock <= threshold` is how a
+ * table ends up disagreeing with the count in the rail above it.
+ */
 function levelOf(row: InventoryRow): 'out' | 'low' | 'ok' {
-  if (row.stock <= 0) return 'out';
-  if (row.stock <= row.lowStockThreshold) return 'low';
+  if (row.isOutOfStock) return 'out';
+  if (row.isLowStock) return 'low';
   return 'ok';
 }
 
@@ -73,10 +91,12 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
   const [page, setPage] = useState(1);
   const debouncedQuery = useDebounced(filters.q, 300);
 
+  // `ListInventoryQueryDto` takes q, page, limit, sort, from, to, lowStock,
+  // outOfStock and categoryId. Nothing else — an unknown key is a 400.
   const params = useMemo(
     () => ({
       q: debouncedQuery || undefined,
-      lowStock: filters.lowStock === 'true' ? 'true' : undefined,
+      lowStock: filters.lowStock === 'true' ? true : undefined,
       page,
       limit: LIMIT,
     }),
@@ -84,21 +104,23 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
   );
 
   const inventory = useVendorQuery<Paged<InventoryRow>>('/vendor/inventory', params);
-  const low = useVendorQuery<Paged<InventoryRow>>('/vendor/inventory', {
-    lowStock: 'true',
-    limit: 20,
-  });
 
   const adjust = useVendorMutation<InventoryAdjust, InventoryRow>(
     '/vendor/inventory/:productId',
     'PATCH',
+  );
+  // One transaction for the whole stock-take: a batch that applied 40 of its
+  // 60 lines and then failed leaves the vendor with no way to know which 20 to
+  // retype.
+  const bulk = useVendorMutation<InventoryBulkAdjust, InventoryBulkResult>(
+    '/vendor/inventory/bulk',
+    'POST',
   );
 
   /* ---- pending deltas, one per row ---- */
   const [pending, setPending] = useState<Record<string, number>>({});
   const [reason, setReason] = useState<InventoryAdjust['reason']>('restock');
   const [confirmBulk, setConfirmBulk] = useState(false);
-  const [history, setHistory] = useState<InventoryRow | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   const setDelta = (productId: string, delta: number) => {
@@ -126,14 +148,27 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
     return result;
   };
 
+  /**
+   * The whole queue in ONE call.
+   *
+   * `POST /vendor/inventory/bulk` applies every adjustment inside a single
+   * transaction. Sending them one at a time — as this screen used to — means a
+   * failure halfway leaves the shelf half-corrected and the vendor guessing
+   * which half. All or nothing is the only honest stock-take.
+   */
   const applyAll = async () => {
-    // Sequential, not `Promise.all`: each one is a separate audited write and a
-    // partial failure has to be visible per product rather than collapsing into
-    // one rejected promise.
-    for (const [productId, delta] of pendingEntries) {
-      const result = await applyOne(productId, delta);
-      if (result === null) break;
-    }
+    setFailure(null);
+    const result = await bulk.mutate(
+      {
+        adjustments: pendingEntries.map(([productId, delta]) => ({ productId, delta })),
+        reason,
+      },
+      {
+        invalidate: ['/vendor/inventory', '/vendor/products', '/vendor/dashboard'],
+        onError: (error) => setFailure(error.friendlyMessage),
+      },
+    );
+    if (result !== null) setPending({});
     setConfirmBulk(false);
   };
 
@@ -159,7 +194,8 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
           <strong>{row.name}</strong>
           <br />
           <span className="adm-dim">
-            {row.sku} · {row.categoryName}
+            {row.sku}
+            {row.brand ? ` · ${row.brand}` : ''}
           </span>
         </span>
       ),
@@ -200,11 +236,13 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
       ),
     },
     {
-      key: 'sellable',
+      key: 'available',
       header: 'Sellable',
       align: 'right',
       numeric: true,
-      render: (row) => <strong>{Math.max(0, row.stock - row.reserved)}</strong>,
+      // `available` is the server's own stock − reserved. Recomputing it here
+      // would be a second opinion on a number that has exactly one authority.
+      render: (row) => <strong>{row.available}</strong>,
     },
     {
       key: 'price',
@@ -233,20 +271,25 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
     {
       key: 'updatedAt',
       header: 'Changed',
-      render: (row) => (
-        <button
-          type="button"
-          className="adm-btn adm-btn--ghost adm-btn--sm"
-          onClick={() => setHistory(row)}
-        >
+      // TODO: link this to the per-product movement trail once
+      // `GET /vendor/inventory/:productId/logs` exists. The `InventoryLog`
+      // collection is written on every adjustment but no vendor-facing
+      // endpoint reads it back, so there is nothing to open — and a button
+      // that opens a 404 is worse than a timestamp that is only a timestamp.
+      render: (row) =>
+        row.updatedAt === null ? (
+          <span className="adm-dim">never</span>
+        ) : (
           <RelativeTime value={row.updatedAt} live={false} />
-        </button>
-      ),
+        ),
     },
   ];
 
-  const lowRows = low.data?.data ?? [];
-  const sortedLow = [...lowRows].sort((a, b) => a.stock - b.stock);
+  const rows = useMemo(() => inventory.data?.data ?? [], [inventory.data]);
+  const sortedLow = useMemo(
+    () => rows.filter((row) => row.isLowStock || row.isOutOfStock).sort((a, b) => a.stock - b.stock),
+    [rows],
+  );
   const meta = inventory.data?.meta;
 
   const fixturePaths = inventory.isFixture ? ['/vendor/inventory'] : [];
@@ -267,11 +310,20 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         </div>
       ) : null}
 
+      {inventory.error && inventory.data === null ? (
+        <EndpointError
+          path="/vendor/inventory"
+          message={inventory.error.friendlyMessage}
+          status={inventory.error.status}
+          onRetry={inventory.refetch}
+        />
+      ) : null}
+
       <AdminSection
         title="Running low"
-        description="Out of stock first — a zero is money you are not taking right now."
+        description="Out of stock first — a zero is money you are not taking right now. Counted over the products on this page."
       >
-        {low.loading && !low.hasLoadedOnce ? (
+        {inventory.loading && !inventory.hasLoadedOnce ? (
           <div className="adm-skel adm-skel--tile" />
         ) : sortedLow.length === 0 ? (
           <EmptyState
@@ -337,7 +389,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
 
         <DataTable
           columns={columns}
-          rows={inventory.data?.data ?? []}
+          rows={rows}
           loading={inventory.loading && !inventory.hasLoadedOnce}
           rowKey={(row) => row.productId}
           page={meta?.page}
@@ -373,7 +425,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
               type="button"
               className="adm-btn adm-btn--primary"
               onClick={() => setConfirmBulk(true)}
-              disabled={adjust.loading}
+              disabled={adjust.loading || bulk.loading}
             >
               Apply all
             </button>
@@ -385,7 +437,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         open={confirmBulk}
         title="Apply every queued adjustment?"
         confirmLabel={`Apply ${pendingEntries.length}`}
-        loading={adjust.loading}
+        loading={bulk.loading}
         onCancel={() => setConfirmBulk(false)}
         onConfirm={() => {
           void applyAll();
@@ -393,9 +445,9 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         body={
           <div className="adm-stack">
             <p>
-              Each one is sent as a separate audited change with the reason{' '}
-              <strong>{humanise(reason)}</strong>. They are applied one at a time, and if one
-              fails the rest are left queued rather than half-applied.
+              All of them go in ONE transaction with the reason{' '}
+              <strong>{humanise(reason)}</strong>. Either every line lands or none of them do —
+              there is no state where half the shelf was corrected.
             </p>
             <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
               {pendingEntries.slice(0, 8).map(([productId, delta]) => (
@@ -409,15 +461,6 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         }
       />
 
-      <DetailDrawer
-        open={history !== null}
-        onClose={() => setHistory(null)}
-        title={history?.name ?? ''}
-        subtitle="Every movement the server recorded for this product"
-        width="min(620px, 96vw)"
-      >
-        {history ? <InventoryHistory productId={history.productId} /> : null}
-      </DetailDrawer>
     </AdminPage>
   );
 }
@@ -498,70 +541,17 @@ function AdjustCell({
 }
 
 /* ================================================================== */
-/* History                                                             */
+/* History — NOT BUILT                                                 */
 /* ================================================================== */
 
-function InventoryHistory({ productId }: { productId: string }) {
-  const path = `/vendor/inventory/${productId}/logs`;
-  const logs = useVendorQuery<InventoryLogEntry[]>(path);
+/*
+  TODO: per-product movement history needs `GET /vendor/inventory/:productId/logs`,
+  which the API does not expose. `InventoryLog` rows are written inside the same
+  transaction as every stock change (restock, manual correction, order reserve,
+  release and commit), so the data exists — there is simply no vendor-facing
+  route that reads it.
 
-  const columns: Column<InventoryLogEntry>[] = [
-    {
-      key: 'at',
-      header: 'When',
-      render: (row) => <RelativeTime value={row.at} live={false} />,
-    },
-    {
-      key: 'delta',
-      header: 'Change',
-      align: 'right',
-      numeric: true,
-      render: (row) => (
-        <strong style={{ color: row.delta < 0 ? 'var(--crit-ink)' : 'var(--good-ink)' }}>
-          {row.delta > 0 ? '+' : ''}
-          {row.delta}
-        </strong>
-      ),
-    },
-    {
-      key: 'balance',
-      header: 'After',
-      align: 'right',
-      numeric: true,
-      render: (row) => (row.balance === undefined ? '—' : String(row.balance)),
-    },
-    { key: 'reason', header: 'Reason', render: (row) => humanise(row.reason) },
-    {
-      key: 'refId',
-      header: 'Reference',
-      numeric: true,
-      render: (row) => row.refId ?? '—',
-    },
-    { key: 'byName', header: 'By' },
-  ];
-
-  return (
-    <div className="adm-stack">
-      {logs.isFixture ? (
-        <p className="ven-note">
-          Sample history — <code>{path}</code> is not reachable, so none of these movements are
-          real.
-        </p>
-      ) : null}
-      <DataTable
-        columns={columns}
-        rows={logs.data ?? []}
-        loading={logs.loading && !logs.hasLoadedOnce}
-        rowKey={(row) => row.id}
-        skeletonRows={6}
-        empty={
-          <EmptyState
-            title="No movements yet"
-            body="Restocks, sales and corrections all appear here."
-            icon={<IconInbox />}
-          />
-        }
-      />
-    </div>
-  );
-}
+  The drawer that used to live here has been removed rather than left pointing
+  at a 404. An affordance that always fails teaches a shop owner to distrust
+  every other button on the screen.
+*/

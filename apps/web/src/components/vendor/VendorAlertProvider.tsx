@@ -21,11 +21,16 @@
  * eight-hour shift.
  *
  * ── WHEN THE API IS NOT THERE ───────────────────────────────────────────────
- * `useVendorQuery` falls back to a labelled fixture, so this provider will
- * report a fixture-backed pending count. `isFixture` travels with it and every
- * screen that shows the number also shows the amber banner. The chime is
- * suppressed for fixture data — a sample order must never make a real sound in
- * a real shop.
+ * On a genuine NETWORK failure — and only then — `useVendorQuery` falls back
+ * to a labelled fixture, so this provider reports a fixture-backed pending
+ * count. `isFixture` travels with it and every screen that shows the number
+ * also shows the amber banner. The chime is suppressed for fixture data: a
+ * sample order must never make a real sound in a real shop.
+ *
+ * A 4xx is NOT a fixture case. If this query starts failing with a 400 the
+ * badge goes to zero and stays there, which is the correct and visible
+ * behaviour for a broken request — a fabricated count over a broken poll would
+ * have a vendor watching a number that cannot change.
  */
 
 import {
@@ -89,6 +94,8 @@ export function VendorAlertProvider({
   /** off until the session is known — polling with no token is 401 noise */
   enabled?: boolean;
 }) {
+  // `status` is a single enum value — exactly what this poll needs. `sort` is
+  // checked against the service's own allowlist, and `placedAt` is on it.
   const query = useVendorQuery<Paged<VendorOrder>>(
     '/vendor/orders',
     { status: 'PLACED', limit: 50, sort: 'placedAt' },

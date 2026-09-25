@@ -2,10 +2,11 @@
  * Maps, and life without them.
  *
  * ── THE SITUATION ───────────────────────────────────────────────────────────
- * `NEXT_PUBLIC_MAPS_BROWSER_KEY` is EMPTY. No key has been supplied, so the
- * shared `<MandiMap>` reports `available: false` and renders nothing useful.
- * A rider app that becomes unusable in that state is not shippable, so the
- * no-map path here is the DESIGNED path, not a degradation:
+ * `NEXT_PUBLIC_MAPS_BROWSER_KEY` now HAS a value, but billing is not enabled
+ * on that Google Cloud project, so the Maps JS API answers `REQUEST_DENIED`
+ * and the shared `<MandiMap>` renders nothing useful. A rider app that becomes
+ * unusable in that state is not shippable, so the no-map path here is the
+ * DESIGNED path, not a degradation:
  *
  *   · the address is set large and high-contrast, and is the primary artefact
  *   · "Open in Google Maps" hands navigation to the app the rider already has
@@ -22,13 +23,13 @@
  * NEVER add `|| 'some-key'` anywhere in this file (plan §4.1, ESLint-enforced).
  */
 
-import type { GeoPoint, Place } from './types';
+import { pointOf, type LatLng, type Waypoint } from './types';
 
 /**
  * Turn-by-turn to a coordinate. Preferred: a lat/lng cannot be misparsed and
  * needs no geocode on Google's side.
  */
-export function directionsUrl(point: GeoPoint): string {
+export function directionsUrl(point: LatLng): string {
   const destination = `${point.lat},${point.lng}`;
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
 }
@@ -42,29 +43,16 @@ export function directionsUrlForAddress(address: string): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}&travelmode=driving`;
 }
 
-/** The one call site the UI needs: a nav link for a Place, point or not. */
-export function navUrlFor(place: Place): string {
-  return place.point === null
-    ? directionsUrlForAddress(`${place.label} ${place.address}`.trim())
-    : directionsUrl(place.point);
-}
-
 /**
- * Straight-line metres between two points (haversine).
+ * The one call site the UI needs: a nav link for a waypoint, pin or not.
  *
- * Used ONLY to fill a gap when the API omitted `distanceMeters`, and labelled
- * "straight line" wherever it is shown. Plan §8.7 (#11) bans a Distance Matrix
- * call for this: it costs money per request and the stored 2dsphere point is
- * already good enough to tell a rider whether a job is near or far.
+ * `pointOf` refuses a half-pair, so an address that has a latitude and a null
+ * longitude falls through to the text form rather than navigating a rider into
+ * the Gulf of Guinea.
  */
-export function haversineMeters(a: GeoPoint, b: GeoPoint): number {
-  const R = 6_371_000;
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
-  const lat1 = toRad(a.lat);
-  const lat2 = toRad(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+export function navUrlFor(waypoint: Waypoint): string {
+  const point = pointOf(waypoint);
+  if (point !== null) return directionsUrl(point);
+  const text = `${waypoint.label} ${waypoint.address}`.trim();
+  return directionsUrlForAddress(text === '' ? waypoint.label : text);
 }

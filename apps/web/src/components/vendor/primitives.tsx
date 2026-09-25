@@ -192,23 +192,31 @@ export function RupeeInput({ id, value, onChange, disabled }: RupeeInputProps) {
 export interface EndpointErrorProps {
   path: string;
   message: string;
+  /** the HTTP status, when there was one — 0 means nothing reached the server */
+  status?: number;
   onRetry?: () => void;
 }
 
 /**
- * Shown when a query failed AND there is no fixture for it.
+ * Shown whenever a query failed and no sample data was substituted — which
+ * now means every failure that reached the server at all.
  *
- * The path is on screen deliberately. "Something went wrong" sends a vendor to
- * support; `/vendor/earnings — 404` sends a developer to the right file.
+ * The path AND the status are on screen deliberately. "Something went wrong"
+ * sends a vendor to support; `GET /vendor/earnings — 400` sends a developer
+ * straight to the DTO that rejected the query, which is the difference between
+ * a bug that is fixed this afternoon and one that lives for a week.
  */
-export function EndpointError({ path, message, onRetry }: EndpointErrorProps) {
+export function EndpointError({ path, message, status, onRetry }: EndpointErrorProps) {
   return (
-    <div className="adm-empty">
+    <div className="adm-empty" role="alert">
       <p className="adm-empty__title">This screen could not load</p>
       <p className="adm-empty__body">
         {message}
         <br />
-        <code>{path}</code>
+        <code>
+          {path}
+          {status !== undefined && status > 0 ? ` — ${status}` : ''}
+        </code>
       </p>
       {onRetry ? (
         <div style={{ marginTop: 'var(--s-2)' }}>

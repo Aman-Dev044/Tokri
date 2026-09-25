@@ -16,19 +16,23 @@
  *   · Re-runs when `invalidateVendor()` fires for a matching path prefix.
  *   · Polls on `refreshMs`, PAUSED while the tab is hidden. The orders board
  *     runs at 15s; a backgrounded shop hammering the API helps nobody.
- *   · On failure, falls back to a LABELLED fixture.
+ *   · On a NETWORK failure, falls back to a LABELLED fixture.
  *
- * ── THE FIXTURE FALLBACK, AND WHY IT IS HONEST ──────────────────────────────
- * Worker A's `/vendor/*` endpoints land in parallel with this panel. Without a
- * fallback every screen would be an error state. When a request fails and
- * `resolveFixture` knows the path, this returns sample data with
- * `isFixture: true` — and that flag is not advisory: `<VendorPage>` renders the
- * amber "sample data" banner whenever any query on the page reports it, and
- * every KPI tile stamps itself. A fixture number must never be readable as a
- * real one.
+ * ── THE FIXTURE FALLBACK, AND THE LINE IT MUST NOT CROSS ────────────────────
+ * Sample data appears for exactly ONE reason: `ApiError.isNetworkError` — the
+ * API process is not running, DNS failed, CORS blocked the call. Nothing
+ * reached the server, so there is nothing to be wrong about.
  *
- * If there is no fixture for the path the real error surfaces instead, so a
- * missing endpoint looks like a missing endpoint.
+ * A 400, 401, 403, 404, 409 or 500 is NOT a reason to show sample data. Those
+ * are contract bugs (a query parameter the DTO does not accept, a stale route,
+ * an expired token) and a contract bug that renders a plausible shop is the
+ * worst outcome available: the screen looks healthy, the vendor reads figures
+ * that are not theirs, and the wrong parameter survives for a week. Those
+ * surface as a real error state with the status on screen.
+ *
+ * When a fixture IS returned, `isFixture` is not advisory: `<AdminPage>`
+ * renders the amber "sample data" banner and every KPI tile stamps itself. A
+ * fixture number must never be readable as a real one.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -128,7 +132,12 @@ export function useVendorQuery<T>(
         const apiError =
           cause instanceof ApiError ? cause : new ApiError('Unexpected failure', 0, {}, true);
 
-        const fixture = resolveFixture(path, stableParams);
+        // ONLY a genuine network failure earns sample data. A 4xx is a bug in
+        // the request this hook just made — showing a plausible shop over it
+        // hides the very thing that needs fixing.
+        const fixture = apiError.isNetworkError
+          ? resolveFixture(path, stableParams)
+          : null;
         if (fixture !== null) {
           setData(fixture as T);
           setError(null);

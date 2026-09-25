@@ -135,6 +135,25 @@ export function IconSignal({ size = 24, className }: IconProps) {
   );
 }
 
+export function IconUser({ size = 24, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20a7.5 7.5 0 0 1 15 0" />
+    </svg>
+  );
+}
+
+export function IconExit({ size = 24, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14" />
+      <path d="M9 8 4.5 12 9 16" />
+      <path d="M4.5 12H15" />
+    </svg>
+  );
+}
+
 export function IconShield({ size = 24, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

@@ -8,6 +8,17 @@
  * questions and stops: how much have I taken today, how many orders, is anyone
  * waiting on me, what is about to run out, and what do customers think of me.
  *
+ * ── ONE CALL, NOT FIVE ──────────────────────────────────────────────────────
+ * `GET /vendor/dashboard` already computes every one of those: the status
+ * breakdown, today's revenue split into gross/commission/net, the pending and
+ * in-flight counts, the low and out-of-stock counts, the rating, and a 7-day
+ * sparkline. This screen used to assemble the same picture from four separate
+ * queries — one of which asked for `?window=today`, a parameter that has never
+ * existed and is a hard 400 under `forbidNonWhitelisted`.
+ *
+ * The orders list is still fetched, but only for the "latest orders" feed at
+ * the bottom, and with parameters the DTO actually accepts.
+ *
  * ── THE NEEDS-ACTION STRIP ──────────────────────────────────────────────────
  * The only part of this page that is not a number: a short list of things that
  * are wrong RIGHT NOW, each one a link straight to the screen that fixes it. A
@@ -36,98 +47,95 @@ import {
 } from '@/components/admin';
 import { useFreshness, useVendorQuery } from '@/hooks';
 import { formatDate, formatPaiseCompact } from '@/lib/admin/format';
+import { todayWindow } from '@/lib/vendor/range';
 import type {
-  EarningsSummary,
-  InventoryRow,
   OrderStatus,
   Paged,
-  SalesReport,
+  VendorDashboard,
   VendorOrder,
-  VendorProfile,
 } from '@/lib/vendor/types';
 import { ORDER_POLL_MS, useVendorAlerts } from '../VendorAlertProvider';
-import { FreshLine } from '../primitives';
-
-/** Statuses that are still the shop's problem. */
-const OPEN_STATUSES: readonly OrderStatus[] = [
-  'PLACED',
-  'ACCEPTED',
-  'PACKING',
-  'READY_FOR_PICKUP',
-];
+import { EndpointError, FreshLine } from '../primitives';
 
 export function DashboardView() {
-  const profile = useVendorQuery<VendorProfile>('/vendor/profile');
-  const today = useVendorQuery<Paged<VendorOrder>>(
-    '/vendor/orders',
-    { window: 'today', limit: 100 },
-    { refreshMs: ORDER_POLL_MS },
-  );
-  const earnings = useVendorQuery<EarningsSummary>('/vendor/earnings', { range: 'day' });
-  const week = useVendorQuery<SalesReport>('/vendor/reports/sales', { range: 'week' });
-  const lowStock = useVendorQuery<Paged<InventoryRow>>('/vendor/inventory', {
-    lowStock: 'true',
-    limit: 50,
+  // `from`/`to` for the local day, computed here. The API has no `window`
+  // parameter and never had one.
+  const today = useMemo(() => todayWindow(), []);
+
+  const dashboard = useVendorQuery<VendorDashboard>('/vendor/dashboard', undefined, {
+    refreshMs: ORDER_POLL_MS,
   });
 
-  const alerts = useVendorAlerts();
-  const freshness = useFreshness(today.marker, ORDER_POLL_MS * 2.5);
-
-  /* ---- today's shape ---- */
-  const orders = useMemo(() => today.data?.data ?? [], [today.data]);
-
-  const byStatus = useMemo(() => {
-    const counts = new Map<OrderStatus, number>();
-    for (const order of orders) counts.set(order.status, (counts.get(order.status) ?? 0) + 1);
-    return counts;
-  }, [orders]);
-
-  const statusRows: ChartRow[] = useMemo(
-    () =>
-      [...byStatus.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([status, count]) => ({ status, count })),
-    [byStatus],
+  const recent = useVendorQuery<Paged<VendorOrder>>(
+    '/vendor/orders',
+    { from: today.from, to: today.to, limit: 6, sort: '-placedAt' },
+    { refreshMs: ORDER_POLL_MS },
   );
 
-  const openCount = orders.filter((order) => OPEN_STATUSES.includes(order.status)).length;
-  const deliveredToday = byStatus.get('DELIVERED') ?? 0;
+  const alerts = useVendorAlerts();
+  const freshness = useFreshness(dashboard.marker, ORDER_POLL_MS * 2.5);
 
-  /* ---- the 7-day trend, as paise ---- */
+  const data = dashboard.data;
+
+  /* ---- today's shape, straight from the server ---- */
+  const statusRows: ChartRow[] = useMemo(() => {
+    const byStatus = data?.ordersToday.byStatus;
+    if (!byStatus) return [];
+    return (Object.entries(byStatus) as Array<[OrderStatus, number]>)
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([status, count]) => ({ status, count }));
+  }, [data]);
+
   const spark = useMemo(
-    () => (week.data?.points ?? []).map((point) => point.revenue),
-    [week.data],
+    () => (data?.sparkline ?? []).map((point) => point.revenue),
+    [data],
   );
 
   const salesRows: ChartRow[] = useMemo(
     () =>
-      (week.data?.points ?? []).map((point) => ({
-        day: formatDate(point.bucket, 'day'),
+      (data?.sparkline ?? []).map((point) => ({
+        day: formatDate(point.date, 'day'),
         revenue: point.revenue,
       })),
-    [week.data],
+    [data],
   );
 
-  const lowRows = lowStock.data?.data ?? [];
-  const outOfStock = lowRows.filter((row) => row.stock <= 0).length;
+  const orders = recent.data?.data ?? [];
 
   const fixturePaths = [
-    profile.isFixture ? '/vendor/profile' : null,
-    today.isFixture ? '/vendor/orders' : null,
-    earnings.isFixture ? '/vendor/earnings' : null,
-    week.isFixture ? '/vendor/reports/sales' : null,
-    lowStock.isFixture ? '/vendor/inventory' : null,
+    dashboard.isFixture ? '/vendor/dashboard' : null,
+    recent.isFixture ? '/vendor/orders' : null,
   ].filter((value): value is string => value !== null);
 
-  const loading = today.loading && !today.hasLoadedOnce;
+  const loading = dashboard.loading && !dashboard.hasLoadedOnce;
+
+  /* ---- a failed dashboard is an error state, never a blank page ---- */
+  if (dashboard.error && data === null) {
+    return (
+      <AdminPage title="Your store" description="Today’s numbers could not be loaded.">
+        <EndpointError
+          path="/vendor/dashboard"
+          message={dashboard.error.friendlyMessage}
+          status={dashboard.error.status}
+          onRetry={dashboard.refetch}
+        />
+      </AdminPage>
+    );
+  }
+
+  const lowOrOut = (data?.lowStockCount ?? 0) + (data?.outOfStockCount ?? 0);
+  const outOfStock = data?.outOfStockCount ?? 0;
 
   return (
     <AdminPage
-      title={profile.data?.storeName ?? 'Your store'}
+      title={data?.storeName ?? 'Your store'}
       description="Today, in the order it matters. Everything here links to the screen that fixes it."
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
-      actions={<FreshLine freshness={freshness} everyMs={ORDER_POLL_MS} onRefresh={today.refetch} />}
+      actions={
+        <FreshLine freshness={freshness} everyMs={ORDER_POLL_MS} onRefresh={dashboard.refetch} />
+      }
     >
       {/* ---------------------------------------- needs action ---- */}
       <AdminSection
@@ -148,16 +156,16 @@ export function DashboardView() {
           />
           <NeedCard
             href="/vendor/orders"
-            tone={openCount > 0 ? 'warn' : 'good'}
-            count={openCount}
+            tone={(data?.inFlightCount ?? 0) > 0 ? 'warn' : 'good'}
+            count={data?.inFlightCount ?? 0}
             label="in progress"
             detail="Accepted, packing or waiting for a rider."
           />
           <NeedCard
             href="/vendor/inventory?lowStock=true"
-            tone={outOfStock > 0 ? 'crit' : lowRows.length > 0 ? 'warn' : 'good'}
-            count={lowRows.length}
-            label={lowRows.length === 1 ? 'product low' : 'products low'}
+            tone={outOfStock > 0 ? 'crit' : lowOrOut > 0 ? 'warn' : 'good'}
+            count={lowOrOut}
+            label={lowOrOut === 1 ? 'product low' : 'products low'}
             detail={
               outOfStock > 0
                 ? `${outOfStock} already at zero — those are lost sales, not warnings.`
@@ -166,11 +174,11 @@ export function DashboardView() {
           />
           <NeedCard
             href="/vendor/settings"
-            tone={profile.data?.isOpen ? 'good' : 'crit'}
+            tone={data?.isOpen ? 'good' : 'crit'}
             count={null}
-            label={profile.data?.isOpen ? 'Store is open' : 'Store is closed'}
+            label={data?.isOpen ? 'Store is open' : 'Store is closed'}
             detail={
-              profile.data?.isOpen
+              data?.isOpen
                 ? 'Customers can order from you.'
                 : 'Nobody can place an order while this is off.'
             }
@@ -183,62 +191,68 @@ export function DashboardView() {
         <div className="adm-grid adm-grid--3">
           <KpiTile
             label="Revenue today"
-            value={earnings.data?.grossSales ?? 0}
+            value={data?.revenueToday.gross ?? 0}
             unit="paise"
             spark={spark}
             tone="good"
             index={0}
-            loading={earnings.loading && !earnings.hasLoadedOnce}
-            isFixture={earnings.isFixture}
+            loading={loading}
+            isFixture={dashboard.isFixture}
           />
           <KpiTile
             label="Orders today"
-            value={orders.length}
+            value={data?.ordersToday.total ?? 0}
             tone="neutral"
             index={1}
             loading={loading}
-            isFixture={today.isFixture}
+            isFixture={dashboard.isFixture}
           />
           <KpiTile
             label="Delivered today"
-            value={deliveredToday}
+            value={data?.ordersToday.byStatus.DELIVERED ?? 0}
             tone="good"
             index={2}
             loading={loading}
-            isFixture={today.isFixture}
+            isFixture={dashboard.isFixture}
           />
           <KpiTile
             label="Waiting for you"
-            value={alerts.pendingCount}
-            tone={alerts.pendingCount > 0 ? 'crit' : 'neutral'}
+            value={data?.pendingCount ?? 0}
+            tone={(data?.pendingCount ?? 0) > 0 ? 'crit' : 'neutral'}
             index={3}
-            loading={alerts.loading}
-            isFixture={alerts.isFixture}
+            loading={loading}
+            isFixture={dashboard.isFixture}
           />
           <KpiTile
             label="Low or out of stock"
-            value={lowRows.length}
-            tone={lowRows.length > 0 ? 'warn' : 'neutral'}
+            value={lowOrOut}
+            tone={lowOrOut > 0 ? 'warn' : 'neutral'}
             index={4}
-            loading={lowStock.loading && !lowStock.hasLoadedOnce}
-            isFixture={lowStock.isFixture}
+            loading={loading}
+            isFixture={dashboard.isFixture}
           />
           {/*
             Rating is the one tile that is NOT a <KpiTile>. That component
             formats a plain number as a count, and a 4.6 rendered as "5" is a
             lie that would take a year to notice. One decimal or nothing.
+
+            The API sends `rating` and NOTHING ELSE about ratings — there is no
+            `ratingCount`. Reading one is what used to crash this page, so the
+            footnote below says what the number is, not how many votes made it.
           */}
-          <article className="adm-tile" data-fixture={profile.isFixture ? 'true' : undefined}>
+          <article className="adm-tile" data-fixture={dashboard.isFixture ? 'true' : undefined}>
             <p className="adm-tile__label">Store rating</p>
             <p className="adm-tile__value">
-              <span className="adm-num">{(profile.data?.rating ?? 0).toFixed(1)}</span>
+              <span className="adm-num">{(data?.rating ?? 0).toFixed(1)}</span>
               <span className="adm-tile__unit">★</span>
             </p>
             <div className="adm-tile__foot">
               <span className="adm-delta__label">
-                {profile.data
-                  ? `from ${profile.data.ratingCount.toLocaleString('en-IN')} ratings`
-                  : 'no ratings yet'}
+                {data === null
+                  ? 'not loaded yet'
+                  : data.rating > 0
+                    ? 'average across your delivered orders'
+                    : 'no ratings yet'}
               </span>
             </div>
           </article>
@@ -253,7 +267,7 @@ export function DashboardView() {
           panel
         >
           <div className="adm-panel--pad">
-            {week.loading && !week.hasLoadedOnce ? (
+            {loading ? (
               <div className="adm-skel adm-skel--chart" />
             ) : (
               <BarChart
@@ -297,34 +311,47 @@ export function DashboardView() {
       {/* ---------------------------------------------- recent ---- */}
       <AdminSection
         title="Latest orders"
-        description="The six most recent, whatever state they are in."
+        description="The six most recent today, whatever state they are in."
       >
         <div className="adm-panel">
-          {orders.slice(0, 6).map((order, index) => (
-            <Link
-              className="adm-feed__item"
-              key={order.id}
-              href={`/vendor/orders/${order.id}`}
-              style={{ ['--adm-i' as string]: String(index) }}
-            >
-              <span>
-                <span className="adm-feed__no">{order.orderNo}</span>
-                <span className="adm-feed__meta">
-                  {' '}
-                  · {order.customerName} · {order.itemCount} items
+          {recent.error && recent.data === null ? (
+            <EndpointError
+              path="/vendor/orders"
+              message={recent.error.friendlyMessage}
+              status={recent.error.status}
+              onRetry={recent.refetch}
+            />
+          ) : (
+            orders.map((order, index) => (
+              <Link
+                className="adm-feed__item"
+                key={order.id}
+                href={`/vendor/orders/${order.id}`}
+                style={{ ['--adm-i' as string]: String(index) }}
+              >
+                <span>
+                  <span className="adm-feed__no">{order.orderNo}</span>
+                  <span className="adm-feed__meta">
+                    {' '}
+                    · {order.customer.name ?? 'Customer'} · {order.itemCount} items
+                  </span>
+                  <br />
+                  <span className="adm-feed__meta">
+                    {order.placedAt === null ? (
+                      'time unknown'
+                    ) : (
+                      <RelativeTime value={order.placedAt} live={false} />
+                    )}
+                  </span>
                 </span>
-                <br />
-                <span className="adm-feed__meta">
-                  <RelativeTime value={order.placedAt} live={false} />
+                <span className="adm-row">
+                  <StatusPill status={order.status} kind="order" />
+                  <Money value={order.grandTotal} />
                 </span>
-              </span>
-              <span className="adm-row">
-                <StatusPill status={order.status} kind="order" />
-                <Money value={order.total} />
-              </span>
-            </Link>
-          ))}
-          {orders.length === 0 && !loading ? (
+              </Link>
+            ))
+          )}
+          {orders.length === 0 && !recent.loading && recent.error === null ? (
             <EmptyState
               title="Nothing today yet"
               body="Orders land here the moment a customer checks out."

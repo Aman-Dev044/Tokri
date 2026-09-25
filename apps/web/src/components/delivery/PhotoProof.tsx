@@ -9,18 +9,27 @@
  * photo and move on".
  *
  * ── WHAT DOES NOT WORK YET, STATED PLAINLY ──────────────────────────────────
- * `POST /delivery/orders/:id/deliver` accepts `{ otp, photoUrl? }` — a URL,
- * which means the file has to be uploaded somewhere first. The vendor surface
- * gets `POST /vendor/products/:id/images → S3 presigned PUT` (§6.2); there is
- * NO equivalent for delivery yet.
+ * `POST /delivery/orders/:id/deliver` accepts `{ otp, photoUrl? }` where
+ * `photoUrl` must be an absolute HTTPS URL (`@IsUrl({ protocols: ['https'] })`
+ * on `DeliverOrderDto`). That means the file has to be uploaded somewhere
+ * first — and the whole delivery API has NO upload route. Verified against the
+ * live server: the only rider routes are /me, /availability, /offers,
+ * /offers/:id/accept|reject, /orders/active, /orders/:id/picked-up,
+ * /orders/:id/out-for-delivery, /orders/:id/deliver, /orders/:id/failed,
+ * /location, /history and /earnings. There is no presign among them.
  *
- * So the photo is captured, shown back to the rider, and NOT sent. The rider
- * is told that, rather than being allowed to believe a photo was filed. When
- * Worker C lands a presigned-upload endpoint, `onUploaded` is the one seam
- * that needs wiring.
+ * So the photo is captured, shown back to the rider, and NOT sent. Sending a
+ * `blob:` object URL would simply be a 400 from the DTO, and inventing an
+ * upload path here would be a 404 at the worst possible moment. The rider is
+ * told the truth instead, below, rather than being allowed to believe a photo
+ * was filed.
  *
- * TODO(worker-c): a `POST /delivery/orders/:id/proof` presigned PUT, then
- * upload here and pass the returned URL into `deliverOrder`.
+ * TODO(api): there is no proof-photo upload endpoint. The rider app needs
+ * `POST /delivery/orders/:id/proof-photo` returning an S3 presigned PUT (the
+ * shape `POST /vendor/products/:id/images` already uses), after which this
+ * component uploads the file and hands the returned HTTPS URL to
+ * `deliverOrder(orderId, otp, photoUrl)`. Until that route exists, neither
+ * this component nor `deliverOrder` takes a photo URL at all.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';

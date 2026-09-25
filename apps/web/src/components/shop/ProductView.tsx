@@ -13,8 +13,8 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatPaise, getAisle, useAisle } from '@mandi/design-system';
 import { useShopQuery } from '@/hooks/useShopQuery';
-import { readProduct, type Product } from '@/lib/shop/types';
-import { useBasket } from './BasketProvider';
+import { readProductDetail, type ProductDetail } from '@/lib/shop/types';
+import { MAX_QTY_PER_LINE, useBasket, type BasketStore } from './BasketProvider';
 import { ErrorNotice, FixtureBanner } from './notices';
 import { ProductMedia } from './ProductCard';
 import { QuantityStepper } from './QuantityStepper';
@@ -25,12 +25,14 @@ export function ProductView({ productId }: { productId: string }) {
   const [draftQty, setDraftQty] = useState(1);
   const addRef = useRef<HTMLButtonElement | null>(null);
 
-  const query = useShopQuery<Product | null>(
+  /* `GET /products/:id` → ProductDetail: the ONLY product response that
+     carries its store. That store is what the basket is keyed on. */
+  const query = useShopQuery<ProductDetail | null>(
     `/products/${encodeURIComponent(productId)}`,
     undefined,
     {
       anonymous: true,
-      read: useCallback((raw: unknown) => readProduct(raw), []),
+      read: useCallback((raw: unknown) => readProductDetail(raw), []),
     },
   );
 
@@ -81,10 +83,13 @@ export function ProductView({ productId }: { productId: string }) {
 
   const inBasket = qtyOf(product.id);
   const aisle = aisleKey === null ? null : getAisle(aisleKey);
-  const discount =
-    product.mrpPaise !== null && product.mrpPaise > product.pricePaise
-      ? Math.round(((product.mrpPaise - product.pricePaise) / product.mrpPaise) * 100)
-      : null;
+  const discount = product.mrp > product.price ? product.discountPct : null;
+  const ceiling = Math.min(product.availableQty, MAX_QTY_PER_LINE);
+  const basketStore: BasketStore = {
+    vendorId: product.store.id,
+    storeName: product.store.storeName,
+    storeSlug: product.store.slug,
+  };
 
   return (
     <div className="shell shop-page">
@@ -112,18 +117,17 @@ export function ProductView({ productId }: { productId: string }) {
           <p className="shop-product__meta">
             <span className="mono">{product.unit}</span>
             {product.brand !== null ? <> · {product.brand}</> : null}
-            {product.storeName !== null ? (
-              <>
-                {' · from '}
-                <strong>{product.storeName}</strong>
-              </>
-            ) : null}
+            {' · from '}
+            <Link href={`/stores/${encodeURIComponent(product.store.slug)}`}>
+              <strong>{product.store.storeName}</strong>
+            </Link>
+            {!product.store.isOpen ? <> · closed right now</> : null}
           </p>
 
           <p className="shop-product__price">
-            <span className="price">{formatPaise(product.pricePaise)}</span>
-            {product.mrpPaise !== null ? (
-              <s className="shop-product__mrp">{formatPaise(product.mrpPaise)}</s>
+            <span className="price">{formatPaise(product.price)}</span>
+            {product.mrp > product.price ? (
+              <s className="shop-product__mrp">{formatPaise(product.mrp)}</s>
             ) : null}
             <span className="shop-product__per">per {product.unit}</span>
           </p>
@@ -131,8 +135,8 @@ export function ProductView({ productId }: { productId: string }) {
           <p className="shop-product__stock" data-in={product.inStock ? 'true' : 'false'}>
             <span className="shop-store__dot" aria-hidden="true" />
             {product.inStock
-              ? product.stock !== null && product.stock <= 5
-                ? `Only ${product.stock} left at this store`
+              ? product.availableQty > 0 && product.availableQty <= 5
+                ? `Only ${product.availableQty} left at this store`
                 : 'In stock at this store'
               : 'Out of stock right now'}
           </p>
@@ -142,7 +146,7 @@ export function ProductView({ productId }: { productId: string }) {
               <QuantityStepper
                 value={draftQty}
                 min={1}
-                max={product.stock}
+                max={ceiling}
                 label={product.name}
                 onChange={setDraftQty}
               />
@@ -151,7 +155,7 @@ export function ProductView({ productId }: { productId: string }) {
                 type="button"
                 className="mnd-btn mnd-btn--solid mnd-btn--lg"
                 onClick={() => {
-                  add(product, draftQty, addRef.current);
+                  add(product, basketStore, draftQty, addRef.current);
                 }}
               >
                 Add {draftQty > 1 ? `${draftQty} ` : ''}to basket

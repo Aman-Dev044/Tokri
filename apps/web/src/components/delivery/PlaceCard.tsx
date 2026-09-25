@@ -2,37 +2,61 @@
 
 /**
  * An address, treated as the primary artefact rather than a caption under a
- * map — because today there IS no map (no browser Maps key), and because in
- * the rain the written address is what a rider actually reads.
+ * map — because today there IS no working map (the Maps key has no billing
+ * behind it), and because in the rain the written address is what a rider
+ * actually reads.
  *
- * Nothing here is decorative: the name, the address, the note the customer
- * left, one navigation link and one phone link. Both links are 64px tall and
- * both are SECONDARY — the screen's primary action stays in the bottom dock,
- * alone (plan §2.4).
+ * ── WHAT A WAYPOINT ACTUALLY CARRIES ────────────────────────────────────────
+ * The API's waypoint is FLAT — `{ label, address, lat, lng }` — and that is
+ * all. There is no phone and no delivery note on it. The customer's number
+ * lives on the order (`customerPhone`), so the caller passes it in explicitly
+ * rather than this component hunting for one that was never sent.
+ *
+ * Nothing here is decorative: the name, the address, one navigation link and
+ * one phone link. Both links are 64px tall and both are SECONDARY — the
+ * screen's primary action stays in the bottom dock, alone.
  */
+
+import type { MapMarker } from '@mandi/design-system/map';
 
 import styles from './delivery.module.css';
 import { IconNavigate, IconPhone, IconPin, IconStore } from './icons';
 import { MapPanel } from './MapPanel';
 import { navUrlFor } from '@/lib/delivery/maps';
 import { telHref } from '@/lib/delivery/format';
-import type { Place } from '@/lib/delivery/types';
+import { pointOf, type Waypoint } from '@/lib/delivery/types';
 
 export function PlaceCard({
   kind,
   place,
   showMap = false,
+  phone,
   phoneLabel,
 }: {
   kind: 'pickup' | 'drop';
-  place: Place;
+  place: Waypoint;
   /** Only the screen the rider is currently navigating to draws a map slot. */
   showMap?: boolean;
+  /** The number to dial. Comes off the ORDER, not off the waypoint. */
+  phone?: string | null;
   /** "Call customer" / "Call store". Omitted ⇒ no phone row. */
   phoneLabel?: string;
 }) {
-  const tel = telHref(place.phone);
+  const tel = telHref(phone);
   const isPickup = kind === 'pickup';
+  const point = pointOf(place);
+
+  const markers: MapMarker[] =
+    point === null
+      ? []
+      : [
+          {
+            id: kind,
+            position: point,
+            kind: isPickup ? 'store' : 'drop',
+            label: place.label,
+          },
+        ];
 
   return (
     <section className={styles.panel} aria-label={isPickup ? 'Pickup' : 'Drop-off'}>
@@ -49,28 +73,11 @@ export function PlaceCard({
         ) : (
           <p className={styles.placeAddress}>{place.address}</p>
         )}
-        {place.note === undefined ? null : (
-          <p className={styles.placeNote}>Note: {place.note}</p>
-        )}
       </div>
 
       {showMap ? (
         <div style={{ marginTop: '0.75rem' }}>
-          <MapPanel
-            center={place.point}
-            markers={
-              place.point === null
-                ? []
-                : [
-                    {
-                      id: kind,
-                      position: place.point,
-                      kind: isPickup ? 'store' : 'drop',
-                      label: place.label,
-                    },
-                  ]
-            }
-          />
+          <MapPanel center={point} markers={markers} />
         </div>
       ) : null}
 

@@ -4,6 +4,21 @@
  * Store settings — the screen a vendor touches twice a year, which is exactly
  * why it has to be forgiving.
  *
+ * ── ★ TWO ENDPOINTS, NOT ONE ────────────────────────────────────────────────
+ * The profile and the opening hours are separate writes, because the API keeps
+ * them separate:
+ *
+ *     PUT /vendor/profile      → UpdateStoreProfileDto
+ *     PUT /vendor/store/hours  → UpdateStoreHoursDto  ({ hours: [...] })
+ *
+ * `UpdateStoreProfileDto` does NOT accept `openingHours`, and with
+ * `forbidNonWhitelisted: true` sending it is a 400 that rejects the WHOLE
+ * save — address, radius and COD cap included. This screen used to post one
+ * combined body and could therefore never save anything at all.
+ *
+ * Hours are a full REPLACEMENT, not a merge: partial hour updates are how a
+ * store ends up advertising two overlapping Tuesday windows.
+ *
  * ── ★ DIRTY-STATE TRACKING ──────────────────────────────────────────────────
  * Nothing saves as you type. The form holds a draft, compares it field by field
  * with what the server returned, and a save/discard dock appears only once
@@ -25,35 +40,59 @@
  * are on screen because a vendor who cannot see their commission rate cannot
  * check their own payouts — but they are plainly marked as not editable here
  * rather than being omitted and quietly wondered about.
+ *
+ * The store's rating is shown as a number and nothing else. The API sends
+ * `rating`; it does not send a vote count, and printing one would be inventing
+ * it.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import {
-  AdminPage,
-  AdminSection,
-  ConfirmDialog,
-  Money,
-} from '@/components/admin';
+import { AdminPage, AdminSection, ConfirmDialog, Money } from '@/components/admin';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
-import type { OpeningHour, VendorProfile, VendorProfileUpdate } from '@/lib/vendor/types';
+import type {
+  OpeningHour,
+  VendorHoursUpdate,
+  VendorProfile,
+  VendorProfileUpdate,
+} from '@/lib/vendor/types';
 import { EndpointError, Field, RupeeInput } from '../primitives';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-type Draft = VendorProfileUpdate;
+/** Exactly the editable slice of the profile, with hours alongside it. */
+interface Draft {
+  storeName: string;
+  description: string;
+  address: {
+    line1: string;
+    line2: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  location: { lat: number; lng: number };
+  serviceRadiusKm: number;
+  codEnabled: boolean;
+  codMaxAmount: number;
+  /** Written through `PUT /vendor/store/hours`, never through the profile. */
+  openingHours: OpeningHour[];
+}
 
 function toDraft(profile: VendorProfile): Draft {
   return {
     storeName: profile.storeName,
-    description: profile.description,
-    logoUrl: profile.logoUrl,
-    bannerUrl: profile.bannerUrl,
-    phone: profile.phone,
-    address: { ...profile.address },
-    location: {
-      type: 'Point',
-      coordinates: [profile.location.coordinates[0], profile.location.coordinates[1]],
+    // `description` and `line2` are nullable on the wire and must be strings
+    // in a controlled input — React logs a warning and drops the caret the
+    // moment an input's value goes from null to a string.
+    description: profile.description ?? '',
+    address: {
+      line1: profile.address.line1,
+      line2: profile.address.line2 ?? '',
+      city: profile.address.city,
+      state: profile.address.state,
+      pincode: profile.address.pincode,
     },
+    location: { lat: profile.location.lat, lng: profile.location.lng },
     serviceRadiusKm: profile.serviceRadiusKm,
     codEnabled: profile.codEnabled,
     codMaxAmount: profile.codMaxAmount,
@@ -66,11 +105,10 @@ function diffOf(draft: Draft, original: Draft): string[] {
   const changed: string[] = [];
   if (draft.storeName !== original.storeName) changed.push('store name');
   if (draft.description !== original.description) changed.push('description');
-  if (draft.phone !== original.phone) changed.push('phone');
   if (JSON.stringify(draft.address) !== JSON.stringify(original.address)) changed.push('address');
   if (
-    draft.location.coordinates[0] !== original.location.coordinates[0] ||
-    draft.location.coordinates[1] !== original.location.coordinates[1]
+    draft.location.lat !== original.location.lat ||
+    draft.location.lng !== original.location.lng
   ) {
     changed.push('map position');
   }
@@ -83,20 +121,49 @@ function diffOf(draft: Draft, original: Draft): string[] {
   return changed;
 }
 
+/** Everything except the hours — that is a different endpoint. */
+function toProfileBody(draft: Draft): VendorProfileUpdate {
+  return {
+    storeName: draft.storeName.trim(),
+    // The validator is `/^.{0,1000}$/s`, so an empty description is legal —
+    // but `null` is not a string and would be rejected.
+    description: draft.description,
+    address: {
+      line1: draft.address.line1.trim(),
+      // `line2` is optional; omitted rather than sent blank when there is none.
+      ...(draft.address.line2.trim() === '' ? {} : { line2: draft.address.line2.trim() }),
+      city: draft.address.city.trim(),
+      state: draft.address.state.trim(),
+      pincode: draft.address.pincode.trim(),
+    },
+    location: draft.location,
+    // `serviceRadiusKm` is @IsInt() with min 1 and max 25. A 4.5 km radius is
+    // a 400, so the control below steps in whole kilometres.
+    serviceRadiusKm: Math.min(25, Math.max(1, Math.round(draft.serviceRadiusKm))),
+    codEnabled: draft.codEnabled,
+    codMaxAmount: draft.codMaxAmount,
+  };
+}
+
 export function SettingsView() {
   const profile = useVendorQuery<VendorProfile>('/vendor/profile');
-  const save = useVendorMutation<Draft, VendorProfile>('/vendor/profile', 'PUT');
+  const saveProfile = useVendorMutation<VendorProfileUpdate, VendorProfile>(
+    '/vendor/profile',
+    'PUT',
+  );
+  const saveHours = useVendorMutation<VendorHoursUpdate, VendorProfile>(
+    '/vendor/store/hours',
+    'PUT',
+  );
 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
-  const original = useMemo(
-    () => (profile.data ? toDraft(profile.data) : null),
-    [profile.data],
-  );
+  const original = useMemo(() => (profile.data ? toDraft(profile.data) : null), [profile.data]);
 
   // Seed once per server payload. Re-seeding on every render would throw away
-  // whatever the vendor is in the middle of typing on each 20s refetch.
+  // whatever the vendor is in the middle of typing on each refetch.
   useEffect(() => {
     if (original) setDraft(original);
   }, [original]);
@@ -123,19 +190,23 @@ export function SettingsView() {
         <EndpointError
           path="/vendor/profile"
           message={profile.error.friendlyMessage}
+          status={profile.error.status}
           onRetry={profile.refetch}
         />
       </AdminPage>
     );
   }
 
-  if (!draft || !profile.data) {
+  if (!draft || !profile.data || !original) {
     return (
       <AdminPage title="Store settings" description="Loading your shop's profile…">
         <div className="adm-skel adm-skel--chart" aria-busy="true" />
       </AdminPage>
     );
   }
+
+  const server = profile.data;
+  const saving = saveProfile.loading || saveHours.loading;
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft({ ...draft, [key]: value });
@@ -149,7 +220,68 @@ export function SettingsView() {
     });
   };
 
-  const [lng, lat] = draft.location.coordinates;
+  /** A day with no row is a day the shop does not open. There is no flag. */
+  const removeDay = (index: number) => {
+    setDraft({
+      ...draft,
+      openingHours: draft.openingHours.filter((_, i) => i !== index),
+    });
+  };
+
+  const addDay = (day: number) => {
+    setDraft({
+      ...draft,
+      openingHours: [...draft.openingHours, { day, open: '09:00', close: '21:00' }].sort(
+        (a, b) => a.day - b.day,
+      ),
+    });
+  };
+
+  const missingDays = DAYS.map((_, day) => day).filter(
+    (day) => !draft.openingHours.some((hour) => hour.day === day),
+  );
+
+  /**
+   * Save the two halves independently, hours last.
+   *
+   * Only what actually changed is sent. If the hours failed and the profile
+   * succeeded the screen says so rather than claiming a clean save — a
+   * settings page that reports success over a half-applied write is how a shop
+   * ends up open at hours it never set.
+   */
+  const onSave = async () => {
+    setFailure(null);
+    const profileChanged = changes.some((change) => change !== 'opening hours');
+    const hoursChanged = changes.includes('opening hours');
+
+    if (profileChanged) {
+      const result = await saveProfile.mutate(toProfileBody(draft), {
+        invalidate: ['/vendor/profile', '/vendor/dashboard'],
+        onError: (error) => setFailure(error.friendlyMessage),
+      });
+      if (result === null) return;
+    }
+
+    if (hoursChanged) {
+      await saveHours.mutate(
+        { hours: draft.openingHours },
+        {
+          invalidate: ['/vendor/profile', '/vendor/dashboard'],
+          onError: (error) =>
+            setFailure(
+              profileChanged
+                ? `The profile saved, but the opening hours did not: ${error.friendlyMessage}`
+                : error.friendlyMessage,
+            ),
+        },
+      );
+    }
+  };
+
+  const pincodeValid = /^\d{6}$/.test(draft.address.pincode);
+  const latValid = draft.location.lat >= -90 && draft.location.lat <= 90;
+  const lngValid = draft.location.lng >= -180 && draft.location.lng <= 180;
+  const canSave = pincodeValid && latValid && lngValid && draft.storeName.trim().length >= 2;
 
   return (
     <AdminPage
@@ -158,11 +290,11 @@ export function SettingsView() {
       isFixture={profile.isFixture}
       fixturePaths={profile.isFixture ? ['/vendor/profile'] : undefined}
     >
-      {save.error ? (
+      {failure ? (
         <div className="adm-fixture" role="alert" style={{ marginBottom: 'var(--s-3)' }}>
           <div>
-            <p className="adm-fixture__title">Nothing was saved</p>
-            <p className="adm-fixture__body">{save.error.friendlyMessage}</p>
+            <p className="adm-fixture__title">Not everything was saved</p>
+            <p className="adm-fixture__body">{failure}</p>
           </div>
         </div>
       ) : null}
@@ -172,14 +304,17 @@ export function SettingsView() {
           {/* ------------------------------------------ profile ---- */}
           <AdminSection title="Profile" description="What customers see at the top of your shop.">
             <div className="ven-form">
-              <Field label="Store name">
+              <Field
+                label="Store name"
+                error={draft.storeName.trim().length < 2 ? 'At least two characters.' : undefined}
+              >
                 {(id) => (
                   <input
                     id={id}
                     className="ven-input"
                     value={draft.storeName}
                     onChange={(event) => set('storeName', event.target.value)}
-                    maxLength={80}
+                    maxLength={120}
                   />
                 )}
               </Field>
@@ -194,23 +329,16 @@ export function SettingsView() {
                     className="ven-textarea"
                     value={draft.description}
                     onChange={(event) => set('description', event.target.value)}
-                    maxLength={400}
+                    maxLength={1000}
                   />
                 )}
               </Field>
 
-              <Field label="Shop phone" hint="Used by riders and by support. Not shown publicly.">
-                {(id) => (
-                  <input
-                    id={id}
-                    className="ven-input"
-                    type="tel"
-                    value={draft.phone}
-                    onChange={(event) => set('phone', event.target.value)}
-                    maxLength={16}
-                  />
-                )}
-              </Field>
+              {/*
+                There is no shop phone here, and that is not an omission. The
+                store profile carries no phone field — the contact number lives
+                on the owner's User account, which this panel does not edit.
+              */}
             </div>
           </AdminSection>
 
@@ -229,19 +357,21 @@ export function SettingsView() {
                     onChange={(event) =>
                       set('address', { ...draft.address, line1: event.target.value })
                     }
+                    maxLength={160}
                   />
                 )}
               </Field>
 
-              <Field label="Address line 2">
+              <Field label="Address line 2" hint="Optional.">
                 {(id) => (
                   <input
                     id={id}
                     className="ven-input"
-                    value={draft.address.line2 ?? ''}
+                    value={draft.address.line2}
                     onChange={(event) =>
                       set('address', { ...draft.address, line2: event.target.value })
                     }
+                    maxLength={160}
                   />
                 )}
               </Field>
@@ -256,6 +386,7 @@ export function SettingsView() {
                       onChange={(event) =>
                         set('address', { ...draft.address, city: event.target.value })
                       }
+                      maxLength={80}
                     />
                   )}
                 </Field>
@@ -268,15 +399,11 @@ export function SettingsView() {
                       onChange={(event) =>
                         set('address', { ...draft.address, state: event.target.value })
                       }
+                      maxLength={80}
                     />
                   )}
                 </Field>
-                <Field
-                  label="Pincode"
-                  error={
-                    /^\d{6}$/.test(draft.address.pincode) ? undefined : 'Six digits, no spaces.'
-                  }
-                >
+                <Field label="Pincode" error={pincodeValid ? undefined : 'Six digits, no spaces.'}>
                   {(id) => (
                     <input
                       id={id}
@@ -294,11 +421,7 @@ export function SettingsView() {
               </div>
 
               <div className="ven-form__row">
-                <Field
-                  label="Latitude"
-                  hint="−90 to 90"
-                  error={lat < -90 || lat > 90 ? 'Out of range.' : undefined}
-                >
+                <Field label="Latitude" hint="−90 to 90" error={latValid ? undefined : 'Out of range.'}>
                   {(id) => (
                     <input
                       id={id}
@@ -306,11 +429,11 @@ export function SettingsView() {
                       data-num="true"
                       type="number"
                       step="0.000001"
-                      value={lat}
+                      value={draft.location.lat}
                       onChange={(event) =>
                         set('location', {
-                          type: 'Point',
-                          coordinates: [lng, Number(event.target.value)],
+                          ...draft.location,
+                          lat: Number(event.target.value),
                         })
                       }
                     />
@@ -319,7 +442,7 @@ export function SettingsView() {
                 <Field
                   label="Longitude"
                   hint="−180 to 180"
-                  error={lng < -180 || lng > 180 ? 'Out of range.' : undefined}
+                  error={lngValid ? undefined : 'Out of range.'}
                 >
                   {(id) => (
                     <input
@@ -328,11 +451,11 @@ export function SettingsView() {
                       data-num="true"
                       type="number"
                       step="0.000001"
-                      value={lng}
+                      value={draft.location.lng}
                       onChange={(event) =>
                         set('location', {
-                          type: 'Point',
-                          coordinates: [Number(event.target.value), lat],
+                          ...draft.location,
+                          lng: Number(event.target.value),
                         })
                       }
                     />
@@ -340,7 +463,7 @@ export function SettingsView() {
                 </Field>
                 <Field
                   label="Delivery radius (km)"
-                  hint="Customers beyond this never see your shop."
+                  hint="Whole kilometres, 1 to 25. Customers beyond this never see your shop."
                 >
                   {(id) => (
                     <input
@@ -348,12 +471,15 @@ export function SettingsView() {
                       className="ven-input"
                       data-num="true"
                       type="number"
-                      min={0.5}
+                      min={1}
                       max={25}
-                      step="0.5"
+                      step="1"
                       value={draft.serviceRadiusKm}
                       onChange={(event) =>
-                        set('serviceRadiusKm', Number(event.target.value) || 0)
+                        set(
+                          'serviceRadiusKm',
+                          Math.min(25, Math.max(1, Math.round(Number(event.target.value) || 1))),
+                        )
                       }
                     />
                   )}
@@ -361,9 +487,9 @@ export function SettingsView() {
               </div>
 
               <p className="ven-note">
-                Stored as GeoJSON — <code>[longitude, latitude]</code>, in that order. The two
-                boxes above are labelled the human way round; the swap happens once, here, which
-                is why a shop in Chandigarh has never ended up in the Indian Ocean.
+                The API takes and returns plain <code>{'{ lat, lng }'}</code> and converts to
+                GeoJSON at its own boundary. The two boxes above are labelled the human way round
+                and travel that way too — there is no coordinate swap to get wrong here.
               </p>
             </div>
           </AdminSection>
@@ -371,21 +497,16 @@ export function SettingsView() {
           {/* -------------------------------------------- hours ---- */}
           <AdminSection
             title="Opening hours"
-            description="Orders are only accepted inside these windows, on top of the open/closed switch in the top bar."
+            description="Orders are only accepted inside these windows, on top of the open/closed switch in the top bar. A day with no row is a day you do not open."
           >
             <div className="ven-hours">
               {draft.openingHours.map((hour, index) => (
-                <div
-                  className="ven-hours__row"
-                  key={`${hour.day}-${index}`}
-                  data-closed={hour.closed ? 'true' : 'false'}
-                >
+                <div className="ven-hours__row" key={`${hour.day}-${index}`} data-closed="false">
                   <span className="ven-hours__day">{DAYS[hour.day] ?? `Day ${hour.day}`}</span>
                   <input
                     className="ven-time"
                     type="time"
                     value={hour.open}
-                    disabled={hour.closed === true}
                     onChange={(event) => setHour(index, { open: event.target.value })}
                     aria-label={`${DAYS[hour.day] ?? ''} opening time`}
                   />
@@ -393,20 +514,39 @@ export function SettingsView() {
                     className="ven-time"
                     type="time"
                     value={hour.close}
-                    disabled={hour.closed === true}
                     onChange={(event) => setHour(index, { close: event.target.value })}
                     aria-label={`${DAYS[hour.day] ?? ''} closing time`}
                   />
-                  <label className="ven-switch">
-                    <input
-                      type="checkbox"
-                      checked={hour.closed === true}
-                      onChange={(event) => setHour(index, { closed: event.target.checked })}
-                    />
-                    <span>Closed all day</span>
-                  </label>
+                  <button
+                    type="button"
+                    className="adm-btn adm-btn--sm adm-btn--ghost"
+                    onClick={() => removeDay(index)}
+                  >
+                    Closed all day
+                  </button>
                 </div>
               ))}
+
+              {draft.openingHours.length === 0 ? (
+                <p className="ven-note">
+                  No opening hours set — your shop is treated as closed every day.
+                </p>
+              ) : null}
+
+              {missingDays.length > 0 ? (
+                <div className="adm-row" style={{ flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+                  {missingDays.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      className="adm-btn adm-btn--sm"
+                      onClick={() => addDay(day)}
+                    >
+                      Open on {DAYS[day]}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </AdminSection>
         </div>
@@ -428,13 +568,14 @@ export function SettingsView() {
 
               <Field
                 label="Maximum COD order (₹)"
-                hint="Above this, the customer has to pay online. A cash order that is refused at the door costs you the delivery and the stock."
+                hint="Above this, the customer has to pay online. The platform ceiling is ₹2,000. A cash order that is refused at the door costs you the delivery and the stock."
+                error={draft.codMaxAmount > 200000 ? 'The platform caps this at ₹2,000.' : undefined}
               >
                 {(id) => (
                   <RupeeInput
                     id={id}
                     value={draft.codMaxAmount}
-                    onChange={(paise) => set('codMaxAmount', paise)}
+                    onChange={(paise) => set('codMaxAmount', Math.min(200000, Math.max(0, paise)))}
                     disabled={!draft.codEnabled}
                   />
                 )}
@@ -450,17 +591,20 @@ export function SettingsView() {
             <div className="adm-panel--pad">
               <dl className="adm-dl">
                 <dt>Commission</dt>
-                <dd className="adm-num">{profile.data.commissionPct}%</dd>
+                <dd className="adm-num">{server.commissionPct}%</dd>
                 <dt>Approval</dt>
-                <dd>{profile.data.status}</dd>
+                <dd>{server.status}</dd>
                 <dt>Rating</dt>
+                {/*
+                  `rating` and nothing else. There is no vote count on this
+                  payload — reading one is what used to crash the dashboard.
+                */}
                 <dd className="adm-num">
-                  {profile.data.rating.toFixed(1)} ★ from{' '}
-                  {profile.data.ratingCount.toLocaleString('en-IN')}
+                  {server.rating > 0 ? `${server.rating.toFixed(1)} ★` : 'not rated yet'}
                 </dd>
                 <dt>Shop URL</dt>
                 <dd>
-                  <code>/store/{profile.data.slug}</code>
+                  <code>/store/{server.slug}</code>
                 </dd>
                 <dt>COD cap</dt>
                 <dd>
@@ -486,14 +630,15 @@ export function SettingsView() {
             <button
               type="button"
               className="adm-btn adm-btn--primary"
-              disabled={save.loading}
-              onClick={() =>
-                void save.mutate(draft, {
-                  invalidate: ['/vendor/profile'],
-                })
-              }
+              disabled={saving || !canSave}
+              title={canSave ? undefined : 'Fix the highlighted fields first.'}
+              onClick={() => {
+                void onSave();
+              }}
             >
-              {save.loading ? 'Saving…' : `Save ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`}
+              {saving
+                ? 'Saving…'
+                : `Save ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`}
             </button>
           </span>
         </div>
@@ -506,7 +651,8 @@ export function SettingsView() {
         confirmLabel="Discard"
         onCancel={() => setConfirmDiscard(false)}
         onConfirm={() => {
-          if (original) setDraft(original);
+          setDraft(original);
+          setFailure(null);
           setConfirmDiscard(false);
         }}
         body={<p>{changes.join(', ')} will go back to what the server has.</p>}
