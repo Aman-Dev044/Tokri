@@ -44,6 +44,27 @@ export const configuration = () => ({
     pepper: process.env.ARGON2_PEPPER as string,
   },
 
+  maps: {
+    /**
+     * Google Maps SERVER key, used only for geocoding an address once,
+     * at the moment it is created (§8.7 cost control).
+     *
+     * Optional in the Joi schema, exactly like SEED_DEMO_PASSWORD, so
+     * this is `undefined` on a deployment that does not geocode. The API
+     * boots perfectly well without it: `GeoService` reads it with
+     * `get()` and refuses the ONE call that needs it, while distance,
+     * ETA and rider payout — which come from the stored 2dsphere points
+     * — carry on working. Making it `.required()` would stop a
+     * production deployment booting over a feature it never uses.
+     *
+     * It is a SERVER key: it must be IP-restricted in the Google console
+     * and must never be given to a browser. The browser key is a
+     * separate, referrer-restricted value and lives behind the
+     * NEXT_PUBLIC_ boundary in the web app.
+     */
+    serverKey: process.env.GOOGLE_MAPS_SERVER_KEY,
+  },
+
   throttle: {
     ttlMs: parseInt(process.env.THROTTLE_TTL_MS as string, 10),
     limit: parseInt(process.env.THROTTLE_LIMIT as string, 10),

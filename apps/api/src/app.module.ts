@@ -8,12 +8,16 @@ import { configuration } from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DeliveryModule } from './modules/delivery/delivery.module';
 import { HealthModule } from './modules/health/health.module';
+import { ShopModule } from './modules/shop/shop.module';
 import { UsersModule } from './modules/users/users.module';
+import { VendorModule } from './modules/vendor/vendor.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { VendorScopeGuard } from './common/guards/vendor-scope.guard';
 import { ResourceOwnerGuard } from './common/guards/resource-owner.guard';
+import { RealtimeModule } from './realtime/realtime.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 @Module({
@@ -57,6 +61,10 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     HealthModule,
     UsersModule,
     AdminModule,
+    DeliveryModule,
+    RealtimeModule,
+    VendorModule,
+    ShopModule,
   ],
 
   providers: [

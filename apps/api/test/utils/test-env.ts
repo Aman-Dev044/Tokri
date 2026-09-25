@@ -72,5 +72,14 @@ export function applyTestEnv(mongoUri: string): void {
     SEED_ADMIN_EMAIL: 'admin@test.invalid',
     SEED_ADMIN_PHONE: '9000000002',
     SEED_ADMIN_PASSWORD: ephemeralSecret(),
+
+    // Optional in the Joi schema, but a developer `.env` carries it as an
+    // EMPTY string and Joi rejects an empty string for a constrained
+    // optional value. `@nestjs/config` never overwrites a variable that is
+    // already in `process.env`, so setting an ephemeral value here is what
+    // stops a local `.env` from breaking the test boot. Nothing in the
+    // suite calls Google Maps — distance and ETA come from the stored
+    // 2dsphere points (§8.7 #11).
+    GOOGLE_MAPS_SERVER_KEY: ephemeralSecret(),
   });
 }

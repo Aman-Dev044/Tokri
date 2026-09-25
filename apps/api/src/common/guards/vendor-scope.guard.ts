@@ -47,11 +47,26 @@ export class VendorScopeGuard implements CanActivate {
       return true;
     }
 
-    if (user.role === Role.VENDOR || user.role === Role.DELIVERY) {
+    // A VENDOR is meaningless without a tenant: every one of their routes
+    // filters on it, so a token without one is broken and must be rejected.
+    if (user.role === Role.VENDOR) {
       if (!user.vendorId) {
         throw new ForbiddenException('Token carries no vendor scope');
       }
       req.vendorScope = user.vendorId;
+      return true;
+    }
+
+    // A DELIVERY partner MAY belong to a vendor, or may be on the platform
+    // pool — `DeliveryPartner.vendorId` is nullable by design (plan §5.1).
+    // Requiring one here 403'd every pool rider on every route.
+    //
+    // Riders are not scoped by tenant anyway: their routes are scoped to
+    // their OWN partner record and their OWN assigned order, so a null
+    // scope removes nothing. Scope is set when present purely so a
+    // vendor-owned rider still cannot read across tenants.
+    if (user.role === Role.DELIVERY) {
+      req.vendorScope = user.vendorId ?? null;
     }
 
     return true;

@@ -25,3 +25,31 @@ export type { Freshness } from './useFreshness';
 
 export { useOpsSummary, opsBadges, OPS_SUMMARY_PATH } from './useOpsSummary';
 export type { OpsBadge, OpsBadges, UseOpsSummaryOptions } from './useOpsSummary';
+
+/* ── vendor panel ───────────────────────────────────────────────────────── */
+export { useVendorQuery, invalidateVendor } from './useVendorQuery';
+export type { VendorQueryOptions, VendorQueryResult } from './useVendorQuery';
+
+export { useVendorMutation } from './useVendorMutation';
+export type {
+  VendorMutateOptions,
+  VendorMutationMethod,
+  VendorMutationResult,
+} from './useVendorMutation';
+
+/* ── customer shop (Worker E) ──────────────────────────────────────────── */
+
+export { useShopQuery, invalidateShop } from './useShopQuery';
+export type { ShopQueryOptions, ShopQueryResult } from './useShopQuery';
+
+export { useGeolocation, locationQuery } from './useGeolocation';
+export type { GeoStatus, GeolocationState, ShopLocation, UseGeolocation } from './useGeolocation';
+
+export { useSocket } from './useSocket';
+export type {
+  ConnectionState,
+  SocketConnection,
+  UseSocketOptions,
+  OrderStatusChanged,
+  DeliveryLocationUpdated,
+} from './useSocket';

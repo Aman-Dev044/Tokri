@@ -40,19 +40,51 @@ import {
  *   GET  /health/ready  Readiness probe, same reason. Returns only
  *                       up/down and whether transactions are available.
  *
+ * ── The customer browse routes (added with the shop module) ─────────────
+ * All five are CATALOGUE: which stores exist, what they stock, what it
+ * costs. None of them is personal, none of them writes anything, and none
+ * of them takes an identifier that belongs to a user. "Browse before
+ * login" is an explicit requirement of §6.2, and a grocery app that
+ * demands an account before it will show a price loses the customer at
+ * the front door.
+ *
+ *   GET /stores                 The store list. Takes lat/lng from the
+ *                               QUERY, which is a location the caller
+ *                               already knows — it is not read from any
+ *                               stored profile.
+ *   GET /stores/:slug           One store, addressed by its public,
+ *                               human-readable slug.
+ *   GET /stores/:id/categories  Aisle navigation for that store.
+ *   GET /stores/:id/products    That store's catalogue, with live stock.
+ *   GET /products/:id           One product. Also the SEO/SSR entry
+ *                               point for a shared product link.
+ *
+ * Every one of them returns only APPROVED vendors and ACTIVE products,
+ * so a suspended store is invisible rather than merely unbuyable. The
+ * moment any of them starts returning something personal — a saved
+ * store, a recent search, a personalised price — it stops being public
+ * and comes off this list.
+ *
  * Deliberately NOT present:
  *   POST /auth/register — the signup flow (role selection, OTP, vendor KYC
  *                         gate) is still being specified; it is not
  *                         implemented, so it is not public.
- *   The catalog browse routes (GET /stores, GET /products/:id) and
- *   POST /webhooks/razorpay arrive in later phases. Each one is a new
- *   line in this list at the time it lands.
+ *   POST /webhooks/razorpay — arrives with the payment phase (§8.3). It
+ *                         is public but HMAC-verified, and it gets a line
+ *                         here at the time it lands.
  */
 const EXPECTED_PUBLIC_ROUTES: readonly string[] = [
   'POST /auth/login',
   'POST /auth/refresh',
   'GET /health/live',
   'GET /health/ready',
+
+  // ── Customer browse (shop module) ─────────────────────────────────
+  'GET /stores',
+  'GET /stores/:slug',
+  'GET /stores/:id/categories',
+  'GET /stores/:id/products',
+  'GET /products/:id',
 ];
 
 interface RouteInfo {

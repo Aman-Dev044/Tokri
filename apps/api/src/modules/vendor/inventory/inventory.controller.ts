@@ -1,0 +1,108 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+
+import { Roles } from '../../../common/decorators/roles.decorator';
+import { Role } from '../../../common/constants/roles.enum';
+import {
+  CurrentUser,
+  JwtUser,
+} from '../../../common/decorators/current-user.decorator';
+import { Paginated } from '../../../common/dto/paginated';
+import { AuditInterceptor } from '../../../common/interceptors/audit.interceptor';
+import { VendorScope } from '../common/vendor-scope.decorator';
+import {
+  BulkAdjustResult,
+  InventoryRow,
+  VendorInventoryService,
+} from './inventory.service';
+import {
+  AdjustStockDto,
+  BulkAdjustStockDto,
+  ListInventoryQueryDto,
+} from './dto';
+
+@ApiTags('vendor/inventory')
+@ApiBearerAuth()
+@ApiForbiddenResponse({ description: 'Not a vendor token.' })
+@ApiNotFoundResponse({ description: 'No such inventory row in this store.' })
+@Controller('vendor/inventory')
+@Roles(Role.VENDOR)
+@UseInterceptors(AuditInterceptor)
+export class VendorInventoryController {
+  constructor(private readonly inventory: VendorInventoryService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Stock board (paginated)',
+    description:
+      'Ordered worst-first: out of stock, then deepest under threshold. ' +
+      'Filters: `lowStock`, `outOfStock`, `categoryId`, `q` over ' +
+      'name/sku/brand.',
+  })
+  list(
+    @VendorScope() scope: string,
+    @Query() query: ListInventoryQueryDto,
+  ): Promise<Paginated<InventoryRow>> {
+    return this.inventory.list(scope, query);
+  }
+
+  @Post('bulk')
+  @ApiOperation({
+    summary: 'Adjust many products in ONE transaction',
+    description:
+      'A stock-take. All lines land or none do — a partially applied ' +
+      'batch leaves the vendor unable to tell which lines took effect.',
+  })
+  @ApiConflictResponse({ description: 'A line would drive stock negative.' })
+  bulkAdjust(
+    @VendorScope() scope: string,
+    @Body() dto: BulkAdjustStockDto,
+    @CurrentUser() actor: JwtUser,
+  ): Promise<BulkAdjustResult> {
+    return this.inventory.bulkAdjust(scope, dto, actor);
+  }
+
+  @Get(':productId')
+  @ApiOperation({ summary: 'One product’s stock row' })
+  findOne(
+    @VendorScope() scope: string,
+    @Param('productId') productId: string,
+  ): Promise<InventoryRow> {
+    return this.inventory.findOne(scope, productId);
+  }
+
+  @Patch(':productId')
+  @ApiOperation({
+    summary: 'Adjust stock by a signed delta',
+    description:
+      'Stock is ADJUSTED, never SET — an `InventoryLog` row is written ' +
+      'in the SAME transaction, so the log always reconstructs the ' +
+      'current quantity. A decrement past zero is a 409: the `$gte` ' +
+      'guard lives in the query filter, so check and write are atomic.',
+  })
+  @ApiConflictResponse({ description: 'Not enough stock for this delta.' })
+  adjust(
+    @VendorScope() scope: string,
+    @Param('productId') productId: string,
+    @Body() dto: AdjustStockDto,
+    @CurrentUser() actor: JwtUser,
+  ): Promise<InventoryRow> {
+    return this.inventory.adjust(scope, productId, dto, actor);
+  }
+}

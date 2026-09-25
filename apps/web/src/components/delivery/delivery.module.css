@@ -1,0 +1,1135 @@
+/* =============================================================================
+   MANDI — the rider surface.
+
+   This is NOT the shopping app. Plan §2.4 gives this role its own rules and
+   they are the whole brief:
+
+     · one action per screen — never two primary buttons competing
+     · 64px minimum touch target, because the rider is wearing gloves
+     · maximum contrast, because this is read outdoors, in sun and in rain
+     · a big mono ETA legible at arm's length
+     · one-handed: the primary action is ANCHORED TO THE BOTTOM, in the thumb
+     · no decoration. Nothing to hunt for.
+
+   The chromatic-aisle system does NOT apply here. Colour is semantic only —
+   --good / --warn / --crit — because on this screen a colour is either an
+   instruction or it is noise.
+
+   ── CONTRAST ────────────────────────────────────────────────────────────────
+   The shared ground (--paper / --ink) is a warm off-white designed for reading
+   a shop. Direct sunlight eats it. So this surface re-derives its own ground
+   from the same palette, pushed to the ends: white-white on light, near-black
+   on dark. Those are defined ONCE below on `.shell` as the complete light set,
+   then overridden for dark in both the system-preference and the explicit
+   `data-theme` direction. Nothing is defined for the first time inside a media
+   query.
+
+   ── DARK IS THE REAL USE CASE ───────────────────────────────────────────────
+   Riders work evenings. Dark here is not a courtesy mode: the ground goes to
+   near-black so the screen does not blind at 10pm, and every semantic hue is
+   re-tuned against it rather than reused from the light set.
+   ============================================================================= */
+
+.shell {
+  /* -- ground, light (complete set) -- */
+  --rd-ground: #ffffff;
+  --rd-panel: #f1f3ec;
+  --rd-panel-2: #e6e9df;
+  --rd-ink: #0b0c08;
+  --rd-ink-2: #454a3c; /* 8.9:1 on white — secondary text, still high */
+  --rd-line: #b7bdac;
+  --rd-line-strong: #8a9080;
+
+  /* -- semantic, measured against --rd-ground -- */
+  --rd-good: #1f5c2c; /* 7.4:1 on white */
+  --rd-good-fill: #1f5c2c;
+  --rd-warn: #7d5310; /* 6.4:1 */
+  --rd-warn-fill: #b8791a;
+  --rd-crit: #9e2b19; /* 7.6:1 */
+  --rd-crit-fill: #b33a28;
+  --rd-on-fill: #ffffff;
+
+  /* -- the dock shadow: a lift, not a drop shadow -- */
+  --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -22px rgba(0, 0, 0, 0.6);
+
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* 100dvh, so a mobile browser's collapsing URL bar does not clip the dock. */
+  min-height: 100dvh;
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  /* Nothing on this surface may scroll sideways. Ever. */
+  overflow-x: clip;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .shell {
+    --rd-ground: #070805;
+    --rd-panel: #14170f;
+    --rd-panel-2: #1e2217;
+    --rd-ink: #f4f6ee;
+    --rd-ink-2: #a9b09b; /* 9.1:1 on #070805 */
+    --rd-line: #363c2c;
+    --rd-line-strong: #565e48;
+
+    --rd-good: #58b06b; /* 7.9:1 */
+    --rd-good-fill: #2f7a41;
+    --rd-warn: #e0a02c; /* 10.3:1 */
+    --rd-warn-fill: #9c6a12;
+    --rd-crit: #f07357; /* 7.7:1 */
+    --rd-crit-fill: #b33a28;
+    --rd-on-fill: #ffffff;
+
+    --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -20px rgba(0, 0, 0, 0.9);
+  }
+}
+
+:global(:root[data-theme='dark']) .shell {
+  --rd-ground: #070805;
+  --rd-panel: #14170f;
+  --rd-panel-2: #1e2217;
+  --rd-ink: #f4f6ee;
+  --rd-ink-2: #a9b09b;
+  --rd-line: #363c2c;
+  --rd-line-strong: #565e48;
+
+  --rd-good: #58b06b;
+  --rd-good-fill: #2f7a41;
+  --rd-warn: #e0a02c;
+  --rd-warn-fill: #9c6a12;
+  --rd-crit: #f07357;
+  --rd-crit-fill: #b33a28;
+  --rd-on-fill: #ffffff;
+
+  --rd-dock-lift: 0 -2px 0 var(--rd-line), 0 -14px 28px -20px rgba(0, 0, 0, 0.9);
+}
+
+/* ===========================================================================
+   Header — deliberately short. Everything a thumb needs is at the bottom.
+   =========================================================================== */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--rd-ground);
+  border-bottom: 2px solid var(--rd-line);
+  padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 0.5rem;
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+}
+
+.brand {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.brandRole {
+  color: var(--rd-ink-2);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+}
+
+/* ===========================================================================
+   The online / offline toggle — THE control on this surface.
+   Full width, 72px tall, unmistakable in either state.
+   =========================================================================== */
+
+.toggle {
+  width: 100%;
+  min-height: 72px;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  border: 3px solid var(--rd-line-strong);
+  border-radius: var(--r-panel);
+  background: var(--rd-panel);
+  color: var(--rd-ink);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
+}
+
+.toggleOn {
+  background: var(--rd-good-fill);
+  border-color: var(--rd-good-fill);
+  color: var(--rd-on-fill);
+}
+
+.toggle:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.toggleLamp {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--rd-line-strong);
+  box-shadow: inset 0 0 0 3px var(--rd-panel);
+}
+
+.toggleOn .toggleLamp {
+  background: var(--rd-on-fill);
+  box-shadow: inset 0 0 0 3px var(--rd-good-fill);
+}
+
+.toggleText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.toggleHint {
+  font-size: 0.8rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* ===========================================================================
+   Today's line — earnings + count + connection, one compact strip.
+   =========================================================================== */
+
+.todayStrip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.todayCell {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--rd-ink-2);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.todayValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--rd-ink);
+}
+
+.conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+  background: none;
+  border: 0;
+  padding: 0.35rem 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.connDot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--rd-line-strong);
+  flex: none;
+}
+
+.connLive .connDot {
+  background: var(--rd-good);
+}
+.connRetry .connDot {
+  background: var(--rd-warn);
+}
+.connFailed .connDot {
+  background: var(--rd-crit);
+}
+
+.connLive {
+  color: var(--rd-good);
+}
+.connRetry {
+  color: var(--rd-warn);
+}
+.connFailed {
+  color: var(--rd-crit);
+}
+
+/* ===========================================================================
+   Main
+   =========================================================================== */
+
+.main {
+  padding: 0.875rem 0.75rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.h1 {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+.h2 {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.lede {
+  color: var(--rd-ink-2);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.panel {
+  background: var(--rd-panel);
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  padding: 1rem;
+}
+
+.panelFlat {
+  background: none;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  padding: 1rem;
+}
+
+.stepTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--data);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+}
+
+/* ===========================================================================
+   The big mono numbers. Azeret Mono, tabular-nums, readable at arm's length.
+   =========================================================================== */
+
+.mega {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-size: clamp(3.25rem, 19vw, 5.5rem);
+}
+
+.megaUnit {
+  font-family: var(--body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+}
+
+.etaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* COD — the number the rider must not get wrong. */
+.cod {
+  border: 3px solid var(--rd-warn-fill);
+  border-radius: var(--r-panel);
+  padding: 0.875rem 1rem;
+  background: var(--rd-ground);
+}
+
+.codLabel {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rd-warn);
+}
+
+.codValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(2.75rem, 16vw, 4.25rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.codRupee {
+  font-size: 0.55em;
+}
+
+.prepaid {
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+  color: var(--rd-good);
+}
+
+/* ===========================================================================
+   Addresses — the primary artefact when there is no map, which is today.
+   =========================================================================== */
+
+.place {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.placeKind {
+  font-family: var(--data);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+}
+
+.placeLabel {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.placeAddress {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.placeNote {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--rd-warn);
+  overflow-wrap: anywhere;
+}
+
+/* A row of secondary, equally-weighted links. Never a primary action. */
+.linkRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.linkBtn {
+  flex: 1 1 10rem;
+  min-height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 0.875rem;
+  border: 2px solid var(--rd-line-strong);
+  border-radius: var(--r-panel);
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   The map slot — and its designed absence.
+
+   NEXT_PUBLIC_MAPS_BROWSER_KEY is empty, so this is what ships today. It is a
+   real element with a real height so the layout does not jump when a key
+   arrives; it is not an apology box.
+   =========================================================================== */
+
+.mapSlot {
+  border: 2px dashed var(--rd-line-strong);
+  border-radius: var(--r-panel);
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  text-align: center;
+  color: var(--rd-ink-2);
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 10px,
+    var(--rd-panel) 10px 20px
+  );
+}
+
+.mapSlotText {
+  font-size: 0.9rem;
+  font-weight: 600;
+  max-width: 28ch;
+  line-height: 1.4;
+}
+
+.mapLive {
+  border-radius: var(--r-panel);
+  overflow: hidden;
+  border: 2px solid var(--rd-line);
+}
+
+/* ===========================================================================
+   Items to collect
+   =========================================================================== */
+
+.items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 56px;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--rd-line);
+  font-size: 1.05rem;
+}
+
+.item:last-child {
+  border-bottom: 0;
+}
+
+.itemQty {
+  flex: none;
+  min-width: 3.25rem;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.itemName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ===========================================================================
+   The offer card — payout BEFORE accepting, countdown impossible to miss.
+   =========================================================================== */
+
+.offerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.countdown {
+  flex: none;
+  min-width: 5.5rem;
+  text-align: center;
+  border: 3px solid var(--rd-good-fill);
+  border-radius: var(--r-panel);
+  padding: 0.5rem 0.25rem;
+  color: var(--rd-good);
+}
+
+.countdownUrgent {
+  border-color: var(--rd-crit-fill);
+  color: var(--rd-crit);
+}
+
+.countdownValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 2.25rem;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.countdownLabel {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* The urgency pulse. Rest state is fully readable; this only adds emphasis,
+   and it is off entirely under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .countdownUrgent {
+    animation: rdPulse 1s steps(2, end) infinite;
+  }
+}
+
+@keyframes rdPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.payoutBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.payoutValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: clamp(2.5rem, 14vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.fact {
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-soft);
+  padding: 0.5rem;
+  text-align: center;
+  min-width: 0;
+}
+
+.factValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.15rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.factLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+  margin-top: 0.15rem;
+}
+
+/* ===========================================================================
+   OTP — four big boxes. The app NEVER knows the correct value.
+   =========================================================================== */
+
+.otpRow {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+  margin: 0.5rem 0;
+}
+
+.otpBox {
+  width: 4rem;
+  height: 5rem;
+  border: 3px solid var(--rd-line-strong);
+  border-radius: var(--r-soft);
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 2.25rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.otpBox::-webkit-outer-spin-button,
+.otpBox::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.otpBox:focus-visible {
+  outline: 3px solid var(--rd-ink);
+  outline-offset: 2px;
+  border-color: var(--rd-ink);
+}
+
+.otpFilled {
+  border-color: var(--rd-ink);
+}
+
+.otpError {
+  border-color: var(--rd-crit-fill);
+}
+
+.attempts {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.attemptsLow {
+  color: var(--rd-crit);
+}
+
+.locked {
+  border: 3px solid var(--rd-crit-fill);
+  border-radius: var(--r-panel);
+  padding: 1rem;
+  color: var(--rd-crit);
+  font-weight: 700;
+}
+
+/* ===========================================================================
+   The dock — the bottom of the viewport, where the thumb is.
+   It holds EITHER the nav OR the one primary action. Never both.
+   =========================================================================== */
+
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  background: var(--rd-ground);
+  box-shadow: var(--rd-dock-lift);
+  padding: 0.6rem 0.75rem calc(0.6rem + env(safe-area-inset-bottom));
+}
+
+.nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.navItem {
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: var(--r-soft);
+  border: 2px solid transparent;
+  color: var(--rd-ink-2);
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  min-width: 0;
+}
+
+.navItemActive {
+  color: var(--rd-ink);
+  border-color: var(--rd-line-strong);
+  background: var(--rd-panel);
+}
+
+.navBadge {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  background: var(--rd-crit-fill);
+  color: var(--rd-on-fill);
+  border-radius: var(--r-pill);
+  padding: 0 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 1.25rem;
+  text-align: center;
+}
+
+/* The one primary action. Big, bottom, unmissable. */
+.primary {
+  width: 100%;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0 1rem;
+  border: 3px solid var(--rd-good-fill);
+  border-radius: var(--r-panel);
+  background: var(--rd-good-fill);
+  color: var(--rd-on-fill);
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.primaryCrit {
+  border-color: var(--rd-crit-fill);
+  background: var(--rd-crit-fill);
+}
+
+/* Accept / Decline: the ONE screen with two buttons, and they are not peers —
+   Accept is the filled primary, Decline is an outline. The offer is a genuine
+   binary choice, so both must be one tap away. */
+.choiceRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 0.5rem;
+}
+
+.decline {
+  min-height: 76px;
+  border: 3px solid var(--rd-line-strong);
+  border-radius: var(--r-panel);
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* A quiet, secondary text action that must never read as the primary. */
+.ghost {
+  min-height: 64px;
+  width: 100%;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  background: none;
+  color: var(--rd-ink-2);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ===========================================================================
+   Banners
+   =========================================================================== */
+
+.banner {
+  border: 3px solid var(--rd-warn-fill);
+  border-radius: var(--r-panel);
+  padding: 0.75rem 0.875rem;
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.bannerTitle {
+  font-weight: 800;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.bannerCode {
+  font-family: var(--data);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.bannerCrit {
+  border-color: var(--rd-crit-fill);
+  color: var(--rd-crit);
+}
+
+.bannerNeutral {
+  border-color: var(--rd-line-strong);
+  color: var(--rd-ink-2);
+}
+
+/* Location honesty badge (plan §8.7 #16). */
+.locBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-pill);
+  padding: 0.5rem 0.75rem;
+  color: var(--rd-ink-2);
+  min-height: 44px;
+}
+
+.locBadgeWarn {
+  border-color: var(--rd-warn-fill);
+  color: var(--rd-warn);
+}
+
+.locBadgeValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===========================================================================
+   Resting state — calm, deliberately empty
+   =========================================================================== */
+
+.resting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1rem;
+  color: var(--rd-ink-2);
+}
+
+.restingMark {
+  color: var(--rd-line-strong);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .restingMark {
+    animation: rdBreathe 4s var(--ease) infinite;
+  }
+}
+
+@keyframes rdBreathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* ===========================================================================
+   History + earnings
+   =========================================================================== */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  padding: 0.75rem;
+  min-height: 72px;
+  min-width: 0;
+}
+
+.rowMain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rowTitle {
+  font-weight: 700;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  font-size: 0.82rem;
+  color: var(--rd-ink-2);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.15rem;
+}
+
+.rowValue {
+  flex: none;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.15rem;
+  text-align: right;
+}
+
+.rowFailed .rowValue {
+  color: var(--rd-crit);
+}
+
+.dayHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--rd-line);
+  font-weight: 800;
+}
+
+/* A bar, not a chart library. Two divs and a width. */
+.barRow {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+  font-size: 0.85rem;
+}
+
+.barTrack {
+  height: 1.25rem;
+  border-radius: var(--r-nub);
+  background: var(--rd-panel-2);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--rd-good-fill);
+  border-radius: var(--r-nub);
+}
+
+.barLabel,
+.barValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.barValue {
+  text-align: right;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.summaryTile {
+  border: 2px solid var(--rd-line);
+  border-radius: var(--r-panel);
+  padding: 0.75rem;
+  min-width: 0;
+}
+
+.summaryValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.summaryLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rd-ink-2);
+  margin-top: 0.2rem;
+}
+
+/* ===========================================================================
+   Gate + misc
+   =========================================================================== */
+
+.gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: var(--rd-ground);
+  color: var(--rd-ink);
+  text-align: center;
+}
+
+.gateInner {
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.skeleton {
+  border-radius: var(--r-panel);
+  background: var(--rd-panel);
+  border: 2px solid var(--rd-line);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus is never subtle here. Sunlight. */
+.shell :focus-visible {
+  outline: 3px solid var(--rd-ink);
+  outline-offset: 3px;
+}
+
+/* 360px is the real device. Nothing below may overflow it. */
+@media (max-width: 22.5rem) {
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .otpBox {
+    width: 3.5rem;
+    height: 4.5rem;
+    font-size: 2rem;
+  }
+  .barRow {
+    grid-template-columns: 4.5rem minmax(0, 1fr) 4rem;
+  }
+}

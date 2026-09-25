@@ -101,4 +101,19 @@ export const envValidationSchema = Joi.object({
   // Still constrained when present: a 6-character demo password on a
   // shared staging database is a real account with a real session.
   SEED_DEMO_PASSWORD: Joi.string().min(12),
+
+  // ── Maps (used ONLY when geocoding an address) ──────────────────
+  // OPTIONAL, for the same reason as SEED_DEMO_PASSWORD above: the API
+  // has no use for it on a deployment that does not geocode, so
+  // `.required()` would refuse to boot over an unused feature.
+  //
+  // `GeoService` reads it with `get()` and throws a clear "maps not
+  // configured" error on the one call that needs it. Distance, ETA and
+  // rider payout come from the stored 2dsphere points and never touch
+  // this key — nothing else degrades.
+  //
+  // This is the SERVER key: IP-restricted, never sent to a browser. The
+  // referrer-restricted browser key is a different value and lives
+  // behind the NEXT_PUBLIC_ boundary in the web app.
+  GOOGLE_MAPS_SERVER_KEY: Joi.string().min(20),
 }).unknown(true);

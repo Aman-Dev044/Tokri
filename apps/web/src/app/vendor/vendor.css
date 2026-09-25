@@ -1,0 +1,1663 @@
+/* =============================================================================
+   MANDI — VENDOR PANEL
+   -----------------------------------------------------------------------------
+   THE BRIEF (plan §2.4): "Dense operations console on ink ground. Aisle colour
+   used ONLY as order-status encoding. Sound + visual alert on new order.
+   Keyboard-first. Zero decoration."
+
+   Someone is reading this during a dinner rush, standing up, with wet hands, at
+   arm's length. Legibility and speed beat beauty every single time.
+
+   ── WHAT THIS FILE IS AND IS NOT ───────────────────────────────────────────
+   The vendor panel REUSES the admin console's component layer — DataTable,
+   KpiTile, StatusPill, Money, DetailDrawer, the charts. Those bring their own
+   `.adm-*` styles from styles/admin.css, which the vendor layout imports and
+   which this file never edits. Every rule below is for something the vendor
+   surface has and the admin console does not: the board, the lanes, the order
+   cards, the new-order alert, the stock board, the earnings equation.
+
+   The shell root carries BOTH `.adm` and `.ven`, so the `--adm-*` locals the
+   shared components read are in scope here too.
+
+   ── ★ COLOUR ───────────────────────────────────────────────────────────────
+   The chromatic-aisle palette appears in exactly one place on this surface:
+   `[data-aisle]` on an order card and its lane header, where the hue IS the
+   order's status (see lib/vendor/orders.ts → STATUS_AISLE). It is never an
+   accent, never a background wash for decoration, and never used for anything
+   that is not a state. Everything else is ink, paper, hairline and the three
+   semantic tones.
+
+   Colour never carries meaning alone (plan §2.6): every hue on this screen has
+   the status word and a pill glyph beside it.
+   ============================================================================= */
+
+/* ===========================================================================
+   1. Scope
+   =========================================================================== */
+
+.ven {
+  --ven-lane-w: 340px;
+  --ven-card-r: 8px;
+  --ven-rail: 232px;
+  --ven-rail-min: 62px;
+  --ven-top: 56px;
+}
+
+/* ===========================================================================
+   2. Shell — rail, top bar, main
+   =========================================================================== */
+
+.ven-shell {
+  display: grid;
+  grid-template-columns: var(--ven-rail) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: var(--body);
+  font-size: var(--adm-fs);
+}
+
+.ven-shell[data-collapsed='true'] {
+  grid-template-columns: var(--ven-rail-min) minmax(0, 1fr);
+}
+
+.ven-rail {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-2);
+  background: var(--adm-panel-2);
+  border-right: 1px solid var(--adm-line);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ven-rail__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  margin-bottom: var(--s-2);
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--adm-r-sm);
+}
+
+.ven-rail__mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: var(--good-ink);
+}
+
+.ven-rail__store {
+  min-width: 0;
+}
+
+.ven-rail__name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--adm-fs-lg);
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ven-rail__role {
+  font-size: var(--adm-fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--adm-dim);
+}
+
+.ven-rail__link {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 9px var(--s-2);
+  border-radius: var(--adm-r-sm);
+  color: var(--adm-text);
+  text-decoration: none;
+  position: relative;
+  transition: background-color var(--t-micro) var(--ease);
+}
+
+.ven-rail__link:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.ven-rail__link[aria-current='page'] {
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+  font-weight: 600;
+}
+
+.ven-rail__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 7px;
+  left: -8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--good-ink);
+}
+
+.ven-rail__link svg {
+  width: 18px;
+  height: 18px;
+  color: var(--adm-dim);
+}
+
+.ven-rail__link[aria-current='page'] svg {
+  color: var(--adm-text);
+}
+
+.ven-rail__label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the single-letter accelerator, shown so it is discoverable */
+.ven-key {
+  font-family: var(--data);
+  font-size: var(--adm-fs-xs);
+  line-height: 1;
+  padding: 3px 5px;
+  border: 1px solid var(--adm-line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  color: var(--adm-dim);
+  background: var(--adm-panel);
+}
+
+.ven-rail__count {
+  font-family: var(--data);
+  font-size: var(--adm-fs-xs);
+  min-width: 20px;
+  text-align: center;
+  padding: 2px 5px;
+  border-radius: var(--r-pill);
+  background: var(--crit-ink);
+  color: var(--on-semantic);
+  font-weight: 600;
+}
+
+.ven-shell[data-collapsed='true'] .ven-rail__label,
+.ven-shell[data-collapsed='true'] .ven-rail__store,
+.ven-shell[data-collapsed='true'] .ven-key {
+  display: none;
+}
+
+.ven-shell[data-collapsed='true'] .ven-rail__link {
+  grid-template-columns: 18px;
+  justify-content: center;
+}
+
+.ven-rail__foot {
+  margin-top: auto;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--adm-line);
+}
+
+.ven-rail__collapse {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 8px var(--s-2);
+  background: none;
+  border: 0;
+  border-radius: var(--adm-r-sm);
+  color: var(--adm-dim);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ven-rail__collapse:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.ven-rail__collapse svg {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--t-move) var(--ease);
+}
+
+.ven-shell[data-collapsed='true'] .ven-rail__collapse svg {
+  transform: rotate(180deg);
+}
+
+/* ---- main column ---- */
+
+.ven-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ven-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  height: var(--ven-top);
+  padding: 0 var(--s-4);
+  background: color-mix(in srgb, var(--adm-panel-2) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.ven-top__spacer {
+  flex: 1 1 auto;
+}
+
+.ven-content {
+  padding: var(--s-5) var(--s-4) var(--s-8);
+  min-width: 0;
+}
+
+/* ---- ★ the store open/closed toggle ---- */
+
+/*
+   Not a switch with a label somewhere else on the screen. The control SAYS what
+   the shop currently is, in a word, at the top of every page — because a shop
+   that thinks it is open when it is closed loses a whole evening of orders and
+   nobody finds out until someone phones.
+*/
+.ven-openstate {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 5px var(--s-2) 5px 7px;
+  border: 1px solid var(--adm-line-strong);
+  border-radius: var(--r-pill);
+  background: var(--adm-panel);
+  color: inherit;
+  font: inherit;
+  font-size: var(--adm-fs-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease);
+}
+
+.ven-openstate:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.ven-openstate__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--adm-dim);
+  flex: 0 0 auto;
+}
+
+.ven-openstate[data-open='true'] {
+  border-color: color-mix(in srgb, var(--good-ink) 55%, transparent);
+}
+
+.ven-openstate[data-open='true'] .ven-openstate__dot {
+  background: var(--good-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--good-ink) 22%, transparent);
+}
+
+.ven-openstate[data-open='false'] {
+  border-color: color-mix(in srgb, var(--crit-ink) 55%, transparent);
+}
+
+.ven-openstate[data-open='false'] .ven-openstate__dot {
+  background: var(--crit-ink);
+}
+
+.ven-openstate__word {
+  font-weight: 600;
+}
+
+.ven-openstate__hint {
+  color: var(--adm-dim);
+  font-size: var(--adm-fs-xs);
+}
+
+/* ---- ★ the new-order alert ---- */
+
+/*
+   PULSES ONCE, THEN HOLDS.
+
+   A permanently pulsing element is unusable across an eight-hour shift: the eye
+   filters it out within minutes and the alert stops being an alert. So the
+   arrival animation runs exactly once per new order and the banner then sits
+   still, legible, until it is acknowledged.
+*/
+.ven-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px var(--s-3);
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--crit-ink) 45%, transparent);
+  background: color-mix(in srgb, var(--crit-ink) 12%, transparent);
+  color: var(--crit-ink);
+  font-weight: 600;
+  font-size: var(--adm-fs-sm);
+  text-decoration: none;
+  animation: ven-alert-pulse 900ms var(--ease-out) 1 both;
+}
+
+.ven-alert svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ven-alert__count {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.ven-alert__dismiss {
+  background: none;
+  border: 0;
+  padding: 0 0 0 var(--s-1);
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.ven-soundbtn[data-on='true'] {
+  color: var(--good-ink);
+}
+
+/* ---- user menu ---- */
+
+.ven-usermenu {
+  position: relative;
+}
+
+.ven-usermenu__panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 236px;
+  padding: var(--s-2);
+  background: var(--adm-panel-2);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r);
+  box-shadow: var(--lift-2);
+  z-index: 60;
+  animation: ven-pop 160ms var(--ease-out) both;
+}
+
+.ven-usermenu__head {
+  padding: var(--s-2);
+  border-bottom: 1px solid var(--adm-line);
+  margin-bottom: var(--s-1);
+}
+
+.ven-usermenu__contact {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+  overflow-wrap: anywhere;
+}
+
+.ven-usermenu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: 8px var(--s-2);
+  border: 0;
+  border-radius: var(--adm-r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ven-usermenu__item:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.ven-usermenu__item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--adm-dim);
+}
+
+/* ===========================================================================
+   3. ★ THE BOARD — three lanes
+   =========================================================================== */
+
+/*
+   The lanes scroll INSIDE their own track. The page body never scrolls
+   sideways, on any surface in this product.
+*/
+.ven-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(var(--ven-lane-w), 1fr);
+  gap: var(--s-3);
+  overflow-x: auto;
+  padding-bottom: var(--s-2);
+  scroll-snap-type: x proximity;
+}
+
+@media (max-width: 900px) {
+  .ven-board {
+    grid-auto-columns: min(86vw, var(--ven-lane-w));
+  }
+}
+
+.ven-lane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r);
+  scroll-snap-align: start;
+}
+
+.ven-lane__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--adm-line);
+  position: relative;
+}
+
+/* ★ the aisle hue, carrying the lane's state and nothing else */
+.ven-lane__head::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: var(--aisle);
+  border-radius: var(--adm-r) var(--adm-r) 0 0;
+}
+
+.ven-lane__title {
+  font-family: var(--display);
+  font-size: var(--adm-fs-lg);
+  font-weight: 700;
+}
+
+.ven-lane__count {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-fs-sm);
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+
+.ven-lane__hint {
+  margin-left: auto;
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+  text-align: right;
+  max-width: 16ch;
+}
+
+.ven-lane__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  min-height: 120px;
+}
+
+/* ---- the card ---- */
+
+.ven-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--s-3) var(--s-3) var(--s-3) calc(var(--s-3) + 3px);
+  background: var(--adm-panel-2);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--ven-card-r);
+  color: inherit;
+  text-decoration: none;
+  animation: ven-cardin 260ms var(--ease-out) both;
+  animation-delay: calc(var(--ven-i, 0) * 20ms);
+  transition:
+    border-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--ease);
+}
+
+.ven-card:hover {
+  border-color: var(--adm-line-strong);
+}
+
+/* ★ the status hue — a rule down the edge, never a fill behind text */
+.ven-card::before {
+  content: '';
+  position: absolute;
+  inset-block: -1px;
+  left: -1px;
+  width: 3px;
+  border-radius: var(--ven-card-r) 0 0 var(--ven-card-r);
+  background: var(--aisle);
+}
+
+/* an order that has JUST arrived: one pulse, then it holds like every other */
+.ven-card[data-fresh='true'] {
+  animation:
+    ven-cardin 260ms var(--ease-out) both,
+    ven-card-pulse 1100ms var(--ease-out) 260ms 1 both;
+}
+
+.ven-card__top {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-bottom: 2px;
+}
+
+.ven-card__no {
+  font-family: var(--data);
+  font-size: var(--adm-fs-sm);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ven-card__wait {
+  margin-left: auto;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+}
+
+.ven-card[data-urgency='warn'] .ven-card__wait {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+.ven-card[data-urgency='late'] .ven-card__wait {
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+.ven-card__customer {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ven-card__items {
+  margin: var(--s-2) 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+}
+
+.ven-card__items li {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.ven-card__qty {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  color: var(--adm-text);
+}
+
+.ven-card__line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ven-card__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding-top: var(--s-2);
+  border-top: 1px dashed var(--adm-line);
+}
+
+.ven-card__total {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.ven-card__actions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-2);
+}
+
+.ven-card__actions .adm-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.ven-paytag {
+  font-family: var(--data);
+  font-size: var(--adm-fs-xs);
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--r-nub);
+  color: var(--adm-dim);
+}
+
+.ven-paytag[data-method='cod'] {
+  color: var(--warn-ink);
+  border-color: color-mix(in srgb, var(--warn-ink) 45%, transparent);
+}
+
+/* ===========================================================================
+   4. Freshness line — "updated 4s ago"
+   =========================================================================== */
+
+/*
+   A board that silently stops polling looks exactly like a quiet evening. This
+   line is the difference between "nothing is happening" and "you are reading a
+   frozen screen", and it says STALE in a word, never in a colour alone.
+*/
+.ven-fresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--data);
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+.ven-fresh__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--good-ink);
+}
+
+.ven-fresh[data-state='stale'] {
+  color: var(--crit-ink);
+  font-weight: 600;
+}
+
+.ven-fresh[data-state='stale'] .ven-fresh__dot {
+  background: var(--crit-ink);
+}
+
+.ven-fresh[data-state='paused'] .ven-fresh__dot {
+  background: var(--adm-dim);
+}
+
+/* ===========================================================================
+   5. Dashboard — needs-action strip
+   =========================================================================== */
+
+.ven-needs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s-2);
+}
+
+.ven-need {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3);
+  border: 1px solid var(--adm-line);
+  border-left-width: 3px;
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel-2);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color var(--t-micro) var(--ease);
+}
+
+.ven-need:hover {
+  border-color: var(--adm-line-strong);
+}
+
+.ven-need[data-tone='crit'] {
+  border-left-color: var(--crit-ink);
+}
+
+.ven-need[data-tone='warn'] {
+  border-left-color: var(--warn-ink);
+}
+
+.ven-need[data-tone='good'] {
+  border-left-color: var(--good-ink);
+}
+
+.ven-need__count {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ven-need__label {
+  font-weight: 600;
+}
+
+.ven-need__detail {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+/* ===========================================================================
+   6. Order detail — partial fulfilment
+   =========================================================================== */
+
+.ven-lines {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  overflow: hidden;
+}
+
+.ven-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--adm-line);
+  transition: opacity var(--t-micro) var(--ease);
+}
+
+.ven-line:last-child {
+  border-bottom: 0;
+}
+
+/* A dropped line stays readable — struck through, not hidden. The vendor has
+   to be able to see what they are about to refund. */
+.ven-line[data-kept='false'] {
+  opacity: 0.6;
+}
+
+.ven-line[data-kept='false'] .ven-line__name {
+  text-decoration: line-through;
+}
+
+.ven-line__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ven-line__unit {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+.ven-line__qty {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  color: var(--adm-dim);
+}
+
+.ven-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  cursor: pointer;
+}
+
+.ven-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--good-ink);
+  cursor: pointer;
+}
+
+/* the money summary that recomputes live */
+.ven-sum {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-1) var(--s-4);
+  padding: var(--s-3);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel);
+}
+
+.ven-sum__label {
+  color: var(--adm-dim);
+}
+
+.ven-sum__value {
+  text-align: right;
+}
+
+.ven-sum__rule {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--adm-line);
+  margin: var(--s-1) 0;
+}
+
+.ven-sum__total .ven-sum__label,
+.ven-sum__total .ven-sum__value {
+  font-weight: 700;
+}
+
+.ven-sum__refund .ven-sum__label,
+.ven-sum__refund .ven-sum__value {
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+/* ===========================================================================
+   7. ★ The commission equation — earnings
+   ---------------------------------------------------------------------------
+   Three tiles that happen to be related do not answer "where did my money go".
+   An equation does. gross − commission − refunds = net, printed left to right,
+   with the operators visible, in the mono face so the digits line up.
+   =========================================================================== */
+
+.ven-eq {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r);
+  background: var(--adm-panel);
+}
+
+.ven-eq__term {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 128px;
+  flex: 1 1 128px;
+}
+
+.ven-eq__label {
+  font-size: var(--adm-fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--adm-dim);
+}
+
+.ven-eq__value {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.ven-eq__note {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+.ven-eq__op {
+  align-self: center;
+  font-family: var(--data);
+  font-size: 1.3rem;
+  color: var(--adm-dim);
+  padding: 0 var(--s-1);
+  flex: 0 0 auto;
+}
+
+.ven-eq__term[data-role='net'] .ven-eq__value {
+  color: var(--good-ink);
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.ven-eq__term[data-role='minus'] .ven-eq__value {
+  color: var(--crit-ink);
+}
+
+/* ===========================================================================
+   8. Inventory board
+   =========================================================================== */
+
+.ven-stock {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.ven-stock__n {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 4ch;
+  text-align: right;
+}
+
+.ven-stock[data-level='out'] .ven-stock__n {
+  color: var(--crit-ink);
+}
+
+.ven-stock[data-level='low'] .ven-stock__n {
+  color: var(--warn-ink);
+}
+
+/* A bar, so a whole column reads as a shape before it reads as numbers. */
+.ven-stock__bar {
+  position: relative;
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  overflow: hidden;
+}
+
+.ven-stock__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--good-ink);
+  transform-origin: left center;
+  transition: width var(--t-move) var(--ease);
+}
+
+.ven-stock[data-level='low'] .ven-stock__fill {
+  background: var(--warn-ink);
+}
+
+.ven-stock[data-level='out'] .ven-stock__fill {
+  background: var(--crit-ink);
+}
+
+/* inline adjust */
+.ven-adjust {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.ven-adjust__step {
+  min-width: 30px;
+  padding: 4px 6px;
+  font-family: var(--data);
+  font-size: var(--adm-fs-sm);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel-2);
+  color: inherit;
+  cursor: pointer;
+}
+
+.ven-adjust__step:hover:not(:disabled) {
+  border-color: var(--adm-line-strong);
+}
+
+.ven-adjust__step:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ven-adjust__input {
+  width: 62px;
+  padding: 4px 6px;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel-2);
+  color: inherit;
+}
+
+/* the low-stock rail */
+.ven-rail-low {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  padding-bottom: var(--s-2);
+}
+
+.ven-lowcard {
+  flex: 0 0 auto;
+  width: 190px;
+  padding: var(--s-3);
+  border: 1px solid var(--adm-line);
+  border-left: 3px solid var(--warn-ink);
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel-2);
+}
+
+.ven-lowcard[data-level='out'] {
+  border-left-color: var(--crit-ink);
+}
+
+.ven-lowcard__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ven-lowcard__n {
+  font-family: var(--data);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* ===========================================================================
+   9. Product preview card (the live preview inside the drawer)
+   =========================================================================== */
+
+/*
+   This is the ONE place the vendor panel shows the customer's own visual
+   language — because it is literally a preview of the customer's screen. It is
+   a quotation, not a style choice, and it is boxed inside the drawer so it can
+   never be mistaken for the panel's own chrome.
+*/
+.ven-preview {
+  border: 1px dashed var(--adm-line-strong);
+  border-radius: var(--adm-r);
+  padding: var(--s-3);
+  background: var(--adm-panel);
+}
+
+.ven-preview__tag {
+  font-size: var(--adm-fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--adm-dim);
+  margin-bottom: var(--s-2);
+}
+
+.ven-pcard {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-panel);
+  overflow: hidden;
+  background: var(--surface-2);
+  max-width: 260px;
+}
+
+.ven-pcard__media {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  background: var(--aisle-wash);
+  border-bottom: 1px solid var(--hairline);
+  color: var(--aisle-ink);
+  font-family: var(--display);
+  font-size: var(--adm-fs-sm);
+  overflow: hidden;
+}
+
+.ven-pcard__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ven-pcard__body {
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ven-pcard__brand {
+  font-size: var(--adm-fs-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ven-pcard__name {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.ven-pcard__unit {
+  font-size: var(--adm-fs-sm);
+  color: var(--muted);
+}
+
+.ven-pcard__prices {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.ven-pcard__price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.ven-pcard__mrp {
+  font-family: var(--data);
+  font-size: var(--adm-fs-sm);
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.ven-pcard__off {
+  font-size: var(--adm-fs-xs);
+  font-weight: 700;
+  color: var(--aisle-ink);
+}
+
+.ven-pcard[data-inactive='true'] {
+  opacity: 0.5;
+}
+
+/* ---- image tray ---- */
+
+.ven-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.ven-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  overflow: hidden;
+  background: var(--adm-panel);
+}
+
+.ven-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ven-thumb__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 72%, transparent);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.ven-thumb__remove svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ===========================================================================
+   10. Forms — fields, switches, hours editor
+   =========================================================================== */
+
+.ven-form {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.ven-form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--s-3);
+}
+
+.ven-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.ven-field__label {
+  font-size: var(--adm-fs-sm);
+  font-weight: 600;
+}
+
+.ven-field__hint {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+.ven-field__error {
+  font-size: var(--adm-fs-xs);
+  color: var(--crit-ink);
+  font-weight: 600;
+}
+
+.ven-input,
+.ven-select,
+.ven-textarea {
+  width: 100%;
+  padding: 7px var(--s-2);
+  font: inherit;
+  font-size: var(--adm-fs);
+  color: var(--adm-text);
+  background: var(--adm-panel-2);
+  border: 1px solid var(--adm-line-strong);
+  border-radius: var(--adm-r-sm);
+}
+
+.ven-input[data-num='true'] {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ven-textarea {
+  min-height: 78px;
+  resize: vertical;
+}
+
+.ven-input:focus-visible,
+.ven-select:focus-visible,
+.ven-textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.ven-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  cursor: pointer;
+}
+
+.ven-switch input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--good-ink);
+}
+
+/* hours */
+.ven-hours {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r-sm);
+  overflow: hidden;
+}
+
+.ven-hours__row {
+  display: grid;
+  grid-template-columns: 5.5rem auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.ven-hours__row:last-child {
+  border-bottom: 0;
+}
+
+.ven-hours__row[data-closed='true'] .ven-input {
+  opacity: 0.45;
+}
+
+.ven-hours__day {
+  font-weight: 600;
+}
+
+.ven-time {
+  font-family: var(--data);
+  width: 7.5rem;
+  padding: 5px var(--s-2);
+  border: 1px solid var(--adm-line-strong);
+  border-radius: var(--adm-r-sm);
+  background: var(--adm-panel-2);
+  color: inherit;
+}
+
+/* ★ the dirty bar — a save/discard dock that only exists when there is
+   something to save. A form with a permanently live Save button teaches the
+   user to click it without reading. */
+.ven-dirty {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  background: var(--adm-panel-2);
+  border: 1px solid var(--adm-line-strong);
+  border-radius: var(--adm-r);
+  box-shadow: var(--lift-2);
+  animation: ven-dock 220ms var(--ease-out) both;
+}
+
+.ven-dirty__text {
+  font-weight: 600;
+}
+
+.ven-dirty__count {
+  font-family: var(--data);
+  color: var(--adm-dim);
+  font-weight: 400;
+}
+
+.ven-dirty__actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--s-2);
+}
+
+/* ===========================================================================
+   11. Misc
+   =========================================================================== */
+
+.ven-note {
+  padding: var(--s-2) var(--s-3);
+  border-left: 3px solid var(--warn-ink);
+  background: color-mix(in srgb, var(--warn-ink) 8%, transparent);
+  border-radius: 0 var(--adm-r-sm) var(--adm-r-sm) 0;
+  font-size: var(--adm-fs-sm);
+}
+
+.ven-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding-left: var(--s-1);
+}
+
+.ven-tl {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: var(--s-3);
+  position: relative;
+  padding-bottom: var(--s-3);
+}
+
+.ven-tl:last-child {
+  padding-bottom: 0;
+}
+
+.ven-tl::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--adm-line);
+}
+
+.ven-tl:last-child::before {
+  display: none;
+}
+
+.ven-tl__dot {
+  width: 13px;
+  height: 13px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--aisle);
+  background: var(--adm-panel-2);
+  z-index: 1;
+}
+
+.ven-tl__dot[data-current='true'] {
+  background: var(--aisle);
+}
+
+.ven-tl__to {
+  font-weight: 600;
+}
+
+.ven-tl__meta {
+  font-size: var(--adm-fs-xs);
+  color: var(--adm-dim);
+}
+
+.ven-tl__reason {
+  font-size: var(--adm-fs-sm);
+  margin-top: 2px;
+}
+
+.ven-gate {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--s-5);
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: var(--body);
+}
+
+.ven-gate__card {
+  width: min(520px, 100%);
+  padding: var(--s-6);
+  background: var(--adm-panel);
+  border: 1px solid var(--adm-line);
+  border-radius: var(--adm-r);
+}
+
+.ven-gate__title {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: var(--s-2);
+}
+
+.ven-gate__body {
+  color: var(--adm-dim);
+  margin-bottom: var(--s-4);
+}
+
+.ven-gate__note {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--adm-line);
+  font-size: var(--adm-fs-sm);
+  color: var(--adm-dim);
+}
+
+.ven-seg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--adm-line);
+  border-radius: var(--r-pill);
+  background: var(--adm-panel);
+}
+
+.ven-seg__btn {
+  padding: 4px var(--s-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--adm-dim);
+  font: inherit;
+  font-size: var(--adm-fs-sm);
+  cursor: pointer;
+}
+
+.ven-seg__btn[aria-pressed='true'] {
+  background: var(--adm-panel-2);
+  color: var(--adm-text);
+  font-weight: 600;
+  box-shadow: var(--lift-1);
+}
+
+/* ===========================================================================
+   12. Keyframes
+   =========================================================================== */
+
+@keyframes ven-cardin {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ONE pulse. See the note on .ven-alert. */
+@keyframes ven-card-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--aisle) 55%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--aisle) 0%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--aisle) 0%, transparent);
+  }
+}
+
+@keyframes ven-alert-pulse {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--crit-ink) 40%, transparent);
+  }
+  55% {
+    transform: scale(1);
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--crit-ink) 0%, transparent);
+  }
+  100% {
+    transform: none;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--crit-ink) 0%, transparent);
+  }
+}
+
+@keyframes ven-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ven-dock {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ===========================================================================
+   13. ★ REDUCED MOTION — one block, no exceptions
+   ---------------------------------------------------------------------------
+   Everything above is decoration over a page that is already correct. Switching
+   it all off leaves each element in its finished state: a card at opacity 1, a
+   dock in place, a lane fully populated. Nothing here is load-bearing, which is
+   the test a functional animation has to pass.
+
+   Note what this does NOT remove: the new-order banner and the fresh-card
+   outline are still there, still red, still counted. The alert survives without
+   the motion, because for some users the motion was never the alert.
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .ven *,
+  .ven *::before,
+  .ven *::after,
+  .ven-alert,
+  .ven-card,
+  .ven-dirty,
+  .ven-usermenu__panel {
+    animation: none !important;
+    transition-duration: 1ms !important;
+  }
+
+  .ven-card[data-fresh='true'] {
+    border-color: var(--crit-ink);
+    border-left-width: 1px;
+  }
+}
+
+/* Print: the rail and the board chrome are noise on paper. */
+@media print {
+  .ven-rail,
+  .ven-top,
+  .ven-dirty {
+    display: none;
+  }
+
+  .ven-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===========================================================================
+   14. Narrow screens — the shop's own phone
+   =========================================================================== */
+
+@media (max-width: 860px) {
+  .ven-shell,
+  .ven-shell[data-collapsed='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ven-rail {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--adm-line);
+    gap: var(--s-1);
+  }
+
+  .ven-rail__brand,
+  .ven-rail__foot,
+  .ven-key,
+  .ven-rail__label {
+    display: none;
+  }
+
+  .ven-rail__link {
+    grid-template-columns: 18px;
+    padding: var(--s-2);
+  }
+
+  .ven-rail__link[aria-current='page']::before {
+    inset-block: auto 0;
+    inset-inline: 6px;
+    left: auto;
+    height: 2px;
+    width: auto;
+  }
+
+  .ven-content {
+    padding: var(--s-4) var(--s-3) var(--s-7);
+  }
+}
