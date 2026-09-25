@@ -70,9 +70,38 @@ function announce(): void {
   });
 }
 
+/**
+ * Google rejects a bad key ASYNCHRONOUSLY, long after the script's load
+ * event has already fired. Billing disabled, a referrer that is not on the
+ * allowlist, an API that was never enabled — in every one of those cases the
+ * `<script>` still returns 200 and still resolves, and then Google paints its
+ * own dark "This page can't load Google Maps correctly" watermark over a grey
+ * tile. The only signal it gives us is this global callback.
+ *
+ * Without it we report `loaded: true` and hand the user Google's broken map
+ * instead of our own placeholder, which is strictly worse than showing no map
+ * at all: the address, the route summary and the deep link all disappear
+ * behind a dead grey square.
+ */
+function installAuthFailureHook(): void {
+  if (typeof window === 'undefined') return;
+  const w = window as unknown as { gm_authFailure?: () => void };
+  if (w.gm_authFailure) return;
+
+  w.gm_authFailure = () => {
+    loader.state = 'error';
+    loader.error =
+      'Google rejected this Maps key. The usual causes are billing not being ' +
+      'enabled on the Cloud project, the Maps JavaScript API not being enabled, ' +
+      'or this origin missing from the key’s HTTP-referrer allowlist.';
+    announce();
+  };
+}
+
 function startLoading(key: string): Promise<void> {
   if (loader.promise) return loader.promise;
 
+  installAuthFailureHook();
   loader.state = 'loading';
   loader.promise = new Promise<void>((resolve, reject) => {
     const existing = document.getElementById(SCRIPT_ID);
@@ -106,6 +135,10 @@ function startLoading(key: string): Promise<void> {
     document.head.appendChild(script);
   })
     .then(() => {
+      // Never clobber an auth failure. `gm_authFailure` can fire before this
+      // resolves, and reporting `ready` afterwards would put the broken grey
+      // map back on screen.
+      if (loader.state === 'error') return;
       loader.state = 'ready';
       loader.error = null;
       announce();
