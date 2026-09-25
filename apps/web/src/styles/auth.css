@@ -1,0 +1,423 @@
+/* =============================================================================
+   MANDI - auth surface
+   -----------------------------------------------------------------------------
+   A split layout: the form on the paper ground, an illustrated shelf of produce
+   crates alongside it. On mobile the illustration collapses to a short band
+   above the form rather than disappearing - it is the only brand moment on the
+   page.
+   ============================================================================= */
+
+.auth {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+}
+
+.auth__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  min-height: 64px;
+  flex: 0 0 auto;
+}
+
+.auth__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+.auth__mark {
+  width: 28px;
+  height: 28px;
+  color: var(--ink);
+}
+.auth__mark svg {
+  width: 100%;
+  height: 100%;
+}
+.auth__wordmark {
+  font-family: var(--display);
+  font-size: 1.24rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.auth__back {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.4rem 0.65rem;
+  border-radius: var(--r-pill);
+}
+.auth__back:hover {
+  background: var(--aisle-wash);
+  color: var(--aisle-ink);
+}
+
+.auth__main {
+  flex: 1 1 auto;
+  display: flex;
+}
+
+/* ===========================================================================
+   The split
+   =========================================================================== */
+
+.authsplit {
+  flex: 1 1 auto;
+  display: grid;
+  width: 100%;
+  align-items: stretch;
+}
+@media (min-width: 900px) {
+  .authsplit {
+    /* asymmetric on purpose - the form is the job, the panel is the mood */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  }
+  .authsplit--single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.authsplit__form {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2rem, 6vw, 4.5rem) var(--gutter);
+}
+
+/* On mobile the panel sits ABOVE the form regardless of source order, so the
+   brand moment is seen and the form still starts near the top of the fold. */
+@media (max-width: 899px) {
+  .authsplit {
+    grid-template-rows: auto 1fr;
+  }
+  .authsplit .authpanel {
+    order: -1;
+    min-height: 168px;
+  }
+  .authsplit--mirror .authsplit__form {
+    order: 1;
+  }
+}
+
+/* ===========================================================================
+   The form
+   =========================================================================== */
+
+.authform {
+  width: 100%;
+  max-width: 27rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.authform--loading {
+  min-height: 24rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--aisle-ink);
+}
+
+.authform__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
+}
+.authform__title {
+  margin: 0;
+  font-size: clamp(2rem, 1.3rem + 2.4vw, 3rem);
+  letter-spacing: -0.042em;
+}
+.authform__title-accent {
+  color: var(--aisle-ink);
+}
+.authform__sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+.authform__alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--crit-ink);
+  border-inline-start-width: 3px;
+  border-radius: var(--r-soft);
+  background: color-mix(in srgb, var(--crit) 9%, transparent);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.authform__alert-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.1rem;
+  border: 1px solid var(--crit-ink);
+  border-radius: var(--r-pill);
+  color: var(--crit-ink);
+  font-family: var(--data);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.authform__peek {
+  border: 0;
+  padding: 0.3rem 0.45rem;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--aisle-ink);
+  cursor: pointer;
+}
+.authform__peek:hover {
+  background: var(--aisle-wash-strong);
+}
+.authform__peek:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.authform__prefix {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  padding-inline-end: 0.15rem;
+  border-inline-end: 1px solid var(--hairline);
+}
+
+.authform__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.authform__minor {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-decoration: none;
+}
+.authform__minor:hover {
+  color: var(--aisle-ink);
+  text-decoration: underline;
+}
+
+.authform__foot {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  text-align: center;
+}
+.authform__foot a {
+  color: var(--aisle-ink);
+  font-weight: 560;
+}
+
+/* ── password strength ───────────────────────────────────────────────────── */
+
+.authform__pw {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
+.strength__bars {
+  display: flex;
+  gap: 4px;
+}
+.strength__bars span {
+  width: 34px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--hairline-strong);
+  transition: background-color var(--t-micro) var(--ease);
+}
+.strength[data-score='1'] .strength__bars span:nth-child(1),
+.strength[data-score='2'] .strength__bars span:nth-child(-n + 2),
+.strength[data-score='3'] .strength__bars span {
+  background: var(--aisle);
+}
+.strength[data-score='0'] .strength__bars span:nth-child(1) {
+  background: var(--crit);
+}
+.strength__label {
+  font-size: var(--fs-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.strength[data-score='0'] .strength__label {
+  color: var(--crit-ink);
+}
+
+/* ===========================================================================
+   The illustrated panel — eight crates on a shelf
+   =========================================================================== */
+
+.authpanel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s-5);
+  padding: clamp(2rem, 5vw, 4rem) var(--gutter);
+  background: var(--sunken);
+  border-inline-start: 1px solid var(--hairline);
+  overflow: hidden;
+}
+@media (max-width: 899px) {
+  .authpanel {
+    border-inline-start: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+}
+
+.authpanel__wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(52% 44% at 74% 26%, var(--aisle-wash-strong), transparent 70%),
+    radial-gradient(40% 36% at 16% 82%, var(--aisle-wash), transparent 72%);
+}
+
+.authpanel__shelf {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(4px, 1vw, 12px);
+  flex: 1 1 auto;
+  min-height: 150px;
+  padding-bottom: 14px;
+}
+
+.authpanel__plank {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--ink);
+  opacity: 0.85;
+}
+
+.crate {
+  position: relative;
+  width: clamp(28px, 6vw, 58px);
+  height: clamp(44px, 9vw, 86px);
+  border: 2px solid var(--ink);
+  border-radius: 3px 3px 5px 5px;
+  background: color-mix(in srgb, var(--w) 14%, transparent);
+  overflow: hidden;
+  animation: crate-settle 5200ms var(--ease-out) infinite;
+  animation-delay: calc(var(--i) * 260ms);
+  transition: transform var(--t-move) var(--spring);
+}
+.crate[data-on='true'] {
+  transform: translateY(-10px);
+  box-shadow: 0 12px 26px -16px var(--ink);
+}
+
+/* the slats - this is what makes it a crate and not a rectangle */
+.crate__slats {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 7px,
+    color-mix(in srgb, var(--ink) 55%, transparent) 7px 9px
+  );
+  opacity: 0.5;
+}
+
+/* the heap of produce spilling over the top edge */
+.crate__heap {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  top: -18%;
+  height: 46%;
+  border-radius: 50%;
+  background: var(--w);
+  box-shadow: inset 0 -4px 0 color-mix(in srgb, black 18%, transparent);
+}
+
+.crate__label {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  translate: -50% 0;
+  font-size: 0.5rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  opacity: 0;
+  white-space: nowrap;
+  transition: opacity var(--t-micro) var(--ease);
+}
+.crate[data-on='true'] .crate__label {
+  opacity: 0.8;
+}
+
+@keyframes crate-settle {
+  0%,
+  72%,
+  100% {
+    translate: 0 0;
+  }
+  78% {
+    translate: 0 -7px;
+  }
+  86% {
+    translate: 0 1px;
+  }
+  92% {
+    translate: 0 -2px;
+  }
+}
+
+.authpanel__quote {
+  position: relative;
+  margin: 0;
+  max-width: 34ch;
+}
+.authpanel__kicker {
+  margin: 0 0 var(--s-2);
+  color: var(--aisle-ink);
+}
+.authpanel__line {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.15rem, 0.9rem + 1.1vw, 1.75rem);
+  font-weight: 600;
+  line-height: 1.24;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crate {
+    animation: none;
+  }
+  .crate[data-on='true'] {
+    transition: none;
+  }
+}

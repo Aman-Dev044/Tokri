@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Mandi: the basket monogram. Moss on paper in light, and the media query
+       flips it for dark so the tab icon reads on either browser chrome. -->
+  <style>
+    .g { fill: #f2f4ee; }
+    .i { stroke: #14150f; }
+    .a { fill: #2f6b3c; }
+    @media (prefers-color-scheme: dark) {
+      .g { fill: #0f110c; }
+      .i { stroke: #e9ece0; }
+      .a { fill: #4e8c3f; }
+    }
+  </style>
+  <rect class="g" width="32" height="32" rx="7"/>
+  <path class="a" d="M5 12 L27 12 L24 26 Q23.4 28 21.5 28 L10.5 28 Q8.6 28 8 26 Z" opacity="0.26"/>
+  <path class="i" d="M5 12 L27 12 L24 26 Q23.4 28 21.5 28 L10.5 28 Q8.6 28 8 26 Z"
+        fill="none" stroke-width="2.2" stroke-linejoin="round"/>
+  <path class="i" d="M11 12 Q16 2.5 21 12" fill="none" stroke-width="2.2" stroke-linecap="round"/>
+  <circle class="a" cx="16" cy="19.5" r="3.6"/>
+</svg>

@@ -1,0 +1,283 @@
+/* =============================================================================
+   STOCK ALERTS — local chrome
+   -----------------------------------------------------------------------------
+   A CSS Module. Panels, buttons, tables and the KPI row come from the shared
+   `_shared-pages/pages.module.css`; this file adds the three things only a
+   stock page needs — the severity chip, the stock-against-threshold gauge, and
+   the by-vendor breakdown.
+
+   ── THE ONE PLACE COLOUR IS CHROMATIC ──────────────────────────────────────
+   Per plan §2.4 this surface is neutral, and --good / --warn / --crit are the
+   only colours carrying meaning. The exception, here as everywhere in the
+   console, is a breakdown BY AISLE: the aisle hue IS the datum and matches the
+   <AisleDot/> beside every product name in the table below it. Those hues are
+   passed in as data from AISLE_SERIES_COLOR; none of them are written here.
+   ============================================================================= */
+
+/* --------------------------------------------------------------------------
+   Severity. Out of stock outranks low stock — heavier weight, a filled
+   square against a half square, and the word itself.
+   -------------------------------------------------------------------------- */
+
+.sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.5rem 0.1rem 0.4rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.sevGlyph {
+  font-family: var(--data);
+  font-size: 0.7em;
+  line-height: 1;
+}
+
+.sevOut {
+  border-color: color-mix(in srgb, var(--crit) 55%, var(--hairline));
+  background: color-mix(in srgb, var(--crit) 12%, var(--surface-2));
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+.sevLow {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--hairline));
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface-2));
+  color: var(--warn-ink);
+  font-weight: 550;
+}
+
+/* An out-of-stock row carries a left rule in its product cell, so the row reads
+   as empty-shelf at a glance without repainting the whole line. */
+.outRow {
+  border-left: 2px solid var(--crit);
+  padding-left: var(--s-2);
+  margin-left: calc(-1 * var(--s-2) - 2px);
+}
+
+.productCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.productLine {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.productName {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productMeta {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Stock against threshold — a gauge, not a bare number
+   -----------------------------------------------------------------------------
+   "4" means nothing on its own. "4 / 20" plus a bar a fifth full means the
+   shelf is nearly empty, and both readings land before the eye has parsed the
+   digits.
+   -------------------------------------------------------------------------- */
+
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.gaugeText {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
+}
+
+.gaugeTextOut {
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+.gaugeOf {
+  color: var(--muted);
+}
+
+.gaugeTrack {
+  width: 4.5rem;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.gaugeFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--warn);
+  transform-origin: left center;
+  animation: gaugeIn var(--t-move) var(--ease-out) both;
+}
+
+/* Zero stock has no bar to draw, so the track itself goes solid — an empty
+   gauge and a missing gauge must not look the same. */
+.gaugeEmpty {
+  background: color-mix(in srgb, var(--crit) 35%, var(--sunken));
+}
+
+@keyframes gaugeIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   By-vendor breakdown
+   -------------------------------------------------------------------------- */
+
+.vendorList {
+  display: flex;
+  flex-direction: column;
+}
+
+.vendorRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.vendorRow:last-child {
+  border-bottom: 0;
+}
+
+.vendorName {
+  font-size: var(--fs-small);
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vendorBar {
+  display: flex;
+  height: 5px;
+  margin-top: 0.3rem;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background: var(--sunken);
+}
+
+.vendorBarOut {
+  background: var(--crit);
+}
+
+.vendorBarLow {
+  background: var(--warn);
+}
+
+.vendorCounts {
+  display: flex;
+  gap: var(--s-2);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+}
+
+.countOut {
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+.countLow {
+  color: var(--warn-ink);
+}
+
+.countZero {
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Aisle legend under the chart — the numbers, so nobody reads a value off a
+   pixel.
+   -------------------------------------------------------------------------- */
+
+.aisleLegend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--s-2) var(--s-4);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  font-size: var(--fs-micro);
+}
+
+.aisleLegendItem {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.aisleSwatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: var(--r-nub);
+  flex: 0 0 auto;
+}
+
+.aisleLegendName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aisleLegendCounts {
+  margin-left: auto;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Restock age
+   -------------------------------------------------------------------------- */
+
+.restock {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.restockStale {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+.restockStale::before {
+  content: "◆ ";
+  font-size: 0.7em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaugeFill {
+    animation: none;
+  }
+}

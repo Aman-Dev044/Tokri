@@ -1,0 +1,1062 @@
+/* =============================================================================
+   ADMIN PAGE CHROME — Worker C surfaces
+   -----------------------------------------------------------------------------
+   Owned by the customers / riders / catalog / payments / settlements / coupons /
+   reports / audit / settings pages. A CSS Module, deliberately: it cannot
+   collide with `src/styles/admin.css`, which another surface owns.
+
+   Per plan §2.4 the admin surface is data-dense, neutral and has no chrome.
+   Semantic colour only (--good / --warn / --crit). The chromatic-aisle
+   re-tinting that drives the shopping app is NOT used here. The one exception
+   is a breakdown *by aisle*, where the eight aisle hues act as categorical
+   series colours — those are passed in as data, not read off --aisle.
+
+   Every colour is a token, so light and dark both come for free.
+   ============================================================================= */
+
+/* --------------------------------------------------------------------------
+   Sample-data banner. The banner itself is the shared <FixtureBanner/>; this
+   only lays the retry button out beside it.
+   -------------------------------------------------------------------------- */
+
+.sampleWrap {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.sampleWrap > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.sampleWrap > button {
+  flex: 0 0 auto;
+  margin-top: var(--s-2);
+}
+
+/* --------------------------------------------------------------------------
+   Layout primitives
+   -------------------------------------------------------------------------- */
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.split {
+  display: grid;
+  gap: var(--s-5);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 60rem) {
+  .split2 {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+  .splitEven {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.rowWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.pushRight {
+  margin-left: auto;
+}
+
+/* Any wide thing scrolls inside itself. The page body never scrolls sideways. */
+.scrollX {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+/* --------------------------------------------------------------------------
+   Panel — a plain bordered surface for content that is not a DataTable
+   -------------------------------------------------------------------------- */
+
+.panel {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.panelTitle {
+  margin: 0;
+  font-family: var(--body);
+  font-size: var(--fs-small);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panelBody {
+  padding: var(--s-4);
+}
+
+.panelBodyFlush {
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Definition list — the workhorse of every detail view
+   -------------------------------------------------------------------------- */
+
+.defList {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, auto) minmax(0, 1fr);
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+}
+
+.dt {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.dd {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------------------
+   Numbers. Azeret Mono, tabular, always.
+   -------------------------------------------------------------------------- */
+
+.num {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.numLarge {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.good {
+  color: var(--good-ink);
+}
+.warn {
+  color: var(--warn-ink);
+}
+.crit {
+  color: var(--crit-ink);
+}
+.muted {
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Live presence dot — riders online / offline
+   -------------------------------------------------------------------------- */
+
+.presence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+}
+
+.presenceDot {
+  position: relative;
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--stone);
+}
+
+.presenceOnline {
+  background: var(--good);
+}
+
+/* The halo is the "live" feeling. It is a second element so the dot itself
+   never moves — a pulsing dot in a table row drags the eye off the numbers. */
+.presenceOnline::after {
+  content: "";
+  position: absolute;
+  inset: -0.25rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--good);
+  opacity: 0.55;
+  animation: pulse 2.4s var(--ease-out) infinite;
+}
+
+.presenceBusy {
+  background: var(--warn);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.65;
+  }
+  70% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Aisle swatch legend (categorical series only — see header note)
+   -------------------------------------------------------------------------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  padding-top: var(--s-3);
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.legendSwatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: var(--r-nub);
+  flex: 0 0 auto;
+}
+
+/* --------------------------------------------------------------------------
+   Progress bar — coupon usage, settlement reconciliation
+   -------------------------------------------------------------------------- */
+
+.progress {
+  position: relative;
+  height: 0.4rem;
+  min-width: 5rem;
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--good);
+  transform-origin: left center;
+  animation: fillIn var(--t-move) var(--ease-out) both;
+}
+
+.progressFillWarn {
+  background: var(--warn);
+}
+.progressFillCrit {
+  background: var(--crit);
+}
+
+@keyframes fillIn {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.progressLabel {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Tabs (catalog)
+   -------------------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: var(--s-1);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 550;
+  cursor: pointer;
+  transition: color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tabCount {
+  margin-left: var(--s-2);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons. Local to these pages — deliberately quieter than the shop's.
+   -------------------------------------------------------------------------- */
+
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-soft);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 550;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--sunken);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnPrimary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--paper));
+}
+
+.btnDanger {
+  border-color: var(--crit);
+  color: var(--crit-ink);
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--crit) 12%, var(--surface));
+}
+
+.btnSmall {
+  padding: 0.25rem 0.55rem;
+  font-size: var(--fs-micro);
+}
+
+.btnGhost {
+  border-color: transparent;
+  background: none;
+}
+
+/* --------------------------------------------------------------------------
+   Forms (coupons drawer, settings)
+   -------------------------------------------------------------------------- */
+
+.formGrid {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 34rem) {
+  .formGrid2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: var(--fs-small);
+  font-weight: 550;
+  color: var(--ink);
+}
+
+.labelHint {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-soft);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+}
+
+.inputNum {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  background: var(--sunken);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.inputInvalid {
+  border-color: var(--crit);
+}
+
+.fieldError {
+  font-size: var(--fs-micro);
+  color: var(--crit-ink);
+}
+
+.fieldHint {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.checkRow input {
+  margin-top: 0.15rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+   Settings save bar — sticky, only visible when dirty
+   -------------------------------------------------------------------------- */
+
+.saveBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-soft);
+  background: var(--surface-2);
+  box-shadow: var(--lift-2);
+  animation: riseIn var(--t-move) var(--spring) both;
+}
+
+@keyframes riseIn {
+  from {
+    transform: translateY(0.75rem);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.saveBarText {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.readOnlyNote {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-5);
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-soft);
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Reconciliation strip (settlements) — gross − commission − refunds = net
+   -------------------------------------------------------------------------- */
+
+.recon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--s-2);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.reconTerm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--s-3);
+  min-width: 8rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+}
+
+.reconTermResult {
+  border-color: var(--ink);
+  background: var(--surface-2);
+}
+
+.reconLabel {
+  font-family: var(--body);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.reconValue {
+  font-size: var(--fs-lead);
+  font-weight: 600;
+}
+
+.reconOp {
+  align-self: center;
+  padding: 0 var(--s-1);
+  font-size: var(--fs-h3);
+  color: var(--muted);
+}
+
+.reconCheck {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  font-size: var(--fs-small);
+}
+
+/* --------------------------------------------------------------------------
+   Audit diff — the centrepiece of /admin/audit
+   -------------------------------------------------------------------------- */
+
+.diffWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--t-move) var(--ease-out);
+}
+
+.diffWrapOpen {
+  grid-template-rows: 1fr;
+}
+
+.diffClip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.diff {
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--sunken);
+  margin: var(--s-2) 0 var(--s-4);
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+}
+
+.diffHead {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.1fr) minmax(0, 2fr) minmax(0, 2fr);
+  gap: 0;
+  border-bottom: 1px solid var(--hairline);
+  font-family: var(--body);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.diffHead > span {
+  padding: var(--s-2) var(--s-3);
+}
+
+.diffRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1.1fr) minmax(0, 2fr) minmax(0, 2fr);
+  border-top: 1px solid var(--hairline);
+}
+
+.diffRow:first-child {
+  border-top: 0;
+}
+
+.diffKey,
+.diffBefore,
+.diffAfter {
+  padding: var(--s-2) var(--s-3);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.diffKey {
+  color: var(--muted);
+}
+
+.diffChanged .diffKey {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.diffChanged .diffBefore {
+  background: color-mix(in srgb, var(--crit) 12%, transparent);
+  color: var(--crit-ink);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--crit) 55%, transparent);
+}
+
+.diffChanged .diffAfter {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good-ink);
+  font-weight: 600;
+}
+
+.diffAdded .diffAfter {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good-ink);
+  font-weight: 600;
+}
+
+.diffRemoved .diffBefore {
+  background: color-mix(in srgb, var(--crit) 12%, transparent);
+  color: var(--crit-ink);
+}
+
+.diffUnchangedToggle {
+  display: block;
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-family: var(--body);
+  font-size: var(--fs-micro);
+  text-align: left;
+  cursor: pointer;
+}
+
+.diffUnchangedToggle:hover {
+  color: var(--ink);
+}
+
+.diffEmpty {
+  padding: var(--s-3);
+  font-family: var(--body);
+  color: var(--muted);
+}
+
+/* A redacted value is rendered as a marker, never as a plausible value. */
+.redacted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.35rem;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-nub);
+  font-family: var(--body);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.diffChanged .redacted,
+.diffAdded .redacted,
+.diffRemoved .redacted {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.nullish {
+  color: var(--stone);
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------------------
+   Timeline (customer / rider history)
+   -------------------------------------------------------------------------- */
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--s-4);
+  border-left: 1px solid var(--hairline);
+}
+
+.timelineItem {
+  position: relative;
+  padding: 0 0 var(--s-4) var(--s-4);
+  font-size: var(--fs-small);
+}
+
+.timelineItem:last-child {
+  padding-bottom: 0;
+}
+
+.timelineItem::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--s-4) - 4px);
+  top: 0.35rem;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--hairline-strong);
+}
+
+.timelineItemDone::before {
+  background: var(--good);
+}
+
+.timelineWhen {
+  display: block;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Aisle row (catalog tab 1)
+   -------------------------------------------------------------------------- */
+
+.aisleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--s-3);
+}
+
+.aisleCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
+}
+
+.aisleCard:hover {
+  border-color: var(--hairline-strong);
+  background: var(--surface-2);
+}
+
+.aisleCardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.aisleCardMeta {
+  display: flex;
+  gap: var(--s-4);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Small text bits
+   -------------------------------------------------------------------------- */
+
+.mono {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.92em;
+}
+
+.subtle {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.twoLine {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-nub);
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Skeletons — shaped like the content they stand in for
+   -------------------------------------------------------------------------- */
+
+.skel {
+  border-radius: var(--r-nub);
+  background: linear-gradient(
+    90deg,
+    var(--sunken) 0%,
+    color-mix(in srgb, var(--hairline) 60%, var(--sunken)) 50%,
+    var(--sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.skelLine {
+  height: 0.8rem;
+  margin-bottom: var(--s-2);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Entrance. Content is readable at rest — these start visible and are only
+   *offset*, so a failed animation never leaves a blank page.
+   -------------------------------------------------------------------------- */
+
+.enter {
+  animation: enter var(--t-move) var(--ease-out) both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0.01;
+    transform: translateY(0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Audit trail entries. Not a table: each entry is an event that opens into a
+   diff, so it is a list of disclosures rather than a grid of cells.
+   -------------------------------------------------------------------------- */
+
+.auditList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.auditItem {
+  border-top: 1px solid var(--hairline);
+}
+
+.auditItem:first-child {
+  border-top: 0;
+}
+
+.auditHead {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--t-micro) var(--ease);
+}
+
+.auditHead:hover {
+  background: var(--surface-2);
+}
+
+.auditHead:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.auditChevron {
+  width: 0.75rem;
+  height: 0.75rem;
+  justify-self: center;
+  color: var(--muted);
+  transition: transform var(--t-micro) var(--ease);
+}
+
+.auditChevronOpen {
+  transform: rotate(90deg);
+}
+
+.auditBody {
+  padding: 0 var(--s-4);
+}
+
+.auditCounts {
+  display: inline-flex;
+  gap: var(--s-3);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  white-space: nowrap;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding-top: var(--s-4);
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Reduced motion — everything above becomes an instant state change.
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .progressFill,
+  .saveBar,
+  .enter,
+  .skel,
+  .presenceOnline::after {
+    animation: none;
+  }
+
+  .diffWrap {
+    transition: none;
+  }
+
+  .btn,
+  .tab,
+  .aisleCard,
+  .input,
+  .select,
+  .textarea,
+  .auditHead,
+  .auditChevron {
+    transition: none;
+  }
+
+  .presenceOnline::after {
+    opacity: 0.4;
+    transform: none;
+  }
+}

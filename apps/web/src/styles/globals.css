@@ -1,0 +1,275 @@
+/* =============================================================================
+   MANDI - app base
+   -----------------------------------------------------------------------------
+   Imported once, from the root layout, AFTER the design-system stylesheets.
+   Element-level defaults only. Component look lives in the design system;
+   surface-specific look lives in marketing.css / auth.css.
+   ============================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+  /* Sticky top bar is 64px; anchored headings must clear it. */
+  scroll-padding-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  /* Explicit ground from a token. The viewer paints its own colour behind the
+     page; a transparent body borrows it and the whole design falls apart. */
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+  /* Nothing may ever scroll the body sideways. Wide content gets its own
+     overflow-x:auto container instead. */
+  overflow-x: clip;
+}
+
+img,
+svg,
+video,
+canvas,
+picture {
+  display: block;
+  max-width: 100%;
+}
+
+img,
+video {
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  text-wrap: balance;
+}
+
+p,
+li {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--aisle-edge);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  text-decoration-color: var(--aisle);
+}
+
+/* One focus treatment for the whole app. Visible, never removed. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: var(--r-nub);
+}
+
+::selection {
+  background: var(--aisle);
+  color: var(--aisle-on);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+/* =============================================================================
+   Shared utilities
+   ============================================================================= */
+
+.skip-link {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  translate: -50% -140%;
+  z-index: 200;
+  padding: 0.7rem 1.2rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 0 0 var(--r-soft) var(--r-soft);
+  font-weight: 600;
+  text-decoration: none;
+  transition: translate var(--t-micro) var(--ease-out);
+}
+.skip-link:focus-visible {
+  translate: -50% 0;
+}
+
+/* Full-bleed section with an inner measure. The landing page is full width; the
+   reading column is not. */
+.bleed {
+  width: 100%;
+  position: relative;
+}
+
+.shell {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.eyebrow {
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.lede {
+  font-size: var(--fs-lead);
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: var(--measure);
+}
+
+/* Any wide thing - a table, a ticker, a diagram - scrolls inside itself. */
+.scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+/* -----------------------------------------------------------------------------
+   Entrance motion.
+
+   These run on LOAD, not on scroll. Nothing here is gated behind an
+   IntersectionObserver, so no section can ever be left parked at opacity:0
+   waiting for a scroll that a crawler, a thumbnail renderer or a user with
+   JS disabled will never perform. The animation always completes; the resting
+   state is the readable one.
+----------------------------------------------------------------------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: rise 620ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   Status pages - 404 and the error boundary. Same furniture, one stylesheet,
+   because both live outside the marketing and auth shells.
+----------------------------------------------------------------------------- */
+
+.status-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--s-4);
+  max-width: 44rem;
+  margin-inline: auto;
+  padding: var(--s-8) var(--gutter);
+  background: var(--paper);
+}
+
+.status-page__art {
+  color: var(--aisle-ink);
+  margin-bottom: var(--s-2);
+}
+
+.status-page__title {
+  margin: 0;
+  font-size: clamp(2rem, 1.2rem + 3vw, 3.4rem);
+  letter-spacing: -0.042em;
+}
+.status-page__accent {
+  color: var(--aisle-ink);
+}
+
+.status-page__body {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-lead);
+  line-height: 1.55;
+  max-width: 46ch;
+}
+
+.status-page__digest {
+  margin: 0;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-nub);
+}
+
+.status-page__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: var(--s-3);
+}

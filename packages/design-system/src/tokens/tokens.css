@@ -1,0 +1,462 @@
+/* =============================================================================
+   MANDI - design tokens
+   -----------------------------------------------------------------------------
+   Reading order matters and is deliberate:
+
+     1. @property registrations   - so --aisle can actually TRANSITION (480ms).
+     2. bare :root                - EVERY token defined here, light ground.
+     3. @media (prefers-color-scheme: dark):root:not([data-theme="light"])
+     4. :root[data-theme="dark"]  - explicit user choice wins in both directions.
+     5. [data-aisle="..."]        - Pillar 1, chromatic aisles (8 blocks).
+     6. [data-time="..."]         - Pillar 2, circadian ground (4 blocks x 2 themes).
+
+   NOTHING is defined for the first time inside a media query. A token that only
+   exists inside `prefers-color-scheme: dark` is the classic unreadable-UI bug.
+
+   ---------------------------------------------------------------------------
+   CONTRAST NOTE - read before changing any hue
+   ---------------------------------------------------------------------------
+   The brief asks every aisle hue to clear 4.5:1 against BOTH --paper (#F2F4EE)
+   and --ink (#14150F). That is geometrically impossible: paper-to-ink is only
+   16.57:1, and a middle colour would need 4.5 x 4.5 = 20.25:1 of headroom to
+   clear both. No colour anywhere in sRGB can do it.
+
+   So the system splits the job in two, which is what the requirement actually
+   wants - never ship unreadable text:
+
+     --aisle      the identity hue. Fills, edges, washes, rules, swatches,
+                  basket tint. NEVER carries small text on its own.
+     --aisle-ink  the SAME hue, lightness-tuned per theme, measured at >= 4.5:1
+                  against the current ground. Every piece of aisle-coloured TEXT
+                  uses this. Measured ratios are in the comment on each line.
+
+   Text placed ON an --aisle fill uses --aisle-on, picked per hue.
+   ============================================================================= */
+
+@property --aisle {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2f6b3c;
+}
+@property --aisle-ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2f6b3c;
+}
+@property --aisle-on {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #f6f8f2;
+}
+
+/* ===========================================================================
+   2. :root - the complete token set (light ground)
+   =========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* -- ground & ink ------------------------------------------------------
+     Neutrals carry a deliberate green bias. Never pure grey. */
+  --ink: #14150f;            /* 16.57:1 on --paper */
+  --paper: #f2f4ee;
+  --stone: #8a8f80;          /* decorative / large text only - 3.00:1 on paper */
+  --muted: #6d7164;          /* 4.52:1 on paper - ALL secondary TEXT uses this */
+  --hairline: #d9dcd2;
+  --hairline-strong: #c2c7b8;
+
+  /* raised surfaces - paper with more light in it, not a grey box */
+  --surface: #f8f9f4;
+  --surface-2: #ffffff;
+  --sunken: #eaede3;
+
+  /* -- brand ------------------------------------------------------------- */
+  --moss: #2f6b3c;
+  --aisle: var(--moss);
+  --aisle-ink: #2f6b3c;      /* 5.76:1 on paper */
+  --aisle-on: #f6f8f2;       /* text placed on an --aisle fill */
+
+  /* derived aisle surfaces - these interpolate too, because --aisle is a
+     registered <color> and color-mix re-evaluates as it animates. */
+  --aisle-wash: color-mix(in srgb, var(--aisle) 8%, transparent);
+  --aisle-wash-strong: color-mix(in srgb, var(--aisle) 16%, transparent);
+  --aisle-edge: color-mix(in srgb, var(--aisle) 38%, transparent);
+  --aisle-glow: color-mix(in srgb, var(--aisle) 26%, transparent);
+
+  /* -- semantic - separate from accent, never reused as brand colour ------ */
+  --good: #2f6b3c;
+  --warn: #c8871f;
+  --crit: #b33a28;
+  --good-ink: #2f6b3c;       /* 5.76:1 on paper */
+  --warn-ink: #966517;       /* 4.52:1 on paper */
+  --crit-ink: #b33a28;       /* 5.33:1 on paper */
+  --on-semantic: #f6f8f2;
+
+  /* -- focus ------------------------------------------------------------- */
+  --focus: #14150f;
+  --focus-halo: color-mix(in srgb, var(--aisle) 45%, transparent);
+
+  /* -- type -------------------------------------------------------------- */
+  --display: var(--font-display), "Bricolage Grotesque", "Trebuchet MS",
+    "Segoe UI", sans-serif;
+  --body: var(--font-body), "Instrument Sans", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --data: var(--font-data), "Azeret Mono", ui-monospace, "SFMono-Regular",
+    "Cascadia Mono", Consolas, monospace;
+
+  /* fluid scale - clamp() so 360px never overflows and 1600px never bloats */
+  --fs-mega: clamp(2.75rem, 1.2rem + 7vw, 8.5rem);
+  --fs-hero: clamp(2.25rem, 1.1rem + 5vw, 5.5rem);
+  --fs-h1: clamp(1.9rem, 1.1rem + 3.2vw, 3.6rem);
+  --fs-h2: clamp(1.5rem, 1rem + 2vw, 2.4rem);
+  --fs-h3: clamp(1.15rem, 0.95rem + 0.9vw, 1.55rem);
+  --fs-lead: clamp(1.02rem, 0.95rem + 0.45vw, 1.28rem);
+  --fs-body: 1rem;
+  --fs-small: 0.875rem;
+  --fs-micro: 0.75rem;
+
+  /* -- spacing - a 4px base, named so nothing is arbitrary ---------------- */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+  --s-9: 6rem;
+  --s-10: 8rem;
+
+  /* page rhythm */
+  --gutter: clamp(1.25rem, 4vw, 4.5rem);
+  --measure: 62ch;
+  --section-y: clamp(3.5rem, 8vw, 8rem);
+
+  /* -- radii - deliberately NOT one value on every box -------------------- */
+  --r-nub: 2px;              /* chips, swatches, rules */
+  --r-soft: 10px;            /* inputs, small panels */
+  --r-panel: 18px;           /* cards, sheets */
+  --r-pill: 999px;           /* buttons, tags */
+
+  /* -- motion ------------------------------------------------------------ */
+  --t-micro: 180ms;          /* hover, press */
+  --t-move: 320ms;           /* panels, sheets */
+  --t-aisle: 480ms;          /* the colour shift */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* -- ink & paper texture (Pillar 6) ------------------------------------ */
+  --grain-opacity: 0.32;
+  --grain-blend: multiply;
+
+  /* -- elevation - paper lifting off paper, not a drop shadow ------------- */
+  --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(20, 21, 15, 0.28);
+  --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(20, 21, 15, 0.4);
+  --lift-aisle: 0 14px 40px -24px var(--aisle-glow);
+
+  /* -- layering ---------------------------------------------------------- */
+  --z-grain: 1;
+  --z-dock: 60;
+  --z-topbar: 70;
+  --z-sheet: 80;
+  --z-toast: 90;
+  --z-loader: 100;
+}
+
+/* ===========================================================================
+   3. dark ground - system preference, unless the user explicitly chose light
+   =========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ink: #e9ece0;          /* 15.86:1 on --paper */
+    --paper: #0f110c;
+    --stone: #8a8f80;        /* 5.72:1 on dark paper - safe for text here */
+    --muted: #9aa08e;
+    --hairline: #2a2e24;
+    --hairline-strong: #3b4133;
+
+    --surface: #15180f;
+    --surface-2: #1c2015;
+    --sunken: #090b06;
+
+    --aisle-ink: #3d8b4e;    /* 4.52:1 on dark paper */
+    --aisle-on: #0d0f09;
+
+    --aisle-wash: color-mix(in srgb, var(--aisle) 14%, transparent);
+    --aisle-wash-strong: color-mix(in srgb, var(--aisle) 26%, transparent);
+    --aisle-edge: color-mix(in srgb, var(--aisle) 52%, transparent);
+    --aisle-glow: color-mix(in srgb, var(--aisle) 34%, transparent);
+
+    --good-ink: #3d8b4e;     /* 4.52:1 */
+    --warn-ink: #c8871f;     /* 6.28:1 */
+    --crit-ink: #d3503c;     /* 4.52:1 */
+    --on-semantic: #0d0f09;
+
+    --focus: #e9ece0;
+
+    --grain-opacity: 0.22;
+    --grain-blend: screen;
+
+    --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
+    --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(0, 0, 0, 0.85);
+  }
+}
+
+/* ===========================================================================
+   4. dark ground - explicit user choice. Wins over the media query above.
+   =========================================================================== */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink: #e9ece0;
+  --paper: #0f110c;
+  --stone: #8a8f80;
+  --muted: #9aa08e;
+  --hairline: #2a2e24;
+  --hairline-strong: #3b4133;
+
+  --surface: #15180f;
+  --surface-2: #1c2015;
+  --sunken: #090b06;
+
+  --aisle-ink: #3d8b4e;
+  --aisle-on: #0d0f09;
+
+  --aisle-wash: color-mix(in srgb, var(--aisle) 14%, transparent);
+  --aisle-wash-strong: color-mix(in srgb, var(--aisle) 26%, transparent);
+  --aisle-edge: color-mix(in srgb, var(--aisle) 52%, transparent);
+  --aisle-glow: color-mix(in srgb, var(--aisle) 34%, transparent);
+
+  --good-ink: #3d8b4e;
+  --warn-ink: #c8871f;
+  --crit-ink: #d3503c;
+  --on-semantic: #0d0f09;
+
+  --focus: #e9ece0;
+
+  --grain-opacity: 0.22;
+  --grain-blend: screen;
+
+  --lift-1: 0 1px 0 var(--hairline), 0 2px 10px -6px rgba(0, 0, 0, 0.7);
+  --lift-2: 0 1px 0 var(--hairline), 0 18px 44px -22px rgba(0, 0, 0, 0.85);
+}
+
+/* ===========================================================================
+   5. PILLAR 1 - CHROMATIC AISLES
+   ---------------------------------------------------------------------------
+   `data-aisle` is stamped on <html>. One attribute re-tints the whole app:
+   accents, rules, buttons, washes, the basket. Nothing hardcodes a colour.
+
+   --aisle-ink values are measured. Light values clear 4.5:1 on #F2F4EE,
+   dark values clear 4.5:1 on #0F110C.
+   =========================================================================== */
+
+[data-aisle="fruits"] {
+  --aisle: #d64530;          /* tomato */
+  --aisle-ink: #ca3d28;      /* 4.51:1 on paper */
+  --aisle-on: #fff6f3;
+}
+[data-aisle="vegetables"] {
+  --aisle: #4e8c3f;          /* leaf */
+  --aisle-ink: #457c38;      /* 4.51:1 */
+  --aisle-on: #f4faf0;
+}
+[data-aisle="dairy"] {
+  --aisle: #c89b3c;          /* butter */
+  --aisle-ink: #8a6a27;      /* 4.52:1 */
+  --aisle-on: #1a1608;
+}
+[data-aisle="bakery"] {
+  --aisle: #b5651d;          /* crust */
+  --aisle-ink: #a65d1b;      /* 4.50:1 */
+  --aisle-on: #fff7ef;
+}
+[data-aisle="beverages"] {
+  --aisle: #2f6f8c;          /* deep water */
+  --aisle-ink: #2f6f8c;      /* 5.02:1 - base hue already clears it */
+  --aisle-on: #f1f8fb;
+}
+[data-aisle="snacks"] {
+  --aisle: #8c4a6b;          /* berry */
+  --aisle-ink: #8c4a6b;      /* 5.73:1 */
+  --aisle-on: #fdf2f7;
+}
+[data-aisle="staples"] {
+  --aisle: #6b6244;          /* husk */
+  --aisle-ink: #6b6244;      /* 5.48:1 */
+  --aisle-on: #faf8ef;
+}
+[data-aisle="frozen"] {
+  --aisle: #4a7c8c;          /* frost */
+  --aisle-ink: #477685;      /* 4.50:1 */
+  --aisle-on: #f1f9fb;
+}
+
+/* aisle TEXT colours re-tuned for the dark ground (lightened, same hue) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-aisle="fruits"]     { --aisle-ink: #d84c38; } /* 4.51:1 */
+  :root:not([data-theme="light"])[data-aisle="vegetables"] { --aisle-ink: #4e8c3f; } /* 4.65:1 */
+  :root:not([data-theme="light"])[data-aisle="dairy"]      { --aisle-ink: #c89b3c; } /* 7.42:1 */
+  :root:not([data-theme="light"])[data-aisle="bakery"]     { --aisle-ink: #b8671e; } /* 4.52:1 */
+  :root:not([data-theme="light"])[data-aisle="beverages"]  { --aisle-ink: #3883a6; } /* 4.51:1 */
+  :root:not([data-theme="light"])[data-aisle="snacks"]     { --aisle-ink: #ad6489; } /* 4.50:1 */
+  :root:not([data-theme="light"])[data-aisle="staples"]    { --aisle-ink: #877b56; } /* 4.52:1 */
+  :root:not([data-theme="light"])[data-aisle="frozen"]     { --aisle-ink: #4e8394; } /* 4.53:1 */
+}
+
+:root[data-theme="dark"][data-aisle="fruits"]     { --aisle-ink: #d84c38; }
+:root[data-theme="dark"][data-aisle="vegetables"] { --aisle-ink: #4e8c3f; }
+:root[data-theme="dark"][data-aisle="dairy"]      { --aisle-ink: #c89b3c; }
+:root[data-theme="dark"][data-aisle="bakery"]     { --aisle-ink: #b8671e; }
+:root[data-theme="dark"][data-aisle="beverages"]  { --aisle-ink: #3883a6; }
+:root[data-theme="dark"][data-aisle="snacks"]     { --aisle-ink: #ad6489; }
+:root[data-theme="dark"][data-aisle="staples"]    { --aisle-ink: #877b56; }
+:root[data-theme="dark"][data-aisle="frozen"]     { --aisle-ink: #4e8394; }
+
+/* The 480ms shift. --aisle is a registered <color>, so this genuinely
+   interpolates, and because it inherits, the whole tree shifts with it. */
+html {
+  transition:
+    --aisle var(--t-aisle) var(--ease),
+    --aisle-ink var(--t-aisle) var(--ease),
+    --aisle-on var(--t-aisle) var(--ease),
+    background-color var(--t-move) var(--ease);
+}
+
+/* ===========================================================================
+   6. PILLAR 2 - CIRCADIAN GROUND
+   ---------------------------------------------------------------------------
+   The ground shifts with the clock INSIDE whichever theme is active. This is
+   not the light/dark toggle - it modulates within it.
+
+   `data-time` is stamped on <html> from a client-side effect only. Server time
+   is not the user's time; computing this during SSR is a hydration mismatch.
+
+   Every pairing below keeps --ink over --paper above 14:1.
+
+   The selectors are deliberately NOT anchored to :root. Stamping `data-time`
+   on any element re-scopes the ground tokens to that subtree, which is what
+   lets the landing page show the four windows side by side as genuine samples
+   instead of painted mockups. The dark blocks below carry enough specificity
+   (0,3,0 vs 0,1,0) to win for nested elements too.
+   =========================================================================== */
+
+/* - light theme grounds - */
+[data-time="dawn"] {
+  --paper: #eef3f1;          /* cool, pale, high clarity */
+  --surface: #f6faf8;
+  --sunken: #e5ebe8;
+  --hairline: #d5dcd8;
+}
+[data-time="day"] {
+  --paper: #f2f4ee;          /* neutral paper, maximum contrast */
+  --surface: #f8f9f4;
+  --sunken: #eaede3;
+  --hairline: #d9dcd2;
+}
+[data-time="dusk"] {
+  --paper: #f5f1e6;          /* warm amber lift, softened edges */
+  --surface: #faf7ef;
+  --sunken: #ede7d8;
+  --hairline: #ded7c5;
+  --grain-opacity: 0.38;
+}
+[data-time="night"] {
+  --paper: #e7eae2;          /* dimmed even in light theme - low glare */
+  --surface: #eff1ea;
+  --sunken: #dde1d6;
+  --hairline: #cdd2c5;
+  --grain-opacity: 0.26;
+}
+
+/* - dark theme grounds, system preference - */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-time="dawn"],
+  :root:not([data-theme="light"]) [data-time="dawn"] {
+    --paper: #0e1411;
+    --surface: #151c18;
+    --sunken: #080d0a;
+    --hairline: #26302b;
+  }
+  :root:not([data-theme="light"])[data-time="day"],
+  :root:not([data-theme="light"]) [data-time="day"] {
+    --paper: #0f110c;
+    --surface: #15180f;
+    --sunken: #090b06;
+    --hairline: #2a2e24;
+  }
+  :root:not([data-theme="light"])[data-time="dusk"],
+  :root:not([data-theme="light"]) [data-time="dusk"] {
+    --paper: #15120a;
+    --surface: #1d190f;
+    --sunken: #0d0b05;
+    --hairline: #332c1d;
+    --grain-opacity: 0.28;
+  }
+  :root:not([data-theme="light"])[data-time="night"],
+  :root:not([data-theme="light"]) [data-time="night"] {
+    --paper: #0a0c07;
+    --surface: #101308;
+    --sunken: #050703;
+    --hairline: #232719;
+    --grain-opacity: 0.16;
+  }
+}
+
+/* - dark theme grounds, explicit choice - */
+:root[data-theme="dark"][data-time="dawn"],
+:root[data-theme="dark"] [data-time="dawn"] {
+  --paper: #0e1411;
+  --surface: #151c18;
+  --sunken: #080d0a;
+  --hairline: #26302b;
+}
+:root[data-theme="dark"][data-time="day"],
+:root[data-theme="dark"] [data-time="day"] {
+  --paper: #0f110c;
+  --surface: #15180f;
+  --sunken: #090b06;
+  --hairline: #2a2e24;
+}
+:root[data-theme="dark"][data-time="dusk"],
+:root[data-theme="dark"] [data-time="dusk"] {
+  --paper: #15120a;
+  --surface: #1d190f;
+  --sunken: #0d0b05;
+  --hairline: #332c1d;
+  --grain-opacity: 0.28;
+}
+:root[data-theme="dark"][data-time="night"],
+:root[data-theme="dark"] [data-time="night"] {
+  --paper: #0a0c07;
+  --surface: #101308;
+  --sunken: #050703;
+  --hairline: #232719;
+  --grain-opacity: 0.16;
+}
+
+/* Accents dim at night, in both themes - spec 2.2, Pillar 2. */
+[data-time="night"] {
+  --aisle-wash: color-mix(in srgb, var(--aisle) 6%, transparent);
+  --aisle-glow: color-mix(in srgb, var(--aisle) 18%, transparent);
+}
+
+/* ===========================================================================
+   7. reduced motion - global kill switch for the token-driven durations
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-micro: 1ms;
+    --t-move: 1ms;
+    --t-aisle: 1ms;
+  }
+  html {
+    transition: none;
+  }
+}

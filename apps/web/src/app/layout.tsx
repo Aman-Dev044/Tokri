@@ -1,0 +1,126 @@
+import type { Metadata, Viewport } from 'next';
+import { Bricolage_Grotesque, Instrument_Sans, Azeret_Mono } from 'next/font/google';
+import { THEME_INIT_SCRIPT } from '@mandi/design-system';
+
+import '@mandi/design-system/tokens.css';
+import '@mandi/design-system/styles.css';
+import '@/styles/globals.css';
+
+import { Providers } from '@/components/shared/Providers';
+import { SITE_URL } from '@/config/env';
+
+/* ---------------------------------------------------------------------------
+   Type (plan section 2.3)
+
+   All three load through next/font/google: self-hosted at build time, zero
+   layout shift, and no external font request at runtime - which is also what
+   lets the CSP keep `font-src 'self'`.
+
+   Every face declares a real fallback stack, so the page is legible in the
+   moment before the woff2 lands and on any network that never delivers it.
+--------------------------------------------------------------------------- */
+
+const display = Bricolage_Grotesque({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+  fallback: ['Trebuchet MS', 'Segoe UI', 'sans-serif'],
+  adjustFontFallback: false,
+});
+
+const body = Instrument_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+  fallback: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+});
+
+const data = Azeret_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-data',
+  fallback: ['ui-monospace', 'SFMono-Regular', 'Consolas', 'monospace'],
+});
+
+/* ------------------------------------------------------------------------- */
+
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'Mandi — the market, delivered',
+    template: '%s · Mandi',
+  },
+  description:
+    'Mandi is a multi-vendor grocery marketplace. Order from the kirana, the dairy and the bakery near you — each aisle colours the whole app as you walk through it.',
+  applicationName: 'Mandi',
+  keywords: [
+    'grocery delivery',
+    'online kirana',
+    'fresh vegetables delivery',
+    'multi vendor grocery',
+    'mandi',
+  ],
+  authors: [{ name: 'Mandi' }],
+  formatDetection: { telephone: false, address: false, email: false },
+  icons: {
+    // TODO(design): add a raster apple-touch-icon.png and a maskable PWA icon
+    // set when the delivery panel's manifest lands (plan section 3.2).
+    icon: '/icons/favicon.svg',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Mandi',
+    locale: 'en_IN',
+    url: SITE_URL,
+    title: 'Mandi — the market, delivered',
+    description:
+      'Eight aisles, eight colours, one market. Groceries from the shops actually near you.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mandi — the market, delivered',
+    description:
+      'Eight aisles, eight colours, one market. Groceries from the shops actually near you.',
+  },
+  robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  // Both grounds are fully designed, so the browser chrome follows the ground.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f2f4ee' },
+    { media: '(prefers-color-scheme: dark)', color: '#0f110c' },
+  ],
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en-IN" className={`${display.variable} ${body.variable} ${data.variable}`}>
+      <head>
+        {/*
+          Runs before first paint, on the user's own machine, reading the user's
+          own clock and their stored theme. Without it a dark-mode user gets one
+          light frame and the circadian ground snaps in after hydration.
+
+          Safe: the string is a build-time constant from the design system.
+          Nothing user-supplied can reach it.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body>
+        {/* Pillar 6 — ink & paper. A grain plate over everything, never
+            interactive, opacity driven by the circadian tokens. */}
+        <div className="mnd-grain" aria-hidden="true" />
+
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+
+        <Providers>{children}</Providers>
+      </body>
+    </html>
+  );
+}

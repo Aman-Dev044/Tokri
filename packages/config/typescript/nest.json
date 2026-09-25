@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "@mandi/config — NestJS",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": false,
+    /*
+     * Nest + Mongoose declare class properties that are assigned by the
+     * decorator/ODM layer rather than by a constructor, so definite
+     * initialization cannot be proven statically.
+     */
+    "strictPropertyInitialization": false
+  }
+}

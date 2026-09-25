@@ -1,0 +1,250 @@
+/* =============================================================================
+   APPROVALS INBOX — local chrome
+   -----------------------------------------------------------------------------
+   A CSS Module, so nothing here can collide with `styles/admin.css` or with the
+   shared `_shared-pages/pages.module.css`. Layout primitives (panels, buttons,
+   tabs, definition lists) come from that shared module; this file only adds the
+   three things the inbox needs and nothing else has: the decision bar, the
+   reject-reason field inside a dialog, and the confirmation toast.
+
+   Every colour is a token, so light and dark both come for free.
+   ============================================================================= */
+
+/* --------------------------------------------------------------------------
+   Decision bar — the pair of buttons that live in the drawer footer and at the
+   end of every row. Approve is quiet; reject carries the danger border.
+   -------------------------------------------------------------------------- */
+
+.decide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* Stop a row click from opening the drawer when the operator meant the button. */
+.decide button {
+  position: relative;
+  z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Reject reason. REQUIRED — the field is not a formality, it is the record of
+   why a business was turned away, and it is read back later.
+   -------------------------------------------------------------------------- */
+
+.reasonField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-3);
+  text-align: left;
+}
+
+.reasonLabel {
+  font-size: var(--fs-small);
+  font-weight: 550;
+  color: var(--ink);
+}
+
+.reasonRequired {
+  color: var(--crit-ink);
+}
+
+.reasonPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.preset {
+  appearance: none;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-micro);
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+}
+
+.preset:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+  border-style: solid;
+}
+
+/* --------------------------------------------------------------------------
+   Toast — "Approved. Removed from the queue."
+   -----------------------------------------------------------------------------
+   Bottom-right, polite live region, auto-dismissing. It reports an outcome that
+   has already happened, so it never traps focus and never blocks the queue.
+   -------------------------------------------------------------------------- */
+
+.toastDock {
+  position: fixed;
+  right: var(--s-4);
+  bottom: var(--s-4);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: min(24rem, calc(100vw - 2 * var(--s-4)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline-strong);
+  border-left-width: 3px;
+  border-radius: var(--r-soft);
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.35);
+  font-size: var(--fs-small);
+  color: var(--ink);
+  pointer-events: auto;
+  animation: toastIn var(--t-move) var(--spring) both;
+}
+
+.toastGood {
+  border-left-color: var(--good);
+}
+.toastCrit {
+  border-left-color: var(--crit);
+}
+.toastWarn {
+  border-left-color: var(--warn);
+}
+
+/* The glyph carries the meaning alongside the colour — never colour alone. */
+.toastGlyph {
+  flex: 0 0 auto;
+  font-family: var(--data);
+  font-size: var(--fs-micro);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.toastBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toastTitle {
+  margin: 0;
+  font-weight: 600;
+}
+
+.toastDetail {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: var(--fs-micro);
+}
+
+.toastClose {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-small);
+  line-height: 1;
+  padding: 0.1rem 0.2rem;
+  cursor: pointer;
+}
+
+.toastClose:hover {
+  color: var(--ink);
+}
+
+@keyframes toastIn {
+  from {
+    transform: translateY(0.75rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Queue-clear zero state. Reads as finished, not as broken.
+   -------------------------------------------------------------------------- */
+
+.clear {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-8) var(--s-4);
+  text-align: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+}
+
+.clearMark {
+  width: 2.25rem;
+  height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--good) 45%, var(--hairline));
+  color: var(--good-ink);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.clearTitle {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--fs-lead);
+  color: var(--ink);
+}
+
+.clearBody {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Drawer body bits
+   -------------------------------------------------------------------------- */
+
+.coords {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.waiting {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.waitingLong {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+/* A dash glyph before an aged row, so "waiting too long" is not colour alone. */
+.waitingLong::before {
+  content: "◆";
+  font-size: 0.7em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

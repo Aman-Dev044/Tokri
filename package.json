@@ -1,0 +1,42 @@
+{
+  "name": "mandi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mandi — Multi-Vendor Grocery Delivery Ecosystem",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:api": "pnpm --filter @mandi/api dev",
+    "dev:web": "pnpm --filter @mandi/web dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "infra:up": "docker compose -f docker/docker-compose.yml up -d",
+    "infra:down": "docker compose -f docker/docker-compose.yml down",
+    "infra:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "infra:reset": "docker compose -f docker/docker-compose.yml down -v && pnpm infra:up",
+    "seed": "pnpm --filter @mandi/api seed",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "//": "argon2 is a NATIVE module — without its build script it installs but throws at runtime, which would break both the seed and every login. pnpm 10 blocks install scripts by default, so the ones we actually need are allowlisted here explicitly rather than approved interactively.",
+    "onlyBuiltDependencies": [
+      "argon2",
+      "@nestjs/core",
+      "@scarf/scarf",
+      "mongodb-memory-server",
+      "unrs-resolver",
+      "sharp",
+      "esbuild"
+    ]
+  }
+}

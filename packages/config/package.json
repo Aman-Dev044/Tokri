@@ -1,0 +1,19 @@
+{
+  "name": "@mandi/config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared ESLint / TypeScript / Prettier configuration for the Mandi monorepo. Home of the lint gate that makes a hardcoded credential fallback impossible to merge.",
+  "files": [
+    "eslint",
+    "typescript",
+    "prettier"
+  ],
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "eslint-config-prettier": "^9.1.0"
+  },
+  "peerDependencies": {
+    "eslint": "^8.57.1"
+  }
+}

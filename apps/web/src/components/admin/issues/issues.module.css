@@ -1,0 +1,345 @@
+/* =============================================================================
+   SUPPORT QUEUE — local chrome
+   -----------------------------------------------------------------------------
+   A CSS Module: nothing here can collide with `styles/admin.css` or with the
+   shared `_shared-pages/pages.module.css`. Panels, buttons, fields and tabs all
+   come from that shared module; this file adds only what a support queue needs.
+
+   ── SEVERITY IS NEVER COLOUR ALONE ─────────────────────────────────────────
+   Every priority and status chip carries three signals at once: a hue, a GLYPH
+   with its own silhouette (▲ ◆ ● – / ○ ◐ ✓ ×), and the word itself. An operator
+   reading this at 2am on a dim laptop, or reading it with a red-green
+   deficiency, gets the same answer from any one of the three.
+   ============================================================================= */
+
+/* --------------------------------------------------------------------------
+   Chips
+   -------------------------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.1rem 0.5rem 0.1rem 0.4rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  font-size: var(--fs-micro);
+  font-weight: 550;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.chipGlyph {
+  font-family: var(--data);
+  font-size: 0.68em;
+  line-height: 1;
+  color: var(--muted);
+}
+
+.chipGood {
+  border-color: color-mix(in srgb, var(--good) 45%, var(--hairline));
+  background: color-mix(in srgb, var(--good) 9%, var(--surface-2));
+}
+.chipGood .chipGlyph {
+  color: var(--good-ink);
+}
+
+.chipWarn {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--hairline));
+  background: color-mix(in srgb, var(--warn) 11%, var(--surface-2));
+}
+.chipWarn .chipGlyph {
+  color: var(--warn-ink);
+}
+
+.chipCrit {
+  border-color: color-mix(in srgb, var(--crit) 55%, var(--hairline));
+  background: color-mix(in srgb, var(--crit) 12%, var(--surface-2));
+  font-weight: 650;
+}
+.chipCrit .chipGlyph {
+  color: var(--crit-ink);
+}
+
+.chipInfo {
+  border-color: var(--hairline-strong);
+  background: var(--sunken);
+}
+
+.chipMuted {
+  border-color: var(--hairline);
+  background: none;
+  color: var(--muted);
+  font-weight: 450;
+}
+
+/* --------------------------------------------------------------------------
+   Age. The single most important number on a support row: an urgent ticket
+   open for three days is the reason this page exists.
+   -------------------------------------------------------------------------- */
+
+.age {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
+  color: var(--ink);
+}
+
+.ageMark {
+  font-size: 0.7em;
+  line-height: 1;
+}
+
+.ageOk {
+  color: var(--muted);
+}
+
+.ageWarn {
+  color: var(--warn-ink);
+  font-weight: 600;
+}
+
+.ageBreached {
+  color: var(--crit-ink);
+  font-weight: 700;
+}
+
+/* The breach bar — a second, non-textual read of the same fact. Fills as the
+   ticket approaches its target and saturates once it is past. */
+.ageBar {
+  display: block;
+  width: 3.25rem;
+  height: 3px;
+  margin-top: 0.25rem;
+  border-radius: var(--r-pill);
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.ageBarFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--muted);
+}
+
+.ageBarFillWarn {
+  background: var(--warn);
+}
+
+.ageBarFillCrit {
+  background: var(--crit);
+}
+
+/* A breached row gets a left rule in the subject cell, so the whole line reads
+   as hot without repainting the row background. */
+.subjectCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.subjectLine {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.subjectText {
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subjectMeta {
+  font-size: var(--fs-micro);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hot {
+  border-left: 2px solid var(--crit);
+  padding-left: var(--s-2);
+  margin-left: calc(-1 * var(--s-2) - 2px);
+}
+
+/* --------------------------------------------------------------------------
+   Detail page — thread
+   -------------------------------------------------------------------------- */
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-height: 28rem;
+  overflow-y: auto;
+  padding: var(--s-4);
+  scroll-behavior: smooth;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 46ch;
+  padding: var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-soft);
+  background: var(--surface);
+  animation: msgIn var(--t-move) var(--ease-out) both;
+  animation-delay: calc(var(--adm-i, 0) * 20ms);
+}
+
+/* Our side of the conversation sits right and reads as the platform speaking. */
+.msgMine {
+  align-self: flex-end;
+  background: var(--sunken);
+  border-color: var(--hairline-strong);
+}
+
+.msgSystem {
+  align-self: center;
+  max-width: 52ch;
+  border-style: dashed;
+  background: none;
+  color: var(--muted);
+  font-size: var(--fs-micro);
+}
+
+.msgHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--fs-micro);
+  color: var(--muted);
+}
+
+.msgAuthor {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.msgRole {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+}
+
+.msgBody {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.replyBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  border-top: 1px solid var(--hairline);
+}
+
+.replyRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+@keyframes msgIn {
+  from {
+    transform: translateY(0.4rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Detail page — controls
+   -------------------------------------------------------------------------- */
+
+.controls {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.linkRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--fs-small);
+}
+
+.linkRow a {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.description {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The resolution gate. Shown the moment "Resolved" is picked, so the reason it
+   is blocked arrives before the click that would have been blocked. */
+.gate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--hairline));
+  border-radius: var(--r-soft);
+  background: color-mix(in srgb, var(--warn) 7%, var(--surface));
+}
+
+.gateTitle {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 650;
+}
+
+.resolutionBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--good) 40%, var(--hairline));
+  border-radius: var(--r-soft);
+  background: color-mix(in srgb, var(--good) 7%, var(--surface));
+  font-size: var(--fs-small);
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg {
+    animation: none;
+  }
+  .thread {
+    scroll-behavior: auto;
+  }
+}
