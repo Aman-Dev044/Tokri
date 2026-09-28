@@ -10,6 +10,11 @@ export const configuration = () => ({
   port: parseInt(process.env.PORT as string, 10),
   apiPrefix: process.env.API_PREFIX as string,
 
+  brand: {
+    name: process.env.APP_NAME as string,
+    refreshCookieName: process.env.REFRESH_COOKIE_NAME as string,
+  },
+
   cors: {
     /** Parsed from the comma-separated allowlist. Never a wildcard. */
     origins: (process.env.CORS_ORIGINS as string)

@@ -9,6 +9,13 @@ import '@/styles/globals.css';
 
 import { Providers } from '@/components/shared/Providers';
 import { SITE_URL } from '@/config/env';
+import {
+  APP_NAME,
+  APP_NAME_LOWER,
+  APP_TITLE,
+  APP_TITLE_TEMPLATE,
+  APP_DESCRIPTION,
+} from '@/config/brand';
 
 /* ---------------------------------------------------------------------------
    Type — "Bento Pop"
@@ -65,20 +72,19 @@ const data = Space_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Mandi — the market, delivered',
-    template: '%s · Mandi',
+    default: APP_TITLE,
+    template: APP_TITLE_TEMPLATE,
   },
-  description:
-    'Mandi is a multi-vendor grocery marketplace. Order from the kirana, the dairy and the bakery near you — each aisle colours the whole app as you walk through it.',
-  applicationName: 'Mandi',
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
   keywords: [
     'grocery delivery',
     'online kirana',
     'fresh vegetables delivery',
     'multi vendor grocery',
-    'mandi',
+    APP_NAME_LOWER,
   ],
-  authors: [{ name: 'Mandi' }],
+  authors: [{ name: APP_NAME }],
   formatDetection: { telephone: false, address: false, email: false },
   icons: {
     // TODO(design): add a raster apple-touch-icon.png and a maskable PWA icon
@@ -87,18 +93,16 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    siteName: 'Mandi',
+    siteName: APP_NAME,
     locale: 'en_IN',
     url: SITE_URL,
-    title: 'Mandi — the market, delivered',
-    description:
-      'Eight aisles, eight colours, one market. Groceries from the shops actually near you.',
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Mandi — the market, delivered',
-    description:
-      'Eight aisles, eight colours, one market. Groceries from the shops actually near you.',
+    title: APP_TITLE,
+    description: APP_DESCRIPTION,
   },
   robots: { index: true, follow: true },
 };
@@ -108,9 +112,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   // Both grounds are fully designed, so the browser chrome follows the ground.
+  // These are --ground from tokens.css. A <meta> tag is evaluated outside any
+  // CSS cascade, so it cannot read a custom property and must be kept in step
+  // by hand; they were still on the previous palette's values until now.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f2f4ee' },
-    { media: '(prefers-color-scheme: dark)', color: '#0f110c' },
+    { media: '(prefers-color-scheme: light)', color: '#fbf7f0' },
+    { media: '(prefers-color-scheme: dark)', color: '#14110f' },
   ],
 };
 

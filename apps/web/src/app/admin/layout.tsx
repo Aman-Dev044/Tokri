@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import '@/styles/admin.css';
 import { AdminShell } from '@/components/admin/AdminShell';
 import { AdminRoleProvider } from '@/lib/admin/session';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * The admin surface.
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
     default: 'Console',
     template: '%s · Mandi Console',
   },
-  description: 'Mandi platform administration.',
+  description: `${APP_NAME} platform administration.`,
   // An admin console has no business in an index, and no OG card to render.
   robots: { index: false, follow: false, nocache: true },
 };

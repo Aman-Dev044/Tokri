@@ -6,14 +6,18 @@ import { Hero } from '@/components/marketing/Hero';
 import { ProduceTicker } from '@/components/marketing/ProduceTicker';
 import { AisleShowcase } from '@/components/marketing/AisleShowcase';
 import { MagneticLink } from '@/components/marketing/MagneticLink';
+import { APP_TITLE } from '@/config/brand';
 
 export const metadata: Metadata = {
-  title: 'Mandi — the market, delivered',
+  // `absolute` opts out of the root layout's `%s · <brand>` template. Without
+  // it the home page reads "Tokri — fill your basket · Tokri", because the
+  // template appends the brand to a title that already carries it.
+  title: { absolute: APP_TITLE },
   description:
     'Groceries from the kirana, dairy and bakery already near you. Eight aisles, each with its own colour, and an app that re-tints as you walk through them. Delivery in about 22 minutes across a 5 km radius.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'Mandi — the market, delivered',
+    title: APP_TITLE,
     description:
       'Eight aisles, eight colours, one market. Multi-vendor grocery delivery built for India.',
     url: '/',

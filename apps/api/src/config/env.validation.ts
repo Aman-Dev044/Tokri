@@ -25,6 +25,20 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().port().default(4000),
   API_PREFIX: Joi.string().default('api/v1'),
 
+  // ── Brand ───────────────────────────────────────────────────────
+  // The product name lives in configuration, not in source, so renaming
+  // the product is an env change rather than a find-and-replace.
+  APP_NAME: Joi.string().required(),
+  // The refresh cookie is namespaced by brand so two deployments on the
+  // same parent domain cannot overwrite each other's session.
+  REFRESH_COOKIE_NAME: Joi.string()
+    .pattern(/^[A-Za-z0-9_-]+$/)
+    .required()
+    .messages({
+      'string.pattern.base':
+        'REFRESH_COOKIE_NAME must be a valid cookie name: letters, digits, _ or - only.',
+    }),
+
   // ── CORS ────────────────────────────────────────────────────────
   // Required, and explicitly rejected if set to '*'. A wildcard origin
   // with credentials enabled is a cross-origin credential leak.

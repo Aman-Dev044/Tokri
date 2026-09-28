@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 
 import { RiderShell } from '@/components/delivery/RiderShell';
 import { ServiceWorkerBoot } from '@/components/delivery/ServiceWorkerBoot';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * The delivery surface — a PWA scoped to `/delivery`.
@@ -34,11 +35,11 @@ export const metadata: Metadata = {
     default: 'Rider',
     template: '%s · Mandi Rider',
   },
-  description: 'Mandi delivery partner app.',
+  description: `${APP_NAME} delivery partner app.`,
   manifest: '/delivery/manifest.webmanifest',
   appleWebApp: {
     capable: true,
-    title: 'Mandi Rider',
+    title: `${APP_NAME} Rider`,
     // The rider ground is near-black; a light status bar over it looks broken.
     statusBarStyle: 'black-translucent',
   },

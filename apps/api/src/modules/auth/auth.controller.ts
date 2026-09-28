@@ -21,7 +21,14 @@ import {
   JwtUser,
 } from '../../common/decorators/current-user.decorator';
 
-const REFRESH_COOKIE = 'mandi_rt';
+/**
+ * The refresh-cookie name comes from REFRESH_COOKIE_NAME, not a literal,
+ * so renaming the product is an env change. It is also namespaced per
+ * brand on purpose: two deployments sharing a parent domain would
+ * otherwise overwrite each other's session cookie.
+ */
+const cookieName = (config: ConfigService) =>
+  config.getOrThrow<string>('brand.refreshCookieName');
 
 @ApiTags('auth')
 @Controller('auth')
@@ -39,7 +46,7 @@ export class AuthController {
   private setRefreshCookie(res: Response, token: string) {
     const domain = this.config.getOrThrow<string>('cookie.domain');
 
-    res.cookie(REFRESH_COOKIE, token, {
+    res.cookie(cookieName(this.config), token, {
       httpOnly: true,
       secure: this.config.getOrThrow<boolean>('cookie.secure'),
       sameSite: 'strict',
@@ -77,7 +84,7 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token = req.cookies?.[REFRESH_COOKIE];
+    const token = req.cookies?.[cookieName(this.config)];
     if (!token) throw new UnauthorizedException('No refresh token');
 
     const { accessToken, refreshToken } = await this.auth.refresh(token);
@@ -93,7 +100,7 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     await this.auth.logout(userId);
-    res.clearCookie(REFRESH_COOKIE, { path: '/' });
+    res.clearCookie(cookieName(this.config), { path: '/' });
   }
 
   @Get('me')

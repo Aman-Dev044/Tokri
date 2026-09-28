@@ -26,7 +26,29 @@ import { NextResponse, type NextRequest } from 'next/server';
  */
 
 /** Set by the API as httpOnly + Secure + SameSite=Strict. Opaque here. */
-const REFRESH_COOKIE = 'mandi_rt';
+/**
+ * Must match REFRESH_COOKIE_NAME on the API.
+ *
+ * Middleware runs in the edge runtime and cannot import the validated config
+ * module, so it reads the public var directly — and throws rather than
+ * guessing, because a wrong cookie name here silently signs everyone out
+ * while looking exactly like a working deployment.
+ */
+function requiredCookieName(): string {
+  // Static member access on its own line: Next's bundler only substitutes
+  // `process.env.NEXT_PUBLIC_X` in exactly that form.
+  const name = process.env.NEXT_PUBLIC_REFRESH_COOKIE_NAME;
+  if (!name || name.trim() === '') {
+    throw new Error(
+      '[web] NEXT_PUBLIC_REFRESH_COOKIE_NAME is not set. ' +
+        'Route protection cannot run without it, and it must match ' +
+        'REFRESH_COOKIE_NAME in apps/api/.env.',
+    );
+  }
+  return name.trim();
+}
+
+const REFRESH_COOKIE: string = requiredCookieName();
 
 /**
  * Prefixes that require a session. The roles are documented rather than

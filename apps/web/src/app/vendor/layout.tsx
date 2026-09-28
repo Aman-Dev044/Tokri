@@ -12,6 +12,7 @@ import './vendor.css';
 
 import { VendorShell, VendorAlertProvider } from '@/components/vendor';
 import { VendorSessionProvider } from '@/lib/vendor/session';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * The vendor surface.
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
     default: 'Store',
     template: '%s · Mandi Store',
   },
-  description: 'Run your shop on Mandi — orders, stock, riders and earnings.',
+  description: `Run your shop on ${APP_NAME} — orders, stock, riders and earnings.`,
   // A shop's operations panel has no business in a search index.
   robots: { index: false, follow: false, nocache: true },
 };

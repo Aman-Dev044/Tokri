@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { StorefrontView } from '@/components/shop/StorefrontView';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * A storefront. Server shell, client body (plan §3.3): the page needs a real
@@ -31,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const name = titleFromSlug(slug);
   return {
     title: name,
-    description: `Order from ${name} on Mandi — live stock, real distance and an honest delivery estimate.`,
+    description: `Order from ${name} on ${APP_NAME} — live stock, real distance and an honest delivery estimate.`,
   };
 }
 
