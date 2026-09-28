@@ -1,60 +1,55 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MANDI — THE CUSTOMER SHOP, in "Bento Pop".
+   TOKRI — THE CUSTOMER SHOP, in "Neon Orchard".
 
-   Everything here is built from the tokens in
-   `@mandi/design-system/tokens.css`. There is not one raw hex in this file:
-   if a value is missing, it is derived with `color-mix()` from a token, never
-   typed as a literal.
+   Dark-first, jewel-toned, deeply three-dimensional. Everything below reads
+   its values from `@mandi/design-system/tokens.css` and `styles.css`
+   (Tilt3D + the tkr-* layout primitives) — there is not one raw hex in this
+   file. Where a value is missing it is derived with `color-mix()` from a
+   token, never typed as a literal.
 
    ── THE CONTRAST RULE THIS FILE IS BUILT AROUND ─────────────────────────────
    `--aisle` is the vivid identity hue — tomato, leaf, butter, indigo. It is
-   for FILLS, BARS and LARGE SHAPES only.
-
-   `--aisle-ink` is the same hue, lightness-tuned to clear 4.5:1 against
-   `--ground` in whichever theme is active. Contrast is symmetric, so the
-   reverse is true as well: `background: var(--aisle-ink); color: var(--ground)`
-   is guaranteed ≥ 4.5:1 for ALL EIGHT AISLES IN BOTH THEMES, by construction
-   rather than by eyeballing eight swatches. That pairing is `--shop-fill` /
-   `--shop-on-fill` below, and it is what every button, chip, stamp and badge
-   that carries text or a glyph uses. `--aisle` itself never sits under type.
+   for FILLS, GLOWS and LARGE SHAPES only. `--aisle-ink` is the same hue,
+   lightness-tuned to clear 4.5:1 against `--ground`. Contrast is symmetric
+   (tokens.css), so `background: var(--aisle-ink); color: var(--ground)` is
+   guaranteed legible for all eight aisles in both themes — that pairing is
+   `--shop-fill` / `--shop-on-fill` below, and every solid button, badge and
+   stamp that carries text uses it. `--aisle` itself never sits under type.
 
    ── WHY THERE IS A COMPAT LAYER ─────────────────────────────────────────────
-   The design system's component stylesheet, the JourneyRibbon and MandiMap
-   still read the PREVIOUS token vocabulary (`--surface`, `--muted`, `--paper`,
-   `--fs-body`, `--aisle-on`…). Those names no longer exist in tokens.css, and
+   `packages/**` is out of scope for this rebuild. The design system's own
+   component stylesheet (`.mnd-btn`, `.mnd-field`), the JourneyRibbon and
+   `globals.css` (shared by every surface, also out of scope) all still read a
+   PREVIOUS token vocabulary — `--muted`, `--paper`, `--fs-body`, `--aisle-on`,
+   `--r-panel`… None of those names exist in the Neon Orchard tokens.css, and
    an undefined custom property makes the whole declaration invalid at
-   computed-value time — which is how a button ends up with no background at
-   all. `packages/**` is out of scope for this rebuild, so the shop republishes
-   the old names as aliases onto the new tokens.
-
-   It lives in a CASCADE LAYER. An unlayered rule always beats a layered one
-   regardless of source order, so if another surface defines any of these names
-   for itself, theirs wins and nothing here can break them.
+   computed-value time, which is how a button silently loses its background.
+   So this file republishes the old names as aliases onto the new tokens, in a
+   CASCADE LAYER — an unlayered rule always beats a layered one regardless of
+   source order, so if another surface ever defines these names for itself,
+   theirs wins and nothing here can break it.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @layer mandi-shop-compat {
   :root {
     /* surfaces */
     --paper: var(--ground);
-    --surface: var(--card);
-    --surface-2: var(--card-raised);
-    --sunken: var(--ground-sunk);
-    --stone: var(--ground-sunk);
+    --surface-2: var(--raised);
+    --sunken: var(--void);
+    --stone: var(--void);
 
     /* ink */
     --muted: var(--ink-soft);
-    --crit-ink: var(--crit);
-    --good-ink: var(--good);
-    --warn-ink: var(--warn);
+    --hairline-strong: var(--hairline-bright);
     --on-semantic: var(--on-accent);
 
-    /* the aisle, derived */
-    --aisle-on: var(--ground);
+    /* the aisle, derived once, reused everywhere */
+    --aisle-on: var(--on-accent);
     --aisle-edge: color-mix(in oklab, var(--aisle) 42%, transparent);
     --aisle-glow: color-mix(in oklab, var(--aisle) 50%, transparent);
-    --aisle-wash: color-mix(in oklab, var(--aisle) 12%, var(--card));
-    --aisle-wash-strong: color-mix(in oklab, var(--aisle) 22%, var(--card));
-    --lift-aisle: 0 8px 26px -14px color-mix(in oklab, var(--aisle) 70%, transparent);
+    --aisle-wash: color-mix(in oklab, var(--aisle) 12%, var(--surface));
+    --aisle-wash-strong: color-mix(in oklab, var(--aisle) 22%, var(--surface));
+    --lift-aisle: 0 8px 26px -14px color-mix(in oklab, var(--aisle) 62%, transparent);
 
     /* focus */
     --focus: var(--aisle-ink);
@@ -73,32 +68,15 @@
     --r-soft: var(--r-sm);
     --r-panel: var(--r-lg);
 
-    /* layout + stacking */
+    /* layout */
     --gutter: var(--s-4);
     --measure: var(--prose-max);
-    --z-grain: 1;
-    --z-loader: 60;
-    --z-sheet: 70;
-    --z-toast: 90;
-    --grain-opacity: 0.035;
-    --grain-blend: multiply;
   }
 
   @media (min-width: 720px) {
     :root {
       --gutter: var(--s-6);
     }
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-      --grain-opacity: 0.05;
-      --grain-blend: screen;
-    }
-  }
-  :root[data-theme='dark'] {
-    --grain-opacity: 0.05;
-    --grain-blend: screen;
   }
 }
 
@@ -107,19 +85,18 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop {
-  /* The two aisle roles, named by what they are ALLOWED to do. */
   --shop-fill: var(--aisle-ink); /* carries text or a glyph */
   --shop-on-fill: var(--ground);
   --shop-vivid: var(--aisle); /* fills, bars, masses — never under type */
 
-  --shop-wash: color-mix(in oklab, var(--aisle) 11%, var(--card));
-  --shop-wash-deep: color-mix(in oklab, var(--aisle) 20%, var(--card));
-  --shop-edge: color-mix(in oklab, var(--aisle) 40%, var(--hairline));
+  --shop-wash: color-mix(in oklab, var(--aisle) 12%, var(--surface));
+  --shop-wash-deep: color-mix(in oklab, var(--aisle) 22%, var(--surface));
+  --shop-edge: color-mix(in oklab, var(--aisle) 42%, var(--hairline));
   --shop-edge-soft: color-mix(in oklab, var(--aisle) 22%, var(--hairline));
-  --shop-glow: color-mix(in oklab, var(--aisle) 46%, transparent);
+  --shop-glow: color-mix(in oklab, var(--aisle) 48%, transparent);
 
-  --shop-head-h: 122px;
-  --shop-dock-h: 92px;
+  --shop-head-h: 126px;
+  --shop-dock-h: 84px;
 
   display: flex;
   flex-direction: column;
@@ -128,10 +105,9 @@
   color: var(--ink);
   font-family: var(--body);
 }
-
 @media (min-width: 720px) {
   .shop {
-    --shop-head-h: 134px;
+    --shop-head-h: 138px;
   }
 }
 
@@ -141,8 +117,6 @@
   padding-block: var(--s-5) var(--s-9);
 }
 
-/* Width container. Self-contained rather than leaning on `.shell`, whose
-   `--gutter` belongs to another surface's stylesheet. */
 .shop-shell {
   width: 100%;
   max-width: var(--page-max);
@@ -155,38 +129,19 @@
   }
 }
 
-/* Wide things scroll inside themselves. The body never scrolls sideways. */
-.shop-scroll-x {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--hairline-strong) transparent;
-}
+/* ── page stack ─────────────────────────────────────────────────────────── */
 
-/* ── the house type ─────────────────────────────────────────────────────── */
-
-.shop-eyebrow {
+.shop-page {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  margin: 0;
-  font-family: var(--body);
-  font-size: var(--t-2xs);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  flex-direction: column;
+  gap: var(--s-6);
+  padding-bottom: calc(var(--shop-dock-h) + var(--s-6));
 }
-.shop-eyebrow a {
-  color: inherit;
-  text-decoration-color: var(--shop-edge);
+.shop-page__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
 }
-.shop-eyebrow a:hover {
-  color: var(--aisle-ink);
-}
-
-.shop-title,
 .shop-page__title {
   font-family: var(--display);
   font-size: var(--t-h1);
@@ -195,13 +150,6 @@
   letter-spacing: var(--track-tight);
   margin: 0;
 }
-
-.shop-title--hero {
-  font-size: var(--t-hero);
-}
-
-/* A short status line under a page head — "showing this store only",
-   "saved PIN 560076" — information, not a headline. */
 .shop-page__scope {
   margin: 0;
   font-size: var(--t-sm);
@@ -211,9 +159,6 @@
 .shop-page__scope strong {
   color: var(--ink);
 }
-
-/* A generic vertical section — a labelled group of content below the page
-   head, e.g. the store list under the location prompt. */
 .shop-section {
   display: flex;
   flex-direction: column;
@@ -227,66 +172,12 @@
   line-height: var(--lh-snug);
   letter-spacing: var(--track-tight);
 }
-
-/* The call-to-action under a short empty-state message — "find a store near
-   you" and the like. */
 .shop-cart__cta {
   margin: var(--s-2) 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-2);
 }
-
-.shop-h2 {
-  font-family: var(--display);
-  font-size: var(--t-h2);
-  font-weight: 800;
-  line-height: var(--lh-snug);
-  letter-spacing: var(--track-tight);
-  margin: 0;
-}
-
-.shop-h3 {
-  font-family: var(--display);
-  font-size: var(--t-h3);
-  font-weight: 700;
-  line-height: var(--lh-snug);
-  letter-spacing: var(--track-tight);
-  margin: 0;
-}
-
-.shop-lede {
-  margin: 0;
-  max-width: var(--prose-max);
-  font-size: var(--t-lg);
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
-.shop-note {
-  margin: 0;
-  font-size: var(--t-sm);
-  line-height: 1.55;
-  color: var(--ink-soft);
-}
-
-.shop-num,
-.shop-price {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-.shop-price {
-  font-weight: 700;
-}
-
-.shop-link {
-  color: var(--aisle-ink);
-  font-weight: 560;
-  text-underline-offset: 3px;
-}
-
-/* A button that reads as a link. Real <button>, so it is announced as one. */
 .shop-linkish {
   appearance: none;
   border: 0;
@@ -294,7 +185,7 @@
   background: none;
   font: inherit;
   color: var(--aisle-ink);
-  font-weight: 560;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -304,168 +195,73 @@
   text-decoration-color: currentColor;
 }
 
-/* ── page stack ─────────────────────────────────────────────────────────── */
-
-.shop-page {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-6);
-  padding-bottom: calc(var(--shop-dock-h) + var(--s-6));
+/* ── money, in shop contexts ───────────────────────────────────────────────
+   Components render money with the global `.price` class (globals.css); the
+   rules below only resize it per context. */
+.shop-card__price .price {
+  font-size: var(--t-lg);
 }
-
-.shop-page__head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
+.shop-summary__total dd .price,
+.shop-order__foot .price {
+  font-size: var(--t-h3);
+  letter-spacing: -0.03em;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   2 · BUTTONS
+   2 · BUTTONS + FIELDS
 
-   The design system's `.mnd-btn` geometry is kept — it is the product's
-   button — but its SOLID variant is re-coloured here onto the guaranteed
-   `--shop-fill` / `--shop-on-fill` pair, because `background: var(--aisle);
-   color: <anything>` cannot clear 4.5:1 for indigo or staples in light.
+   `.mnd-btn` geometry ships in the design system; its SOLID variant is
+   re-coloured here onto the guaranteed `--shop-fill` / `--shop-on-fill` pair.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop .mnd-btn {
   border-radius: var(--r-pill);
   font-family: var(--body);
-  font-weight: 620;
+  font-weight: 640;
   letter-spacing: -0.01em;
-  transition:
-    background-color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring),
-    box-shadow var(--t-micro) var(--ease);
 }
-
-.shop .mnd-btn--sm {
-  padding: 0.45rem 0.9rem;
-  font-size: var(--t-sm);
-  min-height: 36px;
-}
-.shop .mnd-btn--md {
-  padding: 0.7rem 1.3rem;
-  font-size: var(--t-md);
-  min-height: 46px;
-}
-.shop .mnd-btn--lg {
-  padding: 0.95rem 1.8rem;
-  font-size: var(--t-lg);
-  min-height: 54px;
-}
-
 .shop .mnd-btn--solid {
   background: var(--shop-fill);
   color: var(--shop-on-fill);
-  border-color: transparent;
-  box-shadow: 0 6px 20px -10px var(--shop-glow);
+  box-shadow: 0 8px 22px -12px var(--shop-glow);
 }
 .shop .mnd-btn--solid:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 30px -14px var(--shop-glow);
+  box-shadow: 0 16px 34px -14px var(--shop-glow), var(--glow-sm);
 }
-
 .shop .mnd-btn--outline {
-  background: var(--card);
+  background: var(--surface);
   color: var(--aisle-ink);
   border-color: var(--shop-edge);
 }
 .shop .mnd-btn--outline:hover:not(:disabled) {
   background: var(--shop-wash);
   border-color: var(--aisle);
-  transform: translateY(-2px);
-}
-
-.shop .mnd-btn--ghost {
-  background: transparent;
-  color: var(--ink);
-  border-color: transparent;
 }
 .shop .mnd-btn--ghost:hover:not(:disabled) {
   background: var(--shop-wash);
   color: var(--aisle-ink);
 }
-
-/* Squash on press — the Bento Pop feedback, on every control. */
-.shop .mnd-btn:active:not(:disabled) {
-  transform: translateY(0) scale(0.96);
-}
-
-.shop .mnd-btn:disabled,
-.shop .mnd-btn[aria-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.5;
-  transform: none;
-  box-shadow: none;
-}
-
-.shop .mnd-btn:focus-visible {
-  outline: 3px solid var(--aisle-ink);
-  outline-offset: 3px;
-  box-shadow: none;
-}
-
-/* ── fields ─────────────────────────────────────────────────────────────── */
-
-.shop-field {
+.shop .mnd-btn--block {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-  font-weight: 560;
-  color: var(--ink-soft);
-  min-width: 0;
-}
-
-.shop .mnd-field__input,
-.shop-input {
   width: 100%;
-  min-width: 0;
-  appearance: none;
-  background: var(--card);
-  color: var(--ink);
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--r-sm);
-  padding: 0.7rem 0.9rem;
-  min-height: 46px;
-  font-family: var(--body);
-  font-size: var(--t-md);
-  font-weight: 450;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    box-shadow var(--t-micro) var(--ease);
-}
-.shop .mnd-field__input::placeholder,
-.shop-input::placeholder {
-  color: var(--ink-faint);
-  opacity: 1;
-}
-.shop .mnd-field__input:focus-visible,
-.shop-input:focus-visible {
-  outline: none;
-  border-color: var(--aisle);
-  box-shadow: 0 0 0 4px color-mix(in oklab, var(--aisle) 24%, transparent);
 }
 
-.shop ::selection {
-  background: var(--shop-fill);
-  color: var(--shop-on-fill);
+.shop .mnd-field__input {
+  font-family: var(--body);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   3 · THE HEAD — where you are, what you want, who you are
+   3 · THE HEAD — sticky top bar: where you are, what you want, who you are
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-head {
   position: sticky;
   top: 0;
-  z-index: 40;
-  background: color-mix(in oklab, var(--ground) 86%, transparent);
-  backdrop-filter: blur(14px) saturate(1.3);
+  z-index: 60;
+  background: color-mix(in oklab, var(--ground) 84%, transparent);
+  backdrop-filter: blur(16px) saturate(150%);
   border-bottom: 1px solid var(--hairline);
+  box-shadow: var(--rim);
 }
 .shop-head--placeholder {
   min-height: var(--shop-head-h);
@@ -479,7 +275,6 @@
   gap: var(--s-2) var(--s-3);
   padding-block: var(--s-3);
 }
-
 @media (min-width: 900px) {
   .shop-head__bar {
     grid-template-columns: auto auto 1fr auto;
@@ -487,8 +282,6 @@
     gap: var(--s-4);
   }
 }
-
-/* ── brand ──────────────────────────────────────────────────────────────── */
 
 .shop-brand {
   grid-area: brand;
@@ -511,12 +304,12 @@
   background: var(--shop-wash-deep);
   color: var(--aisle-ink);
   border: 1px solid var(--shop-edge-soft);
-  transition:
-    transform var(--t-move) var(--spring),
-    background-color var(--t-enter) var(--ease);
+  box-shadow: var(--rim);
+  transition: transform var(--t-move) var(--spring), box-shadow var(--t-enter) var(--ease);
 }
 .shop-brand:hover .shop-brand__mark {
-  transform: rotate(-7deg) scale(1.06);
+  transform: rotate(-8deg) scale(1.08) translateZ(0);
+  box-shadow: var(--glow-sm), var(--rim);
 }
 .shop-brand__word {
   display: none;
@@ -535,7 +328,6 @@
   justify-self: start;
   min-width: 0;
 }
-
 .shop-loc__summary {
   display: inline-flex;
   align-items: center;
@@ -543,16 +335,14 @@
   max-width: 100%;
   padding: 0.4rem 0.8rem;
   border-radius: var(--r-pill);
-  border: 1px solid var(--hairline-strong);
-  background: var(--card);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   font-size: var(--t-sm);
-  font-weight: 560;
+  font-weight: 600;
   cursor: pointer;
   list-style: none;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring);
+  transition: border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring);
 }
 .shop-loc__summary::-webkit-details-marker {
   display: none;
@@ -571,10 +361,9 @@
   white-space: nowrap;
   max-width: 11rem;
 }
-
 .shop-loc__panel {
   position: absolute;
-  z-index: 50;
+  z-index: 65;
   top: calc(100% + var(--s-2));
   left: 0;
   width: min(22rem, calc(100vw - var(--s-6)));
@@ -583,12 +372,11 @@
   gap: var(--s-3);
   padding: var(--s-5);
   border-radius: var(--r-lg);
-  background: var(--card-raised);
+  background: var(--raised);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-3);
-  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
 }
-
 .shop-loc__pin {
   display: flex;
   flex-direction: column;
@@ -600,7 +388,7 @@
   display: flex;
   gap: var(--s-2);
 }
-.shop-loc__pin-row .shop-input {
+.shop-loc__pin-input {
   font-family: var(--data);
   letter-spacing: 0.12em;
 }
@@ -645,15 +433,13 @@
   min-width: 0;
   padding: 0 0.9rem;
   border-radius: var(--r-pill);
-  background: var(--ground-sunk);
+  background: var(--void);
   border: 1px solid transparent;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease),
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
     box-shadow var(--t-micro) var(--ease);
 }
 .shop-search:focus-within {
-  background: var(--card);
+  background: var(--surface);
   border-color: var(--aisle);
   box-shadow: 0 0 0 4px color-mix(in oklab, var(--aisle) 22%, transparent);
 }
@@ -693,26 +479,15 @@
   padding: 0.45rem 0.8rem;
   border-radius: var(--r-pill);
   font-size: var(--t-sm);
-  font-weight: 560;
+  font-weight: 600;
   color: var(--ink);
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    background-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
+  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
 }
 .shop-head__link:hover {
   background: var(--shop-wash);
   color: var(--aisle-ink);
-}
-.shop-head__link--strong {
-  background: var(--shop-fill);
-  color: var(--shop-on-fill);
-}
-.shop-head__link--strong:hover {
-  background: var(--shop-fill);
-  color: var(--shop-on-fill);
-  filter: saturate(1.15);
 }
 
 .shop-profile {
@@ -725,15 +500,13 @@
   gap: var(--s-2);
   padding: 0.3rem 0.65rem 0.3rem 0.3rem;
   border-radius: var(--r-pill);
-  border: 1px solid var(--hairline-strong);
-  background: var(--card);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   font-size: var(--t-sm);
-  font-weight: 560;
+  font-weight: 600;
   cursor: pointer;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring);
+  transition: border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring);
 }
 .shop-profile__button:hover {
   border-color: var(--shop-edge);
@@ -767,10 +540,9 @@
     display: inline;
   }
 }
-
 .shop-profile__panel {
   position: absolute;
-  z-index: 50;
+  z-index: 65;
   top: calc(100% + var(--s-2));
   right: 0;
   width: min(17rem, calc(100vw - var(--s-6)));
@@ -779,10 +551,10 @@
   gap: var(--s-1);
   padding: var(--s-3);
   border-radius: var(--r-lg);
-  background: var(--card-raised);
+  background: var(--raised);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-3);
-  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
 }
 .shop-profile__head {
   display: flex;
@@ -812,7 +584,6 @@
   border-radius: var(--r-pill);
   background: var(--shop-wash-deep);
   color: var(--aisle-ink);
-  font-family: var(--body);
   font-size: var(--t-2xs);
   font-weight: 700;
   letter-spacing: var(--track-label);
@@ -830,13 +601,11 @@
   color: var(--ink);
   font: inherit;
   font-size: var(--t-sm);
-  font-weight: 560;
+  font-weight: 600;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    background-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring);
+  transition: background-color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring);
 }
 .shop-profile__item:hover {
   background: var(--shop-wash);
@@ -865,27 +634,14 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    4 · PILLAR 1 — THE AISLE RAIL
 
-   Eight swatches. Hovering previews the tint across the whole interface;
-   clicking commits it. `--aisle` is registered with @property, so the swap is
-   a genuine 420ms colour interpolation rather than a cut.
+   `.tkr-rail` (design system) gives the snap-scrolling strip; this only
+   styles the tiles and their per-aisle swatch. Hovering a tile PREVIEWS the
+   retint across the whole interface before you commit to it — `--aisle` is
+   `@property`-registered, so the swap is a genuine colour interpolation.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-head__rail {
   padding-bottom: var(--s-3);
-}
-
-.shop-rail {
-  margin: 0;
-  padding: 0;
-}
-.shop-rail__list {
-  display: flex;
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0 0 var(--s-1);
-  list-style: none;
-  width: max-content;
-  min-width: 100%;
 }
 
 .shop-rail__item {
@@ -897,48 +653,46 @@
   padding: 0.4rem 0.8rem 0.4rem 0.4rem;
   border-radius: var(--r-pill);
   border: 1px solid var(--hairline);
-  background: var(--card);
+  background: var(--surface);
   color: var(--ink-soft);
   font-size: var(--t-sm);
   font-weight: 620;
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring);
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring),
+    box-shadow var(--t-micro) var(--ease);
 }
 .shop-rail__item:hover,
 .shop-rail__item:focus-visible {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
   border-color: var(--shop-edge);
   background: var(--shop-wash);
   color: var(--ink);
+  box-shadow: var(--lift-1);
 }
 .shop-rail__item:active {
   transform: translateY(0) scale(0.96);
 }
-.shop-rail__item[data-active='true'] {
+.shop-rail__item[aria-current='page'] {
   background: var(--shop-wash-deep);
   border-color: var(--aisle);
   color: var(--aisle-ink);
+  box-shadow: var(--glow-sm);
 }
 
-/* The swatch is the aisle's own hue, from its own token — never an inline
-   literal, so it tracks the dark-theme variants too. */
 .shop-rail__swatch {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
   border-radius: var(--r-xs);
   background: var(--ink-faint);
-  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent), var(--lift-1);
   transition: transform var(--t-micro) var(--spring);
 }
 .shop-rail__item:hover .shop-rail__swatch,
-.shop-rail__item[data-active='true'] .shop-rail__swatch {
-  transform: scale(1.14) rotate(-8deg);
+.shop-rail__item[aria-current='page'] .shop-rail__swatch {
+  transform: scale(1.16) rotate(-8deg);
 }
 .shop-rail__swatch[data-key='fruits'] { background: var(--aisle-fruits); }
 .shop-rail__swatch[data-key='vegetables'] { background: var(--aisle-vegetables); }
@@ -956,24 +710,27 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   5 · PILLAR 2 — THE BASKET, AS A PHYSICAL OBJECT
+   5 · PILLAR 3 — THE BASKET, AS A PHYSICAL OBJECT
 
-   A vessel with a visible mass inside it that RISES with what you have put in.
-   Adding arcs the item across the viewport (`.shop-fly`, drawn by
-   BasketProvider) and the dock SQUASHES as it catches — the one spring the
-   product spends on delight.
+   A full-width sticky bottom bar (`.tkr-dock` provides the sticky/blur/
+   border/shadow chrome), with a vessel that RISES with what is inside it.
+   The vessel is a real 3D group: `--persp-near` on `.shop-dock__vessel`
+   turns the mass and the basket rim into two layers at different
+   `translateZ`, and the glow around the whole bar intensifies with fullness
+   through `--dock-glow` — set inline, from the same `fullness` value that
+   drives the mass. Adding arcs the item across the viewport (`.shop-fly`,
+   drawn by BasketProvider) and the bar SQUASHES on catch.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-dock-region {
   position: fixed;
-  z-index: 45;
-  right: var(--s-4);
-  bottom: var(--s-4);
-  left: var(--s-4);
+  z-index: 65;
+  inset-inline: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: var(--s-2);
+  padding: 0 var(--s-3) max(var(--s-2), env(safe-area-inset-bottom));
   pointer-events: none;
 }
 .shop-dock-region > * {
@@ -981,36 +738,36 @@
 }
 @media (min-width: 720px) {
   .shop-dock-region {
-    left: auto;
-    right: var(--s-6);
-    bottom: var(--s-6);
-    max-width: 24rem;
+    padding-inline: var(--s-6);
+    padding-bottom: max(var(--s-3), env(safe-area-inset-bottom));
   }
 }
 
 .shop-dock {
   width: 100%;
-  border-radius: var(--r-xl);
-  background: var(--card-raised);
+  max-width: var(--page-max);
+  margin-inline: auto;
+  border-radius: var(--r-xl) var(--r-xl) var(--r-md) var(--r-md);
+  background: color-mix(in oklab, var(--raised) 92%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
   border: 1px solid var(--shop-edge-soft);
-  box-shadow: var(--lift-3);
+  border-bottom: 0;
+  box-shadow: var(--lift-3), var(--rim),
+    0 0 calc(var(--dock-glow, 0) * 46px) color-mix(in oklab, var(--aisle) 55%, transparent);
   overflow: hidden;
-  transform-origin: 80% 100%;
-  transition:
-    border-color var(--t-enter) var(--ease),
+  transform-origin: 50% 100%;
+  transition: border-color var(--t-enter) var(--ease), box-shadow var(--t-slow) var(--ease),
     transform var(--t-move) var(--spring);
 }
 .shop-dock[data-empty='true'] {
-  opacity: 0.94;
-  border-color: var(--hairline);
+  opacity: 0.92;
+  border-color: var(--hairline-bright);
 }
 
-/* THE CATCH. `data-catch` is set by BasketProvider the instant the flying
-   item lands, and removed 420ms later. */
 @keyframes shop-dock-catch {
   0% { transform: scale(1, 1); }
-  28% { transform: scale(1.1, 0.86); }
-  58% { transform: scale(0.96, 1.07); }
+  28% { transform: scale(1.05, 0.9); }
+  58% { transform: scale(0.98, 1.04); }
   100% { transform: scale(1, 1); }
 }
 .shop-dock[data-catch='true'] {
@@ -1026,7 +783,7 @@
   text-decoration: none;
 }
 
-/* ── the vessel ─────────────────────────────────────────────────────────── */
+/* ── the vessel: a small perspective group of its own ──────────────────── */
 
 .shop-dock__vessel {
   position: relative;
@@ -1036,35 +793,35 @@
   display: grid;
   place-items: center;
   color: var(--aisle-ink);
+  perspective: var(--persp-near);
 }
 
-/* The mass. The ONLY thing that animates, so fullness is what you read. */
 .shop-dock__mass {
   position: absolute;
   left: 7px;
   right: 7px;
   bottom: 4px;
-  height: var(--shop-fill, 0%);
+  height: var(--shop-fill-pct, 0%);
   min-height: 0;
   border-radius: 0 0 var(--r-xs) var(--r-xs);
-  background:
-    repeating-linear-gradient(
+  background: repeating-linear-gradient(
       -38deg,
       color-mix(in oklab, var(--ground) 26%, transparent) 0 5px,
       transparent 5px 11px
     ),
     var(--shop-vivid);
+  transform: translateZ(var(--z-1));
   transition: height var(--t-slow) var(--spring-soft);
 }
 .shop-dock__mass::after {
-  /* the meniscus — a basket fills unevenly */
   content: '';
   position: absolute;
   inset: -3px 0 auto 0;
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--shop-vivid);
-  opacity: 0.85;
+  box-shadow: 0 0 10px color-mix(in oklab, var(--aisle) 60%, transparent);
+  opacity: 0.9;
 }
 .shop-dock[data-empty='true'] .shop-dock__mass::after {
   display: none;
@@ -1075,12 +832,11 @@
   width: 48px;
   height: 44px;
   color: var(--ink);
+  transform: translateZ(var(--z-2));
 }
 .shop-dock[data-empty='true'] .shop-dock__basket {
   color: var(--ink-faint);
 }
-/* The rim carries the aisle hue — the handle stays neutral ink — so the
-   object reads as tinted by where you are standing, not just its contents. */
 .shop-dock__rim {
   stroke: var(--aisle-ink);
   transition: stroke var(--t-enter) var(--ease);
@@ -1097,7 +853,6 @@
   flex: 1 1 auto;
 }
 .shop-dock__count {
-  font-family: var(--body);
   font-size: var(--t-2xs);
   font-weight: 700;
   letter-spacing: var(--track-label);
@@ -1115,7 +870,6 @@
   white-space: nowrap;
 }
 .shop-dock[data-empty='true'] .shop-dock__total {
-  font-family: var(--body);
   font-size: var(--t-sm);
   font-weight: 560;
   color: var(--ink-soft);
@@ -1125,19 +879,21 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--r-pill);
   background: var(--shop-fill);
   color: var(--shop-on-fill);
+  box-shadow: var(--glow-sm);
   transition: transform var(--t-micro) var(--spring);
 }
 .shop-dock__link:hover .shop-dock__go {
-  transform: translateX(3px) scale(1.06);
+  transform: translateX(3px) scale(1.08);
 }
 .shop-dock[data-empty='true'] .shop-dock__go {
-  background: var(--ground-sunk);
+  background: var(--void);
   color: var(--ink-faint);
+  box-shadow: none;
 }
 
 .shop-dock__warn {
@@ -1150,9 +906,7 @@
   border-top: 1px solid var(--hairline);
 }
 
-/* ── the flying item ────────────────────────────────────────────────────── */
-/* Appended to document.body by BasketProvider, so this rule is deliberately
-   NOT scoped under `.shop`. */
+/* ── the flying item — appended to document.body, deliberately unscoped ─── */
 .shop-fly {
   position: fixed;
   z-index: 80;
@@ -1160,7 +914,7 @@
   background-color: var(--aisle);
   background-size: cover;
   background-position: center;
-  box-shadow: var(--lift-3);
+  box-shadow: var(--lift-3), var(--glow-sm);
   pointer-events: none;
 }
 
@@ -1173,12 +927,14 @@
   justify-content: space-between;
   gap: var(--s-3);
   width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card-raised);
-  border: 1px solid var(--pop-4);
-  box-shadow: var(--lift-2);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+  background: var(--raised);
+  border: 1px solid var(--shop-edge-soft);
+  box-shadow: var(--lift-2), var(--rim);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) both;
 }
 .shop-parked--page {
   box-shadow: var(--lift-1);
@@ -1216,7 +972,7 @@
 .shop-switch__scrim {
   position: absolute;
   inset: 0;
-  background: color-mix(in oklab, var(--ink) 55%, transparent);
+  background: color-mix(in oklab, var(--void) 70%, transparent);
   backdrop-filter: blur(4px);
   animation: shop-fade var(--t-move) var(--ease) both;
 }
@@ -1232,10 +988,10 @@
   gap: var(--s-3);
   padding: var(--s-6);
   border-radius: var(--r-xl);
-  background: var(--card-raised);
+  background: var(--raised);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-3);
-  animation: mnd-pop-in var(--t-enter) var(--spring) both;
+  box-shadow: var(--lift-4), var(--rim);
+  animation: tkr-pop-3d var(--t-enter) var(--spring) both;
 }
 .shop-switch__title {
   font-family: var(--display);
@@ -1265,78 +1021,59 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   6 · PILLAR 4 — EDITORIAL PRODUCT CARDS
-   Two-across on mobile · three at 720 · four at 1100.
-   ═══════════════════════════════════════════════════════════════════════════ */
+   6 · PILLAR 5 — THE PRODUCT CARD, TILTED TOWARD THE CURSOR
 
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-3);
-}
-@media (min-width: 720px) {
-  .shop-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--s-4);
-  }
-}
-@media (min-width: 1100px) {
-  .shop-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: var(--s-5);
-  }
-}
+   `ProductCard` wraps the whole card in `<Tilt3D as="article">` from the
+   design system: the WRAPPER owns perspective, the STAGE owns the tracked
+   rotate/translateZ. `.shop-card` styling (background, border, radius,
+   shadow) lives on that same element; `.tkr-tilt3d__stage` only needs to
+   become the flex column the card face used to be. The product photo sits
+   inside a `<Depth depth={3}>` — nearer than the card face — so it visibly
+   parallaxes as the card tilts; the discount badge sits at depth 4, nearer
+   still. `--card-hue` / `--card-hue-ink` are set inline per card from the
+   product's own aisle, never read from a data-attribute selector.
+
+   Two-across on a phone via `.tkr-grid` (design system) — never three.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-card {
   --card-hue: var(--aisle);
-  position: relative;
-  display: flex;
-  flex-direction: column;
+  --card-hue-ink: var(--aisle-ink);
   min-width: 0;
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-1), var(--rim);
   overflow: hidden;
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 11) * var(--stagger));
-  transition:
-    transform var(--t-move) var(--spring-soft),
-    box-shadow var(--t-move) var(--ease),
-    border-color var(--t-move) var(--ease);
 }
-.shop-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--lift-2);
-  border-color: color-mix(in oklab, var(--card-hue) 42%, var(--hairline));
+.shop-card.tkr-tilt3d:hover {
+  box-shadow: var(--lift-2), var(--rim);
+  border-color: color-mix(in oklab, var(--card-hue) 44%, var(--hairline));
 }
-/* Squash on press — the card is an object, and objects give. */
-.shop-card:active {
-  transform: translateY(-1px) scale(0.985);
-  transition-duration: var(--t-instant);
+.shop-card > .tkr-tilt3d__stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  height: 100%;
 }
-.shop-card[data-out='true'] {
+.shop-card--out {
   opacity: 0.82;
 }
-
-/* Per-card aisle hue: an aisle shelf reads as one colour, a mixed shelf reads
-   as eight. The stamp is on the card, not the document. */
-.shop-card[data-card-aisle='fruits'] { --card-hue: var(--aisle-fruits); }
-.shop-card[data-card-aisle='vegetables'] { --card-hue: var(--aisle-vegetables); }
-.shop-card[data-card-aisle='dairy'] { --card-hue: var(--aisle-dairy); }
-.shop-card[data-card-aisle='bakery'] { --card-hue: var(--aisle-bakery); }
-.shop-card[data-card-aisle='beverages'] { --card-hue: var(--aisle-beverages); }
-.shop-card[data-card-aisle='snacks'] { --card-hue: var(--aisle-snacks); }
-.shop-card[data-card-aisle='staples'] { --card-hue: var(--aisle-staples); }
-.shop-card[data-card-aisle='frozen'] { --card-hue: var(--aisle-frozen); }
 
 .shop-card__media {
   position: relative;
   display: block;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: color-mix(in oklab, var(--card-hue) 9%, var(--ground-sunk));
+  background: color-mix(in oklab, var(--card-hue) 10%, var(--void));
   border-bottom: 1px solid var(--hairline);
+}
+.shop-card__media-depth {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .shop-media__img {
   width: 100%;
@@ -1344,12 +1081,12 @@
   object-fit: cover;
   transition: transform var(--t-slow) var(--ease-out);
 }
-.shop-card:hover .shop-media__img {
-  transform: scale(1.055);
+.shop-card.tkr-tilt3d:hover .shop-media__img {
+  transform: scale(1.06);
 }
 
 /* The drawn plate — every product without a photograph gets a composed
-   placeholder in its own aisle hue, not a grey box with a broken glyph. */
+   placeholder in its own aisle hue, not a grey box. */
 .shop-media__plate {
   position: absolute;
   inset: 0;
@@ -1359,10 +1096,10 @@
 .shop-media__plate-art {
   width: 72%;
   height: 72%;
-  color: color-mix(in oklab, var(--card-hue) 70%, var(--ink));
+  color: var(--card-hue-ink);
   transition: transform var(--t-slow) var(--spring-soft);
 }
-.shop-card:hover .shop-media__plate-art {
+.shop-card.tkr-tilt3d:hover .shop-media__plate-art {
   transform: rotate(-4deg) scale(1.05);
 }
 .shop-media__plate-letter {
@@ -1385,8 +1122,9 @@
   letter-spacing: 0.02em;
 }
 .shop-card__save {
-  background: var(--shop-fill);
-  color: var(--shop-on-fill);
+  background: var(--card-hue-ink);
+  color: var(--void);
+  box-shadow: var(--glow-sm);
 }
 .shop-card__out {
   top: auto;
@@ -1458,9 +1196,6 @@
   margin: 0;
   min-width: 0;
 }
-.shop-card__price .shop-price {
-  font-size: var(--t-lg);
-}
 .shop-card__mrp {
   font-family: var(--data);
   font-size: var(--t-xs);
@@ -1472,20 +1207,19 @@
   align-items: center;
   gap: var(--s-1);
   padding: 0.42rem 0.8rem;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in oklab, var(--card-hue) 50%, transparent);
   border-radius: var(--r-pill);
-  background: var(--shop-fill);
-  color: var(--shop-on-fill);
+  background: var(--card-hue-ink);
+  color: var(--void);
   font-family: var(--body);
   font-size: var(--t-sm);
   font-weight: 700;
   cursor: pointer;
-  transition:
-    transform var(--t-micro) var(--spring),
-    filter var(--t-micro) var(--ease);
+  transition: transform var(--t-micro) var(--spring), box-shadow var(--t-micro) var(--ease);
 }
 .shop-card__add:hover {
   transform: translateY(-2px) scale(1.04);
+  box-shadow: var(--glow-sm);
 }
 .shop-card__add:active {
   transform: scale(0.9);
@@ -1496,19 +1230,19 @@
   color: var(--ink-faint);
 }
 
-/* ── the skeleton, cut to the real card ─────────────────────────────────── */
+/* ── the skeleton, cut to the real card's shape ─────────────────────────── */
 
 .shop-skel {
   display: block;
   border-radius: var(--r-sm);
   background: linear-gradient(
     90deg,
-    var(--ground-sunk) 25%,
-    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
-    var(--ground-sunk) 75%
+    var(--void) 25%,
+    color-mix(in oklab, var(--void) 55%, var(--surface)) 50%,
+    var(--void) 75%
   );
   background-size: 200% 100%;
-  animation: mnd-shimmer 1.4s linear infinite;
+  animation: tkr-shimmer 1.4s linear infinite;
 }
 .shop-skel--line {
   height: 0.95rem;
@@ -1527,10 +1261,12 @@
   height: 12rem;
   border-radius: var(--r-lg);
 }
-
 .shop-card--skeleton {
   box-shadow: none;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
 }
 .shop-card--skeleton .shop-card__media {
   border-bottom-color: transparent;
@@ -1540,7 +1276,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   7 · THE QUANTITY STEPPER — bouncing, and honest about the ceiling
+   7 · THE QUANTITY STEPPER
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-step {
@@ -1556,7 +1292,6 @@
 .shop-step[data-disabled='true'] {
   opacity: 0.5;
 }
-
 .shop-step__btn {
   display: grid;
   place-items: center;
@@ -1564,13 +1299,11 @@
   height: 30px;
   border: 0;
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--surface);
   color: var(--aisle-ink);
   cursor: pointer;
   box-shadow: var(--lift-1);
-  transition:
-    transform var(--t-instant) var(--spring),
-    background-color var(--t-micro) var(--ease),
+  transition: transform var(--t-instant) var(--spring), background-color var(--t-micro) var(--ease),
     opacity var(--t-micro) var(--ease);
 }
 .shop-step[data-size='md'] .shop-step__btn {
@@ -1590,7 +1323,6 @@
   cursor: not-allowed;
   box-shadow: none;
 }
-
 .shop-step__value {
   min-width: 2ch;
   padding-inline: var(--s-1);
@@ -1605,8 +1337,6 @@
   font-size: var(--t-lg);
   min-width: 2.5ch;
 }
-/* The bounce fires on the value itself when it changes — the number is the
-   thing that moved, so the number is what reacts. */
 .shop-step__value[data-bounce='true'] {
   animation: shop-bounce 320ms var(--spring) both;
 }
@@ -1615,7 +1345,6 @@
   35% { transform: scale(1.34); }
   100% { transform: scale(1); }
 }
-
 .shop-step__cap {
   position: absolute;
   top: calc(100% + var(--s-1));
@@ -1629,7 +1358,7 @@
   font-size: var(--t-2xs);
   font-weight: 620;
   line-height: 1.35;
-  animation: mnd-pop-in var(--t-micro) var(--spring-soft) both;
+  animation: tkr-pop-3d var(--t-micro) var(--spring-soft) both;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1643,10 +1372,10 @@
   padding: var(--s-4);
   border-radius: var(--r-md);
   border: 1px solid var(--hairline);
-  background: var(--card);
+  background: var(--surface);
   font-size: var(--t-sm);
   line-height: 1.55;
-  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
 }
 .shop-notice p {
   margin: 0;
@@ -1662,15 +1391,10 @@
   border-radius: var(--r-xs);
   background: color-mix(in oklab, var(--ink) 8%, transparent);
 }
-
-.shop-notice--fixture {
-  background: var(--warn-wash);
-  border-color: color-mix(in oklab, var(--warn) 40%, transparent);
-  color: var(--warn);
-}
+.shop-notice--fixture,
 .shop-notice--warn {
   background: var(--warn-wash);
-  border-color: color-mix(in oklab, var(--warn) 34%, transparent);
+  border-color: color-mix(in oklab, var(--warn) 38%, transparent);
   color: var(--warn);
 }
 .shop-notice--error {
@@ -1721,6 +1445,7 @@
 }
 .shop-conn[data-tone='good'] .shop-conn__dot {
   background: var(--good);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--good) 70%, transparent);
   animation: shop-pulse 2.2s var(--ease) infinite;
 }
 .shop-conn[data-tone='warn'] .shop-conn__dot { background: var(--warn); }
@@ -1742,9 +1467,9 @@
 }
 .shop-conn__retry {
   appearance: none;
-  border: 1px solid var(--hairline-strong);
+  border: 1px solid var(--hairline-bright);
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--surface);
   color: var(--ink);
   padding: 0.15rem 0.6rem;
   font: inherit;
@@ -1795,7 +1520,7 @@
 
    The database is deliberately empty, so these are the screens the client
    actually sees. An empty catalogue is a stage in a store's life, not an
-   error — it is drawn, titled and given the way forward.
+   error — it is drawn, titled and given a way forward.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .shop-empty {
@@ -1805,16 +1530,16 @@
   gap: var(--s-4);
   padding: var(--s-7) var(--s-5);
   border-radius: var(--r-xl);
-  background: var(--card);
+  background: var(--surface);
   border: 1px dashed var(--shop-edge-soft);
   text-align: center;
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) both;
 }
 .shop-empty__art {
   width: 108px;
   height: 108px;
   color: var(--aisle);
-  animation: mnd-float 5s var(--ease) infinite;
+  animation: tkr-float 5s var(--ease) infinite;
 }
 .shop-empty__title {
   margin: 0;
@@ -1852,20 +1577,18 @@
   flex-direction: column;
   min-width: 0;
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-1), var(--rim);
   overflow: hidden;
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 9) * var(--stagger));
-  transition:
-    transform var(--t-move) var(--spring-soft),
-    box-shadow var(--t-move) var(--ease),
+  transition: transform var(--t-move) var(--spring-soft), box-shadow var(--t-move) var(--ease),
     border-color var(--t-move) var(--ease);
 }
 .shop-store:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--lift-2);
+  transform: translateY(-5px);
+  box-shadow: var(--lift-2), var(--rim);
   border-color: var(--shop-edge);
 }
 .shop-store:active {
@@ -1880,7 +1603,6 @@
   box-shadow: none;
   pointer-events: none;
 }
-
 .shop-store__hit {
   display: flex;
   flex-direction: column;
@@ -1922,7 +1644,7 @@
   color: var(--good);
 }
 .shop-store__state[data-open='false'] {
-  background: var(--ground-sunk);
+  background: var(--void);
   color: var(--ink-faint);
 }
 .shop-store__dot {
@@ -1971,7 +1693,7 @@
   gap: var(--s-2);
   padding: var(--s-3) var(--s-5);
   border-top: 1px solid var(--hairline);
-  background: var(--ground-sunk);
+  background: var(--void);
   font-size: var(--t-xs);
   color: var(--ink-soft);
 }
@@ -2001,7 +1723,7 @@
   border-radius: var(--r-lg);
   background: var(--shop-wash);
   border: 1px solid var(--shop-edge-soft);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) both;
 }
 .shop-locate__title {
   margin: 0;
@@ -2028,7 +1750,7 @@
   gap: var(--s-2);
   flex-wrap: wrap;
 }
-.shop-locate__pin .shop-input {
+.shop-locate__pin input {
   width: 9rem;
   font-family: var(--data);
   letter-spacing: 0.12em;
@@ -2039,29 +1761,14 @@
   color: var(--crit);
 }
 
-.shop-scope {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--s-2);
-  margin: 0;
-  padding: var(--s-3) var(--s-4);
-  border-radius: var(--r-md);
-  background: var(--shop-wash);
-  border: 1px solid var(--shop-edge-soft);
-  font-size: var(--t-sm);
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    11 · THE STOREFRONT + AISLE HEADS
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* The chromatic band. `--aisle` is @property-registered, so this whole panel
-   genuinely CROSSFADES over --t-enter when the aisle changes. It is deliberately
-   the largest colour area on the page, because that is what makes the swap
-   land as an event rather than a detail. */
+/* The chromatic band. `--aisle` is `@property`-registered, so this whole
+   panel genuinely crossfades over `--t-enter` when the aisle changes — the
+   largest colour area on the page, deliberately, so the swap lands as an
+   event rather than a detail. */
 .shop-band {
   position: relative;
   overflow: hidden;
@@ -2070,15 +1777,15 @@
   gap: var(--s-3);
   padding: var(--s-6) var(--s-5);
   border-radius: var(--r-xl);
-  background:
-    radial-gradient(
+  background: radial-gradient(
       120% 140% at 88% 0%,
-      color-mix(in oklab, var(--aisle) 34%, transparent) 0%,
+      color-mix(in oklab, var(--aisle) 36%, transparent) 0%,
       transparent 62%
     ),
-    color-mix(in oklab, var(--aisle) 12%, var(--card));
+    color-mix(in oklab, var(--aisle) 12%, var(--surface));
   border: 1px solid var(--shop-edge-soft);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) both;
+  box-shadow: var(--rim);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) both;
 }
 @media (min-width: 720px) {
   .shop-band {
@@ -2119,7 +1826,7 @@
   height: 34px;
   border-radius: var(--r-sm);
   background: var(--aisle);
-  box-shadow: 0 6px 18px -8px var(--shop-glow);
+  box-shadow: 0 6px 18px -8px var(--shop-glow), var(--glow-sm);
 }
 
 .shop-front__facts {
@@ -2150,7 +1857,7 @@
   font-weight: 700;
   letter-spacing: var(--track-tight);
 }
-.shop-front__facts dd.shop-num {
+.shop-front__facts dd.mono {
   font-family: var(--data);
 }
 .shop-front__facts dd[data-open='true'] {
@@ -2160,17 +1867,10 @@
   color: var(--ink-faint);
 }
 
-/* ── aisle tabs ─────────────────────────────────────────────────────────── */
+/* ── aisle tabs (inside a storefront) ───────────────────────────────────── */
 
 .shop-tabs {
   margin: 0;
-}
-.shop-tabs__list {
-  display: flex;
-  gap: var(--s-2);
-  width: max-content;
-  min-width: 100%;
-  padding-bottom: var(--s-1);
 }
 .shop-tab {
   display: inline-flex;
@@ -2179,18 +1879,15 @@
   padding: 0.45rem 0.9rem;
   border-radius: var(--r-pill);
   border: 1px solid var(--hairline);
-  background: var(--card);
+  background: var(--surface);
   color: var(--ink-soft);
   font-family: var(--body);
   font-size: var(--t-sm);
   font-weight: 620;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    transform var(--t-micro) var(--spring),
-    background-color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
+  transition: transform var(--t-micro) var(--spring), background-color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
 }
 .shop-tab:hover {
   transform: translateY(-2px);
@@ -2204,6 +1901,7 @@
   background: var(--shop-fill);
   border-color: transparent;
   color: var(--shop-on-fill);
+  box-shadow: var(--glow-sm);
 }
 .shop-tab__swatch {
   width: 14px;
@@ -2220,12 +1918,6 @@
 .shop-tab__swatch[data-key='snacks'] { background: var(--aisle-snacks); }
 .shop-tab__swatch[data-key='staples'] { background: var(--aisle-staples); }
 .shop-tab__swatch[data-key='frozen'] { background: var(--aisle-frozen); }
-.shop-tab__count {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-xs);
-  opacity: 0.75;
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    12 · THE PRODUCT PAGE
@@ -2242,18 +1934,15 @@
     gap: var(--s-7);
   }
 }
-
 .shop-product__media {
   position: relative;
   margin: 0;
   aspect-ratio: 4 / 3;
   border-radius: var(--r-xl);
   overflow: hidden;
-  background: color-mix(in oklab, var(--aisle) 10%, var(--ground-sunk));
+  background: color-mix(in oklab, var(--aisle) 10%, var(--void));
   border: 1px solid var(--shop-edge-soft);
-  box-shadow: var(--lift-2);
-  /* The shared-element feel: the media arrives with the same spring the grid
-     card leaves on, so a tap from the shelf reads as one object opening. */
+  box-shadow: var(--lift-2), var(--rim);
   animation: shop-open var(--t-slow) var(--spring-soft) both;
 }
 @keyframes shop-open {
@@ -2301,14 +1990,14 @@
   font-family: var(--data);
   font-size: var(--t-sm);
   font-weight: 700;
+  box-shadow: var(--glow-sm);
 }
-
 .shop-product__body {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
   min-width: 0;
-  animation: mnd-rise var(--t-enter) var(--spring-soft) 80ms both;
+  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) 80ms both;
 }
 .shop-product__name {
   margin: 0;
@@ -2333,7 +2022,7 @@
   gap: var(--s-3);
   margin: 0;
 }
-.shop-product__price .shop-price {
+.shop-product__price .price {
   font-size: clamp(2rem, 1.4rem + 2.4vw, 3rem);
   line-height: 1;
   letter-spacing: -0.045em;
@@ -2373,7 +2062,7 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
 }
@@ -2421,7 +2110,6 @@
   padding: 0;
   list-style: none;
 }
-
 .shop-line {
   display: flex;
   flex-wrap: wrap;
@@ -2430,10 +2118,10 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
   transition: border-color var(--t-micro) var(--ease);
 }
@@ -2501,10 +2189,10 @@
   gap: var(--s-4);
   padding: var(--s-5);
   border-radius: var(--r-xl);
-  background: var(--card-raised);
+  background: var(--raised);
   border: 1px solid var(--shop-edge-soft);
-  box-shadow: var(--lift-2);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) 120ms both;
+  box-shadow: var(--lift-2), var(--rim);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) 120ms both;
 }
 @media (min-width: 960px) {
   .shop-summary--sticky {
@@ -2576,10 +2264,6 @@
   letter-spacing: var(--track-tight);
   color: var(--ink) !important;
 }
-.shop-summary__total dd .shop-price {
-  font-size: var(--t-h3);
-  letter-spacing: -0.04em;
-}
 .shop-summary__pending {
   font-size: var(--t-xs);
   color: var(--ink-faint);
@@ -2621,17 +2305,16 @@
   gap: var(--s-4);
   min-width: 0;
 }
-
 .shop-panel {
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
   padding: var(--s-5);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 8) * var(--stagger));
 }
 .shop-panel__title {
@@ -2664,7 +2347,6 @@
   color: var(--ink-faint);
 }
 
-/* selectable rows — address, payment, slot */
 .shop-choice {
   display: flex;
   align-items: flex-start;
@@ -2672,11 +2354,9 @@
   padding: var(--s-4);
   border-radius: var(--r-md);
   border: 1.5px solid var(--hairline);
-  background: var(--card);
+  background: var(--surface);
   cursor: pointer;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease),
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
     transform var(--t-micro) var(--spring);
 }
 .shop-choice:hover {
@@ -2686,6 +2366,7 @@
 .shop-choice[data-selected='true'] {
   border-color: var(--aisle);
   background: var(--shop-wash);
+  box-shadow: var(--glow-sm);
 }
 .shop-choice input {
   margin-top: 3px;
@@ -2717,7 +2398,6 @@
   font-size: var(--t-xs);
   color: var(--ink-faint);
 }
-
 .shop-choices {
   display: flex;
   flex-direction: column;
@@ -2734,9 +2414,17 @@
   gap: var(--s-4);
   padding: var(--s-4);
   border-radius: var(--r-md);
-  background: var(--ground-sunk);
+  background: var(--void);
   border: 1px solid var(--hairline);
-  animation: mnd-pop-in var(--t-move) var(--spring-soft) both;
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
+}
+.shop-addrform label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--ink-soft);
 }
 .shop-addrform__fields {
   display: grid;
@@ -2775,7 +2463,7 @@
   gap: var(--s-2);
   flex-wrap: wrap;
 }
-.shop-coupon .shop-input {
+.shop-coupon input {
   flex: 1 1 10rem;
   font-family: var(--data);
   letter-spacing: 0.14em;
@@ -2794,52 +2482,6 @@
   color: var(--crit);
 }
 
-/* ── the delivery code ──────────────────────────────────────────────────── */
-
-.shop-otp {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  align-items: center;
-  text-align: center;
-  padding: var(--s-6) var(--s-5);
-  border-radius: var(--r-xl);
-  background:
-    radial-gradient(
-      100% 120% at 50% 0%,
-      color-mix(in oklab, var(--aisle) 26%, transparent) 0%,
-      transparent 70%
-    ),
-    var(--card-raised);
-  border: 2px solid var(--aisle);
-  box-shadow: var(--lift-3);
-  animation: mnd-pop-in var(--t-enter) var(--spring) both;
-}
-.shop-otp__digits {
-  display: flex;
-  gap: var(--s-2);
-}
-.shop-otp__digit {
-  display: grid;
-  place-items: center;
-  min-width: 3rem;
-  padding: var(--s-3) var(--s-2);
-  border-radius: var(--r-md);
-  background: var(--ink);
-  color: var(--ground);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(1.8rem, 1.2rem + 3vw, 2.75rem);
-  font-weight: 700;
-  line-height: 1;
-  animation: shop-stamp 520ms var(--spring) backwards;
-  animation-delay: calc(var(--i, 0) * 90ms);
-}
-@keyframes shop-stamp {
-  from { opacity: 0; transform: translateY(-16px) scale(1.4) rotate(-6deg); }
-  to { opacity: 1; transform: none; }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    14 · ORDERS
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -2852,29 +2494,27 @@
   padding: 0;
   list-style: none;
 }
-
 .shop-order {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
   padding: var(--s-5);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 9) * var(--stagger));
-  transition:
-    transform var(--t-move) var(--spring-soft),
-    box-shadow var(--t-move) var(--ease);
+  transition: transform var(--t-move) var(--spring-soft), box-shadow var(--t-move) var(--ease);
 }
 .shop-order:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   box-shadow: var(--lift-2);
 }
 .shop-order[data-live='true'] {
   border-color: var(--aisle);
   background: var(--shop-wash);
+  box-shadow: var(--lift-1), var(--glow-sm);
 }
 .shop-order--skeleton {
   gap: var(--s-3);
@@ -2927,9 +2567,6 @@
   padding-top: var(--s-3);
   border-top: 1px solid var(--hairline);
 }
-.shop-order__foot .shop-price {
-  font-size: var(--t-lg);
-}
 .shop-order__pay {
   font-size: var(--t-xs);
   color: var(--ink-faint);
@@ -2973,17 +2610,14 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   15 · PILLAR 3 — TRACKING
+   15 · PILLAR 4 — TRACKING
 
-   The JourneyRibbon is the hero. The map sits BELOW it, collapsed, and every
-   fact on this screen survives the map never loading at all — which is the
-   normal case, because Maps billing is not enabled.
+   The JourneyRibbon (design system) is the hero; three rules here put its
+   coloured surfaces back on the guaranteed-contrast pair via the compat
+   layer above. The map is secondary, collapsed by default, and every fact on
+   this screen survives it never loading.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* `.shop-track` is the page-level marker only — layout comes from `.shop-page`
-   (a flex column: the header stacks above this). The two-column layout
-   belongs to the grid wrapper INSIDE it, `.shop-track__grid`, or the header
-   would become a grid column beside the ribbon. */
 .shop-track__grid {
   display: grid;
   gap: var(--s-5);
@@ -3002,14 +2636,11 @@
   min-width: 0;
 }
 
-/* The ribbon ships its own CSS against the previous token names; the compat
-   layer covers those, and these three rules put its coloured surfaces back on
-   the guaranteed-contrast pair. */
 .shop .mnd-ribbon {
-  background: var(--card-raised);
+  background: var(--raised);
   border-radius: var(--r-xl);
   border-color: var(--shop-edge-soft);
-  box-shadow: var(--lift-2);
+  box-shadow: var(--lift-2), var(--rim);
 }
 .shop .mnd-ribbon__headline {
   font-weight: 800;
@@ -3034,7 +2665,7 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
 }
@@ -3081,17 +2712,15 @@
   width: 100%;
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-md);
-  border: 1px dashed var(--hairline-strong);
-  background: var(--ground-sunk);
+  border: 1px dashed var(--hairline-bright);
+  background: var(--void);
   color: var(--ink);
   text-align: left;
   font: inherit;
   font-size: var(--t-sm);
   font-weight: 620;
   cursor: pointer;
-  transition:
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease);
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
 }
 .shop-track__maptoggle:hover:not(:disabled) {
   border-color: var(--shop-edge);
@@ -3109,7 +2738,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  animation: mnd-rise var(--t-move) var(--ease-out) both;
+  animation: tkr-rise-3d var(--t-move) var(--ease-out) both;
 }
 .shop-track__mapbody[data-stale='true'] {
   filter: saturate(0.6);
@@ -3140,15 +2769,16 @@
   gap: var(--s-3);
   padding: var(--s-5);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(min(var(--i, 0), 8) * var(--stagger));
 }
 .shop-addrbook__row[data-default='true'] {
   border-color: var(--aisle);
   background: var(--shop-wash);
+  box-shadow: var(--lift-1), var(--glow-sm);
 }
 .shop-addrbook__label {
   display: flex;
@@ -3199,7 +2829,7 @@
 .shop-foot {
   margin-top: var(--s-8);
   border-top: 1px solid var(--hairline);
-  background: var(--ground-sunk);
+  background: var(--void);
 }
 .shop-foot__inner {
   display: grid;
@@ -3246,9 +2876,7 @@
   color: var(--ink-soft);
   font-size: var(--t-sm);
   text-decoration: none;
-  transition:
-    color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--spring);
+  transition: color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring);
 }
 .shop-foot__nav a:hover {
   color: var(--aisle-ink);
@@ -3262,58 +2890,18 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   18 · BENTO, tuned for the shop
-   ═══════════════════════════════════════════════════════════════════════════ */
+   18 · REDUCED MOTION
 
-.shop .mnd-cell--act:hover {
-  border-color: color-mix(in oklab, var(--aisle) 45%, var(--hairline));
-}
-.shop .mnd-cell__title {
-  font-weight: 800;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   19 · REDUCED MOTION
-
-   Every animation above is reduced to an instant state change. None of them
-   are removed: a control that appears to do nothing is worse than one that
-   moves too much, and the dock still has to visibly CATCH.
+   The blanket rule in tokens.css already collapses every animation/transition
+   duration app-wide, which is why most hover transforms need no explicit
+   override here: an instant transition still lands on the right end state.
+   The two exceptions are the tilt (flattened outright by Tilt3D itself and by
+   tokens.css) and the basket catch, whose squash keyframe would otherwise be
+   compressed to a single, invisible frame — so the catch gets a non-animated
+   stand-in that still reads as a catch.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @media (prefers-reduced-motion: reduce) {
-  .shop *,
-  .shop *::before,
-  .shop *::after,
-  .shop-fly {
-    animation-duration: 1ms !important;
-    animation-delay: 0ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 1ms !important;
-  }
-
-  /* Feedback that must survive: these swap instantly instead of easing, and
-     the hover/press transforms are dropped so nothing lurches. */
-  .shop-card:hover,
-  .shop-store:hover,
-  .shop-order:hover,
-  .shop-rail__item:hover,
-  .shop-tab:hover,
-  .shop-choice:hover,
-  .shop-profile__item:hover,
-  .shop-foot__nav a:hover,
-  .shop .mnd-btn:hover:not(:disabled) {
-    transform: none;
-  }
-  .shop-card:active,
-  .shop-step__btn:active:not(:disabled),
-  .shop-card__add:active,
-  .shop .mnd-btn:active:not(:disabled) {
-    transform: none;
-  }
-  .shop-card:hover .shop-media__img,
-  .shop-card:hover .shop-media__plate-art {
-    transform: none;
-  }
   .shop-empty__art {
     animation: none !important;
   }
@@ -3322,9 +2910,13 @@
     animation: none !important;
     opacity: 1;
   }
-  /* The catch still reads as a catch — it just happens at once. */
   .shop-dock[data-catch='true'] {
+    animation: none !important;
     outline: 3px solid var(--aisle);
     outline-offset: 2px;
+  }
+  .shop-media__img,
+  .shop-media__plate-art {
+    transition: none !important;
   }
 }

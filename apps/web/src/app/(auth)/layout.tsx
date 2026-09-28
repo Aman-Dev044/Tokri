@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { APP_NAME } from '@/config/brand';
 
 import '@/styles/auth.css';
 
@@ -11,14 +12,15 @@ import '@/styles/auth.css';
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth">
+      <div className="auth__glow" aria-hidden="true" />
       <header className="auth__bar auth__shell">
-        <Link href="/" className="auth__brand" aria-label="Mandi, home">
+        <Link href="/" className="auth__brand" aria-label={`${APP_NAME}, home`}>
           <span className="auth__mark" aria-hidden="true">
             <svg viewBox="0 0 32 32" focusable="false">
               <path
                 d="M5 12 L27 12 L24 26 Q23.4 28 21.5 28 L10.5 28 Q8.6 28 8 26 Z"
                 fill="var(--accent)"
-                opacity="0.24"
+                opacity="0.28"
               />
               <path
                 d="M5 12 L27 12 L24 26 Q23.4 28 21.5 28 L10.5 28 Q8.6 28 8 26 Z"
@@ -37,7 +39,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               <circle cx="16" cy="19" r="3.4" fill="var(--accent)" />
             </svg>
           </span>
-          <span className="auth__wordmark">Mandi</span>
+          <span className="auth__wordmark">{APP_NAME}</span>
         </Link>
 
         <Link href="/" className="auth__back">

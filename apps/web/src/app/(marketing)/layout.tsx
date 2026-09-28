@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { TopBar } from '@/components/marketing/TopBar';
 import { Footer } from '@/components/marketing/Footer';
 import { SITE_URL } from '@/config/env';
+import { APP_NAME, APP_DESCRIPTION } from '@/config/brand';
 
 import '@/styles/marketing.css';
 
@@ -19,17 +20,16 @@ const jsonLd = {
     {
       '@type': 'Organization',
       '@id': `${SITE_URL}/#org`,
-      name: 'Mandi',
+      name: APP_NAME,
       url: SITE_URL,
-      description:
-        'Multi-vendor grocery delivery marketplace in India. Order from the shops already near you.',
+      description: APP_DESCRIPTION,
       areaServed: { '@type': 'Country', name: 'India' },
     },
     {
       '@type': 'WebSite',
       '@id': `${SITE_URL}/#site`,
       url: SITE_URL,
-      name: 'Mandi',
+      name: APP_NAME,
       publisher: { '@id': `${SITE_URL}/#org` },
       inLanguage: 'en-IN',
     },

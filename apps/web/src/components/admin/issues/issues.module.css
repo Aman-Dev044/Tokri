@@ -21,10 +21,10 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.1rem 0.5rem 0.1rem 0.4rem;
-  border: 1px solid var(--hairline-strong);
+  border: 1px solid var(--hairline-bright);
   border-radius: var(--r-pill);
-  background: var(--surface-2);
-  font-size: var(--fs-micro);
+  background: var(--raised);
+  font-size: var(--t-2xs);
   font-weight: 550;
   line-height: 1.6;
   color: var(--ink);
@@ -35,12 +35,12 @@
   font-family: var(--data);
   font-size: 0.68em;
   line-height: 1;
-  color: var(--muted);
+  color: var(--ink-faint);
 }
 
 .chipGood {
   border-color: color-mix(in srgb, var(--good) 45%, var(--hairline));
-  background: color-mix(in srgb, var(--good) 9%, var(--surface-2));
+  background: color-mix(in srgb, var(--good) 9%, var(--raised));
 }
 .chipGood .chipGlyph {
   color: var(--good-ink);
@@ -48,7 +48,7 @@
 
 .chipWarn {
   border-color: color-mix(in srgb, var(--warn) 50%, var(--hairline));
-  background: color-mix(in srgb, var(--warn) 11%, var(--surface-2));
+  background: color-mix(in srgb, var(--warn) 11%, var(--raised));
 }
 .chipWarn .chipGlyph {
   color: var(--warn-ink);
@@ -56,7 +56,7 @@
 
 .chipCrit {
   border-color: color-mix(in srgb, var(--crit) 55%, var(--hairline));
-  background: color-mix(in srgb, var(--crit) 12%, var(--surface-2));
+  background: color-mix(in srgb, var(--crit) 12%, var(--raised));
   font-weight: 650;
 }
 .chipCrit .chipGlyph {
@@ -64,14 +64,14 @@
 }
 
 .chipInfo {
-  border-color: var(--hairline-strong);
-  background: var(--sunken);
+  border-color: var(--hairline-bright);
+  background: var(--void);
 }
 
 .chipMuted {
   border-color: var(--hairline);
   background: none;
-  color: var(--muted);
+  color: var(--ink-faint);
   font-weight: 450;
 }
 
@@ -86,7 +86,7 @@
   gap: 0.3rem;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   color: var(--ink);
 }
 
@@ -96,7 +96,7 @@
 }
 
 .ageOk {
-  color: var(--muted);
+  color: var(--ink-faint);
 }
 
 .ageWarn {
@@ -117,7 +117,7 @@
   height: 3px;
   margin-top: 0.25rem;
   border-radius: var(--r-pill);
-  background: var(--sunken);
+  background: var(--void);
   overflow: hidden;
 }
 
@@ -125,7 +125,7 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--muted);
+  background: var(--ink-faint);
 }
 
 .ageBarFillWarn {
@@ -160,8 +160,8 @@
 }
 
 .subjectMeta {
-  font-size: var(--fs-micro);
-  color: var(--muted);
+  font-size: var(--t-2xs);
+  color: var(--ink-faint);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -194,7 +194,7 @@
   max-width: 46ch;
   padding: var(--s-3);
   border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-md);
   background: var(--surface);
   animation: msgIn var(--t-move) var(--ease-out) both;
   animation-delay: calc(var(--adm-i, 0) * 20ms);
@@ -203,8 +203,8 @@
 /* Our side of the conversation sits right and reads as the platform speaking. */
 .msgMine {
   align-self: flex-end;
-  background: var(--sunken);
-  border-color: var(--hairline-strong);
+  background: var(--void);
+  border-color: var(--hairline-bright);
 }
 
 .msgSystem {
@@ -212,16 +212,16 @@
   max-width: 52ch;
   border-style: dashed;
   background: none;
-  color: var(--muted);
-  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  font-size: var(--t-2xs);
 }
 
 .msgHead {
   display: flex;
   align-items: baseline;
   gap: var(--s-2);
-  font-size: var(--fs-micro);
-  color: var(--muted);
+  font-size: var(--t-2xs);
+  color: var(--ink-faint);
 }
 
 .msgAuthor {
@@ -237,7 +237,7 @@
 
 .msgBody {
   margin: 0;
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   line-height: 1.55;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -289,7 +289,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s-3);
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
 }
 
 .linkRow a {
@@ -299,7 +299,7 @@
 
 .description {
   margin: 0;
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -313,13 +313,13 @@
   gap: var(--s-2);
   padding: var(--s-3);
   border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--hairline));
-  border-radius: var(--r-soft);
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--warn) 7%, var(--surface));
 }
 
 .gateTitle {
   margin: 0;
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   font-weight: 650;
 }
 
@@ -329,9 +329,9 @@
   gap: var(--s-2);
   padding: var(--s-3);
   border: 1px solid color-mix(in srgb, var(--good) 40%, var(--hairline));
-  border-radius: var(--r-soft);
+  border-radius: var(--r-md);
   background: color-mix(in srgb, var(--good) 7%, var(--surface));
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   line-height: 1.55;
 }
 

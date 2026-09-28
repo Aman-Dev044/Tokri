@@ -130,13 +130,13 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
           ) : null}
 
           {products.loading && !products.hasLoadedOnce ? (
-            <div className="shop-grid">
+            <div className="tkr-grid">
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <ProductCardSkeleton key={i} index={i} />
               ))}
             </div>
           ) : rows.length > 0 ? (
-            <div className="shop-grid">
+            <div className="tkr-grid">
               {rows.map((product, index) => (
                 <ProductCard
                   key={product.id}

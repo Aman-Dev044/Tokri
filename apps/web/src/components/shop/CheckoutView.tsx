@@ -570,7 +570,7 @@ export function CheckoutView() {
               <input
                 id="ck-coupon-code"
                 className="mnd-field__input"
-                placeholder="MANDI50"
+                placeholder="SAVE50"
                 value={coupon}
                 onChange={(event) => {
                   setCoupon(event.target.value.toUpperCase());

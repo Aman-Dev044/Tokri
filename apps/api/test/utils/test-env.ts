@@ -31,6 +31,10 @@ export function applyTestEnv(mongoUri: string): void {
 
   Object.assign(process.env, {
     NODE_ENV: 'test',
+    // Brand is configuration: the app refuses to boot without these, and
+    // the cookie name must match what the auth spec reads back.
+    APP_NAME: 'Tokri',
+    REFRESH_COOKIE_NAME: 'tokri_rt',
     PORT: '4100',
     API_PREFIX: 'api/v1',
 

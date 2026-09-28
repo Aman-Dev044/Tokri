@@ -47,6 +47,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { APP_NAME } from '@/config/brand';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import type {
   OpeningHour,
@@ -571,7 +572,7 @@ export function SettingsView() {
           </VenSection>
 
           <VenSection
-            title="Set by Mandi"
+            title={`Set by ${APP_NAME}`}
             description="Platform settings. Visible here so you can check your own payouts — changed only by an admin."
             panel
           >

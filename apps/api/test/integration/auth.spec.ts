@@ -16,7 +16,12 @@ import {
   readCookie,
 } from '../utils/test-app';
 
-const REFRESH_COOKIE = 'mandi_rt';
+/**
+ * Read from the environment, never hardcoded. The cookie name is
+ * configuration (REFRESH_COOKIE_NAME), so a literal here would turn a
+ * rename into three confusing assertion failures instead of a clear one.
+ */
+const REFRESH_COOKIE = process.env.REFRESH_COOKIE_NAME ?? 'tokri_rt';
 
 /** Long enough to satisfy the DTO; generated per-run, never a literal. */
 const PASSWORD = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

@@ -26,6 +26,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getAisle, useAisle, type AisleKey } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
 import { useShopQuery } from '@/hooks/useShopQuery';
 import { formatDistance } from '@/lib/shop/format';
 import {
@@ -88,7 +89,7 @@ export function StorefrontView({ slug }: { slug: string }) {
     return (
       <div className="shell shop-page">
         <span className="shop-skel shop-skel--line" style={{ width: '40%', height: '2.4rem' }} />
-        <div className="shop-grid">
+        <div className="tkr-grid">
           {[0, 1, 2, 3].map((i) => (
             <ProductCardSkeleton key={i} index={i} />
           ))}
@@ -114,7 +115,7 @@ export function StorefrontView({ slug }: { slug: string }) {
       <div className="shell shop-page">
         <h1 className="shop-page__title">Store not found</h1>
         <p className="lede">
-          That shop is not on Mandi, or its listing was taken down.{' '}
+          That shop is not on {APP_NAME}, or its listing was taken down.{' '}
           <Link href="/stores">See the stores near you</Link>.
         </p>
       </div>
@@ -138,7 +139,7 @@ export function StorefrontView({ slug }: { slug: string }) {
 
       <header className="shop-page__head">
         <p className="eyebrow">
-          <Link href="/stores">Stores</Link> · {shop.address.city || shop.city || 'Mandi'}
+          <Link href="/stores">Stores</Link> · {shop.address.city || shop.city || 'Nearby'}
         </p>
         <h1 className="shop-page__title">{shop.storeName}</h1>
         {shop.description !== null ? <p className="lede">{shop.description}</p> : null}
@@ -217,13 +218,13 @@ export function StorefrontView({ slug }: { slug: string }) {
       ) : null}
 
       {products.loading && !products.hasLoadedOnce ? (
-        <div className="shop-grid">
+        <div className="tkr-grid">
           {[0, 1, 2, 3, 4, 5].map((i) => (
             <ProductCardSkeleton key={i} index={i} />
           ))}
         </div>
       ) : productRows.length > 0 ? (
-        <div className="shop-grid">
+        <div className="tkr-grid">
           {productRows.map((product, index) => (
             <ProductCard
               key={product.id}
@@ -254,7 +255,7 @@ export function StorefrontView({ slug }: { slug: string }) {
             </>
           ) : (
             <>
-              {shop.storeName} has not listed any products yet. The shop is on Mandi and
+              {shop.storeName} has not listed any products yet. The shop is on {APP_NAME} and
               approved — the shelves are simply still being filled.
             </>
           )}

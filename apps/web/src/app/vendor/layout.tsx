@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 /*
-  The vendor panel is self-contained ("Bento Pop"): it draws on the shared
-  design-system tokens and Bento primitives (imported globally by the root
-  layout) and nothing else from another surface. vendor.css is the panel's own
-  stylesheet — the shell, the board, the lanes, the order cards, the new-order
-  alert, the stock board, the earnings equation, and every local component's
-  class names.
+  The vendor panel is self-contained ("Neon Orchard"): it draws on the shared
+  design-system tokens and the `<Tilt3D>` depth engine (imported globally by
+  the root layout) and nothing else from another surface. vendor.css is the
+  panel's own stylesheet — the shell, the board, the lanes, the order cards,
+  the new-order alert, the stock board, the earnings equation, and every
+  local component's class names.
 */
 import './vendor.css';
 
@@ -42,7 +42,7 @@ import { APP_NAME } from '@/config/brand';
 export const metadata: Metadata = {
   title: {
     default: 'Store',
-    template: '%s · Mandi Store',
+    template: `%s · ${APP_NAME} Store`,
   },
   description: `Run your shop on ${APP_NAME} — orders, stock, riders and earnings.`,
   // A shop's operations panel has no business in a search index.

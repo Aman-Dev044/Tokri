@@ -36,6 +36,11 @@ import type { Offer } from '@/lib/delivery/types';
 /** Under this, the countdown goes critical and starts pulsing. */
 const URGENT_SECONDS = 15;
 
+/** The offer's full life, in seconds — what the ring's sweep is drawn against. */
+const OFFER_TOTAL_SECONDS = 45;
+const RING_RADIUS = 45;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+
 export function OffersView() {
   const router = useRouter();
   const {
@@ -179,8 +184,31 @@ export function OffersView() {
             role="timer"
             aria-live="off"
           >
-            <div className={styles.countdownValue}>{clock(remaining)}</div>
-            <div className={styles.countdownLabel}>left</div>
+            {/* The draining ring. Purely decorative — the number beside it is
+                the actual information, so the ring is aria-hidden. Its sweep
+                is drawn against a fixed 45s life, not against whatever
+                `remaining` happened to be on the first render, so a rider who
+                opens the tab mid-countdown sees a ring already part-drained
+                rather than one that lies about a full 45 seconds left. */}
+            <svg className={styles.ring} viewBox="0 0 104 104" aria-hidden="true">
+              <circle className={styles.ringTrack} cx="52" cy="52" r={RING_RADIUS} />
+              <circle
+                className={styles.ringDrain}
+                cx="52"
+                cy="52"
+                r={RING_RADIUS}
+                style={{
+                  strokeDasharray: RING_CIRCUMFERENCE,
+                  strokeDashoffset:
+                    RING_CIRCUMFERENCE *
+                    (1 - Math.max(0, Math.min(1, remaining / OFFER_TOTAL_SECONDS))),
+                }}
+              />
+            </svg>
+            <div className={styles.countdownInner}>
+              <div className={styles.countdownValue}>{clock(remaining)}</div>
+              <div className={styles.countdownLabel}>left</div>
+            </div>
           </div>
         </div>
 

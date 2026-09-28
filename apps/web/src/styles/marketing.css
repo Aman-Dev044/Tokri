@@ -1,43 +1,54 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MANDI — MARKETING SURFACE  ·  "BENTO POP"
+   MARKETING SURFACE · "NEON ORCHARD"
 
-   Every value here comes from a token in @mandi/design-system/tokens.css.
-   There is not one raw hex in this file: if a colour is missing, the fix is a
-   token, never a literal. Light and dark are both designed — the tokens do the
-   swapping, so nothing below is written for one ground only.
+   Every value here comes from a token in @mandi/design-system/tokens.css —
+   there is not one raw hex below. Light and dark are both designed; the
+   tokens do the swapping, so nothing here is written for one ground only,
+   even though this system was drawn for the dark one.
 
-   Entrance motion is LOAD-TIME CSS. Nothing is parked at opacity:0 waiting for
-   a scroll observer; a crawler, a link-preview renderer or a visitor who lands
-   mid-page sees the finished page. Every animation is reduced — not removed —
-   inside the prefers-reduced-motion block at the foot of the file.
+   Entrance motion is LOAD-TIME CSS. Nothing is parked at opacity:0 waiting
+   for a scroll observer; a crawler, a link-preview renderer or a visitor who
+   lands mid-page sees the finished page. Every animation is reduced — not
+   removed — and every tilt is flattened outright, inside the
+   prefers-reduced-motion block at the foot of the file.
+
+   3D techniques used across this file, and where:
+     · layered parallax          .mk-rig (Hero)         — background glow,
+                                  mid produce, foreground headline, each its
+                                  own translateZ inside one <Tilt3D>
+     · cursor tilt + floating    .mk-aisle-wrap          — the 8 aisle cards
+       label                    (AisleShowcase)
+     · spring-in with stagger    .tkr-card (shared)      — everywhere a card
+                                                            grid appears
+     · flip reveal                .mk-detail              — the aisle detail
+                                  (AisleShowcase)           panel, on switch
+     · slow float                 .mk-rig__glyph--float   — one hero glyph
+     · breathing glow             .mk-btn--pulse          — the hero's
+                                                            primary CTA only
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ───────────────────────────────────────────────────────────────────────────
    ROOT
-   The ground is painted here rather than inherited: a transparent wrapper
-   borrows whatever the host paints behind it, which is how a warm cream page
-   ends up grey in somebody else's viewer.
-
    --accent is re-pointed at the live aisle, so committing an aisle in the
-   picker retints buttons, focus rings, washes and rules across the whole page
-   in one move. --aisle is registered with @property, so the swap interpolates
-   over --t-enter instead of snapping.
+   picker retints buttons, focus rings, washes and the CTA glow across the
+   whole page in one move. --aisle is registered with @property in
+   tokens.css, so the swap interpolates over --t-enter instead of snapping.
    ─────────────────────────────────────────────────────────────────────────── */
 
 .marketing {
   --accent: var(--aisle);
   --accent-ink: var(--aisle-ink);
-  --accent-wash: color-mix(in oklab, var(--aisle) 14%, var(--card));
+  --accent-wash: color-mix(in oklab, var(--aisle) 16%, var(--surface));
 
   --mk-gutter: clamp(16px, 4vw, 40px);
-  --mk-sec-pad: clamp(56px, 7vw, 104px);
+  --mk-sec-pad: clamp(48px, 6vw, 96px);
 
   position: relative;
   background: var(--ground);
   color: var(--ink);
   min-height: 100dvh;
-  /* Blobs and marquees are wider than the viewport by design; the page itself
-     must never scroll sideways. */
+  /* Blobs, orbits and the ticker are wider than the viewport by design; the
+     page itself must never scroll sideways. */
   overflow-x: clip;
 }
 
@@ -52,90 +63,783 @@
   position: relative;
   padding-block: var(--mk-sec-pad);
 }
-
 .mk-sec--tight {
   padding-block: clamp(32px, 4vw, 56px);
-}
-
-/* ── section furniture ───────────────────────────────────────────────────── */
-
-.mk-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-family: var(--body);
-  font-size: var(--t-2xs);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--accent-ink);
-}
-
-.mk-eyebrow::before {
-  content: '';
-  width: 10px;
-  height: 10px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  flex: 0 0 auto;
 }
 
 .mk-sec__head {
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
-  max-width: 34ch;
-  margin-bottom: var(--s-7);
+  gap: var(--s-3);
+  max-width: 46rem;
+  margin-bottom: var(--s-6);
+}
+.mk-sec__head--wide {
+  max-width: 56rem;
 }
 
-.mk-sec__head--wide {
-  max-width: 52ch;
+.mk-eyebrow {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--accent-ink);
 }
 
 .mk-title {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: var(--t-h1);
-  line-height: var(--lh-tight);
+  margin: 0;
+  font-size: var(--t-h2);
   letter-spacing: var(--track-tight);
 }
-
 .mk-title em {
   font-style: normal;
   color: var(--accent-ink);
 }
 
 .mk-lede {
+  margin: 0;
   font-size: var(--t-lg);
   line-height: var(--lh-body);
   color: var(--ink-soft);
-  max-width: 56ch;
+  max-width: var(--prose-max);
 }
 
-.mk-num {
+/* ───────────────────────────────────────────────────────────────────────────
+   GRID — a 12-column system every card grid on the page shares. A card's
+   own spring-in + tilt come from .tkr-card / <Tilt3D>; this only places it.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mk-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--s-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.mk-cell {
+  grid-column: span 12;
+  min-width: 0;
+}
+@media (min-width: 640px) {
+  .mk-cell--3 { grid-column: span 6; }
+  .mk-cell--4 { grid-column: span 6; }
+  .mk-cell--6 { grid-column: span 12; }
+  .mk-cell--8 { grid-column: span 12; }
+}
+@media (min-width: 900px) {
+  .mk-cell--3 { grid-column: span 3; }
+  .mk-cell--4 { grid-column: span 4; }
+  .mk-cell--6 { grid-column: span 6; }
+  .mk-cell--8 { grid-column: span 8; }
+  .mk-cell--12 { grid-column: span 12; }
+}
+
+.mk-cell--tone-mint   { --tone: var(--mint);   --tone-ink: var(--mint-ink);   --tone-wash: var(--mint-wash); }
+.mk-cell--tone-coral  { --tone: var(--coral);  --tone-ink: var(--coral-ink);  --tone-wash: var(--coral-wash); }
+.mk-cell--tone-violet { --tone: var(--violet); --tone-ink: var(--violet-ink); --tone-wash: var(--violet-wash); }
+.mk-cell--tone-gold   { --tone: var(--gold);   --tone-ink: var(--gold-ink);   --tone-wash: var(--gold-wash); }
+
+/* Card face for the toned cells — the stat tiles in the hero and the claim
+   tiles under "why". --tone-wash / --tone are custom properties, which
+   inherit: it does not matter whether the tone class lands on the card
+   itself or on a wrapping cell, a descendant .tkr-card picks it up either
+   way, falling back to the plain surface where no tone is set. A flat wash
+   + a coloured rim, not a filled block — four of them side by side stay
+   calm instead of turning into a rainbow. */
+.mk-shell .tkr-card:not(.tkr-card--raised) {
+  background: var(--tone-wash, var(--surface));
+  border-color: color-mix(in oklab, var(--tone, var(--hairline)) 40%, transparent);
+}
+
+/* .tkr-card ships from the design system with sensible defaults; the
+   marketing surface wants a touch more room to match the larger type scale
+   in use here. */
+.mk-shell .tkr-card,
+.mk-shell .mk-aisle {
+  padding: var(--s-4);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   HERO
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mk-hero {
+  position: relative;
+  padding-block: clamp(28px, 5vw, 64px) clamp(40px, 6vw, 80px);
+}
+
+/* the parallax rig: one <Tilt3D>, three depths */
+.mk-rig {
+  position: relative;
+  padding-block: clamp(8px, 2vw, 28px) clamp(28px, 4vw, 48px);
+}
+
+.mk-rig__glow {
+  position: absolute;
+  inset: -10% -6%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 26rem at 18% 20%, color-mix(in oklab, var(--accent) 20%, transparent), transparent 62%),
+    radial-gradient(30rem 22rem at 88% 78%, color-mix(in oklab, var(--violet) 16%, transparent), transparent 60%);
+  filter: blur(2px);
+  transition: background var(--t-enter) var(--ease);
+}
+
+.mk-rig__orbit {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(20px, 4vw, 56px);
+  justify-content: flex-end;
+  padding-inline-end: clamp(0px, 4vw, 32px);
+  margin-bottom: clamp(-8px, -2vw, 0px);
+  pointer-events: none;
+}
+.mk-rig__glyph {
+  width: clamp(28px, 3.2vw, 44px);
+  color: var(--sw, var(--accent));
+  opacity: 0.55;
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.mk-rig__glyph--float {
+  animation:
+    tkr-pop-3d var(--t-enter) var(--spring-soft) backwards,
+    tkr-float 6s var(--ease) 600ms infinite;
+  opacity: 0.85;
+}
+
+.mk-rig__fore {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 44rem;
+}
+
+.mk-hero__title {
+  margin: 0;
+  font-size: var(--t-hero);
+  letter-spacing: var(--track-tight);
+}
+.mk-word {
+  display: inline-block;
+  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--w, 0) * var(--stagger));
+}
+.mk-word--accent {
+  color: var(--accent-ink);
+}
+
+.mk-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+
+.mk-hero__note {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
+.mk-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 30%, transparent);
+  flex: 0 0 auto;
+}
+
+/* the picker */
+.mk-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  width: 100%;
+}
+.mk-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+@media (min-width: 480px) {
+  .mk-picker__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+.mk-pick {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: var(--void);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring-soft);
+}
+.mk-pick:hover {
+  border-color: color-mix(in oklab, var(--sw) 55%, var(--hairline));
+  transform: translateY(-2px);
+}
+.mk-pick[data-on='true'] {
+  background: color-mix(in oklab, var(--sw) 16%, var(--surface));
+  border-color: color-mix(in oklab, var(--sw) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--sw) 40%, transparent);
+}
+.mk-pick__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--sw) 60%, transparent);
+}
+.mk-pick__name {
+  font-weight: 700;
+  font-size: var(--t-sm);
+}
+.mk-pick__hi {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+.mk-picker__blurb {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+}
+.mk-picker__src {
+  display: block;
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  margin-bottom: 0.3em;
+}
+
+/* the number tiles */
+.mk-stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  justify-content: center;
+  height: 100%;
+}
+.mk-stat__value {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
+  font-size: clamp(1.8rem, 1.3rem + 2vw, 2.6rem);
+  font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--tone-ink, var(--ink));
+}
+.mk-stat__unit {
+  font-size: 0.5em;
+  margin-left: 0.2em;
+  color: var(--ink-faint);
+}
+.mk-stat__label {
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
 }
 
-.mk-body {
+/* the three real catalogue lines */
+.mk-feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  height: 100%;
+}
+.mk-feature__art {
+  width: 30px;
+  height: 30px;
+}
+.mk-feature__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.mk-feature__name {
+  font-weight: 700;
+  font-size: var(--t-md);
+}
+.mk-feature__price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--sw, var(--accent-ink));
+}
+.mk-feature__unit {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* the one focal glow on the page */
+.mk-btn--pulse {
+  animation: tkr-glow-breathe var(--t-amble) var(--ease) infinite;
+}
+.mk-btn--pulse:hover {
+  animation-play-state: paused;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   PRODUCE TICKER
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mk-ticker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--hairline);
+  border-block: 1px solid var(--hairline);
+  overflow: hidden;
+}
+.mk-ticker__row {
+  background: var(--surface);
+  overflow: hidden;
+}
+.mk-ticker__row:hover .mk-ticker__track {
+  animation-play-state: paused;
+}
+.mk-ticker__track {
+  display: flex;
+  width: max-content;
+  padding-block: var(--s-3);
+  gap: var(--s-7);
+  animation: mk-ticker-scroll 46s linear infinite;
+}
+.mk-ticker__row[data-reverse='true'] .mk-ticker__track {
+  animation-direction: reverse;
+}
+@keyframes mk-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.mk-ticker__item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  white-space: nowrap;
+  font-size: var(--t-sm);
+}
+.mk-ticker__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sw);
+  flex: 0 0 auto;
+}
+.mk-ticker__name {
+  font-weight: 600;
+}
+.mk-ticker__unit {
+  color: var(--ink-faint);
+}
+.mk-ticker__price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-ticker__track {
+    animation: none;
+    overflow-x: auto;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   AISLE SHOWCASE — the 8 tilting cards + the flip-in detail panel
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mk-grid--aisles {
+  align-items: stretch;
+}
+
+.mk-aisle-wrap {
+  height: 100%;
+}
+.mk-aisle {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in oklab, var(--sw) 22%, transparent), transparent 60%),
+    var(--surface);
+}
+.mk-aisle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--sw) 30%, transparent);
+  pointer-events: none;
+}
+.mk-aisle--on {
+  background:
+    radial-gradient(120% 100% at 100% 0%, color-mix(in oklab, var(--sw) 34%, transparent), transparent 62%),
+    var(--raised);
+}
+.mk-aisle--on::before {
+  box-shadow: inset 0 0 0 2px var(--sw), 0 0 26px color-mix(in oklab, var(--sw) 40%, transparent);
+}
+.mk-aisle:focus-visible {
+  outline: 2px solid var(--sw);
+  outline-offset: 2px;
+}
+
+.mk-aisle__face {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: 100%;
+}
+.mk-aisle__glyph {
+  width: 30px;
+  height: 30px;
+  color: var(--sw);
+}
+.mk-aisle__name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--t-lg);
+}
+.mk-aisle__hi {
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.mk-aisle__count {
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+
+/* the detail panel: flips into view on aisle change (see marketing.css
+   header note) instead of replaying the default card spring-in. */
+.mk-detail {
+  animation: tkr-flip-in var(--t-enter) var(--ease) both;
+}
+.mk-detail__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--t-h3);
+}
+.mk-detail__hi {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: var(--t-md);
+  color: var(--ink-faint);
+}
+
+.mk-stock {
+  display: flex;
+  gap: var(--s-3);
+  list-style: none;
+  margin: var(--s-4) 0 0;
+  padding: 0 0 var(--s-2);
+}
+.mk-stock__item {
+  flex: 0 0 auto;
+  width: 156px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.mk-stock__name {
+  font-weight: 700;
+  font-size: var(--t-sm);
+}
+.mk-stock__unit {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.mk-stock__price {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   HOW IT WORKS · WHY · BANDS · CLOSER
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.mk-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  height: 100%;
+}
+.mk-step__n {
+  font-family: var(--data);
+  font-size: var(--t-sm);
+  color: var(--accent-ink);
+}
+.mk-step__title {
+  margin: 0;
+  font-size: var(--t-h3);
+}
+.mk-step__body {
+  margin: 0;
   color: var(--ink-soft);
   line-height: var(--lh-body);
 }
 
-.mk-rule {
-  border: 0;
-  border-top: 1px solid var(--hairline);
+.mk-claim {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  height: 100%;
+}
+.mk-claim__mark {
+  font-size: var(--t-sm);
+  color: var(--tone-ink, var(--accent-ink));
+}
+.mk-claim__head {
   margin: 0;
+  font-size: var(--t-h3);
+}
+.mk-claim__body {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+}
+
+.mk-band {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  height: 100%;
+}
+.mk-band__cta {
+  margin-top: var(--s-2);
+}
+.mk-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-soft);
+}
+.mk-facts li {
+  padding-inline-start: 1.2em;
+  position: relative;
+}
+.mk-facts li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.mk-facts b {
+  color: var(--ink);
+}
+
+.mk-ledger-card,
+.mk-offer-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  height: 100%;
+}
+.mk-ledger {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.mk-ledger__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-sm);
+}
+.mk-ledger__row dt {
+  color: var(--ink-soft);
+}
+.mk-ledger__row dd {
+  margin: 0;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+.mk-ledger__neg {
+  color: var(--coral-ink);
+}
+.mk-ledger__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--hairline-bright);
+}
+.mk-ledger__big {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--t-h3);
+  color: var(--mint-ink);
+}
+.mk-note {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  line-height: var(--lh-body);
+}
+
+.mk-offer__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.mk-offer__leg {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+}
+.mk-offer__pin {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+.mk-offer__pin span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--mint) 55%, transparent);
+}
+.mk-offer__leg--drop .mk-offer__pin span {
+  background: var(--coral);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--coral) 55%, transparent);
+}
+.mk-offer__meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) 0;
+  border-block: 1px solid var(--hairline);
+}
+.mk-offer__meta dt {
+  font-size: var(--t-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
+.mk-offer__meta dd {
+  margin: 0;
+  font-family: var(--data);
+  font-weight: 700;
+}
+.mk-otp {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.mk-otp span[aria-hidden] {
+  display: flex;
+  gap: var(--s-2);
+}
+.mk-otp b {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  background: var(--void);
+  border: 1px solid var(--hairline-bright);
+  font-family: var(--data);
+  font-size: var(--t-lg);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--d, 0) * var(--stagger));
+}
+
+.mk-closer {
+  text-align: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding-block: var(--s-4);
+}
+.mk-closer__title {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5em 0.7em;
+  font-size: var(--t-h1);
+}
+.mk-closer__word {
+  position: relative;
+  padding-bottom: 0.12em;
+  border-bottom: 4px solid var(--sw);
+}
+.mk-closer__cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--s-3);
+  margin-top: var(--s-2);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   BUTTONS
-   The design-system .mnd-btn styles still read the previous token vocabulary,
-   so the marketing surface ships its own. Primary is an INK fill rather than
-   an accent fill: the eight aisle hues run from tangerine to saffron, and
-   white-on-saffron cannot clear 4.5:1 at any size. Ink on ground clears it in
-   both themes, always, and the aisle still shows as the halo under the pill.
+   BUTTONS & MISC CONTROLS — shared by the top bar, the hero and the closer
    ─────────────────────────────────────────────────────────────────────────── */
 
 .mk-btn {
@@ -144,1254 +848,348 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  padding: 0.85rem 1.5rem;
-  min-height: 48px;
   border: 1px solid transparent;
   border-radius: var(--r-pill);
   font-family: var(--body);
-  font-size: var(--t-md);
-  font-weight: 600;
-  line-height: 1;
+  font-weight: 700;
   letter-spacing: -0.01em;
+  line-height: 1;
+  cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  /* `translate` is driven by the magnetic pointer handler; keeping it off the
-     `transform` channel means the press squash below cannot fight it. */
   translate: var(--mx, 0) var(--my, 0);
   transition:
-    translate var(--t-micro) var(--spring-soft),
-    scale var(--t-instant) var(--spring),
+    translate var(--t-move) var(--spring-soft),
+    box-shadow var(--t-micro) var(--ease),
     background-color var(--t-micro) var(--ease),
     border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease),
-    box-shadow var(--t-move) var(--ease);
+    color var(--t-micro) var(--ease);
 }
-
-.mk-btn--lg {
-  padding: 1rem 1.9rem;
-  min-height: 56px;
-  font-size: var(--t-lg);
-}
-
-.mk-btn--sm {
-  padding: 0.5rem 1rem;
-  min-height: 38px;
-  font-size: var(--t-sm);
-}
-
-.mk-btn--block {
-  display: flex;
-  width: 100%;
-}
+.mk-btn--sm { padding: 0.55rem 1rem; font-size: var(--t-sm); min-height: 36px; }
+.mk-btn--lg { padding: 0.95rem 1.9rem; font-size: var(--t-lg); min-height: 54px; }
+.mk-btn--block { display: flex; width: 100%; }
 
 .mk-btn--solid {
-  background: var(--ink);
-  color: var(--ground);
-  box-shadow: 0 6px 22px color-mix(in oklab, var(--accent) 34%, transparent);
-}
-.mk-btn--solid:hover {
-  box-shadow: 0 12px 34px color-mix(in oklab, var(--accent) 48%, transparent);
-}
-
-.mk-btn--quiet {
-  background: var(--card);
-  color: var(--accent-ink);
-  border-color: color-mix(in oklab, var(--accent) 38%, var(--hairline));
+  background: var(--accent);
+  color: var(--on-accent);
   box-shadow: var(--lift-1);
 }
-.mk-btn--quiet:hover {
+.mk-btn--solid:hover {
+  box-shadow: var(--lift-2), var(--glow-sm);
+}
+.mk-btn--quiet {
   background: var(--accent-wash);
+  color: var(--accent-ink);
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.mk-btn--quiet:hover {
   border-color: var(--accent);
 }
-
 .mk-btn--ghost {
   background: transparent;
   color: var(--ink);
+  border-color: var(--hairline-bright);
 }
 .mk-btn--ghost:hover {
-  background: var(--accent-wash);
+  border-color: var(--accent);
   color: var(--accent-ink);
 }
-
-/* The signature Bento Pop press: squash, then spring back. */
 .mk-btn:active {
   scale: 0.96;
+}
+.mk-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.mk-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+}
+.mk-icon-btn:hover {
+  background: var(--surface);
+  border-color: var(--hairline);
+}
+.mk-icon-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mk-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sw);
+  flex: 0 0 auto;
+  box-shadow: 0 0 8px color-mix(in oklab, var(--sw) 50%, transparent);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
    TOP BAR
-   A floating pill, not a full-width band. Sits above the hero and picks up a
-   card ground once the page moves.
    ─────────────────────────────────────────────────────────────────────────── */
 
 .mk-top {
   position: sticky;
   top: 0;
-  z-index: 60;
-  padding-block: var(--s-3);
-  background: color-mix(in oklab, var(--ground) 82%, transparent);
-  backdrop-filter: blur(14px) saturate(1.3);
-  transition: box-shadow var(--t-move) var(--ease);
+  z-index: 80;
+  background: color-mix(in oklab, var(--ground) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--t-move) var(--ease);
 }
-
 .mk-top[data-scrolled='true'] {
-  box-shadow: 0 1px 0 var(--hairline), var(--lift-1);
+  border-bottom-color: var(--hairline);
 }
-
-/* Reading progress. A hairline of the live aisle, scaled from the left — not
-   a loading bar, and never mistaken for one. */
 .mk-top__progress {
   position: absolute;
   left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: var(--accent);
+  bottom: -1px;
+  height: 2px;
+  width: 100%;
   transform-origin: 0 50%;
-  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 
 .mk-top__inner {
   display: flex;
   align-items: center;
-  gap: var(--s-4);
+  gap: var(--s-5);
+  min-height: var(--bar-h);
+  padding-block: var(--s-2);
 }
 
 .mk-brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--s-3);
-  color: var(--ink);
+  gap: var(--s-2);
   text-decoration: none;
-  flex: 0 0 auto;
+  color: var(--ink);
+  margin-right: auto;
 }
-
 .mk-brand__mark {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-md);
-  background: var(--accent-wash);
-  border: 1px solid color-mix(in oklab, var(--accent) 34%, transparent);
+  width: 34px;
+  height: 34px;
   color: var(--accent-ink);
-  transition: rotate var(--t-move) var(--spring), background-color var(--t-enter) var(--ease);
 }
-.mk-brand__mark svg {
-  width: 24px;
-  height: 24px;
-}
-.mk-brand:hover .mk-brand__mark {
-  rotate: -8deg;
-}
-
 .mk-brand__word {
   display: flex;
-  flex-direction: column;
-  line-height: 1;
-}
-.mk-brand__word b {
+  align-items: baseline;
+  gap: 0.4em;
   font-family: var(--display);
-  font-size: 1.3rem;
   font-weight: 800;
-  letter-spacing: var(--track-tight);
+  font-size: 1.1rem;
 }
-.mk-brand__word span {
-  font-size: var(--t-2xs);
+.mk-brand__word span[aria-hidden] {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: 0.72em;
   color: var(--ink-faint);
-  letter-spacing: var(--track-label);
 }
 
 .mk-nav {
   display: none;
   align-items: center;
   gap: var(--s-1);
-  margin-inline: auto;
 }
-
-@media (min-width: 1040px) {
-  .mk-nav {
-    display: flex;
-  }
+@media (min-width: 980px) {
+  .mk-nav { display: flex; }
 }
-
 .mk-nav__link {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: 0.55rem 0.85rem;
-  border-radius: var(--r-pill);
-  border: 1px solid transparent;
-  background: transparent;
+  gap: 0.3em;
+  padding: 0.6rem 0.85rem;
+  border: 0;
+  background: none;
+  border-radius: var(--r-sm);
   color: var(--ink-soft);
+  font-family: var(--body);
+  font-weight: 600;
   font-size: var(--t-sm);
-  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease);
+  transition: color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
 }
-.mk-nav__link:hover,
-.mk-nav__link[aria-expanded='true'] {
+.mk-nav__link:hover {
   color: var(--ink);
-  background: var(--accent-wash);
+  background: var(--surface);
 }
 
 .mk-menu {
   position: relative;
 }
-
 .mk-menu__chev {
-  transition: rotate var(--t-micro) var(--spring-soft);
-}
-.mk-nav__link[aria-expanded='true'] .mk-menu__chev {
-  rotate: 180deg;
-}
-
-.mk-menu__panel {
-  position: absolute;
-  top: calc(100% + var(--s-3));
-  left: 50%;
-  translate: -50% 0;
-  z-index: 40;
-  width: min(92vw, 420px);
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-1);
-  margin: 0;
-  padding: var(--s-3);
-  list-style: none;
-  background: var(--card);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lift-3);
-  animation: mk-menu-in var(--t-move) var(--spring-soft);
+  transition: transform var(--t-micro) var(--ease);
 }
 .mk-menu__panel[hidden] {
   display: none;
 }
-
+.mk-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 90;
+  width: min(420px, 84vw);
+  margin: 0;
+  padding: var(--s-3);
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  background: var(--raised);
+  border: 1px solid var(--hairline-bright);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-pop-3d var(--t-micro) var(--spring-soft) backwards;
+}
 .mk-menu__hint {
   grid-column: 1 / -1;
-  font-size: var(--t-2xs);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
+  padding: 0.4rem 0.6rem 0.7rem;
+  font-size: var(--t-xs);
   color: var(--ink-faint);
-  padding: var(--s-1) var(--s-2) var(--s-2);
 }
-
 .mk-menu__item {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
+  padding: 0.55rem 0.6rem;
   border-radius: var(--r-sm);
   color: var(--ink);
   text-decoration: none;
   font-size: var(--t-sm);
-  transition: background-color var(--t-micro) var(--ease);
-}
-.mk-menu__item:hover {
-  background: var(--ground-sunk);
 }
 .mk-menu__item span:last-child {
-  margin-inline-start: auto;
+  margin-left: auto;
   color: var(--ink-faint);
-  font-family: var(--data);
-  font-size: var(--t-2xs);
+  font-size: 0.85em;
 }
-
-.mk-swatch {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--r-xs);
-  background: var(--sw, var(--accent));
+.mk-menu__item:hover,
+.mk-menu__item:focus-visible {
+  background: var(--surface);
+  outline: none;
 }
 
 .mk-top__acts {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  margin-inline-start: auto;
 }
-@media (min-width: 1040px) {
-  .mk-top__acts {
-    margin-inline-start: 0;
-  }
-}
-
-.mk-icon-btn {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--hairline);
-  background: var(--card);
-  color: var(--ink-soft);
-  cursor: pointer;
-  transition:
-    color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease),
-    rotate var(--t-move) var(--spring);
-}
-.mk-icon-btn:hover {
-  color: var(--accent-ink);
-  border-color: var(--accent);
-  rotate: 25deg;
-}
-
 .mk-top__login {
   display: none;
-  color: var(--ink);
+  padding: 0.6rem 0.9rem;
   font-size: var(--t-sm);
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--ink-soft);
   text-decoration: none;
-  padding-inline: var(--s-2);
+  border-radius: var(--r-sm);
 }
-@media (min-width: 680px) {
-  .mk-top__login {
-    display: inline-flex;
-  }
+.mk-top__login:hover {
+  color: var(--ink);
 }
-
+@media (min-width: 640px) {
+  .mk-top__login { display: inline-flex; }
+}
 .mk-burger {
-  display: grid;
+  display: inline-grid;
 }
-@media (min-width: 1040px) {
-  .mk-burger {
-    display: none;
-  }
+@media (min-width: 980px) {
+  .mk-burger { display: none; }
 }
 
-/* ── mobile drawer ───────────────────────────────────────────────────────── */
+/* ── mobile drawer ────────────────────────────────────────────────────── */
 
 .mk-drawer {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 100;
 }
-
 .mk-drawer__scrim {
   position: absolute;
   inset: 0;
   border: 0;
-  padding: 0;
-  background: color-mix(in oklab, var(--ink) 46%, transparent);
-  animation: mk-fade-in var(--t-move) var(--ease);
+  background: color-mix(in oklab, var(--void) 70%, transparent);
+  backdrop-filter: blur(2px);
   cursor: pointer;
 }
-
 .mk-drawer__panel {
   position: absolute;
-  inset-block: 0;
-  inset-inline-end: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   width: min(360px, 88vw);
   display: flex;
   flex-direction: column;
   gap: var(--s-5);
   padding: var(--s-5);
+  background: var(--surface);
+  border-left: 1px solid var(--hairline);
+  box-shadow: var(--lift-4);
   overflow-y: auto;
-  background: var(--ground);
-  border-inline-start: 1px solid var(--hairline);
-  border-start-start-radius: var(--r-xl);
-  border-end-start-radius: var(--r-xl);
-  box-shadow: var(--lift-3);
-  animation: mk-drawer-in var(--t-enter) var(--spring-soft);
+  animation: tkr-rise-3d var(--t-move) var(--spring-soft);
 }
-
 .mk-drawer__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-3);
 }
-
 .mk-drawer__title {
+  margin: 0;
   font-family: var(--display);
-  font-size: var(--t-h3);
   font-weight: 800;
 }
-
 .mk-drawer__nav {
   display: flex;
   flex-direction: column;
-  gap: var(--s-1);
+  gap: 0.2rem;
 }
-
 .mk-drawer__link {
-  padding: var(--s-3);
-  border-radius: var(--r-md);
+  padding: 0.7rem 0.2rem;
   color: var(--ink);
   text-decoration: none;
-  font-size: var(--t-lg);
-  font-weight: 500;
-  transition: background-color var(--t-micro) var(--ease);
-}
-.mk-drawer__link:hover {
-  background: var(--accent-wash);
-}
-
-.mk-drawer__label {
-  font-size: var(--t-2xs);
   font-weight: 600;
-  letter-spacing: var(--track-label);
+  border-bottom: 1px solid var(--hairline);
+}
+.mk-drawer__label {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-2xs);
   text-transform: uppercase;
+  letter-spacing: var(--track-label);
   color: var(--ink-faint);
 }
-
 .mk-drawer__aisles {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-2);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-
 .mk-drawer__aisle {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--hairline);
-  background: var(--card);
+  padding: 0.55rem 0.2rem;
   color: var(--ink);
-  font-size: var(--t-sm);
   text-decoration: none;
 }
-
 .mk-drawer__foot {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
   margin-top: auto;
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   HERO
-   Sized to its content. A 100vh hero pushes the whole page out of the first
-   frame and tells a first-time visitor nothing about what is below it.
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-hero {
-  position: relative;
-  padding-block: clamp(32px, 5vw, 72px) var(--mk-sec-pad);
-}
-
-/* Two soft fields of the live aisle hue, drifting. Purely ambient; they carry
-   no information and are never the only thing separating two surfaces. */
-.mk-orbs {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.mk-orb {
-  position: absolute;
-  width: clamp(280px, 38vw, 560px);
-  aspect-ratio: 1;
-  border-radius: var(--r-pill);
-  filter: blur(70px);
-  opacity: 0.5;
-  background: var(--accent);
-  animation: mk-drift 17s var(--ease) infinite alternate;
-}
-.mk-orb--a {
-  top: -14%;
-  inset-inline-end: -8%;
-}
-.mk-orb--b {
-  bottom: -22%;
-  inset-inline-start: -10%;
-  background: var(--pop-4);
-  animation-duration: 23s;
-  animation-direction: alternate-reverse;
-}
-
-.mk-hero > .mk-shell {
-  position: relative;
-  z-index: 1;
-}
-
-.mk-hero__copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-5);
-  justify-content: center;
-}
-
-.mk-hero__title {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: var(--t-hero);
-  line-height: var(--lh-tight);
-  letter-spacing: var(--track-tight);
-  /* Each word is its own inline-block so it can rise independently without
-     the line box reflowing mid-animation. */
-}
-
-.mk-word {
-  display: inline-block;
-  animation: mk-word-rise 760ms var(--spring-soft) backwards;
-  animation-delay: calc(var(--w, 0) * 65ms);
-}
-
-.mk-word--accent {
-  position: relative;
-  color: var(--accent-ink);
-}
-
-/* The accent underline draws itself once, left to right, under the phrase. */
-.mk-word--accent::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0.04em;
-  height: 0.09em;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  transform-origin: 0 50%;
-  animation: mk-underline 620ms var(--ease-out) backwards;
-  animation-delay: calc(var(--w, 0) * 65ms + 420ms);
-}
-
-.mk-hero__cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-3);
-  animation: mk-rise-soft 760ms var(--spring-soft) backwards;
-  animation-delay: 560ms;
-}
-
-.mk-hero__note {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-  color: var(--ink-faint);
-}
-
-.mk-live-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: var(--r-pill);
-  background: var(--pop-2);
-  box-shadow: 0 0 0 0 color-mix(in oklab, var(--pop-2) 60%, transparent);
-  animation: mk-ping 2.4s var(--ease-out) infinite;
-  flex: 0 0 auto;
-}
-
-/* ── stat tiles ──────────────────────────────────────────────────────────── */
-
-.mk-stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  min-width: 0;
-}
-
-.mk-stat__value {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(1.6rem, 1.1rem + 1.9vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  color: var(--ink);
-}
-
-.mk-stat__unit {
-  font-size: 0.55em;
-  color: var(--ink-faint);
-  margin-inline-start: 0.15em;
-}
-
-.mk-stat__label {
-  font-size: var(--t-2xs);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-/* ── the aisle picker ────────────────────────────────────────────────────── */
-
-.mk-picker {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-}
-
-.mk-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mk-pick {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--s-1);
-  width: 100%;
-  padding: var(--s-3);
-  border-radius: var(--r-md);
-  border: 1px solid var(--hairline);
-  background: var(--card);
-  color: var(--ink);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    transform var(--t-micro) var(--spring-soft),
-    border-color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease),
-    box-shadow var(--t-micro) var(--ease);
-}
-.mk-pick:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--lift-2);
-  border-color: color-mix(in oklab, var(--sw) 55%, var(--hairline));
-}
-.mk-pick:active {
-  animation: mk-squash var(--t-move) var(--spring);
-}
-.mk-pick[data-on='true'] {
-  background: color-mix(in oklab, var(--sw) 12%, var(--card));
-  border-color: color-mix(in oklab, var(--sw) 62%, transparent);
-  box-shadow: var(--lift-2);
-}
-
-.mk-pick__dot {
-  width: 22px;
-  height: 22px;
-  border-radius: var(--r-xs);
-  background: var(--sw);
-  transition: scale var(--t-micro) var(--spring);
-}
-.mk-pick:hover .mk-pick__dot,
-.mk-pick[data-on='true'] .mk-pick__dot {
-  scale: 1.18;
-}
-
-.mk-pick__name {
-  font-size: var(--t-sm);
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.mk-pick__hi {
-  font-family: var(--data);
-  font-size: var(--t-xs);
-  color: var(--ink-faint);
-}
-
-.mk-picker__blurb {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-  padding: var(--s-3);
-  border-radius: var(--r-md);
-  background: var(--ground-sunk);
-  font-size: var(--t-sm);
-  color: var(--ink-soft);
-  line-height: var(--lh-body);
-}
-
-.mk-picker__src {
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--accent-ink);
-}
-
-/* ── the featured crate ──────────────────────────────────────────────────── */
-
-.mk-feature {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-
-.mk-feature__art {
-  display: grid;
-  place-items: center;
-  padding-block: var(--s-4);
-  border-radius: var(--r-md);
-  background: var(--ground-sunk);
-  color: var(--accent-ink);
-}
-.mk-feature__art svg {
-  width: clamp(72px, 16vw, 108px);
-  height: auto;
-  animation: mk-bob 4.5s var(--ease) infinite;
-}
-
-.mk-feature__row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-}
-
-.mk-feature__name {
-  font-weight: 600;
-}
-
-.mk-feature__price {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-h3);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-.mk-feature__unit {
-  font-family: var(--data);
-  font-size: var(--t-xs);
-  color: var(--ink-faint);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   PRODUCE TICKER
-   Two rows of real stock at real prices, scrolling in opposite directions.
-   Decorative repetition, so it is aria-hidden — the aisle section below
-   carries the same items in a readable list.
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-ticker {
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding-block: var(--s-4);
-  border-block: 1px solid var(--hairline);
-  background: var(--card);
-  overflow: hidden;
-  /* Fades the ends into the card so the loop point never shows as a seam. */
-  mask-image: linear-gradient(90deg, transparent, var(--ink) 7%, var(--ink) 93%, transparent);
-}
-
-.mk-ticker__row {
-  overflow: hidden;
-}
-
-.mk-ticker__track {
-  display: flex;
-  align-items: center;
-  gap: var(--s-5);
-  width: max-content;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  animation: mk-marquee 64s linear infinite;
-}
-.mk-ticker__row[data-reverse='true'] .mk-ticker__track {
-  animation-direction: reverse;
-  animation-duration: 78s;
-}
-
-/* Pause on hover, and on keyboard focus anywhere inside the strip. */
-.mk-ticker:hover .mk-ticker__track,
-.mk-ticker:focus-within .mk-ticker__track {
-  animation-play-state: paused;
-}
-
-.mk-ticker__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-4);
-  border-radius: var(--r-pill);
-  background: var(--ground-sunk);
-  white-space: nowrap;
-}
-
-.mk-ticker__dot {
-  width: 9px;
-  height: 9px;
-  border-radius: var(--r-pill);
-  background: var(--sw);
-  flex: 0 0 auto;
-}
-
-.mk-ticker__name {
-  font-size: var(--t-sm);
-  font-weight: 500;
-}
-
-.mk-ticker__unit {
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  color: var(--ink-faint);
-}
-
-.mk-ticker__price {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-sm);
-  font-weight: 700;
-  color: var(--accent-ink);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   HOW IT WORKS
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-step {
-  gap: var(--s-3);
-}
-
-.mk-step__n {
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--r-md);
-  background: var(--accent-wash);
-  border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
-  color: var(--accent-ink);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-md);
-  font-weight: 700;
-}
-
-.mk-step__title {
-  font-family: var(--display);
-  font-size: var(--t-h3);
-  font-weight: 700;
-  letter-spacing: var(--track-tight);
-}
-
-.mk-step__body {
-  color: var(--ink-soft);
-  font-size: var(--t-sm);
-  line-height: var(--lh-body);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   AISLES
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-aisle {
-  --sw: var(--accent);
-  gap: var(--s-3);
-  align-items: flex-start;
-  overflow: hidden;
-}
-
-/* A band of the aisle hue across the top edge of its cell. */
-.mk-aisle::before {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 6px;
-  background: var(--sw);
-  transition: height var(--t-micro) var(--ease);
-}
-.mk-aisle--on::before {
-  height: 12px;
-}
-
-.mk-aisle--on {
-  background: color-mix(in oklab, var(--sw) 10%, var(--card));
-  border-color: color-mix(in oklab, var(--sw) 45%, transparent);
-}
-
-.mk-aisle__glyph {
-  width: 38px;
-  height: 38px;
-  color: var(--sw);
-  transition: scale var(--t-move) var(--spring), rotate var(--t-move) var(--spring);
-}
-.mk-aisle:hover .mk-aisle__glyph {
-  scale: 1.14;
-  rotate: -6deg;
-}
-
-.mk-aisle__name {
-  font-family: var(--display);
-  font-size: var(--t-lg);
-  font-weight: 700;
-  letter-spacing: var(--track-tight);
-}
-
-.mk-aisle__hi {
-  font-family: var(--data);
-  font-size: var(--t-sm);
-  color: var(--ink-faint);
-}
-
-.mk-aisle__count {
-  margin-top: auto;
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-/* ── the stock panel ─────────────────────────────────────────────────────── */
-
-.mk-detail__title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-  font-family: var(--display);
-  font-size: var(--t-h2);
-  font-weight: 800;
-  letter-spacing: var(--track-tight);
-}
-
-.mk-detail__hi {
-  font-family: var(--data);
-  font-size: var(--t-md);
-  font-weight: 400;
-  color: var(--accent-ink);
-}
-
-.mk-stock {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mk-stock__item {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  border-radius: var(--r-md);
-  background: var(--card);
-  border: 1px solid var(--hairline);
-  animation: mnd-pop-in var(--t-enter) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
-}
-
-.mk-stock__name {
-  font-size: var(--t-sm);
-  font-weight: 500;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.mk-stock__unit {
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  color: var(--ink-faint);
-}
-
-.mk-stock__price {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-sm);
-  font-weight: 700;
-  color: var(--accent-ink);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   WHY MANDI
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-claim__head {
-  font-family: var(--display);
-  font-size: var(--t-h3);
-  font-weight: 700;
-  letter-spacing: var(--track-tight);
-}
-
-.mk-claim__body {
-  color: var(--ink-soft);
-  font-size: var(--t-sm);
-  line-height: var(--lh-body);
-}
-
-.mk-claim__mark {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--r-sm);
-  background: var(--card);
-  border: 1px solid var(--hairline);
-  color: var(--accent-ink);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   VENDOR + RIDER
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-band {
-  justify-content: center;
-}
-
-.mk-band__cta {
-  margin-top: var(--s-2);
-}
-
-.mk-facts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mk-facts li {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-2);
-  font-size: var(--t-sm);
-  color: var(--ink-soft);
-}
-
-.mk-facts b {
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  font-weight: 700;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--accent-ink);
-  flex: 0 0 auto;
-}
-
-.mk-ledger {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  margin: 0;
-}
-
-.mk-ledger__row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-  font-size: var(--t-sm);
-}
-
-.mk-ledger__row dt {
-  color: var(--ink-soft);
-}
-
-.mk-ledger__row dd {
-  margin: 0;
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.mk-ledger__neg {
-  color: var(--crit);
-}
-
-.mk-ledger__total {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--s-3);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--hairline);
-}
-
-.mk-ledger__total span:first-child {
-  font-weight: 600;
-}
-
-.mk-ledger__big {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-h3);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--pop-2-ink);
-}
-
-.mk-note {
-  font-size: var(--t-xs);
-  color: var(--ink-faint);
-  line-height: var(--lh-body);
-}
-
-/* ── the rider offer card ────────────────────────────────────────────────── */
-
-.mk-offer__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.mk-offer__leg {
-  display: flex;
-  gap: var(--s-3);
-}
-
-.mk-offer__pin {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 6px;
-}
-
-.mk-offer__pin span {
-  width: 11px;
-  height: 11px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  flex: 0 0 auto;
-}
-
-.mk-offer__pin::after {
-  content: '';
-  flex: 1 1 auto;
-  width: 2px;
-  margin-top: 4px;
-  border-radius: var(--r-pill);
-  background: repeating-linear-gradient(
-    var(--hairline-strong) 0 4px,
-    transparent 4px 8px
-  );
-}
-
-.mk-offer__leg--drop .mk-offer__pin span {
-  background: var(--pop-2);
-}
-.mk-offer__leg--drop .mk-offer__pin::after {
-  display: none;
-}
-
-.mk-offer__where {
-  font-weight: 600;
-}
-
-.mk-offer__meta {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-3);
-  margin: 0;
-  padding: var(--s-3) 0 0;
-  border-top: 1px solid var(--hairline);
-}
-
-.mk-offer__meta dt {
-  font-size: var(--t-2xs);
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-.mk-offer__meta dd {
-  margin: 0;
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-lg);
-  font-weight: 700;
-}
-
-.mk-otp {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-}
-
-.mk-otp b {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 46px;
-  border-radius: var(--r-sm);
-  background: var(--ink);
-  color: var(--ground);
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: var(--t-lg);
-  font-weight: 700;
-  animation: mk-flip 5s var(--spring-soft) infinite;
-  animation-delay: calc(var(--d, 0) * 140ms);
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   CLOSER
-   The hue underlines each aisle word rather than colouring it: several of the
-   eight hues cannot clear 4.5:1 as text on the cream ground, and a rule
-   carries the identity without putting an unreadable word on the page.
-   ─────────────────────────────────────────────────────────────────────────── */
-
-.mk-closer {
-  align-items: center;
-  text-align: center;
-  gap: var(--s-5);
-  padding: clamp(40px, 6vw, 88px) var(--s-5);
-}
-
-.mk-closer__title {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--s-2) var(--s-4);
-  font-family: var(--display);
-  font-size: clamp(1.75rem, 1.1rem + 3.2vw, 3.6rem);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: var(--track-tight);
-}
-
-.mk-closer__word {
-  position: relative;
-  padding-bottom: 0.12em;
-  cursor: default;
-  transition: translate var(--t-micro) var(--spring);
-}
-.mk-closer__word::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 0.1em;
-  border-radius: var(--r-pill);
-  background: var(--sw);
-  transform-origin: 0 50%;
-  transition: scale var(--t-move) var(--spring);
-}
-.mk-closer__word:hover {
-  translate: 0 -5px;
-}
-.mk-closer__word:hover::after {
-  scale: 1.06 1.9;
-}
-
-.mk-closer__cta {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--s-3);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -1399,86 +1197,85 @@
    ─────────────────────────────────────────────────────────────────────────── */
 
 .mk-foot {
+  position: relative;
+  background: var(--void);
   border-top: 1px solid var(--hairline);
-  background: var(--card);
-  padding-block: var(--s-8) var(--s-5);
+  padding-block: var(--s-8) var(--s-6);
 }
-
 .mk-foot__top {
   display: grid;
-  gap: var(--s-7);
-  grid-template-columns: 1fr;
+  gap: var(--s-6);
 }
-@media (min-width: 900px) {
+@media (min-width: 780px) {
   .mk-foot__top {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--s-8);
   }
 }
-
 .mk-foot__brand {
+  max-width: 30rem;
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
 }
-
 .mk-foot__mark {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--s-2);
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
   font-family: var(--display);
-  font-size: 1.5rem;
   font-weight: 800;
-  letter-spacing: var(--track-tight);
+  font-size: 1.4rem;
 }
-
 .mk-foot__mark-hi {
-  font-family: var(--data);
-  font-size: var(--t-sm);
+  font-family: var(--body);
   font-weight: 400;
+  font-size: 0.6em;
   color: var(--ink-faint);
 }
-
 .mk-foot__pitch {
+  margin: 0;
   color: var(--ink-soft);
-  font-size: var(--t-sm);
   line-height: var(--lh-body);
-  max-width: 40ch;
 }
-
 .mk-foot__cols {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--s-5);
 }
-
-.mk-foot__col h2 {
-  font-family: var(--body);
-  font-size: var(--t-2xs);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin-bottom: var(--s-3);
+@media (min-width: 480px) {
+  .mk-foot__cols { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-
+.mk-foot__col h2 {
+  margin: 0 0 var(--s-2);
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+}
 .mk-foot__col ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
   margin: 0;
   padding: 0;
   list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
-
 .mk-foot__col a {
   color: var(--ink-soft);
-  font-size: var(--t-sm);
   text-decoration: none;
-  transition: color var(--t-micro) var(--ease);
+  font-size: var(--t-sm);
 }
 .mk-foot__col a:hover {
   color: var(--accent-ink);
+}
+
+.mk-rule {
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  margin: var(--s-6) 0;
 }
 
 .mk-foot__bottom {
@@ -1486,215 +1283,49 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-4);
-  margin-top: var(--s-6);
-  padding-top: var(--s-5);
-  border-top: 1px solid var(--hairline);
+  gap: var(--s-3);
 }
-
 .mk-foot__legal {
-  font-family: var(--data);
+  margin: 0;
   font-size: var(--t-xs);
   color: var(--ink-faint);
 }
-
 .mk-foot__strip {
   display: flex;
-  gap: 3px;
+  gap: 4px;
   margin: 0;
 }
-
 .mk-foot__strip span {
-  width: 26px;
-  height: 10px;
+  width: 18px;
+  height: 4px;
   border-radius: var(--r-pill);
   background: var(--sw);
-  transition: scale var(--t-micro) var(--spring);
-}
-.mk-foot__strip:hover span {
-  scale: 1 1.7;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   KEYFRAMES
-   ─────────────────────────────────────────────────────────────────────────── */
-
-@keyframes mk-word-rise {
-  from {
-    opacity: 0;
-    transform: translateY(0.5em) rotate(2.5deg);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes mk-underline {
-  from {
-    scale: 0 1;
-  }
-  to {
-    scale: 1 1;
-  }
-}
-
-@keyframes mk-rise-soft {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes mk-marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    /* The list is rendered twice, so -50% is one seamless lap. */
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-
-@keyframes mk-squash {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(0.93, 1.07);
-  }
-  70% {
-    transform: scale(1.03, 0.97);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes mk-drift {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-6%, 8%, 0) scale(1.18);
-  }
-}
-
-@keyframes mk-bob {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-2deg);
-  }
-  50% {
-    transform: translateY(-9px) rotate(2deg);
-  }
-}
-
-@keyframes mk-ping {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--pop-2) 60%, transparent);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 11px transparent;
-  }
-}
-
-@keyframes mk-flip {
-  0%,
-  86%,
-  100% {
-    transform: rotateX(0deg);
-  }
-  93% {
-    transform: rotateX(180deg);
-  }
-}
-
-@keyframes mk-menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes mk-drawer-in {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: none;
-  }
-}
-
-@keyframes mk-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   REDUCED MOTION
-   Reduced to an instant state change, never removed: a control that appears
-   to do nothing is worse than one that moves too much. The marquee stops and
-   becomes an ordinary strip that scrolls with the pointer instead.
+   REDUCED MOTION — one block, last. Feedback becomes an instant state
+   change, never disappears; the tilt is flattened outright.
    ─────────────────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .mk-word,
-  .mk-word--accent::after,
-  .mk-hero__cta,
-  .mk-orb,
-  .mk-feature__art svg,
-  .mk-live-dot,
-  .mk-otp b,
-  .mk-stock__item,
+  .mk-rig__glyph,
+  .mk-rig__glyph--float,
+  .mk-btn--pulse,
   .mk-menu__panel,
   .mk-drawer__panel,
-  .mk-drawer__scrim {
-    animation: none;
+  .mk-detail,
+  .mk-stock__item,
+  .mk-otp b {
+    animation: none !important;
   }
-
-  .mk-pick:active {
-    animation: none;
+  .mk-btn {
+    translate: 0 0;
   }
-
-  .mk-ticker__row {
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
+  .mk-btn:active {
+    scale: 1;
   }
-  .mk-ticker__track {
-    animation: none;
-  }
-
-  /* Feedback stays — it just arrives at once. */
-  .mk-btn,
-  .mk-pick,
-  .mk-closer__word,
-  .mk-aisle__glyph,
-  .mk-brand__mark,
-  .mk-icon-btn {
-    transition-duration: var(--t-instant);
-  }
-  .mk-pick:hover,
-  .mk-closer__word:hover {
+  .mk-pick:hover {
     transform: none;
-    translate: none;
-  }
-  .mk-icon-btn:hover,
-  .mk-brand:hover .mk-brand__mark,
-  .mk-aisle:hover .mk-aisle__glyph {
-    rotate: none;
   }
 }

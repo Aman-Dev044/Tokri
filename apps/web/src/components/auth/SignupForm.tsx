@@ -19,13 +19,14 @@
  * │ client that the backend then has to match.                               │
  * │                                                                          │
  * │ Everything else is real: validation, inline errors, show/hide password,  │
- * │ disabled + loading states, the GroceryLoader on submit.                  │
+ * │ disabled + loading states.                                               │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { Button, Checkbox, Input, useToast } from '@mandi/design-system';
+import { useToast } from '@mandi/design-system';
+import { AuthField, AuthCheckbox, AuthButton } from '@/components/auth/fields';
 
 interface Fields {
   name: string;
@@ -127,7 +128,7 @@ export function SignupForm() {
         </p>
       </header>
 
-      <Input
+      <AuthField
         label="Your name"
         name="name"
         autoComplete="name"
@@ -139,7 +140,7 @@ export function SignupForm() {
         required
       />
 
-      <Input
+      <AuthField
         label="Mobile number"
         name="phone"
         type="tel"
@@ -157,7 +158,7 @@ export function SignupForm() {
         required
       />
 
-      <Input
+      <AuthField
         label="Email"
         name="email"
         type="email"
@@ -174,7 +175,7 @@ export function SignupForm() {
       />
 
       <div className="authform__pw">
-        <Input
+        <AuthField
           label="Password"
           name="password"
           type={showPassword ? 'text' : 'password'}
@@ -209,7 +210,7 @@ export function SignupForm() {
         ) : null}
       </div>
 
-      <Checkbox
+      <AuthCheckbox
         label={
           <>
             I agree to the <Link href="/#top">terms</Link> and the{' '}
@@ -223,15 +224,9 @@ export function SignupForm() {
         disabled={submitting}
       />
 
-      <Button
-        type="submit"
-        size="lg"
-        block
-        loading={submitting}
-        loadingLabel="Creating your account"
-      >
+      <AuthButton loading={submitting} loadingLabel="Creating your account">
         Create account
-      </Button>
+      </AuthButton>
 
       <p className="authform__foot">
         Already have an account? <Link href="/login">Sign in</Link>

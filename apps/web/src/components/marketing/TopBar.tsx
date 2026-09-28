@@ -34,6 +34,7 @@ import {
 } from 'react';
 import { AISLES, useAisle, useTheme } from '@mandi/design-system';
 import type { AisleKey } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
 
 const NAV: ReadonlyArray<{ label: string; href: string }> = [
   { label: 'How it works', href: '/#how-it-works' },
@@ -415,12 +416,12 @@ export function TopBar() {
       />
 
       <div className="mk-top__inner mk-shell">
-        <Link href="/#top" className="mk-brand" aria-label="Mandi, home">
+        <Link href="/#top" className="mk-brand" aria-label={`${APP_NAME}, home`}>
           <span className="mk-brand__mark">
             <BasketMark />
           </span>
           <span className="mk-brand__word">
-            <b>Mandi</b>
+            <b>{APP_NAME}</b>
             <span aria-hidden="true">मंडी</span>
           </span>
         </Link>

@@ -38,6 +38,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { APP_NAME } from '@/config/brand';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import type {
   Paged,
@@ -313,7 +314,7 @@ export function PartnersView() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title="Add a rider"
-        subtitle="This creates a delivery login for the Mandi rider app"
+        subtitle={`This creates a delivery login for the ${APP_NAME} rider app`}
         width="min(520px, 96vw)"
         actions={
           <>

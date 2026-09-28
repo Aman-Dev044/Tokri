@@ -48,6 +48,7 @@ import { RiderProvider, useRider } from './RiderProvider';
 import { useRiderSession } from '@/lib/delivery/session';
 import { money } from '@/lib/delivery/format';
 import { IconShield, IconUser } from './icons';
+import { APP_NAME } from '@/config/brand';
 
 /* ------------------------------------------------------------------ */
 /* Dock exclusivity                                                    */
@@ -150,7 +151,7 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
       <div className={styles.headerInner}>
         <div className={styles.headerTop}>
           <Link href="/delivery" className={styles.brand}>
-            Mandi <span className={styles.brandRole}>RIDER</span>
+            {APP_NAME} <span className={styles.brandRole}>RIDER</span>
           </Link>
           <div className={styles.headerActions}>
             <button
@@ -298,7 +299,7 @@ export function RiderShell({ children }: { children: ReactNode }) {
             <IconShield size={32} />
           </span>
           <h1 className={styles.h1}>Checking your sign-in</h1>
-          <p className={styles.lede}>One moment — reconnecting you to Mandi.</p>
+          <p className={styles.lede}>One moment — reconnecting you to {APP_NAME}.</p>
         </div>
       </div>
     );

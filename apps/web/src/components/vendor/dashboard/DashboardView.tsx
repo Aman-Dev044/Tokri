@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The morning screen — the panel's one Bento Pop surface besides earnings.
+ * The morning screen — a KPI-tile surface, alongside earnings.
  *
  * A shop owner opens this once, reads it in about four seconds, and then lives
  * in the orders board for the rest of the day. So it answers exactly five
@@ -32,7 +32,6 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { BentoCard, BentoGrid, BentoHead } from '@mandi/design-system';
 import { useFreshness, useVendorQuery } from '@/hooks';
 import { todayWindow } from '@/lib/vendor/range';
 import type { OrderStatus, Paged, VendorDashboard, VendorOrder } from '@/lib/vendor/types';
@@ -41,6 +40,7 @@ import { formatCount, formatDate, formatPaiseCompact, humanise } from '../format
 import { IconChevronRight, IconInbox } from '../icons';
 import { VenPage, VenSection } from '../Page';
 import {
+  ChartPanel,
   EmptyState,
   EndpointError,
   FreshLine,
@@ -193,7 +193,7 @@ export function DashboardView() {
             <SkelStat index={5} />
           </div>
         ) : (
-          <BentoGrid dense>
+          <div className="ven-kpigrid">
             <KpiCell
               label="Revenue today"
               value={data?.revenueToday.gross ?? 0}
@@ -251,17 +251,13 @@ export function DashboardView() {
                     : 'no ratings yet'
               }
             />
-          </BentoGrid>
+          </div>
         )}
       </VenSection>
 
       {/* ---------------------------------------------- charts ---- */}
-      <BentoGrid dense>
-        <BentoCard span="half" index={0}>
-          <BentoHead
-            title="Last 7 days"
-            eyebrow="Revenue"
-          />
+      <div className="ven-chartgrid">
+        <ChartPanel title="Last 7 days" eyebrow="Revenue">
           <p className="ven-dim">Revenue per day, in rupees. The shape matters more than any single bar.</p>
           {loading ? (
             <SkelChart />
@@ -273,10 +269,9 @@ export function DashboardView() {
               tone="pop-2"
             />
           )}
-        </BentoCard>
+        </ChartPanel>
 
-        <BentoCard span="half" index={1}>
-          <BentoHead title="Today by status" eyebrow="Breakdown" />
+        <ChartPanel title="Today by status" eyebrow="Breakdown">
           <p className="ven-dim">Where today&rsquo;s orders currently sit.</p>
           {loading ? (
             <SkelChart />
@@ -290,8 +285,8 @@ export function DashboardView() {
           ) : (
             <RankedBars data={statusRows} format={formatCount} label="Today's orders grouped by status" />
           )}
-        </BentoCard>
-      </BentoGrid>
+        </ChartPanel>
+      </div>
 
       {/* ---------------------------------------------- recent ---- */}
       <VenSection

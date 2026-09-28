@@ -13,6 +13,7 @@
 
 import styles from './delivery.module.css';
 import { IconSignal, IconShield } from './icons';
+import { APP_NAME } from '@/config/brand';
 
 export function FixtureBanner({
   endpoints,
@@ -53,8 +54,8 @@ export function CachedBanner({ onRetry }: { onRetry: () => void }) {
       <IconSignal size={22} />
       <div>
         <strong className={styles.bannerTitle}>Showing your last saved job</strong>
-        We could not reach Mandi, so this is the copy saved on this phone. It may be out
-        of date.
+        We could not reach {APP_NAME}, so this is the copy saved on this phone. It may be
+        out of date.
         <button type="button" className={styles.ghost} onClick={onRetry} style={{ marginTop: '0.5rem' }}>
           Retry
         </button>

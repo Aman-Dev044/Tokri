@@ -21,8 +21,12 @@ export function AisleRail() {
   const pathname = usePathname();
 
   return (
-    <nav className="shop-rail scroll-x" aria-label="Aisles">
-      <ul className="shop-rail__list">
+    <nav aria-label="Aisles">
+      {/* `.tkr-rail` (design system) is the snap-scrolling strip itself —
+          overflow, scroll-snap, the hidden scrollbar and the negative
+          margins that let it bleed to the screen edge. Only the tile look
+          (the swatch, the active/aisle colouring) belongs to the shop. */}
+      <ul className="tkr-rail">
         {AISLES.map((entry) => {
           const href = `/aisle/${entry.key}`;
           const active = aisle === entry.key || pathname === href;
@@ -31,7 +35,7 @@ export function AisleRail() {
               <Link
                 href={href}
                 className="shop-rail__item"
-                data-active={active ? 'true' : undefined}
+                aria-current={active ? 'page' : undefined}
                 // The preview is a hover affordance, not information — the
                 // label and the route carry the meaning on their own.
                 onMouseEnter={() => {
@@ -42,7 +46,6 @@ export function AisleRail() {
                   preview(entry.key);
                 }}
                 onBlur={clearPreview}
-                aria-current={active ? 'page' : undefined}
               >
                 <span
                   className="shop-rail__swatch"

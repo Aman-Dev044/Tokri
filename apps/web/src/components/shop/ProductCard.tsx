@@ -27,7 +27,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRef } from 'react';
-import { formatPaise, type AisleKey } from '@mandi/design-system';
+import { Depth, formatPaise, Tilt3D, type AisleKey } from '@mandi/design-system';
 import { useBasket, type BasketStore } from './BasketProvider';
 import { QuantityStepper } from './QuantityStepper';
 import type { Product } from '@/lib/shop/types';
@@ -115,19 +115,38 @@ export function ProductCard({ product, store, aisleKey, priority = false }: Prod
   // against a catalogue row where the two prices are equal.
   const discount = product.mrp > product.price ? product.discountPct : null;
 
+  /* The card's own aisle hue, read straight into inline custom properties —
+     never through a `data-*` selector, since `Tilt3D`'s props are strictly
+     typed and take no arbitrary attributes. Falls back to the page's current
+     `--aisle` (the mint default, or whatever aisle you are standing in). */
+  const hue = aisleKey ?? product.aisleKey;
+  const hueVar = hue ? `var(--aisle-${hue})` : 'var(--aisle)';
+  const hueInkVar = hue ? `var(--aisle-${hue}-ink)` : 'var(--aisle-ink)';
+
   return (
-    <article
-      className="shop-card"
-      data-card-aisle={aisleKey ?? product.aisleKey ?? undefined}
-      data-out={product.inStock ? undefined : 'true'}
+    <Tilt3D
+      as="article"
+      className={['shop-card', product.inStock ? '' : 'shop-card--out'].filter(Boolean).join(' ')}
+      style={{ ['--card-hue' as string]: hueVar, ['--card-hue-ink' as string]: hueInkVar }}
+      max={7}
+      lift={12}
+      scale={1.018}
     >
       <Link href={`/product/${encodeURIComponent(product.id)}`} className="shop-card__media">
-        <ProductMedia
-          product={product}
-          sizes="(min-width: 1100px) 260px, (min-width: 700px) 30vw, 46vw"
-          priority={priority}
-        />
-        {discount !== null ? <span className="shop-card__save">−{discount}%</span> : null}
+        {/* PILLAR 5 — the photo sits nearer than the card face, so it
+            visibly parallaxes as the card tilts toward the cursor. */}
+        <Depth depth={3} className="shop-card__media-depth">
+          <ProductMedia
+            product={product}
+            sizes="(min-width: 1100px) 260px, (min-width: 700px) 30vw, 46vw"
+            priority={priority}
+          />
+        </Depth>
+        {discount !== null ? (
+          <Depth depth={4} className="shop-card__save">
+            −{discount}%
+          </Depth>
+        ) : null}
         {!product.inStock ? <span className="shop-card__out">Out of stock</span> : null}
       </Link>
 
@@ -178,7 +197,7 @@ export function ProductCard({ product, store, aisleKey, priority = false }: Prod
           )}
         </div>
       </div>
-    </article>
+    </Tilt3D>
   );
 }
 

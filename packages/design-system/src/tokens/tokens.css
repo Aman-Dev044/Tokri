@@ -523,3 +523,95 @@ img, svg, video { max-width: 100%; display: block; }
   .tkr-tilt__layer--far,
   .tkr-tilt__layer--near { transform: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   COMPATIBILITY ALIASES
+
+   The primitives that shipped with earlier palettes — Button, Input,
+   Checkbox, Sheet, Toast, GroceryLoader, JourneyRibbon, the grain plate —
+   are written against the token vocabulary of those systems. Renaming the
+   vocabulary without providing these left every one of them reading
+   undefined custom properties, which CSS resolves to nothing: a button
+   with no background, a field with no border, a loader with no size.
+
+   Each alias points at the Neon Orchard token that carries the same
+   MEANING, so they swap with the theme automatically and there is exactly
+   one definition of each real value.
+
+   These are for existing components. New code uses the real names.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* surfaces */
+  --paper: var(--surface);
+  --card: var(--surface);
+  --ground-sunk: var(--void);
+  --hairline-strong: var(--hairline-bright);
+
+  /* text */
+  --muted: var(--ink-faint);
+  --ink-dim: var(--ink-soft);
+
+  /* focus */
+  --focus: var(--accent);
+  --focus-halo: var(--glow-sm);
+
+  /* the old fixed type scale */
+  --fs-micro: var(--t-2xs);
+  --fs-small: var(--t-sm);
+  --fs-body: var(--t-md);
+  --fs-lead: var(--t-lg);
+  --fs-h3: var(--t-h3);
+  --fs-h2: var(--t-h2);
+  --fs-h1: var(--t-h1);
+
+  /* spacing + shape */
+  --gutter: var(--s-4);
+  --r-soft: var(--r-md);
+  --r-panel: var(--r-lg);
+
+  /* aisle derivatives — these were separate tokens; they are now derived
+     from the live --aisle, so they retint with it instead of going stale */
+  --aisle-on: var(--on-accent);
+  --aisle-wash: color-mix(in oklab, var(--aisle) 12%, var(--surface));
+  --aisle-wash-strong: color-mix(in oklab, var(--aisle) 26%, var(--surface));
+  --aisle-edge: color-mix(in oklab, var(--aisle) 45%, transparent);
+  --aisle-glow: 0 0 28px color-mix(in oklab, var(--aisle) 35%, transparent);
+  --lift-aisle: var(--lift-2), 0 0 24px color-mix(in oklab, var(--aisle) 22%, transparent);
+
+  /* the previous palette's four pops, mapped onto the orchard by role */
+  --pop-1: var(--coral);
+  --pop-1-ink: var(--coral-ink);
+  --pop-1-wash: var(--coral-wash);
+  --pop-2: var(--mint);
+  --pop-2-ink: var(--mint-ink);
+  --pop-2-wash: var(--mint-wash);
+  --pop-3: var(--violet);
+  --pop-3-ink: var(--violet-ink);
+  --pop-3-wash: var(--violet-wash);
+  --pop-4: var(--gold);
+  --pop-4-ink: var(--gold-ink);
+  --pop-4-wash: var(--gold-wash);
+
+  /* loader + skeleton knobs the components set per-instance */
+  --mnd-loader-size: 72px;
+  --mnd-skel-i: 0;
+
+  /* The grain plate. Neon Orchard is a lit, glossy system rather than a
+     printed one, so the grain is dialled almost out rather than removed —
+     the element still exists in the root layout. */
+  /* stacking order — these were literals scattered through the old CSS,
+     which is how a toast ends up behind a sheet. One ladder, one place. */
+  --z-grain: 1;
+  --z-sheet: 70;
+  --z-loader: 80;
+  --z-toast: 90;
+
+  /* remaining one-offs */
+  --stone: var(--ink-faint);
+  --sunken: var(--void);
+  --surface-2: var(--raised);
+  --r-nub: var(--r-xs);
+
+  --grain-opacity: 0.025;
+  --grain-blend: overlay;
+}

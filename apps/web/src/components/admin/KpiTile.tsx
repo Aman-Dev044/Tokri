@@ -1,5 +1,6 @@
 'use client';
 
+import { Tilt3D } from '@mandi/design-system';
 import { useCountUp } from '@/hooks';
 import { formatCount, formatPaise, formatPct } from '@/lib/admin/format';
 import { IconArrowUp } from './icons';
@@ -105,46 +106,54 @@ export function KpiTile({
           : 'down';
 
   return (
-    <article
-      className={['adm-tile', className].filter(Boolean).join(' ')}
-      data-tone={tone}
-      data-fixture={isFixture ? 'true' : undefined}
-      style={{ ['--adm-i' as string]: String(index) }}
-    >
-      <p className="adm-tile__label">{label}</p>
+    // Tilt3D wraps the tile rather than replacing it: the wrapper owns the
+    // pointer-tracked perspective/tilt, the <article> underneath keeps every
+    // data-attribute and class the rest of the stylesheet already selects
+    // on, untouched. Depth here is hierarchy, not spectacle — a small lift
+    // and a few degrees of tilt, never enough to make the number hard to
+    // read while it is still counting up.
+    <Tilt3D as="div" className="adm-tile-tilt" max={6} lift={10} glow={tone === 'crit'}>
+      <article
+        className={['adm-tile', className].filter(Boolean).join(' ')}
+        data-tone={tone}
+        data-fixture={isFixture ? 'true' : undefined}
+        style={{ ['--adm-i' as string]: String(index) }}
+      >
+        <p className="adm-tile__label">{label}</p>
 
-      <p className="adm-tile__value">
-        {/* The ref'd span holds exactly the animated string; the unit sits
-            outside it so the ramp never rewrites the suffix. */}
-        <span ref={countRef}>{format(value)}</span>
-        {unit && !isMoney ? <span className="adm-tile__unit">{unit}</span> : null}
-      </p>
+        <p className="adm-tile__value">
+          {/* The ref'd span holds exactly the animated string; the unit sits
+              outside it so the ramp never rewrites the suffix. */}
+          <span ref={countRef}>{format(value)}</span>
+          {unit && !isMoney ? <span className="adm-tile__unit">{unit}</span> : null}
+        </p>
 
-      <div className="adm-tile__foot">
-        {delta === undefined ? (
-          <span />
-        ) : (
-          <span className="adm-delta" data-dir={deltaDirection}>
-            {deltaDirection === 'flat' ? null : (
-              <IconArrowUp
-                style={{
-                  transform: delta < 0 ? 'rotate(180deg)' : undefined,
-                }}
-              />
-            )}
-            {formatPct(delta, true)}
-            {deltaLabel ? <span className="adm-delta__label">{deltaLabel}</span> : null}
-          </span>
-        )}
+        <div className="adm-tile__foot">
+          {delta === undefined ? (
+            <span />
+          ) : (
+            <span className="adm-delta" data-dir={deltaDirection}>
+              {deltaDirection === 'flat' ? null : (
+                <IconArrowUp
+                  style={{
+                    transform: delta < 0 ? 'rotate(180deg)' : undefined,
+                  }}
+                />
+              )}
+              {formatPct(delta, true)}
+              {deltaLabel ? <span className="adm-delta__label">{deltaLabel}</span> : null}
+            </span>
+          )}
 
-        {spark && spark.length > 1 ? (
-          <Sparkline
-            data={spark}
-            tone={SPARK_TONE[tone]}
-            label={`${label} trend, ${spark.length} points`}
-          />
-        ) : null}
-      </div>
-    </article>
+          {spark && spark.length > 1 ? (
+            <Sparkline
+              data={spark}
+              tone={SPARK_TONE[tone]}
+              label={`${label} trend, ${spark.length} points`}
+            />
+          ) : null}
+        </div>
+      </article>
+    </Tilt3D>
   );
 }

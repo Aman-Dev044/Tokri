@@ -1,8 +1,8 @@
 /* =============================================================================
-   MANDI RIDER — "BENTO POP" on a handlebar.
+   TOKRI RIDER — "NEON ORCHARD" on a handlebar.
 
-   This is NOT the shopping app, and Bento Pop's job here is warmth and
-   clarity, not decoration. The rider rules override style every time:
+   This is NOT the shopping app, and Neon Orchard's job here is legibility and
+   focus, not spectacle. The rider rules override style every time:
 
      · ONE action per screen. Never two primary buttons competing.
      · 64px minimum touch target; the dock primary is 76px. Glove-friendly.
@@ -12,63 +12,68 @@
      · The dock is exclusive: nav OR the one action, never both.
 
    ── TOKENS ONLY ─────────────────────────────────────────────────────────────
-   There is not one raw hex value in this file. Everything resolves through
-   `@mandi/design-system/tokens.css`. Where a colour needs an alpha or a blend
-   it is `color-mix(in oklab, <token> N%, …)`, never a hand-typed rgba.
+   Every value here resolves through `@mandi/design-system/tokens.css`. Where a
+   colour needs an alpha or a blend it is `color-mix(in oklab, <token> N%, …)`,
+   never a hand-typed rgba or hex.
 
    ── THE ROLE PALETTE ────────────────────────────────────────────────────────
-   Four pops, each given ONE job on this surface so a colour is an instruction
+   Five roles, each given ONE job on this surface so a colour is an instruction
    rather than a mood:
 
-     --go    leaf     advance, confirm, online          (pop-2)
-     --hot   tangerine the offer, the countdown, urgency (pop-1)
-     --way   indigo   navigation, pickup, links          (pop-3)
-     --cash  saffron  money the rider is holding         (pop-4)
-     --stop  crit     refuse, lock, sign out             (semantic)
+     --go    mint     advance, confirm, online              (primary)
+     --hot   coral     the offer, the countdown, urgency     (secondary)
+     --way   violet    navigation, pickup, links             (tertiary)
+     --cash  gold      money the rider is holding            (highlight)
+     --stop  crit      refuse, lock, sign out                (semantic)
 
-   FILLS vs TEXT. Reaching 4.5:1 on both a cream ground and a near-black one
-   with a single value is geometrically impossible, which is why the token file
-   splits `--pop-N` from `--pop-N-ink`. So every filled control here takes the
-   INK value in light (dark fill, white label) and the BASE value in dark
-   (bright fill, dark label) — `--on-accent` already flips for exactly this.
-   That is the whole reason the `--go` / `--hot` / `--way` locals exist.
+   FILLS vs TEXT. `--X-ink` is the token tuned to clear 4.5:1 against a wash or
+   the ground, so every label sitting on a tinted chip reads it. The base `--X`
+   is for FILLS — a solid button, a dot, a bar. A solid fill needs its own
+   contrasting label colour, which is `--X-on` below: it borrows
+   `--on-accent`, the one token this system already built for "text on top of
+   a bright, saturated surface" — a mint, coral, violet, gold or crit fill all
+   sit in the same lightness band in both themes, so one ink serves all five
+   rather than inventing four more tokens the file does not have.
 
-   ── DARK IS THE REAL USE CASE ───────────────────────────────────────────────
-   Riders work evenings. Dark here is not a courtesy mode. The ground drops to
-   near-black so the screen does not blind at 10pm, every pop is re-taken from
-   the lifted dark values, and depth stops coming from shadow (which does
-   nothing on black) and starts coming from the surface stepping lighter plus a
-   hairline. Both themes are declared in full; nothing is defined for the first
-   time inside a media query.
+   ── DARK IS THE DEFAULT, NOT A COURTESY MODE ────────────────────────────────
+   Riders work evenings, and Neon Orchard's whole depth system — shadow, glow,
+   the surface stepping lighter as it lifts — reads from luminance difference,
+   which a near-black ground gives it. `--mint`/`--coral`/`--violet`/`--gold`
+   already swap value between the dark default and the light override inside
+   tokens.css, so nothing here has to re-derive them per theme; the ONE thing
+   that does need a per-theme split is the GLOW, because a glow reads as
+   emission on ink and as a faint smudge on paper — see the glow block below,
+   which mirrors the same split tokens.css makes for `--glow`/`--glow-lg`.
    ============================================================================= */
 
-/* ══ ROLE PALETTE — light, and the default ═════════════════════════════════ */
+/* ══ ROLE PALETTE — dark, and the default ══════════════════════════════════ */
 
 .shell,
 .gate {
-  --go: var(--pop-2-ink);
+  --go: var(--mint);
+  --go-ink: var(--mint-ink);
+  --go-wash: var(--mint-wash);
   --go-on: var(--on-accent);
-  --go-soft: var(--pop-2-wash);
-  --go-text: var(--pop-2-ink);
 
-  --hot: var(--pop-1-ink);
+  --hot: var(--coral);
+  --hot-ink: var(--coral-ink);
+  --hot-wash: var(--coral-wash);
   --hot-on: var(--on-accent);
-  --hot-soft: var(--pop-1-wash);
-  --hot-text: var(--pop-1-ink);
 
-  --way: var(--pop-3-ink);
+  --way: var(--violet);
+  --way-ink: var(--violet-ink);
+  --way-wash: var(--violet-wash);
   --way-on: var(--on-accent);
-  --way-soft: var(--pop-3-wash);
-  --way-text: var(--pop-3-ink);
 
-  --cash-soft: var(--pop-4-wash);
-  --cash-edge: var(--pop-4);
-  --cash-text: var(--pop-4-ink);
+  --cash: var(--gold);
+  --cash-ink: var(--gold-ink);
+  --cash-wash: var(--gold-wash);
+  --cash-on: var(--on-accent);
 
   --stop: var(--crit);
+  --stop-ink: var(--crit-ink);
+  --stop-wash: var(--crit-wash);
   --stop-on: var(--on-accent);
-  --stop-soft: var(--crit-wash);
-  --stop-text: var(--crit);
 
   /* Every touch target on this surface, in one place. */
   --tap: 64px;
@@ -76,47 +81,59 @@
   /* What `main` reserves so a fixed dock never covers the last control. */
   --dock-h: 112px;
 
-  --edge: color-mix(in oklab, var(--ink) 14%, var(--hairline));
-  --sheet-lift: 0 -1px 0 var(--hairline-strong),
-    0 -18px 36px -24px color-mix(in oklab, var(--ink) 55%, transparent);
+  --sheet-lift: 0 -1px 0 var(--hairline-bright),
+    0 -18px 40px -20px color-mix(in oklab, var(--void) 85%, transparent);
+
+  /* Glow, dark default: a real blurred emission — this is the one place on
+     the whole product where "the screen is lit from inside" is the correct
+     reading, because the rider IS looking at a lit screen in the dark. */
+  --go-glow-sm: 0 0 16px color-mix(in oklab, var(--go) 40%, transparent);
+  --go-glow: 0 0 32px color-mix(in oklab, var(--go) 48%, transparent);
+  --hot-glow-sm: 0 0 16px color-mix(in oklab, var(--hot) 38%, transparent);
+  --hot-glow: 0 0 34px color-mix(in oklab, var(--hot) 46%, transparent);
+  --stop-glow: 0 0 28px color-mix(in oklab, var(--stop) 42%, transparent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme='light'])) .shell,
-  :global(:root:not([data-theme='light'])) .gate {
-    /* Values only. Every one of these tokens already exists above. */
-    --go: var(--pop-2);
-    --hot: var(--pop-1);
-    --way: var(--pop-3);
-    --stop: var(--crit);
-
-    --edge: color-mix(in oklab, var(--ink) 22%, var(--hairline));
-    --sheet-lift: 0 -1px 0 var(--hairline-strong),
-      0 -18px 36px -18px color-mix(in oklab, var(--ground-sunk) 92%, transparent);
+/* Glow, light: a blur vanishes on paper, so it becomes a crisp coloured
+   RING instead — same trick `--glow`/`--glow-lg` play in tokens.css. Values
+   only; every token above already exists. */
+@media (prefers-color-scheme: light) {
+  :global(:root:not([data-theme='dark'])) .shell,
+  :global(:root:not([data-theme='dark'])) .gate {
+    --go-glow-sm: 0 0 0 1px color-mix(in oklab, var(--go) 32%, transparent);
+    --go-glow: 0 0 0 2px color-mix(in oklab, var(--go) 32%, transparent);
+    --hot-glow-sm: 0 0 0 1px color-mix(in oklab, var(--hot) 32%, transparent);
+    --hot-glow: 0 0 0 2px color-mix(in oklab, var(--hot) 32%, transparent);
+    --stop-glow: 0 0 0 2px color-mix(in oklab, var(--stop) 32%, transparent);
   }
 }
-
-:global(:root[data-theme='dark']) .shell,
-:global(:root[data-theme='dark']) .gate {
-  --go: var(--pop-2);
-  --hot: var(--pop-1);
-  --way: var(--pop-3);
-  --stop: var(--crit);
-
-  --edge: color-mix(in oklab, var(--ink) 22%, var(--hairline));
-  --sheet-lift: 0 -1px 0 var(--hairline-strong),
-    0 -18px 36px -18px color-mix(in oklab, var(--ground-sunk) 92%, transparent);
+:global(:root[data-theme='light']) .shell,
+:global(:root[data-theme='light']) .gate {
+  --go-glow-sm: 0 0 0 1px color-mix(in oklab, var(--go) 32%, transparent);
+  --go-glow: 0 0 0 2px color-mix(in oklab, var(--go) 32%, transparent);
+  --hot-glow-sm: 0 0 0 1px color-mix(in oklab, var(--hot) 32%, transparent);
+  --hot-glow: 0 0 0 2px color-mix(in oklab, var(--hot) 32%, transparent);
+  --stop-glow: 0 0 0 2px color-mix(in oklab, var(--stop) 32%, transparent);
 }
 
 /* ══ MOTION ════════════════════════════════════════════════════════════════
-   Restrained and functional. A rider is not browsing: nothing on a job screen
-   moves unless it is telling them something. Every rule below is neutralised
-   by the reduced-motion block at the foot of this file. */
+   Restrained and functional, and deliberately flat: NO perspective, NO
+   rotateX/Y, NO translateZ anywhere in this file. Neon Orchard's tilt engine
+   is right for a product grid a shopper is browsing with two idle thumbs; a
+   rider is one-handed, on a handlebar, sometimes moving, and parallax that
+   shifts under a tap is a hazard, not a delight. Depth here comes ONLY from
+   the surface steps (void → ground → surface → raised) and from shadow/glow —
+   elevation and focus, never motion that tracks a pointer.
+
+   Nothing on a job screen repeats except the urgent countdown pulse, which is
+   the one animation on this surface that is genuinely telling the rider
+   something time-critical. Every rule below is neutralised by the
+   reduced-motion block at the foot of this file. */
 
 @keyframes rdPop {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(14px) scale(0.97);
   }
   to {
     opacity: 1;
@@ -127,7 +144,7 @@
 @keyframes rdSlideForward {
   from {
     opacity: 0;
-    transform: translateX(22px);
+    transform: translateX(24px);
   }
   to {
     opacity: 1;
@@ -210,8 +227,8 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: color-mix(in oklab, var(--ground) 92%, transparent);
-  backdrop-filter: blur(14px);
+  background: color-mix(in oklab, var(--ground) 90%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
   border-bottom: 1px solid var(--hairline);
   padding: max(var(--s-2), env(safe-area-inset-top, 0px)) var(--s-4) var(--s-3);
 }
@@ -273,8 +290,8 @@
   min-height: 44px;
   padding: 0 var(--s-3);
   border-radius: var(--r-pill);
-  border: 1px solid var(--hairline-strong);
-  background: var(--card);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink-soft);
   font-family: var(--body);
   font-size: var(--t-2xs);
@@ -282,7 +299,7 @@
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform var(--t-micro) var(--spring-soft);
+  transition: transform var(--t-micro) var(--spring-soft), box-shadow var(--t-micro) var(--ease);
 }
 
 .conn:active {
@@ -299,8 +316,9 @@
 
 .connLive {
   border-color: color-mix(in oklab, var(--go) 45%, transparent);
-  background: var(--go-soft);
-  color: var(--go-text);
+  background: var(--go-wash);
+  color: var(--go-ink);
+  box-shadow: var(--go-glow-sm);
 }
 .connLive .connDot {
   background: var(--go);
@@ -309,7 +327,7 @@
 .connRetry {
   border-color: color-mix(in oklab, var(--warn) 45%, transparent);
   background: var(--warn-wash);
-  color: var(--warn);
+  color: var(--warn-ink);
 }
 .connRetry .connDot {
   background: var(--warn);
@@ -317,8 +335,8 @@
 
 .connFailed {
   border-color: color-mix(in oklab, var(--stop) 45%, transparent);
-  background: var(--stop-soft);
-  color: var(--stop-text);
+  background: var(--stop-wash);
+  color: var(--stop-ink);
 }
 .connFailed .connDot {
   background: var(--stop);
@@ -330,8 +348,8 @@
   width: 48px;
   height: 48px;
   border-radius: var(--r-md);
-  border: 1px solid var(--hairline-strong);
-  background: var(--card);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   flex: 0 0 auto;
@@ -352,15 +370,17 @@
   min-height: 72px;
   padding: 0 var(--s-4);
   border-radius: var(--r-lg);
-  border: 2px solid var(--hairline-strong);
-  background: var(--card);
+  border: 2px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  box-shadow: var(--lift-1), var(--rim);
   transition:
     background var(--t-move) var(--ease),
     border-color var(--t-move) var(--ease),
+    box-shadow var(--t-move) var(--ease),
     transform var(--t-micro) var(--spring-soft);
 }
 
@@ -377,6 +397,7 @@
   background: var(--go);
   border-color: var(--go);
   color: var(--go-on);
+  box-shadow: var(--lift-2), var(--go-glow-sm);
   animation: rdPulseOnce 700ms var(--ease-out) 1;
 }
 
@@ -474,9 +495,10 @@
   right: 0;
   bottom: 0;
   z-index: 30;
-  background: color-mix(in oklab, var(--ground) 94%, transparent);
-  backdrop-filter: blur(16px);
+  background: color-mix(in oklab, var(--raised) 94%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
   box-shadow: var(--sheet-lift);
+  border-top: 1px solid var(--hairline-bright);
   padding: var(--s-3) var(--s-4)
     calc(var(--s-3) + env(safe-area-inset-bottom, 0px));
 }
@@ -520,8 +542,8 @@
 }
 
 .navItemActive {
-  background: var(--way-soft);
-  color: var(--way-text);
+  background: var(--way-wash);
+  color: var(--way-ink);
 }
 
 .navBadge {
@@ -541,6 +563,9 @@
 
 /* ══ BUTTONS ═══════════════════════════════════════════════════════════════ */
 
+/* The one primary action always glows — the signature Neon Orchard tell for
+   "this is the thing to press", and glow is the one 3D cue that survives
+   direct sunlight, unlike a shadow. */
 .primary {
   display: flex;
   align-items: center;
@@ -560,8 +585,10 @@
   text-align: center;
   text-decoration: none;
   cursor: pointer;
+  box-shadow: var(--lift-2), var(--go-glow);
   transition:
     transform var(--t-micro) var(--spring),
+    box-shadow var(--t-micro) var(--ease),
     filter var(--t-micro) var(--ease);
 }
 
@@ -570,14 +597,16 @@
 }
 
 .primary:disabled {
-  background: var(--ground-sunk);
+  background: var(--void);
   color: var(--ink-faint);
+  box-shadow: none;
   cursor: not-allowed;
 }
 
 .primaryCrit {
   background: var(--stop);
   color: var(--stop-on);
+  box-shadow: var(--lift-2), var(--stop-glow);
 }
 
 .decline {
@@ -588,14 +617,15 @@
   min-height: var(--tap-primary);
   padding: 0 var(--s-3);
   border-radius: var(--r-lg);
-  border: 2px solid var(--hairline-strong);
-  background: var(--card);
+  border: 2px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   font-family: var(--display);
   font-size: var(--t-md);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--t-micro) var(--spring);
+  box-shadow: var(--lift-1), var(--rim);
+  transition: transform var(--t-micro) var(--spring), box-shadow var(--t-micro) var(--ease);
 }
 
 .decline:active {
@@ -625,14 +655,14 @@
   width: 100%;
   padding: 0 var(--s-4);
   border-radius: var(--r-md);
-  border: 2px solid var(--hairline-strong);
+  border: 2px solid var(--hairline-bright);
   background: transparent;
   color: var(--ink-soft);
   font-family: var(--body);
   font-size: var(--t-md);
   font-weight: 600;
   cursor: pointer;
-  transition: transform var(--t-micro) var(--spring-soft);
+  transition: transform var(--t-micro) var(--spring-soft), border-color var(--t-micro) var(--ease);
 }
 
 .ghost:active {
@@ -661,9 +691,9 @@
   min-height: var(--tap);
   padding: 0 var(--s-4);
   border-radius: var(--r-md);
-  border: 2px solid color-mix(in oklab, var(--way) 40%, transparent);
-  background: var(--way-soft);
-  color: var(--way-text);
+  border: 2px solid color-mix(in oklab, var(--way) 42%, transparent);
+  background: var(--way-wash);
+  color: var(--way-ink);
   font-family: var(--body);
   font-size: var(--t-md);
   font-weight: 700;
@@ -688,9 +718,9 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-1), var(--rim);
   min-width: 0;
   animation: rdPop var(--t-enter) var(--spring-soft) backwards;
 }
@@ -701,7 +731,7 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--ground-sunk);
+  background: var(--void);
   border: 1px solid var(--hairline);
   min-width: 0;
 }
@@ -782,9 +812,9 @@
   max-width: 440px;
   padding: var(--s-6) var(--s-5);
   border-radius: var(--r-xl);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-2);
+  box-shadow: var(--lift-2), var(--rim);
   animation: rdPop var(--t-enter) var(--spring-soft) backwards;
 }
 
@@ -794,14 +824,14 @@
   width: 64px;
   height: 64px;
   border-radius: var(--r-lg);
-  background: var(--hot-soft);
-  color: var(--hot-text);
+  background: var(--hot-wash);
+  color: var(--hot-ink);
 }
 
 /* ══ THE RESTING STATE ═════════════════════════════════════════════════════
    With the demo data wiped there are zero orders and zero offers, so this is
    the screen a rider actually spends their shift looking at. It is designed,
-   not defaulted: a warm bento card, a calm mark, and one plain sentence about
+   not defaulted: a lifted card, a calm mark, and one plain sentence about
    what happens next. No spinner — waiting is not loading. */
 
 .resting {
@@ -811,9 +841,9 @@
   gap: var(--s-4);
   padding: var(--s-7) var(--s-5);
   border-radius: var(--r-xl);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-2), var(--rim);
   text-align: center;
   animation: rdPop var(--t-enter) var(--spring-soft) backwards;
 }
@@ -824,13 +854,15 @@
   width: 108px;
   height: 108px;
   border-radius: var(--r-xl);
-  background: var(--go-soft);
-  color: var(--go-text);
+  background: var(--go-wash);
+  color: var(--go-ink);
+  box-shadow: var(--go-glow-sm);
 }
 
 .restingOff .restingMarkWrap {
-  background: var(--ground-sunk);
+  background: var(--void);
   color: var(--ink-faint);
+  box-shadow: none;
 }
 
 .restingMark {
@@ -870,7 +902,7 @@
   gap: var(--s-2);
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-pill);
-  background: var(--ground-sunk);
+  background: var(--void);
   color: var(--ink-soft);
   font-family: var(--body);
   font-size: var(--t-xs);
@@ -891,9 +923,9 @@
   gap: var(--s-1);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
-  box-shadow: var(--lift-1);
+  box-shadow: var(--lift-1), var(--rim);
   min-width: 0;
   animation: rdPop var(--t-enter) var(--spring-soft) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger));
@@ -930,7 +962,7 @@
   padding: var(--s-4);
   border-radius: var(--r-lg);
   background: var(--warn-wash);
-  border: 2px solid color-mix(in oklab, var(--warn) 40%, transparent);
+  border: 2px solid color-mix(in oklab, var(--warn) 42%, transparent);
   color: var(--ink);
   font-family: var(--body);
   font-size: var(--t-sm);
@@ -946,19 +978,19 @@
 }
 
 .bannerNeutral {
-  background: var(--way-soft);
-  border-color: color-mix(in oklab, var(--way) 35%, transparent);
+  background: var(--way-wash);
+  border-color: color-mix(in oklab, var(--way) 38%, transparent);
 }
 .bannerNeutral .bannerIcon {
-  color: var(--way-text);
+  color: var(--way-ink);
 }
 
 .bannerCrit {
-  background: var(--stop-soft);
-  border-color: color-mix(in oklab, var(--stop) 45%, transparent);
+  background: var(--stop-wash);
+  border-color: color-mix(in oklab, var(--stop) 48%, transparent);
 }
 .bannerCrit .bannerIcon {
-  color: var(--stop-text);
+  color: var(--stop-ink);
 }
 
 .bannerBody {
@@ -994,8 +1026,9 @@
   gap: var(--s-4);
   padding: var(--s-5) var(--s-4);
   border-radius: var(--r-xl);
-  background: var(--hot-soft);
-  border: 2px solid color-mix(in oklab, var(--hot) 40%, transparent);
+  background: var(--hot-wash);
+  border: 2px solid color-mix(in oklab, var(--hot) 42%, transparent);
+  box-shadow: var(--lift-2), var(--rim);
   min-width: 0;
   animation: rdPop var(--t-enter) var(--spring) backwards;
 }
@@ -1026,7 +1059,9 @@
   overflow-wrap: anywhere;
 }
 
-/* ── The countdown. Impossible to miss: a draining ring AND the number. ──── */
+/* ── The countdown. Impossible to miss: a draining ring AND the number. ────
+   The ring reads as a NEAR OBJECT — the one deliberate use of glow-as-depth
+   on this screen, because it survives sunlight where a shadow would not. */
 
 .countdown {
   position: relative;
@@ -1035,6 +1070,9 @@
   width: 104px;
   height: 104px;
   flex: 0 0 auto;
+  border-radius: var(--r-pill);
+  filter: drop-shadow(var(--hot-glow-sm));
+  transition: filter var(--t-move) var(--ease);
 }
 
 .ring {
@@ -1088,11 +1126,14 @@
   color: var(--ink-faint);
 }
 
+.countdownUrgent {
+  filter: drop-shadow(var(--stop-glow));
+}
 .countdownUrgent .ringDrain {
   stroke: var(--stop);
 }
 .countdownUrgent .countdownValue {
-  color: var(--stop-text);
+  color: var(--stop-ink);
 }
 .countdownUrgent .ringTrack {
   stroke: color-mix(in oklab, var(--stop) 22%, transparent);
@@ -1115,7 +1156,7 @@
   gap: 2px;
   padding: var(--s-3) var(--s-2);
   border-radius: var(--r-md);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   min-width: 0;
   text-align: center;
@@ -1140,7 +1181,11 @@
   color: var(--ink-faint);
 }
 
-/* ══ THE JOB ═══════════════════════════════════════════════════════════════ */
+/* ══ THE JOB ═══════════════════════════════════════════════════════════════
+   Everything below sits on a RAISED surface with a real lift, not the base
+   card treatment: this is the one screen where a rider needs to feel the
+   content is closer to them than the ambient ground, at a glance, without
+   reading a word. */
 
 /* Four pips, one per step. Position without a progress bar's false precision. */
 .stepRail {
@@ -1149,8 +1194,9 @@
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-pill);
-  background: var(--card);
-  border: 1px solid var(--hairline);
+  background: var(--raised);
+  border: 1px solid var(--hairline-bright);
+  box-shadow: var(--lift-2), var(--rim);
   min-width: 0;
   /* Pulse ONCE on a status change, then hold. Keyed on the step in React. */
   animation: rdPulseOnce 700ms var(--ease-out) 1;
@@ -1167,7 +1213,7 @@
   width: 10px;
   height: 10px;
   border-radius: var(--r-pill);
-  background: var(--hairline-strong);
+  background: var(--hairline-bright);
 }
 
 .stepPipDone {
@@ -1177,6 +1223,7 @@
 .stepPipNow {
   width: 26px;
   background: var(--go);
+  box-shadow: var(--go-glow-sm);
 }
 
 .stepRailText {
@@ -1207,7 +1254,8 @@
 }
 
 /* Each step slides forward. Keyed on the step, so the pane remounts and the
-   animation replays exactly once per real transition. */
+   animation replays exactly once per real transition. A plain translateX —
+   no perspective, no rotate — this is a page turn, not a tilt. */
 .stepPane {
   display: flex;
   flex-direction: column;
@@ -1224,8 +1272,9 @@
   gap: var(--s-3);
   padding: var(--s-5) var(--s-4);
   border-radius: var(--r-xl);
-  background: var(--way-soft);
-  border: 2px solid color-mix(in oklab, var(--way) 32%, transparent);
+  background: var(--way-wash);
+  border: 2px solid color-mix(in oklab, var(--way) 34%, transparent);
+  box-shadow: var(--lift-2), var(--rim);
   min-width: 0;
   animation: rdPop var(--t-enter) var(--spring-soft) backwards;
 }
@@ -1244,7 +1293,7 @@
   font-family: var(--body);
   font-size: var(--t-md);
   font-weight: 700;
-  color: var(--way-text);
+  color: var(--way-ink);
   min-width: 0;
 }
 
@@ -1266,7 +1315,7 @@
   min-height: 56px;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
-  background: var(--ground-sunk);
+  background: var(--void);
   min-width: 0;
 }
 
@@ -1277,8 +1326,8 @@
   min-width: 56px;
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-sm);
-  background: var(--card);
-  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  border: 1px solid var(--hairline-bright);
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--t-sm);
@@ -1298,16 +1347,17 @@
 /* ── Money at the door ───────────────────────────────────────────────────── */
 
 /* The largest thing on the delivery screen. A rider who collects the wrong
-   cash has a problem no refund fixes cleanly. The frame is saffron; the
-   FIGURE is --ink, because at that size contrast beats hue. */
+   cash has a problem no refund fixes cleanly. The frame is gold; the FIGURE
+   is --ink, because at that size contrast beats hue. */
 .cod {
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
   padding: var(--s-5) var(--s-4);
   border-radius: var(--r-xl);
-  background: var(--cash-soft);
-  border: 3px solid var(--cash-edge);
+  background: var(--cash-wash);
+  border: 3px solid var(--cash);
+  box-shadow: var(--lift-3), var(--rim);
   min-width: 0;
   animation: rdPop var(--t-enter) var(--spring) backwards;
 }
@@ -1318,7 +1368,7 @@
   font-weight: 700;
   letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--cash-text);
+  color: var(--cash-ink);
 }
 
 .codValue {
@@ -1337,7 +1387,7 @@
 
 .codRupee {
   font-size: 0.55em;
-  color: var(--cash-text);
+  color: var(--cash-ink);
 }
 
 .prepaid {
@@ -1346,9 +1396,9 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--go-soft);
-  border: 2px solid color-mix(in oklab, var(--go) 35%, transparent);
-  color: var(--go-text);
+  background: var(--go-wash);
+  border: 2px solid color-mix(in oklab, var(--go) 38%, transparent);
+  color: var(--go-ink);
   font-family: var(--body);
   font-size: var(--t-md);
   font-weight: 700;
@@ -1365,8 +1415,9 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--stop-soft);
+  background: var(--stop-wash);
   border: 2px solid var(--stop);
+  box-shadow: var(--lift-1);
   color: var(--ink);
   font-family: var(--body);
   font-size: var(--t-md);
@@ -1388,8 +1439,8 @@
   height: 76px;
   padding: 0;
   border-radius: var(--r-md);
-  border: 2px solid var(--hairline-strong);
-  background: var(--card);
+  border: 2px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
@@ -1399,19 +1450,26 @@
   transition:
     border-color var(--t-micro) var(--ease),
     background var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease),
     transform var(--t-micro) var(--spring);
+}
+
+.otpBox:focus-visible {
+  outline: none;
+  border-color: var(--go);
+  box-shadow: var(--go-glow-sm);
 }
 
 .otpFilled {
   border-color: var(--go);
-  background: var(--go-soft);
+  background: var(--go-wash);
   transform: scale(1.02);
 }
 
 .otpError {
   border-color: var(--stop);
-  background: var(--stop-soft);
-  color: var(--stop-text);
+  background: var(--stop-wash);
+  color: var(--stop-ink);
 }
 
 .attempts {
@@ -1423,7 +1481,7 @@
 }
 
 .attemptsLow {
-  color: var(--stop-text);
+  color: var(--stop-ink);
   font-weight: 700;
 }
 
@@ -1455,13 +1513,13 @@
 }
 
 .placeKindPickup {
-  background: var(--way-soft);
-  color: var(--way-text);
+  background: var(--way-wash);
+  color: var(--way-ink);
 }
 
 .placeKindDrop {
-  background: var(--hot-soft);
-  color: var(--hot-text);
+  background: var(--hot-wash);
+  color: var(--hot-ink);
 }
 
 .placeLabel {
@@ -1475,7 +1533,7 @@
   overflow-wrap: anywhere;
 }
 
-/* Large, ink-black, generous leading. This is what gets read in the rain. */
+/* Large, near-white, generous leading. This is what gets read in the rain. */
 .placeAddress {
   font-family: var(--body);
   font-size: var(--t-lg);
@@ -1487,7 +1545,7 @@
 }
 
 .placeAddressMissing {
-  color: var(--stop-text);
+  color: var(--stop-ink);
   font-weight: 700;
 }
 
@@ -1497,8 +1555,8 @@
   min-height: 116px;
   padding: var(--s-4);
   border-radius: var(--r-md);
-  background: var(--ground-sunk);
-  border: 1px dashed var(--hairline-strong);
+  background: var(--void);
+  border: 1px dashed var(--hairline-bright);
   text-align: center;
 }
 
@@ -1525,8 +1583,8 @@
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-pill);
-  background: var(--card);
-  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  border: 1px solid var(--hairline-bright);
   color: var(--ink-soft);
   font-family: var(--body);
   font-size: var(--t-sm);
@@ -1579,7 +1637,7 @@
   min-height: var(--tap);
   padding: var(--s-3) var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
   box-shadow: var(--lift-1);
   min-width: 0;
@@ -1588,8 +1646,8 @@
 }
 
 .rowFailed {
-  background: var(--stop-soft);
-  border-color: color-mix(in oklab, var(--stop) 30%, transparent);
+  background: var(--stop-wash);
+  border-color: color-mix(in oklab, var(--stop) 32%, transparent);
   box-shadow: none;
 }
 
@@ -1651,7 +1709,7 @@
   display: block;
   height: 14px;
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--ink) 8%, var(--card));
+  background: color-mix(in oklab, var(--ink) 10%, var(--surface));
   overflow: hidden;
   min-width: 0;
 }
@@ -1661,6 +1719,7 @@
   height: 100%;
   border-radius: var(--r-pill);
   background: var(--go);
+  box-shadow: var(--go-glow-sm);
   transition: width var(--t-enter) var(--spring-soft);
 }
 
@@ -1711,8 +1770,8 @@
   width: 56px;
   height: 56px;
   border-radius: var(--r-lg);
-  background: var(--hot-soft);
-  color: var(--hot-text);
+  background: var(--hot-wash);
+  color: var(--hot-ink);
   flex: 0 0 auto;
 }
 
@@ -1752,8 +1811,8 @@
   width: 48px;
   height: 48px;
   border-radius: var(--r-md);
-  border: 1px solid var(--hairline-strong);
-  background: var(--card);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   flex: 0 0 auto;
@@ -1804,8 +1863,8 @@
   padding: 0 var(--s-4);
   border-radius: var(--r-lg);
   border: 2px solid var(--stop);
-  background: var(--stop-soft);
-  color: var(--stop-text);
+  background: var(--stop-wash);
+  color: var(--stop-ink);
   font-family: var(--display);
   font-size: var(--t-lg);
   font-weight: 800;
@@ -1834,7 +1893,7 @@
   gap: var(--s-3);
   padding: var(--s-4);
   border-radius: var(--r-lg);
-  background: var(--card);
+  background: var(--surface);
   border: 1px solid var(--hairline);
 }
 
@@ -1844,9 +1903,9 @@
   border-radius: var(--r-sm);
   background: linear-gradient(
     90deg,
-    var(--ground-sunk) 25%,
-    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
-    var(--ground-sunk) 75%
+    var(--void) 25%,
+    color-mix(in oklab, var(--void) 55%, var(--surface)) 50%,
+    var(--void) 75%
   );
   background-size: 200% 100%;
   animation: rdShimmer 1.4s linear infinite;
@@ -1881,8 +1940,8 @@
 /* ══ REDUCED MOTION ════════════════════════════════════════════════════════
    One block, last. Feedback is reduced to an instant state change and never
    removed: a control that appears to do nothing is worse than one that moves
-   too much. The countdown keeps its NUMBER and its colour — only the pulse
-   goes — because the 45 seconds are information, not decoration. */
+   too much. The countdown keeps its NUMBER, its RING and its colour — only
+   the pulse goes — because the 45 seconds are information, not decoration. */
 
 @media (prefers-reduced-motion: reduce) {
   .panel,
@@ -1906,7 +1965,7 @@
   .skelStat,
   .skelTitle {
     animation: none;
-    background: var(--ground-sunk);
+    background: var(--void);
   }
 
   .countdownUrgent {

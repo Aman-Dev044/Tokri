@@ -6,6 +6,7 @@ import { BasketProvider } from '@/components/shop/BasketProvider';
 import { BasketDock } from '@/components/shop/BasketDock';
 import { ShopHeader } from '@/components/shop/ShopHeader';
 import { ShopFooter } from '@/components/shop/ShopFooter';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * THE CUSTOMER SHOP.
@@ -40,7 +41,7 @@ import { ShopFooter } from '@/components/shop/ShopFooter';
 export const metadata: Metadata = {
   title: {
     default: 'Shop',
-    template: '%s · Mandi',
+    template: `%s · ${APP_NAME}`,
   },
   description:
     'Order from the kirana, the dairy and the bakery actually near you. Eight aisles, eight colours, one market.',

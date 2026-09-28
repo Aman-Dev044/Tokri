@@ -30,6 +30,7 @@ import { useRider } from './RiderProvider';
 import { RowsSkeleton, StatPairSkeleton } from './Skeletons';
 import { dayLabel, money } from '@/lib/delivery/format';
 import { useRiderEarnings } from '@/lib/delivery/useRiderData';
+import { APP_NAME } from '@/config/brand';
 
 /** The bars only ever show the tail of the window; 14 fits 360px comfortably. */
 const MAX_BARS = 14;
@@ -99,8 +100,8 @@ export function EarningsView() {
           {money(value.codCollectedPaise)}
         </div>
         <p className={styles.lede} style={{ fontSize: '0.9rem', marginTop: '0.35rem' }}>
-          Cash on delivery you collected over {windowLabel}. This is owed to Mandi — it
-          is not part of what you earned.
+          Cash on delivery you collected over {windowLabel}. This is owed to {APP_NAME} —
+          it is not part of what you earned.
         </p>
       </section>
 

@@ -6,12 +6,12 @@
  *
  * ── SELF-CONTAINED, ON PURPOSE ───────────────────────────────────────────────
  * This surface used to borrow the admin console's component layer wholesale.
- * That stopped being the right call once the panel moved to "Bento Pop": the
- * two surfaces answer different questions, are rebuilt on different
- * timelines by different people, and sharing a component layer means neither
- * can be tuned for its reader without risking the other. So everything below
- * is local to the vendor panel and pulls only tokens + the Bento primitives
- * from `@mandi/design-system`.
+ * That stopped being the right call: the two surfaces answer different
+ * questions, are rebuilt on different timelines by different people, and
+ * sharing a component layer means neither can be tuned for its reader
+ * without risking the other. So everything below is local to the vendor
+ * panel and pulls only tokens and the `<Tilt3D>`/`<Depth>` depth engine from
+ * `@mandi/design-system`.
  *
  * ── HOUSE RULES THESE COMPONENTS ENCODE ─────────────────────────────────────
  *   · Money is INTEGER PAISE. Pass paise to <Money/>. Never divide by 100.
@@ -20,7 +20,8 @@
  *     (lib/vendor/orders → STATUS_AISLE) and inside <ProductPreviewCard/>,
  *     which is a quotation of the customer app. Nowhere else.
  *   · The new-order alert pulses ONCE and then holds.
- *   · Tables stay tables; only the dashboard and earnings are bento.
+ *   · Tables stay tables and never tilt; depth (lift + tilt) is reserved for
+ *     the KPI tile and the order-board card.
  *   · Every animation is off under `prefers-reduced-motion: reduce`, and every
  *     screen is complete and readable at rest.
  */
@@ -47,6 +48,7 @@ export {
   IconBtn,
   Stat,
   KpiCell,
+  ChartPanel,
   FreshLine,
   Segmented,
   Field,
@@ -69,6 +71,7 @@ export type {
   StatProps,
   KpiTone,
   KpiCellProps,
+  ChartPanelProps,
   FreshLineProps,
   SegmentedProps,
   SegmentedOption,

@@ -82,17 +82,22 @@ export function BasketDock() {
           ref={dockRef}
           className="shop-dock"
           data-empty={empty ? 'true' : undefined}
+          style={{ ['--dock-glow' as string]: fullness.toFixed(3) }}
           suppressHydrationWarning
         >
           <Link href="/cart" className="shop-dock__link" aria-label={
             empty ? 'Basket, empty' : `Basket, ${count} ${count === 1 ? 'item' : 'items'}, ${formatPaise(subtotalPaise)}`
           }>
+            {/* The vessel is its own small 3D group: `perspective` lives on
+                `.shop-dock__vessel` (the ancestor), and the mass and the
+                basket rim sit at different `translateZ` inside it — real
+                depth, not a flat badge. The mass's HEIGHT is the only thing
+                that animates; the basket body is static so the contents are
+                what you read. */}
             <span className="shop-dock__vessel" aria-hidden="true">
-              {/* The mass. `--shop-fill` is the only thing that animates; the
-                  basket body is static so the contents are what you read. */}
               <span
                 className="shop-dock__mass"
-                style={{ ['--shop-fill' as string]: `${(fullness * 100).toFixed(1)}%` }}
+                style={{ ['--shop-fill-pct' as string]: `${(fullness * 100).toFixed(1)}%` }}
               />
               <svg viewBox="0 0 48 44" className="shop-dock__basket">
                 <path

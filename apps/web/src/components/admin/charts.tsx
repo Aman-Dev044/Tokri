@@ -28,6 +28,7 @@
  */
 
 import { useMemo, useState, type MouseEvent } from 'react';
+import { Tilt3D } from '@mandi/design-system';
 
 /* ================================================================== */
 /* Shared                                                              */
@@ -186,6 +187,11 @@ export function LineChart({
   const activeX = active === null ? 0 : PAD.left + active * geo.stepX;
 
   return (
+    // Depth for hierarchy, not spectacle: a chart panel lifts and tilts a
+    // few degrees on hover, gentle enough that the line underneath the
+    // pointer stays easy to read. Data TABLES never get this — see
+    // DataTable.tsx, which has no Tilt3D anywhere near it.
+    <Tilt3D as="div" className="adm-chart-tilt" max={5} lift={10}>
     <div className="adm-chart__wrap">
       <svg
         className="adm-chart"
@@ -321,6 +327,7 @@ export function LineChart({
         </div>
       ) : null}
     </div>
+    </Tilt3D>
   );
 }
 
@@ -396,6 +403,7 @@ export function BarChart({
   const activeRow = active === null ? undefined : data[active];
 
   return (
+    <Tilt3D as="div" className="adm-chart-tilt" max={5} lift={10}>
     <div className="adm-chart__wrap">
       <svg
         className="adm-chart"
@@ -567,6 +575,7 @@ export function BarChart({
         </div>
       ) : null}
     </div>
+    </Tilt3D>
   );
 }
 
@@ -637,6 +646,7 @@ export function DonutChart({
   if (data.length === 0 || total === 0) return <ChartEmpty height={height} />;
 
   return (
+    <Tilt3D as="div" className="adm-chart-tilt" max={5} lift={10}>
     <div className="adm-donut__wrap">
       <svg
         width={size}
@@ -692,6 +702,7 @@ export function DonutChart({
         ))}
       </div>
     </div>
+    </Tilt3D>
   );
 }
 

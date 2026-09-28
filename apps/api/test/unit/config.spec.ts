@@ -30,7 +30,13 @@ function validEnv(): Record<string, string> {
     PORT: '4000',
     API_PREFIX: 'api/v1',
 
-    CORS_ORIGINS: 'http://localhost:3000,https://mandi.app',
+    // The brand is configuration, not source: the product name and the
+    // refresh-cookie name both come from the environment so renaming the
+    // product never means a find-and-replace.
+    APP_NAME: 'Tokri',
+    REFRESH_COOKIE_NAME: 'tokri_rt',
+
+    CORS_ORIGINS: 'http://localhost:3000,https://tokri.app',
     CORS_CREDENTIALS: 'true',
 
     COOKIE_DOMAIN: 'localhost',

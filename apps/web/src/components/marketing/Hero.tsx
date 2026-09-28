@@ -1,26 +1,31 @@
 'use client';
 
 /**
- * THE HERO — the page is the demo.
+ * THE HERO — layered 3D parallax, not a picture of it.
  *
- * The aisle picker on the right is a live control, not a picture of one:
- * hovering a swatch previews that hue across the entire page, clicking commits
- * it, and every accent — buttons, rules, washes, the progress hairline, the
- * footer strip — crossfades over --t-enter because --aisle is registered with
- * @property and --accent is re-pointed at it in marketing.css.
+ * A single <Tilt3D> rig owns the top of the hero. Three depths sit inside
+ * it: a background glow at --z-1, a ring of aisle glyphs at --z-2/--z-3, and
+ * the headline card nearest the viewer at --z-4. Moving the pointer over the
+ * rig rotates the whole stage a few degrees, and because the layers sit at
+ * different Z they part company at different speeds — that difference *is*
+ * the parallax; nothing here hand-rolls scroll-linked motion for it.
  *
- * Motion here is all load-time CSS. The headline words rise in sequence from a
- * `backwards` fill, the bento cells spring in on the shared --stagger cascade,
- * and the figures count up once on mount from a value that is already correct
- * in the server-rendered HTML. Nothing waits on a scroll observer, so the hero
- * is complete in a crawl, a link preview and a screenshot.
+ * Below the rig, the aisle picker is a live control, not a picture of one:
+ * hovering a swatch previews that hue across the entire page, clicking
+ * commits it, and every accent — buttons, rules, washes, the CTA glow —
+ * crossfades over --t-enter because --aisle is registered with @property
+ * and --accent is re-pointed at it in marketing.css.
  *
- * It is sized to its content. A 100vh hero pushes the rest of the page out of
- * the first frame and tells a first-time visitor nothing about what follows.
+ * All of it is load-time CSS. The headline words rise in sequence from a
+ * `backwards` fill, the stat and feature cards spring in on the shared
+ * --stagger cascade, and the figures count up once on mount from a value
+ * that is already correct in the server-rendered HTML. Nothing waits on a
+ * scroll observer, so the hero is complete in a crawl, a link preview and a
+ * screenshot — and it is sized to its content, not to 100vh.
  */
 
 import { useState, type CSSProperties } from 'react';
-import { AISLES, BentoCard, BentoGrid, formatPaise, useAisle } from '@mandi/design-system';
+import { AISLES, Tilt3D, Depth, formatPaise, useAisle } from '@mandi/design-system';
 import type { AisleKey } from '@mandi/design-system';
 
 import { AisleGlyph } from '@/components/marketing/AisleGlyph';
@@ -49,6 +54,17 @@ const COUNTER: ReadonlyArray<{ aisle: AisleKey; item: string }> = [
   { aisle: 'fruits', item: 'Alphonso Mango' },
   { aisle: 'dairy', item: 'Amul Taaza Milk' },
   { aisle: 'snacks', item: 'Bhavnagari Gathiya' },
+];
+
+/* A slim ring of aisle glyphs for the mid-plane of the parallax rig — five
+   is plenty to read as "produce", the full eight belong to the picker below
+   where each one is an actual control. */
+const ORBIT_KEYS: ReadonlyArray<AisleKey> = [
+  'fruits',
+  'vegetables',
+  'dairy',
+  'snacks',
+  'beverages',
 ];
 
 interface CounterLine {
@@ -92,15 +108,26 @@ export function Hero() {
 
   return (
     <section className="mk-hero" id="top">
-      <div className="mk-orbs" aria-hidden="true">
-        <span className="mk-orb mk-orb--a" />
-        <span className="mk-orb mk-orb--b" />
-      </div>
-
       <div className="mk-shell">
-        <BentoGrid>
-          {/* ── the pitch ───────────────────────────────────────────────── */}
-          <BentoCard span="wide" index={0} className="mk-hero__copy">
+        {/* ── the parallax rig: background glow · mid-plane produce · headline ── */}
+        <Tilt3D as="div" max={6} lift={0} scale={1} className="mk-rig">
+          <Depth depth={1} className="mk-rig__glow">
+            {null}
+          </Depth>
+
+          <Depth depth={2} className="mk-rig__orbit">
+            {ORBIT_KEYS.map((key, i) => (
+              <span
+                className={i === 0 ? 'mk-rig__glyph mk-rig__glyph--float' : 'mk-rig__glyph'}
+                key={key}
+                style={{ ...swatchVar(key), ['--i' as string]: i }}
+              >
+                <AisleGlyph aisleKey={key} />
+              </span>
+            ))}
+          </Depth>
+
+          <Depth depth={4} className="mk-rig__fore">
             <p className="mk-eyebrow">मंडी · multi-vendor grocery, India</p>
 
             <h1 className="mk-hero__title">
@@ -117,13 +144,13 @@ export function Hero() {
             </h1>
 
             <p className="mk-lede">
-              Mandi is not a warehouse with a catalogue stapled on. It is the kirana, the
-              dairy and the bakery already on your street — and every aisle you enter
-              re-tints the whole app, so you always know where you are standing.
+              Not a warehouse with a catalogue stapled on. It is the kirana, the dairy
+              and the bakery already on your street — and every aisle you enter re-tints
+              the whole app, so you always know where you are standing.
             </p>
 
             <div className="mk-hero__cta">
-              <MagneticLink href="/signup" variant="solid">
+              <MagneticLink href="/signup" variant="solid" className="mk-btn--pulse">
                 Start shopping
               </MagneticLink>
               <MagneticLink href="/#how-it-works" variant="quiet">
@@ -135,19 +162,24 @@ export function Hero() {
               <span className="mk-live-dot" aria-hidden="true" />
               {locked
                 ? `Locked to ${shown?.name ?? 'an aisle'} — pick another any time.`
-                : 'Hover an aisle on the right. The page follows you into it.'}
+                : 'Hover an aisle below. The page follows you into it.'}
             </p>
-          </BentoCard>
+          </Depth>
+        </Tilt3D>
 
-          {/* ── the live aisle picker ───────────────────────────────────── */}
-          <BentoCard span="third" index={1}>
+        {/* ── the live aisle picker + the numbers + three real lines ──────────── */}
+        <div className="mk-grid">
+          <div className="mk-cell mk-cell--6 tkr-card" style={{ ['--i' as string]: 0 }}>
             <div className="mk-picker">
               <p className="mk-eyebrow">{locked ? 'Your aisle' : 'Now tinting'}</p>
 
-              <ul className="mk-picker__grid" onMouseLeave={() => {
-                setHovered(null);
-                clearPreview();
-              }}>
+              <ul
+                className="mk-picker__grid"
+                onMouseLeave={() => {
+                  setHovered(null);
+                  clearPreview();
+                }}
+              >
                 {AISLES.map((a) => {
                   const on = shown?.key === a.key;
                   return (
@@ -194,19 +226,18 @@ export function Hero() {
                 </p>
               ) : null}
             </div>
-          </BentoCard>
+          </div>
 
-          {/* ── the numbers ─────────────────────────────────────────────── */}
-          <BentoCard span="quarter" index={2} tone="pop-2">
+          <div className="mk-cell mk-cell--3 mk-cell--tone-mint tkr-card" style={{ ['--i' as string]: 1 }}>
             <div className="mk-stat">
               <span className="mk-stat__value">
                 <CountUp to={AISLES.length} format={(n) => String(Math.round(n)).padStart(2, '0')} />
               </span>
               <span className="mk-stat__label">Chromatic aisles</span>
             </div>
-          </BentoCard>
+          </div>
 
-          <BentoCard span="quarter" index={3} tone="pop-1">
+          <div className="mk-cell mk-cell--3 mk-cell--tone-coral tkr-card" style={{ ['--i' as string]: 2 }}>
             <div className="mk-stat">
               <span className="mk-stat__value">
                 <CountUp to={22} />
@@ -214,9 +245,9 @@ export function Hero() {
               </span>
               <span className="mk-stat__label">Typical handover</span>
             </div>
-          </BentoCard>
+          </div>
 
-          <BentoCard span="quarter" index={4} tone="pop-3">
+          <div className="mk-cell mk-cell--3 mk-cell--tone-violet tkr-card" style={{ ['--i' as string]: 3 }}>
             <div className="mk-stat">
               <span className="mk-stat__value">
                 <CountUp to={5} />
@@ -224,20 +255,23 @@ export function Hero() {
               </span>
               <span className="mk-stat__label">Serviceable radius</span>
             </div>
-          </BentoCard>
+          </div>
 
-          <BentoCard span="quarter" index={5} tone="pop-4">
+          <div className="mk-cell mk-cell--3 mk-cell--tone-gold tkr-card" style={{ ['--i' as string]: 4 }}>
             <div className="mk-stat">
               <span className="mk-stat__value">
                 <CountUp to={49900} format={(n) => formatPaise(Math.round(n))} />
               </span>
               <span className="mk-stat__label">Free delivery over</span>
             </div>
-          </BentoCard>
+          </div>
 
-          {/* ── three real lines off the counter ────────────────────────── */}
           {lines.map((line, i) => (
-            <BentoCard span="third" index={6 + i} key={line.name}>
+            <div
+              className="mk-cell mk-cell--4 tkr-card"
+              style={{ ['--i' as string]: 5 + i }}
+              key={line.name}
+            >
               <div className="mk-feature" style={swatchVar(line.aisle)}>
                 <div className="mk-feature__art" style={{ color: `var(--aisle-${line.aisle}-ink)` }}>
                   <AisleGlyph aisleKey={line.aisle} />
@@ -253,9 +287,9 @@ export function Hero() {
                   <span className="mk-feature__unit">{line.aisleName}</span>
                 </div>
               </div>
-            </BentoCard>
+            </div>
           ))}
-        </BentoGrid>
+        </div>
       </div>
     </section>
   );

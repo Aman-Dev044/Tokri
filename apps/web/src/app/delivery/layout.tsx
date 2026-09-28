@@ -33,7 +33,7 @@ import { APP_NAME } from '@/config/brand';
 export const metadata: Metadata = {
   title: {
     default: 'Rider',
-    template: '%s · Mandi Rider',
+    template: `%s · ${APP_NAME} Rider`,
   },
   description: `${APP_NAME} delivery partner app.`,
   manifest: '/delivery/manifest.webmanifest',
@@ -56,9 +56,15 @@ export const viewport: Viewport = {
   // Deliberately NOT user-scalable:false. Plan §2.6 requires this panel to be
   // usable at 200% zoom, and blocking pinch-zoom on the one surface read in
   // bright sun is exactly the wrong call.
+  //
+  // These two hex values are the ONLY hand-typed colour in the rider surface.
+  // A `<meta name="theme-color">` is painted by the OS chrome before any
+  // stylesheet — tokens.css, "Neon Orchard" — has loaded, so it cannot read a
+  // custom property. They are kept in lockstep with `--ground` by hand: light
+  // #faf7ff, dark #0e0a14.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#070805' },
+    { media: '(prefers-color-scheme: light)', color: '#faf7ff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e0a14' },
   ],
 };
 

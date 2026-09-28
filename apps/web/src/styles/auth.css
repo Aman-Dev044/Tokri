@@ -1,22 +1,23 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   MANDI — AUTH SURFACE  ·  "BENTO POP"
+   AUTH SURFACE · "NEON ORCHARD"
 
-   A split layout: the form on the cream ground, an animated bento panel of
-   produce crates beside it — one per aisle, in that aisle's hue. On mobile the
-   panel collapses to a short band above the form rather than disappearing; it
-   is the only brand moment on the page.
+   A split layout: the form on one side, a tilting 3D panel of aisle crates on
+   the other. On mobile the panel collapses to a short band above or below
+   the form rather than disappearing — it is the one brand moment on a page
+   that otherwise has exactly one job.
 
-   Every value here comes from a token in @mandi/design-system/tokens.css.
-   There is not one raw hex in this file. Entrance motion is load-time CSS from
-   a visible resting state, and every animation is reduced — not removed —
-   inside the prefers-reduced-motion block at the foot of the file.
+   Every value here comes from a token in @mandi/design-system/tokens.css —
+   there is not one raw hex below. Entrance motion is load-time CSS from a
+   visible resting state; every animation is reduced, and every tilt is
+   flattened outright, inside the prefers-reduced-motion block at the foot.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .auth {
   --accent: var(--aisle);
   --accent-ink: var(--aisle-ink);
-  --accent-wash: color-mix(in oklab, var(--aisle) 14%, var(--card));
+  --accent-wash: color-mix(in oklab, var(--aisle) 16%, var(--surface));
 
+  position: relative;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -25,7 +26,21 @@
   overflow-x: clip;
 }
 
+/* Ambient light behind the whole shell — a jewel-toned wash, not a shape. */
+.auth__glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(46rem 30rem at 12% -8%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(38rem 26rem at 108% 92%, color-mix(in oklab, var(--violet) 14%, transparent), transparent 60%);
+  transition: background var(--t-enter) var(--ease);
+}
+
 .auth__shell {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: var(--page-max);
   margin-inline: auto;
@@ -56,231 +71,221 @@
   height: 40px;
   border-radius: var(--r-md);
   background: var(--accent-wash);
-  border: 1px solid color-mix(in oklab, var(--accent) 34%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
   color: var(--ink);
-  transition: rotate var(--t-move) var(--spring);
-}
-.auth__mark svg {
-  width: 24px;
-  height: 24px;
+  transition: box-shadow var(--t-move) var(--ease);
 }
 .auth__brand:hover .auth__mark {
-  rotate: -8deg;
+  box-shadow: var(--glow-sm);
+}
+.auth__mark svg {
+  width: 22px;
+  height: 22px;
 }
 .auth__wordmark {
   font-family: var(--display);
-  font-size: 1.24rem;
   font-weight: 800;
+  font-size: 1.15rem;
   letter-spacing: var(--track-tight);
-}
-
-.auth-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-family: var(--body);
-  font-size: var(--t-2xs);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--accent-ink);
-}
-.auth-eyebrow::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: var(--r-pill);
-  background: var(--accent);
-  flex: 0 0 auto;
 }
 
 .auth__back {
   display: inline-flex;
   align-items: center;
-  gap: var(--s-2);
+  gap: 0.4em;
   font-size: var(--t-sm);
-  font-weight: 500;
+  font-weight: 600;
   color: var(--ink-soft);
   text-decoration: none;
-  padding: 0.5rem 0.9rem;
-  border-radius: var(--r-pill);
-  transition:
-    color var(--t-micro) var(--ease),
-    background-color var(--t-micro) var(--ease);
+  padding: 0.5em 0.4em;
+  border-radius: var(--r-sm);
+  transition: color var(--t-micro) var(--ease);
 }
 .auth__back:hover {
-  background: var(--accent-wash);
   color: var(--accent-ink);
 }
 
 .auth__main {
+  position: relative;
+  z-index: 1;
   flex: 1 1 auto;
   display: flex;
 }
 
-/* ───────────────────────────────────────────────────────────────────────────
-   THE SPLIT
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ── split ────────────────────────────────────────────────────────────── */
 
 .authsplit {
-  flex: 1 1 auto;
-  display: grid;
   width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+  padding: var(--s-3) clamp(16px, 4vw, 40px) var(--s-8);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-6);
   align-items: stretch;
+  flex: 1 1 auto;
 }
+
+.authsplit--single {
+  max-width: 640px;
+}
+
 @media (min-width: 900px) {
   .authsplit {
-    /* asymmetric on purpose — the form is the job, the panel is the mood */
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr);
+    gap: var(--s-7);
+    padding-block: var(--s-6) var(--s-9);
   }
-  .authsplit--single {
-    grid-template-columns: minmax(0, 1fr);
+  .authsplit--mirror {
+    grid-template-columns: minmax(0, 0.86fr) minmax(0, 1fr);
+  }
+  .authsplit--mirror .authpanel {
+    order: -1;
   }
 }
 
 .authsplit__form {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: clamp(2rem, 6vw, 4.5rem) clamp(16px, 4vw, 40px);
+  min-width: 0;
 }
 
-/* On mobile the panel sits ABOVE the form regardless of source order, so the
-   brand moment is seen and the form still starts near the top of the fold. */
-@media (max-width: 899px) {
-  .authsplit {
-    grid-template-rows: auto 1fr;
-  }
-  .authsplit .authpanel {
-    order: -1;
-    min-height: 180px;
-  }
-  .authsplit--mirror .authsplit__form {
-    order: 1;
-  }
-}
-
-/* ───────────────────────────────────────────────────────────────────────────
-   THE FORM
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ── form card ────────────────────────────────────────────────────────── */
 
 .authform {
+  position: relative;
   width: 100%;
-  max-width: 27rem;
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
-  animation: authform-rise var(--t-enter) var(--spring-soft) backwards;
+  gap: var(--s-5);
+  padding: clamp(24px, 3.4vw, 40px);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-2), var(--rim);
+  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) backwards;
 }
 
 .authform--loading {
-  min-height: 24rem;
-  align-items: center;
-  justify-content: center;
-  color: var(--accent-ink);
+  gap: var(--s-3);
+  padding: clamp(24px, 3.4vw, 40px);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+}
+.authform__skel {
+  display: block;
+  height: 46px;
+  border-radius: var(--r-md);
+  background: linear-gradient(
+    90deg,
+    var(--raised) 25%,
+    color-mix(in oklab, var(--raised) 55%, var(--lifted)) 50%,
+    var(--raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: tkr-shimmer 1.4s linear infinite;
 }
 
 .authform__head {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  margin-bottom: var(--s-2);
 }
+
+.auth-eyebrow {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--accent-ink);
+}
+
 .authform__title {
   margin: 0;
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: clamp(2rem, 1.3rem + 2.4vw, 3rem);
-  line-height: var(--lh-tight);
+  font-size: var(--t-h1);
   letter-spacing: var(--track-tight);
 }
 .authform__title-accent {
   color: var(--accent-ink);
 }
+
 .authform__sub {
   margin: 0;
   color: var(--ink-soft);
-  font-size: var(--t-sm);
+  font-size: var(--t-lg);
   line-height: var(--lh-body);
+  max-width: 42ch;
 }
 
 .authform__alert {
   display: flex;
   align-items: flex-start;
   gap: var(--s-3);
-  padding: var(--s-3);
-  border: 1px solid color-mix(in oklab, var(--crit) 45%, transparent);
-  border-inline-start-width: 3px;
+  padding: var(--s-3) var(--s-4);
   border-radius: var(--r-md);
   background: var(--crit-wash);
-  color: var(--ink);
+  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
+  color: var(--crit-ink);
   font-size: var(--t-sm);
   line-height: var(--lh-body);
-  animation: authform-shake var(--t-move) var(--ease-out);
 }
 .authform__alert-mark {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 1.3rem;
-  height: 1.3rem;
-  margin-top: 0.1rem;
-  border: 1px solid var(--crit);
+  width: 1.4em;
+  height: 1.4em;
   border-radius: var(--r-pill);
-  color: var(--crit);
+  background: var(--crit);
+  color: var(--void);
   font-family: var(--data);
-  font-size: 0.72rem;
   font-weight: 700;
-}
-
-.authform__peek {
-  border: 0;
-  background: transparent;
-  padding: 0.3rem 0.5rem;
-  border-radius: var(--r-pill);
-  font-family: var(--body);
-  font-size: var(--t-2xs);
-  font-weight: 700;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--accent-ink);
-  cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease);
-}
-.authform__peek:hover {
-  background: var(--accent-wash);
-}
-
-.authform__prefix {
-  font-family: var(--data);
-  font-size: var(--t-sm);
-  color: var(--ink-faint);
-  padding-inline-end: 0.15rem;
-  border-inline-end: 1px solid var(--hairline);
+  font-size: 0.85em;
 }
 
 .authform__row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--s-3);
+  gap: var(--s-4);
+  flex-wrap: wrap;
 }
+
 .authform__minor {
   font-size: var(--t-sm);
+  font-weight: 600;
   color: var(--ink-soft);
   text-decoration: none;
+  padding-top: 0.35rem;
 }
 .authform__minor:hover {
   color: var(--accent-ink);
-  text-decoration: underline;
+}
+
+.authform__peek {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  padding: 0.4em 0.2em;
+}
+.authform__peek:hover {
+  color: var(--accent-ink);
 }
 
 .authform__foot {
   margin: 0;
-  font-size: var(--t-sm);
-  color: var(--ink-soft);
   text-align: center;
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
 }
 .authform__foot a {
   color: var(--accent-ink);
@@ -291,13 +296,16 @@
   text-decoration: underline;
 }
 
-/* ── password strength ───────────────────────────────────────────────────── */
-
 .authform__pw {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
 }
+.authform__prefix {
+  color: var(--ink-faint);
+}
+
+/* password strength — a mono readout, not a scare bar */
 .strength {
   display: flex;
   align-items: center;
@@ -305,263 +313,447 @@
   margin: 0;
 }
 .strength__bars {
-  display: flex;
+  display: inline-flex;
   gap: 4px;
 }
 .strength__bars span {
-  width: 34px;
+  width: 22px;
   height: 4px;
   border-radius: var(--r-pill);
-  background: var(--hairline-strong);
-  transition: background-color var(--t-micro) var(--ease);
+  background: var(--hairline-bright);
+  transition: background var(--t-micro) var(--ease);
 }
-.strength[data-score='1'] .strength__bars span:nth-child(1),
-.strength[data-score='2'] .strength__bars span:nth-child(-n + 2),
-.strength[data-score='3'] .strength__bars span {
-  background: var(--good);
-}
-.strength[data-score='0'] .strength__bars span:nth-child(1) {
-  background: var(--crit);
-}
+.strength[data-score='0'] .strength__bars span:nth-child(1) { background: var(--crit); }
+.strength[data-score='1'] .strength__bars span:nth-child(-n + 1) { background: var(--warn); }
+.strength[data-score='2'] .strength__bars span:nth-child(-n + 2) { background: var(--gold); }
+.strength[data-score='3'] .strength__bars span:nth-child(-n + 3) { background: var(--mint); }
 .strength__label {
-  font-family: var(--data);
-  font-size: var(--t-2xs);
-  text-transform: uppercase;
-  letter-spacing: var(--track-label);
+  font-size: var(--t-xs);
   color: var(--ink-faint);
 }
-.strength[data-score='0'] .strength__label {
-  color: var(--crit);
+
+/* ── field ────────────────────────────────────────────────────────────── */
+
+.authfield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
 }
 
-/* ── buttons that are links, not the design-system Button ───────────────── */
+.authfield__label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.authfield__shell {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: var(--void);
+  border: 1px solid var(--hairline-bright);
+  border-radius: var(--r-md);
+  padding-inline: var(--s-4);
+  transition:
+    border-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease);
+}
+.authfield__shell:hover {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--hairline-bright));
+}
+.authfield__shell:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 22%, transparent);
+  background: var(--surface);
+}
+.authfield[data-invalid='true'] .authfield__shell {
+  border-color: var(--crit);
+}
+.authfield[data-invalid='true'] .authfield__shell:focus-within {
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--crit) 28%, transparent);
+}
+
+.authfield__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  appearance: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: var(--t-md);
+  padding-block: 0.85rem;
+  min-height: 48px;
+}
+.authfield__input::placeholder {
+  color: var(--ink-faint);
+  opacity: 1;
+}
+.authfield__input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.authfield__input:-webkit-autofill,
+.authfield__input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--void) inset;
+  caret-color: var(--ink);
+}
+
+.authfield__adornment {
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink-faint);
+  flex: 0 0 auto;
+}
+
+.authfield__msg {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  line-height: var(--lh-body);
+}
+.authfield__msg--error {
+  color: var(--crit-ink);
+  font-weight: 600;
+}
+.authfield__msg--error::before {
+  content: '!';
+  display: inline-grid;
+  place-items: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-inline-end: 0.4em;
+  border: 1px solid currentColor;
+  border-radius: var(--r-pill);
+  font-family: var(--data);
+  font-size: 0.75em;
+  vertical-align: -0.08em;
+}
+
+/* ── checkbox ─────────────────────────────────────────────────────────── */
+
+.authcheck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.authcheck__row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+.authcheck__input {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.authcheck__box {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  border: 1.6px solid var(--hairline-bright);
+  border-radius: 6px;
+  background: var(--void);
+  color: var(--on-accent);
+  transition: background-color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+}
+.authcheck__box svg {
+  width: 14px;
+  height: 14px;
+}
+.authcheck__tick {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  transition: stroke-dashoffset var(--t-micro) var(--ease-out);
+}
+.authcheck__input:hover + .authcheck__box {
+  border-color: var(--accent);
+}
+.authcheck__input:checked + .authcheck__box {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.authcheck__input:checked + .authcheck__box .authcheck__tick {
+  stroke-dashoffset: 0;
+}
+.authcheck__input:focus-visible + .authcheck__box {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.authcheck[data-invalid='true'] .authcheck__box {
+  border-color: var(--crit);
+}
+.authcheck__label {
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.authcheck__label a {
+  color: var(--accent-ink);
+  text-underline-offset: 2px;
+}
+
+/* ── button ───────────────────────────────────────────────────────────── */
 
 .authbtn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  padding: 1rem 1.9rem;
-  min-height: 56px;
   border: 1px solid transparent;
   border-radius: var(--r-pill);
   font-family: var(--body);
-  font-size: var(--t-lg);
-  font-weight: 600;
-  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
   cursor: pointer;
+  text-decoration: none;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
   transition:
-    transform var(--t-micro) var(--spring-soft),
-    scale var(--t-instant) var(--spring),
-    background-color var(--t-micro) var(--ease),
-    border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
+    transform var(--t-micro) var(--spring),
+    box-shadow var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease);
+}
+.authbtn--lg {
+  padding: 0.95rem 1.9rem;
+  font-size: var(--t-lg);
+  min-height: 54px;
+}
+.authbtn--block {
+  display: flex;
+  width: 100%;
 }
 .authbtn--outline {
-  background: var(--card);
+  background: transparent;
   color: var(--accent-ink);
-  border-color: color-mix(in oklab, var(--accent) 38%, var(--hairline));
-  box-shadow: var(--lift-1);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
 }
 .authbtn--outline:hover {
   background: var(--accent-wash);
   border-color: var(--accent);
-  transform: translateY(-2px);
 }
-.authbtn:active {
-  scale: 0.96;
+.authbtn--solid {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--lift-1);
 }
+.authbtn--solid:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--lift-2), var(--glow-sm);
+}
+/* the one place on the auth surface that breathes: the primary submit. */
+.authbtn--glow {
+  animation: tkr-glow-breathe var(--t-amble) var(--ease) infinite;
+}
+.authbtn--glow:hover:not(:disabled) {
+  animation-play-state: paused;
+}
+.authbtn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.authbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.authbtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+.authbtn__label {
+  transition: opacity var(--t-micro) var(--ease);
+}
+.authbtn[data-loading='true'] .authbtn__label {
+  opacity: 0;
+}
+.authbtn__spin {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.authbtn__spin span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: tkr-squash 900ms var(--ease-out) infinite;
+}
+.authbtn__spin span:nth-child(2) { animation-delay: 120ms; }
+.authbtn__spin span:nth-child(3) { animation-delay: 240ms; }
 
-/* ───────────────────────────────────────────────────────────────────────────
-   THE PANEL — eight crates on a market shelf
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ── the 3D aisle panel ───────────────────────────────────────────────── */
 
 .authpanel {
   position: relative;
-  display: flex;
+  display: none;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--s-5);
-  padding: clamp(2rem, 5vw, 4rem) clamp(16px, 4vw, 40px);
-  background: var(--ground-sunk);
-  border-inline-start: 1px solid var(--hairline);
+  justify-content: space-between;
+  gap: var(--s-6);
+  border-radius: var(--r-2xl);
+  padding: clamp(24px, 3vw, 44px);
   overflow: hidden;
+  background: linear-gradient(160deg, var(--raised), var(--surface) 60%);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) 90ms backwards;
 }
-@media (max-width: 899px) {
+@media (min-width: 900px) {
   .authpanel {
-    border-inline-start: 0;
-    border-bottom: 1px solid var(--hairline);
+    display: flex;
   }
 }
 
 .authpanel__wash {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   background:
-    radial-gradient(52% 44% at 74% 26%, var(--accent-wash), transparent 70%),
-    radial-gradient(40% 36% at 16% 82%, var(--accent-wash), transparent 72%);
+    radial-gradient(60% 55% at 78% 8%, color-mix(in oklab, var(--accent) 24%, transparent), transparent 70%),
+    radial-gradient(50% 45% at 10% 96%, color-mix(in oklab, var(--violet) 20%, transparent), transparent 70%);
+  transition: background var(--t-enter) var(--ease);
+  pointer-events: none;
+}
+
+.authpanel__rig {
+  position: relative;
+  flex: 1 1 auto;
 }
 
 .authpanel__shelf {
   position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: clamp(4px, 1vw, 12px);
-  flex: 1 1 auto;
-  min-height: 160px;
-  padding-bottom: 16px;
+  height: 100%;
+  min-height: 260px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-content: center;
+  gap: var(--s-4);
+  transform-style: preserve-3d;
 }
 
 .authpanel__plank {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 6px;
+  left: -8%;
+  right: -8%;
+  bottom: -14px;
+  height: 10px;
   border-radius: var(--r-pill);
-  background: var(--ink);
-  opacity: 0.85;
+  background: linear-gradient(180deg, var(--lifted), var(--void));
+  box-shadow: var(--lift-2);
+  transform: translateZ(var(--z-1));
 }
 
 .crate {
-  position: relative;
-  width: clamp(28px, 6vw, 58px);
-  height: clamp(44px, 9vw, 86px);
-  border: 2px solid var(--ink);
-  border-radius: var(--r-xs) var(--r-xs) var(--r-sm) var(--r-sm);
-  background: color-mix(in oklab, var(--w) 16%, var(--card));
-  overflow: hidden;
-  cursor: pointer;
-  animation: crate-settle 5200ms var(--ease-out) infinite;
-  animation-delay: calc(var(--i) * 260ms);
-  transition: transform var(--t-move) var(--spring);
-}
-.crate[data-on='true'] {
-  transform: translateY(-10px);
-  box-shadow: 0 12px 26px -16px var(--ink);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
 }
 
-/* the slats — this is what makes it a crate and not a rectangle */
+.crate__body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  aspect-ratio: 1.15;
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--w) 20%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--w) 45%, transparent);
+  box-shadow: var(--lift-1);
+  cursor: default;
+  transition: box-shadow var(--t-move) var(--ease), transform var(--t-move) var(--spring-soft);
+  overflow: hidden;
+}
+.crate__body[data-on='true'] {
+  box-shadow: var(--lift-2), 0 0 0 1px color-mix(in oklab, var(--w) 70%, transparent),
+    0 0 30px color-mix(in oklab, var(--w) 40%, transparent);
+}
+
 .crate__slats {
   position: absolute;
   inset: 0;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0 7px,
-    color-mix(in oklab, var(--ink) 55%, transparent) 7px 9px
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 9px,
+    color-mix(in oklab, var(--w) 22%, transparent) 9px,
+    color-mix(in oklab, var(--w) 22%, transparent) 11px
   );
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
-/* the heap of produce spilling over the top edge */
 .crate__heap {
   position: absolute;
-  left: -8%;
-  right: -8%;
-  top: -18%;
-  height: 46%;
+  top: -30%;
+  left: 10%;
+  right: 10%;
+  height: 60%;
   border-radius: 50%;
-  background: var(--w);
-  box-shadow: inset 0 -4px 0 color-mix(in oklab, var(--ink) 22%, transparent);
+  background: radial-gradient(
+    circle at 50% 30%,
+    color-mix(in oklab, var(--w) 75%, white 10%),
+    var(--w) 60%,
+    transparent 75%
+  );
+  filter: blur(1px);
 }
 
 .crate__label {
-  position: absolute;
-  left: 50%;
-  bottom: 6px;
-  translate: -50% 0;
+  position: relative;
   font-family: var(--data);
-  font-size: 0.5rem;
-  letter-spacing: 0.04em;
+  font-size: var(--t-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--ink);
-  opacity: 0;
-  white-space: nowrap;
-  transition: opacity var(--t-micro) var(--ease);
-}
-.crate[data-on='true'] .crate__label {
-  opacity: 0.85;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
 }
 
 .authpanel__quote {
   position: relative;
   margin: 0;
-  max-width: 34ch;
-  animation: authform-rise var(--t-enter) var(--spring-soft) 120ms backwards;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
 }
 .authpanel__kicker {
-  margin: 0 0 var(--s-2);
+  margin: 0;
 }
 .authpanel__line {
   margin: 0;
+  font-size: var(--t-h3);
   font-family: var(--display);
-  font-size: clamp(1.15rem, 0.9rem + 1.1vw, 1.75rem);
   font-weight: 700;
-  line-height: 1.24;
   letter-spacing: var(--track-tight);
+  line-height: var(--lh-snug);
   color: var(--ink);
 }
 
-/* ───────────────────────────────────────────────────────────────────────────
-   KEYFRAMES
-   ─────────────────────────────────────────────────────────────────────────── */
-
-@keyframes authform-rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes authform-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(4px);
-  }
-}
-
-@keyframes crate-settle {
-  0%,
-  72%,
-  100% {
-    translate: 0 0;
-  }
-  78% {
-    translate: 0 -7px;
-  }
-  86% {
-    translate: 0 1px;
-  }
-  92% {
-    translate: 0 -2px;
-  }
-}
+/* ── reduced motion ───────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .authform,
-  .authpanel__quote {
-    animation: none;
+  .authform__skel,
+  .authpanel,
+  .crate,
+  .authbtn--glow,
+  .authbtn__spin span {
+    animation: none !important;
   }
-  .authform__alert {
-    animation: none;
-  }
-  .crate {
-    animation: none;
-    transition: none;
-  }
-  .authbtn:hover {
+  .authbtn--solid:hover:not(:disabled) {
     transform: none;
   }
 }

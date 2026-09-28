@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
 
+import { APP_NAME } from '@/config/brand';
+
 /**
  * The rider PWA manifest — served at `/delivery/manifest.webmanifest`.
  *
@@ -32,7 +34,7 @@ import type { MetadataRoute } from 'next';
 
 const manifest: MetadataRoute.Manifest = {
   id: '/delivery',
-  name: 'Mandi Rider',
+  name: `${APP_NAME} Rider`,
   short_name: 'Rider',
   description:
     'Take delivery offers, run the job step by step, and confirm with the customer code.',
@@ -40,10 +42,14 @@ const manifest: MetadataRoute.Manifest = {
   scope: '/delivery',
   display: 'standalone',
   orientation: 'portrait',
-  // `theme_color` can only be one value, so it is the dark one: riders work
-  // evenings and a white splash at 10pm is the thing they would complain about.
-  background_color: '#070805',
-  theme_color: '#070805',
+  // `theme_color`/`background_color` are read by the OS before any stylesheet
+  // loads, so they cannot reference a custom property — kept in lockstep with
+  // "Neon Orchard"'s `--ground` (dark: #0e0a14) by hand. Only one value is
+  // possible here (the manifest has no media-query form), and it is the dark
+  // one: riders work evenings and a pale splash screen at 10pm is the thing
+  // they would complain about.
+  background_color: '#0e0a14',
+  theme_color: '#0e0a14',
   categories: ['business', 'productivity'],
   dir: 'ltr',
   lang: 'en-IN',

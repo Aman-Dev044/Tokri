@@ -30,6 +30,7 @@
  */
 
 import Link from 'next/link';
+import { Tilt3D } from '@mandi/design-system';
 import { STATUS_AISLE, minutesWaiting, urgencyOf } from '@/lib/vendor/orders';
 import type { VendorOrder } from '@/lib/vendor/types';
 import { Money, OrderStatusPill, SkelLine } from './primitives';
@@ -54,58 +55,66 @@ export function OrderCard({ order, now, index, fresh = false, actions }: OrderCa
   const customerName = order.customer.name ?? 'Customer';
 
   return (
-    <article
-      className="ven-card"
-      data-aisle={STATUS_AISLE[order.status]}
-      data-urgency={urgency}
-      data-fresh={fresh ? 'true' : undefined}
+    <Tilt3D
+      as="article"
+      max={7}
+      lift={12}
+      scale={1.01}
+      className="ven-cardslot"
       style={{ ['--ven-i' as string]: String(Math.min(index, 12)) }}
     >
-      <div className="ven-card__top">
-        <Link className="ven-card__no" href={`/vendor/orders/${order.id}`}>
-          {order.orderNo}
-        </Link>
-        <span className="ven-card__wait">
-          {minutes === null ? '—' : `${minutes}m`}
-          <span className="ven-sr">
-            {minutes === null
-              ? ''
-              : ` waiting${urgency === 'late' ? ', overdue' : urgency === 'warn' ? ', getting late' : ''}`}
-          </span>
-        </span>
-      </div>
-
-      <p className="ven-card__customer">{customerName}</p>
-
-      <ul className="ven-card__items">
-        <li>
-          <span className="ven-card__qty">{order.itemCount}×</span>
-          <span className="ven-card__line">
-            {order.itemCount === 1 ? 'item' : 'items'} in the bag
-          </span>
-        </li>
-        {order.deliveryPartner?.name ? (
-          <li>
-            <span className="ven-card__qty" aria-hidden="true">
-              →
+      <div
+        className="ven-card"
+        data-aisle={STATUS_AISLE[order.status]}
+        data-urgency={urgency}
+        data-fresh={fresh ? 'true' : undefined}
+      >
+        <div className="ven-card__top">
+          <Link className="ven-card__no" href={`/vendor/orders/${order.id}`}>
+            {order.orderNo}
+          </Link>
+          <span className="ven-card__wait">
+            {minutes === null ? '—' : `${minutes}m`}
+            <span className="ven-sr">
+              {minutes === null
+                ? ''
+                : ` waiting${urgency === 'late' ? ', overdue' : urgency === 'warn' ? ', getting late' : ''}`}
             </span>
-            <span className="ven-card__line">{order.deliveryPartner.name}</span>
+          </span>
+        </div>
+
+        <p className="ven-card__customer">{customerName}</p>
+
+        <ul className="ven-card__items">
+          <li>
+            <span className="ven-card__qty">{order.itemCount}×</span>
+            <span className="ven-card__line">
+              {order.itemCount === 1 ? 'item' : 'items'} in the bag
+            </span>
           </li>
-        ) : null}
-      </ul>
+          {order.deliveryPartner?.name ? (
+            <li>
+              <span className="ven-card__qty" aria-hidden="true">
+                →
+              </span>
+              <span className="ven-card__line">{order.deliveryPartner.name}</span>
+            </li>
+          ) : null}
+        </ul>
 
-      <div className="ven-card__foot">
-        <OrderStatusPill status={order.status} />
-        <span className="ven-paytag" data-method={order.payment.method}>
-          {order.payment.method === 'cod' ? 'COD' : 'PAID'}
-        </span>
-        <span className="ven-card__total">
-          <Money value={order.grandTotal} />
-        </span>
+        <div className="ven-card__foot">
+          <OrderStatusPill status={order.status} />
+          <span className="ven-paytag" data-method={order.payment.method}>
+            {order.payment.method === 'cod' ? 'COD' : 'PAID'}
+          </span>
+          <span className="ven-card__total">
+            <Money value={order.grandTotal} />
+          </span>
+        </div>
+
+        {actions ? <div className="ven-card__actions">{actions}</div> : null}
       </div>
-
-      {actions ? <div className="ven-card__actions">{actions}</div> : null}
-    </article>
+    </Tilt3D>
   );
 }
 

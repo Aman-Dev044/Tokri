@@ -24,6 +24,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
+import { APP_NAME } from '@/config/brand';
 import { useGeolocation, locationQuery, isLocationFiltered } from '@/hooks/useGeolocation';
 import { useShopQuery } from '@/hooks/useShopQuery';
 import { readPaged, readStore, type Paged, type Store } from '@/lib/shop/types';
@@ -150,7 +151,7 @@ export function StoresView() {
       {/* ── the stores ───────────────────────────────────────────────────── */}
       <section className="shop-section" aria-labelledby="shop-stores-title">
         <h2 id="shop-stores-title" className="shop-section__title">
-          {isLocationFiltered(geo.location) ? 'Stores that reach you' : 'Stores on Mandi'}
+          {isLocationFiltered(geo.location) ? 'Stores that reach you' : `Stores on ${APP_NAME}`}
         </h2>
 
         {stores.isFixture ? <FixtureBanner endpoint="GET /stores" /> : null}
@@ -178,7 +179,7 @@ export function StoresView() {
               </>
             ) : isLocationFiltered(geo.location) ? (
               <>
-                No store on Mandi reaches this address yet. We are onboarding vendors daily —{' '}
+                No store on {APP_NAME} reaches this address yet. We are onboarding vendors daily —{' '}
                 <Link href="/for-vendors">know a shop that should be here?</Link>
               </>
             ) : (

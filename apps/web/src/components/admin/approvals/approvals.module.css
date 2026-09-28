@@ -41,7 +41,7 @@
 }
 
 .reasonLabel {
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   font-weight: 550;
   color: var(--ink);
 }
@@ -58,12 +58,12 @@
 
 .preset {
   appearance: none;
-  border: 1px dashed var(--hairline-strong);
+  border: 1px dashed var(--hairline-bright);
   border-radius: var(--r-pill);
   background: none;
-  color: var(--muted);
+  color: var(--ink-faint);
   font: inherit;
-  font-size: var(--fs-micro);
+  font-size: var(--t-2xs);
   padding: 0.15rem 0.6rem;
   cursor: pointer;
 }
@@ -98,12 +98,12 @@
   align-items: flex-start;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--hairline-strong);
+  border: 1px solid var(--hairline-bright);
   border-left-width: 3px;
-  border-radius: var(--r-soft);
-  background: var(--surface-2);
+  border-radius: var(--r-md);
+  background: var(--raised);
   box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.35);
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   color: var(--ink);
   pointer-events: auto;
   animation: toastIn var(--t-move) var(--spring) both;
@@ -123,9 +123,9 @@
 .toastGlyph {
   flex: 0 0 auto;
   font-family: var(--data);
-  font-size: var(--fs-micro);
+  font-size: var(--t-2xs);
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--ink-faint);
 }
 
 .toastBody {
@@ -140,17 +140,17 @@
 
 .toastDetail {
   margin: 0.1rem 0 0;
-  color: var(--muted);
-  font-size: var(--fs-micro);
+  color: var(--ink-faint);
+  font-size: var(--t-2xs);
 }
 
 .toastClose {
   appearance: none;
   border: 0;
   background: none;
-  color: var(--muted);
+  color: var(--ink-faint);
   font: inherit;
-  font-size: var(--fs-small);
+  font-size: var(--t-xs);
   line-height: 1;
   padding: 0.1rem 0.2rem;
   cursor: pointer;
@@ -183,7 +183,7 @@
   padding: var(--s-8) var(--s-4);
   text-align: center;
   border: 1px solid var(--hairline);
-  border-radius: var(--r-soft);
+  border-radius: var(--r-md);
   background: var(--surface);
 }
 
@@ -202,15 +202,15 @@
 .clearTitle {
   margin: 0;
   font-family: var(--display);
-  font-size: var(--fs-lead);
+  font-size: var(--t-lg);
   color: var(--ink);
 }
 
 .clearBody {
   margin: 0;
   max-width: 34ch;
-  font-size: var(--fs-small);
-  color: var(--muted);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
 }
 
 /* --------------------------------------------------------------------------
@@ -220,8 +220,8 @@
 .coords {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-micro);
-  color: var(--muted);
+  font-size: var(--t-2xs);
+  color: var(--ink-faint);
 }
 
 .waiting {

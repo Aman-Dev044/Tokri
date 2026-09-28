@@ -30,6 +30,7 @@ import { CardSkeleton, StatPairSkeleton } from './Skeletons';
 import { useRider } from './RiderProvider';
 import { IconBox, IconResting } from './icons';
 import { distanceKm, money } from '@/lib/delivery/format';
+import { APP_NAME } from '@/config/brand';
 
 export function HomeView() {
   const {
@@ -68,7 +69,7 @@ export function HomeView() {
       ) : null}
       {jobFromCache && !jobIsSample ? <CachedBanner onRetry={refresh} /> : null}
       {loadError === null ? null : (
-        <Notice tone="crit" title="Mandi did not answer properly">
+        <Notice tone="crit" title={`${APP_NAME} did not answer properly`}>
           {loadError}
         </Notice>
       )}

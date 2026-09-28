@@ -4,8 +4,8 @@
  * Login.
  *
  * POSTs { identifier, password } to ${NEXT_PUBLIC_API_URL}/auth/login with
- * credentials: 'include', so the API can set the httpOnly mandi_rt refresh
- * cookie on the response.
+ * credentials: 'include', so the API can set the httpOnly refresh cookie on
+ * the response.
  *
  * The access token that comes back goes into React state via AuthProvider and
  * into one module variable in api-client. It is NEVER written to localStorage
@@ -16,9 +16,10 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { Button, Checkbox, Input } from '@mandi/design-system';
+import { AuthField, AuthCheckbox, AuthButton } from '@/components/auth/fields';
 import { HOME_FOR_ROLE, useAuth, type Role } from '@/components/auth/AuthProvider';
 import { ApiError } from '@/lib/api-client';
+import { APP_NAME } from '@/config/brand';
 
 interface FieldErrors {
   identifier?: string;
@@ -141,7 +142,7 @@ export function LoginForm() {
         </div>
       ) : null}
 
-      <Input
+      <AuthField
         label="Email or mobile number"
         name="identifier"
         type="text"
@@ -160,7 +161,7 @@ export function LoginForm() {
         required
       />
 
-      <Input
+      <AuthField
         label="Password"
         name="password"
         type={showPassword ? 'text' : 'password'}
@@ -191,7 +192,7 @@ export function LoginForm() {
             honouring this means sending the flag on /auth/login and having the
             API issue a short- or long-lived cookie. Wiring it client-side only
             would be a lie. */}
-        <Checkbox
+        <AuthCheckbox
           label="Keep me signed in"
           name="remember"
           checked={remember}
@@ -203,18 +204,12 @@ export function LoginForm() {
         </Link>
       </div>
 
-      <Button
-        type="submit"
-        size="lg"
-        block
-        loading={submitting}
-        loadingLabel="Signing you in"
-      >
+      <AuthButton loading={submitting} loadingLabel="Signing you in">
         Sign in
-      </Button>
+      </AuthButton>
 
       <p className="authform__foot">
-        New to Mandi? <Link href="/signup">Create an account</Link>
+        New to {APP_NAME}? <Link href="/signup">Create an account</Link>
       </p>
     </form>
   );

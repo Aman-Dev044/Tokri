@@ -34,6 +34,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { APP_NAME } from '@/config/brand';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { AisleRail } from './AisleRail';
 
@@ -68,7 +69,7 @@ export function ShopHeader() {
   return (
     <header className="shop-head">
       <div className="shop-head__bar shell">
-        <Link href="/" className="shop-brand" aria-label="Mandi, home">
+        <Link href="/" className="shop-brand" aria-label={`${APP_NAME}, home`}>
           <span className="shop-brand__mark" aria-hidden="true">
             <svg viewBox="0 0 32 32" width="20" height="20">
               <path
@@ -87,7 +88,7 @@ export function ShopHeader() {
               />
             </svg>
           </span>
-          <span className="shop-brand__word">Mandi</span>
+          <span className="shop-brand__word">{APP_NAME}</span>
         </Link>
 
         {/* ── location ─────────────────────────────────────────────────── */}

@@ -4,10 +4,10 @@
  * The vendor surface owns its own formatters rather than borrowing the admin
  * console's. Two reasons, and neither is duplication for its own sake:
  *
- *   1. This panel is being rebuilt in the "Bento Pop" system while the console
- *      is being rebuilt in parallel. A shared module is a shared blast radius,
- *      and a shop owner should not see a rupee change shape because somebody
- *      was editing a different surface.
+ *   1. This panel is styled in "Neon Orchard" while the console is rebuilt on
+ *      its own track. A shared module is a shared blast radius, and a shop
+ *      owner should not see a rupee change shape because somebody was
+ *      editing a different surface.
  *   2. Every figure in this panel is mono and tabular by rule, so the string a
  *      formatter emits is part of a typographic contract that belongs here.
  *

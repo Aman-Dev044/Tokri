@@ -1,28 +1,31 @@
 /* =============================================================================
-   MANDI — ADMIN CONSOLE · "BENTO POP"
+   TOKRI — ADMIN CONSOLE · "NEON ORCHARD"
    -----------------------------------------------------------------------------
    Imported once, from `app/admin/layout.tsx`.
 
    ── WHAT THIS SURFACE IS NOW ───────────────────────────────────────────────
-   The console used to be a deliberately grey tool. Bento Pop replaces that:
-   the same density, the same seriousness about data, but sitting on the warm
-   cream ground with the rest of the product, composed in bento cells, with one
-   saturated accent doing the identity work.
+   The console moves from the warm cream "Bento Pop" ground onto Neon
+   Orchard's dark, jewel-toned, three-dimensional system: the same density,
+   the same seriousness about data, but composed across FOUR real surface
+   planes (--ground → --surface → --raised → --lifted) instead of one flat
+   card colour, with mint/coral/violet/gold doing identity work and semantic
+   good/warn/crit kept strictly separate from them.
 
-   The console is scanned for a whole shift, so the rules are sharper here than
-   on the shop:
+   The console is operated for a whole shift, so restraint is the brief:
 
-     · CALM AT REST. The pop palette carries IDENTITY and CHART SERIES. It
-       never says "this is broken". Semantic --good/--warn/--crit say that, and
-       only when something is genuinely wrong.
+     · DEPTH FOR HIERARCHY, NOT SPECTACLE. KPI tiles and chart panels lift and
+       tilt gently on hover via <Tilt3D/>. DATA TABLES NEVER TILT — a table
+       that moves under the cursor is unusable for eight hours.
+     · CALM AT REST. Mint/coral/violet/gold carry IDENTITY and CHART SERIES.
+       They never say "this is broken". Semantic --good/--warn/--crit say
+       that, and only when something is genuinely wrong.
      · SEVERITY IS NEVER COLOUR ALONE. Every severity state carries a SHAPE
        (circle / triangle / square) and a WORD as well as a hue. Print the
        board in greyscale and it still triages correctly.
-     · DASHBOARDS ARE BENTO. Tables are tables. A twelve-column mosaic is how
-       you compose KPIs, charts and attention panels; it is not how you read
-       two hundred rows of settlements.
-     · EVERY NUMBER IS MONO AND TABULAR. Columns of digits that do not align
-       are columns nobody can scan.
+     · EVERY NUMBER IS MONO AND TABULAR (--data). Columns of digits that do
+       not align are columns nobody can scan.
+     · GLOW IS A FOCAL TOOL. At most one glowing thing per screen — an SLA
+       breach, a primary action, never a whole row of tiles at once.
 
    ── TOKENS ONLY ────────────────────────────────────────────────────────────
    There is not one raw hex value in this file. Every colour comes from
@@ -41,7 +44,9 @@
 
    Every screen is complete and readable at rest: nothing is parked at
    `opacity: 0` waiting for a script. All of it is switched off in one block,
-   §19, under `prefers-reduced-motion: reduce`.
+   §19, under `prefers-reduced-motion: reduce`, and every `.tkr-tilt3d` is
+   flattened outright there — a tilt is a vestibular trigger, not something to
+   merely shorten.
    ============================================================================= */
 
 /* ===========================================================================
@@ -49,14 +54,19 @@
    =========================================================================== */
 
 .adm {
-  /* ── surfaces ───────────────────────────────────────────────────────────
-     The console sits on the ground; panels are cards lifted out of it. The
-     rail is a card so it reads as chrome rather than as content. */
+  /* ── surfaces — four real depth planes, not one card colour ─────────────
+     The console sits on the ground; a panel steps up to --surface, a card
+     nested inside that panel (a chip, a sticky sub-header, a stat tile)
+     steps up again to --raised, and the thing being hovered or dragged
+     steps up once more to --lifted. A shadow alone does not read as
+     elevation on an ink ground — the surface has to get lighter too. */
   --adm-bg: var(--ground);
-  --adm-panel: var(--card);
-  --adm-panel-2: var(--ground-sunk);
+  --adm-panel: var(--surface);
+  --adm-panel-2: var(--raised);
+  --adm-hover: var(--lifted);
+  --adm-sunk: var(--void);
   --adm-line: var(--hairline);
-  --adm-line-strong: var(--hairline-strong);
+  --adm-line-strong: var(--hairline-bright);
   --adm-text: var(--ink);
   --adm-dim: var(--ink-faint);
   --adm-soft: var(--ink-soft);
@@ -92,12 +102,13 @@
   --adm-aisle-frozen: var(--aisle-frozen);
 
   /* ── chart series, when the breakdown is NOT by aisle ───────────────────
-     Four of the pops in a fixed order. They are identity, not severity: a
-     series being "series 3" says nothing about whether it is good news. */
-  --adm-series-1: var(--pop-1);
-  --adm-series-2: var(--pop-3);
-  --adm-series-3: var(--pop-2);
-  --adm-series-4: var(--pop-4);
+     The four brand hues in a fixed order. They are identity, not severity: a
+     series being "series 3" says nothing about whether it is good news —
+     semantic good/warn/crit is what carries that, always separately. */
+  --adm-series-1: var(--mint);
+  --adm-series-2: var(--violet);
+  --adm-series-3: var(--coral);
+  --adm-series-4: var(--gold);
 
   /* ── stacking ───────────────────────────────────────────────────────── */
   --adm-z-rail: 40;
@@ -163,7 +174,7 @@
 .adm code {
   font-family: var(--data);
   font-size: 0.92em;
-  background: var(--ground-sunk);
+  background: var(--adm-sunk);
   border-radius: var(--adm-r-xs);
   padding: 0.1em 0.38em;
 }
@@ -195,7 +206,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--s-4) var(--s-3) var(--s-3);
-  background: var(--card);
+  background: var(--adm-panel);
   border-right: 1px solid var(--adm-line);
   scrollbar-width: thin;
 }
@@ -273,7 +284,7 @@
 }
 
 .adm-rail__link:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
   color: var(--ink);
 }
 
@@ -345,8 +356,8 @@
   font-size: var(--adm-fs-xs);
   font-weight: 700;
   letter-spacing: var(--track-label);
-  color: var(--pop-3-ink);
-  background: var(--pop-3-wash);
+  color: var(--violet-ink);
+  background: var(--violet-wash);
   border-radius: var(--r-pill);
   padding: 2px 6px;
 }
@@ -375,7 +386,7 @@
 }
 
 .adm-rail__collapse:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
   color: var(--ink);
 }
 
@@ -528,7 +539,7 @@
   padding: 0 var(--s-2) 0 var(--s-3);
   border: 1px solid var(--adm-line);
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--adm-dim);
   font: inherit;
   font-size: var(--adm-fs-sm);
@@ -568,7 +579,7 @@
   line-height: 1;
   padding: 4px 6px;
   border-radius: var(--adm-r-xs);
-  background: var(--ground-sunk);
+  background: var(--adm-sunk);
   border: 1px solid var(--adm-line);
   color: var(--adm-dim);
 }
@@ -599,7 +610,7 @@
 }
 
 .adm-iconbtn:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
   color: var(--ink);
 }
 
@@ -620,7 +631,7 @@
   padding: 0 4px;
   border-radius: var(--r-pill);
   background: var(--crit);
-  color: var(--card);
+  color: var(--void);
   font-family: var(--data);
   font-size: 9px;
   font-weight: 700;
@@ -636,7 +647,7 @@
   padding: 0 var(--s-2) 0 3px;
   border: 1px solid var(--adm-line);
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: inherit;
   font: inherit;
   font-size: var(--adm-fs-sm);
@@ -689,13 +700,13 @@
 }
 
 .adm-rolepill[data-level='SUPER_ADMIN'] {
-  background: var(--pop-3-wash);
-  color: var(--pop-3-ink);
+  background: var(--violet-wash);
+  color: var(--violet-ink);
 }
 
 .adm-rolepill[data-level='ADMIN'] {
-  background: var(--pop-2-wash);
-  color: var(--pop-2-ink);
+  background: var(--gold-wash);
+  color: var(--gold-ink);
 }
 
 /* ── the dropdown menus ─────────────────────────────────────────────────── */
@@ -714,7 +725,7 @@
   max-width: min(92vw, 380px);
   padding: var(--s-2);
   border-radius: var(--adm-r);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   box-shadow: var(--lift-3);
   animation: adm-menu-in var(--t-move) var(--spring-soft) backwards;
@@ -753,7 +764,7 @@
 }
 
 .adm-menu__item:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
 }
 
 .adm-menu__item--danger {
@@ -801,7 +812,7 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--adm-r-lg);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   box-shadow: var(--lift-3);
   overflow: hidden;
@@ -881,7 +892,7 @@
   gap: var(--s-3);
   padding: var(--s-2) var(--s-4);
   border-top: 1px solid var(--adm-line);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
 }
@@ -1090,8 +1101,22 @@
   gap: var(--s-3);
 }
 
+/* The Tilt3D wrapper around a tile. Grid items stretch to the row height by
+   default, so the wrapper only needs to hand that height on to the article
+   inside it — otherwise a short tile in a row of taller ones would tilt
+   around a box smaller than its neighbours. */
+.adm-tile-tilt {
+  display: block;
+  height: 100%;
+}
+.adm-tile-tilt .tkr-tilt3d__stage {
+  display: block;
+  height: 100%;
+}
+
 .adm-tile {
   position: relative;
+  height: 100%;
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -1252,6 +1277,18 @@
   min-width: 0;
 }
 
+/* The Tilt3D wrapper a chart sits in. Block, full width, so the perspective
+   ancestor does not shrink the chart it is supposed to be tilting. */
+.adm-chart-tilt {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.adm-chart-tilt .tkr-tilt3d__stage {
+  display: block;
+  width: 100%;
+}
+
 .adm-chart__grid {
   stroke: var(--adm-line);
   stroke-width: 1;
@@ -1277,7 +1314,7 @@
 }
 
 .adm-chart__dot {
-  stroke: var(--card);
+  stroke: var(--adm-panel);
   stroke-width: 2;
 }
 
@@ -1315,7 +1352,7 @@
   min-width: 128px;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--adm-r-sm);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line-strong);
   box-shadow: var(--lift-2);
   font-size: var(--adm-fs-sm);
@@ -1447,7 +1484,7 @@
   font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   color: var(--adm-soft);
   border: 1px solid transparent;
 }
@@ -1623,7 +1660,7 @@
 /* Hover raises a HAIRLINE, not a shadow. A shadow on a table row makes the
    row look detachable, which it is not. */
 .adm-table tbody tr:hover td {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
 }
 
 .adm-table tbody tr[data-clickable='true'] {
@@ -1722,7 +1759,7 @@
   padding: 0 var(--s-4);
   border: 1px solid var(--adm-line-strong);
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--ink);
   font: inherit;
   font-size: var(--adm-fs);
@@ -1761,13 +1798,13 @@
 .adm-btn--primary:hover {
   background: color-mix(in oklab, var(--accent) 88%, var(--ink));
   border-color: transparent;
-  box-shadow: var(--lift-accent);
+  box-shadow: var(--glow-sm);
 }
 
 .adm-btn--danger {
   background: var(--crit);
   border-color: transparent;
-  color: var(--card);
+  color: var(--void);
 }
 
 .adm-btn--danger:hover {
@@ -1782,7 +1819,7 @@
 }
 
 .adm-btn--ghost:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
   border-color: transparent;
   box-shadow: none;
 }
@@ -1858,7 +1895,7 @@
   padding: 0 var(--s-3);
   border: 1px solid var(--adm-line-strong);
   border-radius: var(--adm-r-sm);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--ink);
   font: inherit;
   font-size: var(--adm-fs);
@@ -1905,7 +1942,7 @@
   padding: 3px;
   gap: 2px;
   border-radius: var(--r-pill);
-  background: var(--ground-sunk);
+  background: var(--adm-sunk);
   border: 1px solid var(--adm-line);
 }
 
@@ -1929,7 +1966,7 @@
 }
 
 .adm-segmented__btn[aria-pressed='true'] {
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--ink);
   box-shadow: var(--lift-1);
 }
@@ -1965,7 +2002,7 @@
   width: min(560px, 100vw);
   display: flex;
   flex-direction: column;
-  background: var(--card);
+  background: var(--adm-panel-2);
   border-left: 1px solid var(--adm-line);
   box-shadow: var(--lift-3);
   animation: adm-drawer-in var(--t-enter) var(--spring-soft) backwards;
@@ -2010,14 +2047,14 @@
   flex-wrap: wrap;
   padding: var(--s-4) var(--s-5);
   border-top: 1px solid var(--adm-line);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
 }
 
 .adm-dialog {
   width: min(460px, 100%);
   padding: var(--s-5);
   border-radius: var(--adm-r-lg);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   box-shadow: var(--lift-3);
   animation: adm-sheet-in var(--t-move) var(--spring-soft) backwards;
@@ -2078,7 +2115,7 @@
   height: 46px;
   margin-bottom: var(--s-1);
   border-radius: var(--r-pill);
-  background: var(--ground-sunk);
+  background: var(--adm-sunk);
   color: var(--adm-dim);
 }
 
@@ -2247,7 +2284,7 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 2px solid var(--adm-line-strong);
   color: var(--adm-dim);
 }
@@ -2308,9 +2345,9 @@
   border-radius: var(--adm-r-sm);
   background: linear-gradient(
     90deg,
-    var(--ground-sunk) 25%,
-    color-mix(in oklab, var(--ground-sunk) 55%, var(--card)) 50%,
-    var(--ground-sunk) 75%
+    var(--adm-sunk) 25%,
+    color-mix(in oklab, var(--adm-sunk) 55%, var(--adm-panel)) 50%,
+    var(--adm-sunk) 75%
   );
   background-size: 200% 100%;
   animation: adm-shimmer 1.4s linear infinite;
@@ -2354,7 +2391,7 @@
   gap: var(--s-3);
   padding: var(--s-6);
   border-radius: var(--adm-r-lg);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   box-shadow: var(--lift-2);
   animation: adm-pop var(--t-enter) var(--spring-soft) backwards;
@@ -2420,7 +2457,7 @@
 .adm-breachbar__glyph svg {
   width: 15px;
   height: 15px;
-  fill: var(--card);
+  fill: var(--void);
 }
 
 .adm-breachbar strong {
@@ -2642,7 +2679,7 @@
   gap: var(--s-2);
   padding: var(--s-3);
   border-radius: var(--adm-r-sm);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   color: var(--ink);
   text-decoration: none;
   min-width: 0;
@@ -2686,7 +2723,7 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--pop-3);
+  background: var(--accent);
   transition: width var(--t-slow) var(--spring-soft);
 }
 
@@ -2704,7 +2741,7 @@
   gap: 2px;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--adm-r-sm);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
 }
 
 .adm-pulse__label {
@@ -2743,7 +2780,7 @@
 .adm-capacity {
   height: 10px;
   border-radius: var(--r-pill);
-  background: var(--ground-sunk);
+  background: var(--adm-sunk);
   overflow: hidden;
 }
 
@@ -2751,7 +2788,7 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--pop-2);
+  background: var(--accent);
   transition: width var(--t-slow) var(--spring-soft);
 }
 
@@ -2763,7 +2800,7 @@
   gap: var(--s-2);
   padding: 4px 4px 4px var(--s-3);
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   font-size: var(--adm-fs-sm);
   color: var(--adm-dim);
@@ -2831,7 +2868,7 @@
 }
 
 .adm-attn__item:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
 }
 
 .adm-attn__count {
@@ -2843,7 +2880,7 @@
   padding: 0 var(--s-2);
   flex: 0 0 auto;
   border-radius: var(--adm-r-sm);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--adm-fs-lg);
@@ -2914,7 +2951,7 @@
 }
 
 .adm-feed__item:hover {
-  background: var(--ground-sunk);
+  background: var(--adm-hover);
 }
 
 .adm-feed__no {
@@ -3015,7 +3052,7 @@
   font-size: var(--adm-fs-xs);
   font-weight: 700;
   white-space: nowrap;
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   color: var(--adm-soft);
 }
 
@@ -3074,7 +3111,7 @@
   min-width: 0;
   max-height: calc(100dvh - 260px);
   border-radius: var(--adm-r-lg);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
 }
 
@@ -3086,7 +3123,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   border-radius: var(--adm-r-lg) var(--adm-r-lg) 0 0;
 }
 
@@ -3106,7 +3143,7 @@
   color: var(--adm-dim);
   padding: 2px 8px;
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
 }
 
 .adm-lane__breach {
@@ -3156,7 +3193,7 @@
   gap: 5px;
   padding: var(--s-3);
   border-radius: var(--adm-r-sm);
-  background: var(--card);
+  background: var(--adm-panel-2);
   border: 1px solid var(--adm-line);
   color: var(--ink);
   text-decoration: none;
@@ -3260,9 +3297,9 @@
   height: 96px;
   background: linear-gradient(
     90deg,
-    var(--card) 25%,
-    color-mix(in oklab, var(--card) 60%, var(--ground-sunk)) 50%,
-    var(--card) 75%
+    var(--adm-sunk) 25%,
+    color-mix(in oklab, var(--adm-sunk) 55%, var(--adm-panel)) 50%,
+    var(--adm-sunk) 75%
   );
   background-size: 200% 100%;
   animation: adm-shimmer 1.4s linear infinite;
@@ -3296,7 +3333,7 @@
   gap: var(--s-2);
   padding: var(--s-3);
   border-radius: var(--adm-r);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   border: 1px solid transparent;
   min-width: 0;
   animation: adm-pop var(--t-move) var(--spring-soft) backwards;
@@ -3323,7 +3360,7 @@
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--r-pill);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--adm-soft);
 }
 
@@ -3364,7 +3401,7 @@
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--adm-line);
   border-radius: var(--adm-r-sm);
-  background: var(--card);
+  background: var(--adm-panel-2);
   color: var(--ink);
   font: inherit;
   font-size: var(--adm-fs-sm);
@@ -3424,7 +3461,7 @@
   gap: 4px;
   padding: var(--s-3);
   border-radius: var(--adm-r);
-  background: var(--ground-sunk);
+  background: var(--adm-panel-2);
   min-width: 0;
   animation: adm-row-in var(--t-move) var(--ease-out) backwards;
   animation-delay: calc(var(--adm-i, 0) * 25ms);
@@ -3465,7 +3502,7 @@
 }
 
 .adm-rider[data-state='on_delivery'] .adm-rider__dot {
-  background: var(--pop-3);
+  background: var(--info);
 }
 
 .adm-rider[data-state='offline'] .adm-rider__dot {
@@ -3485,7 +3522,7 @@
   margin-top: var(--s-1);
   padding: var(--s-2);
   border-radius: var(--adm-r-sm);
-  background: var(--card);
+  background: var(--adm-panel-2);
   font-size: var(--adm-fs-sm);
   min-width: 0;
 }

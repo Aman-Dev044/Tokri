@@ -41,6 +41,7 @@ import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
 import { IconBox, IconCheck, IconStore } from './icons';
 import { ApiError } from '@/lib/api-client';
+import { APP_NAME } from '@/config/brand';
 import {
   deliverOrder,
   failDelivery,
@@ -142,7 +143,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         refresh();
       } catch (cause) {
         if (cause instanceof ApiError && cause.status === 409) {
-          setProblem('This order has already moved on. Pulling the latest from Mandi…');
+          setProblem(`This order has already moved on. Pulling the latest from ${APP_NAME}…`);
           refresh();
         } else {
           setProblem(
@@ -234,7 +235,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
           <IconCheck size={64} />
           <h1 className={styles.h1}>Delivered</h1>
           <p className={styles.lede}>
-            Nice work. Your earnings update once Mandi settles the order.
+            Nice work. Your earnings update once {APP_NAME} settles the order.
           </p>
         </div>
         <Dock>
@@ -254,7 +255,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
     return (
       <>
         {loadError === null ? null : (
-          <Notice tone="crit" title="Mandi did not answer properly">
+          <Notice tone="crit" title={`${APP_NAME} did not answer properly`}>
             {loadError}
           </Notice>
         )}

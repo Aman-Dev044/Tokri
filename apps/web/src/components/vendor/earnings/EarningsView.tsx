@@ -50,7 +50,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { BentoCard, BentoGrid, BentoHead } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
 import { useVendorQuery } from '@/hooks';
 import {
   PERIOD_OPTIONS,
@@ -72,6 +72,7 @@ import { formatCount, formatDate, formatPaise, formatPaiseCompact } from '../for
 import { IconInbox } from '../icons';
 import { VenPage, VenSection } from '../Page';
 import {
+  ChartPanel,
   EmptyState,
   EndpointError,
   KpiCell,
@@ -182,7 +183,7 @@ export function EarningsView() {
   return (
     <VenPage
       title="Earnings"
-      description="What you sold, what Mandi took, and what lands in your account."
+      description={`What you sold, what ${APP_NAME} took, and what lands in your account.`}
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
@@ -190,9 +191,8 @@ export function EarningsView() {
       }
     >
       {/* ------------------------------------------- equation ---- */}
-      <BentoGrid dense>
-        <BentoCard span="hero" index={0}>
-          {loading ? (
+      <div className="ven-panel ven-panel--pad ven-panel--hero">
+        {loading ? (
             <SkelStat />
           ) : earnings.error && data === null ? (
             <EndpointError
@@ -224,7 +224,7 @@ export function EarningsView() {
                 </span>
 
                 <div className="ven-eq__term" data-role="minus">
-                  <span className="ven-eq__label">Mandi commission</span>
+                  <span className="ven-eq__label">{APP_NAME} commission</span>
                   <span className="ven-eq__value">{formatPaise(data.commission)}</span>
                   <span className="ven-eq__note">
                     {effectivePct === null
@@ -268,11 +268,10 @@ export function EarningsView() {
               ) : null}
             </>
           )}
-        </BentoCard>
-      </BentoGrid>
+      </div>
 
       {/* ----------------------------------------------- KPIs ---- */}
-      <BentoGrid dense>
+      <div className="ven-kpigrid">
         <KpiCell
           label="Gross sales"
           value={data?.gross ?? 0}
@@ -318,12 +317,11 @@ export function EarningsView() {
           index={5}
           loading={loading}
         />
-      </BentoGrid>
+      </div>
 
       {/* --------------------------------------------- charts ---- */}
-      <BentoGrid dense>
-        <BentoCard span="half" index={0}>
-          <BentoHead title="Sales" eyebrow={`Revenue ${PERIOD_WORD[period]}, by day`} />
+      <div className="ven-chartgrid">
+        <ChartPanel title="Sales" eyebrow={`Revenue ${PERIOD_WORD[period]}, by day`}>
           {sales.loading && !sales.hasLoadedOnce ? (
             <SkelChart />
           ) : sales.error && sales.data === null ? (
@@ -347,10 +345,9 @@ export function EarningsView() {
               label={`Revenue ${PERIOD_WORD[period]}`}
             />
           )}
-        </BentoCard>
+        </ChartPanel>
 
-        <BentoCard span="half" index={1}>
-          <BentoHead title="Top products" eyebrow="By revenue, not by units" />
+        <ChartPanel title="Top products" eyebrow="By revenue, not by units">
           {top.loading && !top.hasLoadedOnce ? (
             <SkelChart />
           ) : top.error && top.data === null ? (
@@ -365,8 +362,8 @@ export function EarningsView() {
           ) : (
             <RankedBars data={topRows} format={formatPaiseCompact} label="Top products by revenue" />
           )}
-        </BentoCard>
-      </BentoGrid>
+        </ChartPanel>
+      </div>
 
       {/* --------------------------------------------- ledger ---- */}
       <VenSection
@@ -390,7 +387,7 @@ export function EarningsView() {
 
       <VenSection
         title="Settlements"
-        description="A settlement is a window closed off and paid. Until it says paid, the money is still with Mandi. Shown in full, whatever period is selected above."
+        description={`A settlement is a window closed off and paid. Until it says paid, the money is still with ${APP_NAME}. Shown in full, whatever period is selected above.`}
       >
         {settlements.error && settlements.data === null ? (
           <EndpointError

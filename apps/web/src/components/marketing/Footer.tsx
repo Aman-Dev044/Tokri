@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AISLES } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
 
 /**
  * Footer. A Server Component - nothing here is interactive, so nothing here
@@ -14,7 +15,7 @@ export function Footer() {
         <div className="mk-foot__top">
           <div className="mk-foot__brand">
             <p className="mk-foot__mark">
-              Mandi
+              {APP_NAME}
               <span className="mk-foot__mark-hi" aria-hidden="true">
                 मंडी
               </span>
@@ -50,10 +51,10 @@ export function Footer() {
               <h2>Partner</h2>
               <ul>
                 <li>
-                  <Link href="/#vendors">Sell on Mandi</Link>
+                  <Link href="/#vendors">Sell on {APP_NAME}</Link>
                 </li>
                 <li>
-                  <Link href="/#riders">Ride with Mandi</Link>
+                  <Link href="/#riders">Ride with {APP_NAME}</Link>
                 </li>
                 <li>
                   <Link href="/#how-it-works">How it works</Link>
@@ -78,7 +79,7 @@ export function Footer() {
 
         <div className="mk-foot__bottom">
           <p className="mk-foot__legal">
-            © {year} Mandi · Built for Indian grocery · All prices in ₹ INR
+            © {year} {APP_NAME} · Built for Indian grocery · All prices in ₹ INR
           </p>
           <p className="mk-foot__strip" aria-hidden="true">
             {AISLES.map((a) => (

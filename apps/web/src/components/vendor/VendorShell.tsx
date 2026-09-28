@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from '@mandi/design-system';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { APP_NAME } from '@/config/brand';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
 import { VENDOR_NAV, isActiveHref, type VendorNavIcon } from '@/lib/vendor/nav';
 import { primeAudio } from '@/lib/vendor/alert';
@@ -156,12 +157,12 @@ export function VendorShell({ children }: { children: ReactNode }) {
           </p>
           <p className="ven-gate__body">
             You are signed in as <strong>{session.apiRole ?? 'another role'}</strong>. The store
-            panel is for shop owners. If you run a shop on Mandi and are seeing this, your account
-            has not been linked to a store yet — ask an admin to check it.
+            panel is for shop owners. If you run a shop on {APP_NAME} and are seeing this, your
+            account has not been linked to a store yet — ask an admin to check it.
           </p>
           <div className="ven-row">
             <Link className="ven-btn" data-variant="primary" data-size="md" href="/">
-              Back to Mandi
+              Back to {APP_NAME}
             </Link>
             <Link className="ven-btn" data-variant="plain" data-size="md" href="/login">
               Sign in as someone else

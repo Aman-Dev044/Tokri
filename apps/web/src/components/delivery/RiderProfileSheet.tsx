@@ -44,6 +44,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { useRider } from './RiderProvider';
 import { money, telHref } from '@/lib/delivery/format';
 import { VEHICLE_LABEL } from '@/lib/delivery/types';
+import { APP_NAME } from '@/config/brand';
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -131,7 +132,7 @@ export function RiderProfileSheet({ onClose }: { onClose: () => void }) {
               />
               <Row
                 label="Fleet"
-                value={profile.vendorId === null ? 'Mandi platform pool' : 'Store fleet'}
+                value={profile.vendorId === null ? `${APP_NAME} platform pool` : 'Store fleet'}
               />
               <Row label="Lifetime deliveries" value={String(profile.completedCount)} />
             </section>

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The store panel's atoms — "Bento Pop", built for a shop counter.
+ * The store panel's atoms — "Neon Orchard", built for a shop counter.
  *
  * ── WHY THE PANEL OWNS THESE ────────────────────────────────────────────────
  * This surface used to borrow the admin console's component layer wholesale.
@@ -11,8 +11,9 @@
  * crate of onions — and sharing a component layer means neither can be tuned
  * for its reader without breaking the other.
  *
- * So the vendor panel is self-contained: it imports tokens and the bento
- * primitives from `@mandi/design-system` and nothing else from another surface.
+ * So the vendor panel is self-contained: it imports tokens and the `<Tilt3D>`
+ * depth engine from `@mandi/design-system` and nothing else from another
+ * surface.
  *
  * ── THE RULES THESE ATOMS ENFORCE ───────────────────────────────────────────
  *   · Money is INTEGER PAISE. `<Money/>` is the only thing that divides by 100.
@@ -25,7 +26,7 @@
  */
 
 import { useEffect, useId, useState, type ChangeEvent, type ReactNode } from 'react';
-import { BentoCard, type BentoTone } from '@mandi/design-system';
+import { Tilt3D } from '@mandi/design-system';
 import { useCountUp, type Freshness } from '@/hooks';
 import type { OrderStatus, PartnerStatus, SettlementStatus } from '@/lib/vendor/types';
 import { STATUS_AISLE } from '@/lib/vendor/orders';
@@ -207,8 +208,8 @@ export interface BtnProps {
 }
 
 /**
- * The panel's button. Squash-stretch on press — the signature Bento Pop
- * feedback — lives in CSS, inside a reduced-motion guard, where it becomes an
+ * The panel's button. Squash-stretch on press — the shared `tkr-squash`
+ * keyframe — lives in CSS, inside a reduced-motion guard, where it becomes an
  * instant background change rather than nothing at all. A control that appears
  * to do nothing is worse than one that moves too much.
  */
@@ -324,20 +325,15 @@ export interface KpiCellProps {
   loading?: boolean;
 }
 
-const KPI_TONE: Record<KpiTone, BentoTone> = {
-  plain: 'plain',
-  good: 'good',
-  warn: 'warn',
-  crit: 'crit',
-};
-
 /**
  * ★ THE KPI TILE — the one shape the dashboard and earnings are built from.
  *
- * A `<BentoCard>` holding a label, the count-up figure, and optionally a
- * seven-point sparkline and a footnote. Nothing here is bespoke: the card's
- * entrance, hover and tone wash all come from the shared Bento primitive, so
- * this tile looks like the same product as every other bento surface.
+ * A gentle `<Tilt3D>` lift toward the pointer, holding a label, the count-up
+ * figure, and optionally a seven-point sparkline and a footnote. Depth here
+ * is for HIERARCHY, not spectacle: a KPI tile is a fact a shop owner glances
+ * at, so the tilt ceiling is kept low (6°) and there is no glow — the panel's
+ * one glow budget belongs to the new-order alert, not a tile that is on
+ * screen the whole shift.
  */
 export function KpiCell({
   label,
@@ -350,9 +346,16 @@ export function KpiCell({
   loading = false,
 }: KpiCellProps) {
   return (
-    <BentoCard span="quarter" tone={KPI_TONE[tone]} index={index}>
-      <div className="ven-kpi">
-        <span className="mnd-label">{label}</span>
+    <Tilt3D
+      as="article"
+      max={6}
+      lift={10}
+      scale={1.012}
+      className="ven-kpitile"
+      style={{ ['--i' as string]: index }}
+    >
+      <div className="ven-kpi" data-tone={tone}>
+        <span className="ven-label">{label}</span>
         {loading ? (
           <SkelLine width="60%" height={30} />
         ) : (
@@ -361,7 +364,37 @@ export function KpiCell({
         {!loading && spark && spark.length > 1 ? <Sparkline values={spark} /> : null}
         {note ? <span className="ven-kpi__note">{note}</span> : null}
       </div>
-    </BentoCard>
+    </Tilt3D>
+  );
+}
+
+/* ================================================================== */
+/* ChartPanel — the flat surface a chart or a rank list sits on        */
+/* ================================================================== */
+
+export interface ChartPanelProps {
+  title: ReactNode;
+  eyebrow?: ReactNode;
+  children: ReactNode;
+}
+
+/**
+ * A titled panel for a chart. Deliberately NOT a `<Tilt3D>` — a bar chart or
+ * a ranked list is read for its data, and a surface that rotates under the
+ * cursor while someone is trying to compare bar heights is a surface fighting
+ * its own content. The card still steps up a plane (`--raised`) so it reads
+ * as a distinct surface on the page, it just does it with lightness and a
+ * shadow instead of tilt.
+ */
+export function ChartPanel({ title, eyebrow, children }: ChartPanelProps) {
+  return (
+    <div className="ven-panel ven-chartpanel">
+      <div className="ven-panel__head">
+        {eyebrow ? <span className="ven-label">{eyebrow}</span> : null}
+        <h3 className="ven-panel__title">{title}</h3>
+      </div>
+      <div className="ven-panel__body">{children}</div>
+    </div>
   );
 }
 
