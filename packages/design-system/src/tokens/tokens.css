@@ -1,131 +1,161 @@
 /* ════════════════════════════════════════════════════════════════════════
-   MANDI — "BENTO POP"
+   TOKRI — "NEON ORCHARD"
 
-   Bright, playful, kinetic. Bento-grid layouts, soft rounded cards,
-   saturated warm colour, spring physics.
+   Dark-first, jewel-toned, deeply three-dimensional.
 
-   HOW THIS FILE IS STRUCTURED, AND WHY
-   Every token is declared on bare `:root` FIRST. The dark overrides then
-   redefine ONLY the values. A token whose sole definition lives inside a
-   media query or a [data-theme] block silently vanishes for the ~50% of
-   viewers whose theme is "system" with nothing stamped on the root — that
-   is the classic unreadable-page bug, and structuring it this way makes
-   it impossible.
+   WHY DARK-FIRST
+   This system is built around real depth: perspective, translateZ, tilt,
+   glow and layered parallax. All of those read from LUMINANCE difference.
+   On a light ground a shadow is a faint grey smudge and a glow is
+   invisible, so 3D collapses into flatness no matter how much transform
+   you write. On an ink ground the same shadow reads as distance and the
+   same glow reads as emission. The light theme below is fully designed —
+   it is just not what the system was drawn for.
+
+   WHY THESE HUES
+   Every quick-commerce grocery app in the market is yellow, green or
+   orange. Aubergine with electric mint is immediately not one of them,
+   and mint on aubergine is the single highest-chroma pairing available
+   that still clears contrast for body text.
+
+   HOW THIS FILE IS STRUCTURED
+   Every token is declared on bare `:root` FIRST, then overridden by value
+   in the theme blocks. A token whose only definition lives inside a media
+   query silently vanishes for the many viewers on "system" theme with
+   nothing stamped on the root — that is the classic unreadable-page bug,
+   and this structure makes it impossible.
 
    Three theme states, not two:
-     :root                                   light, and the default
-     @media (prefers-color-scheme: dark)     system-dark, guarded so an
-       :root:not([data-theme='light'])       explicit light choice wins
-     :root[data-theme='dark']                explicit dark choice
+     :root                                 the DARK default
+     @media (prefers-color-scheme: light)  system-light, guarded so an
+       :root:not([data-theme='dark'])      explicit dark choice wins
+     :root[data-theme='light']             explicit light choice
    ════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── GROUND ───────────────────────────────────────────────────────────
-     Warm cream, not white. A neutral with a deliberate hue bias reads as
-     chosen; a pure #FFF/#888 reads as unconsidered. */
-  --ground: #fbf7f0;
-  --ground-sunk: #f3ede2; /* wells, tracks, inset areas */
-  --card: #ffffff;
-  --card-raised: #ffffff;
+  /* ── GROUND — four real depth planes, not one colour ───────────────────
+     The z-axis is expressed in SURFACE LIGHTNESS as well as in shadow.
+     A card that only casts a shadow but does not lift in tone still reads
+     flat on a dark ground. */
+  --void: #07040c; /* behind everything; the page gutter */
+  --ground: #0e0a14; /* the page */
+  --surface: #191122; /* a card */
+  --raised: #241733; /* a card on a card, a popover */
+  --lifted: #30204a; /* the thing being dragged or hovered */
 
   /* ── INK ──────────────────────────────────────────────────────────── */
-  --ink: #1a1614;
-  --ink-soft: #554d47; /* secondary text — 7.1:1 on ground */
-  --ink-faint: #8a7f77; /* tertiary, labels — 4.6:1 on ground */
-  --hairline: #e8dfd2;
-  --hairline-strong: #d8ccb9;
+  --ink: #f4eefb; /* 16.1:1 on ground */
+  --ink-soft: #bfb0d4; /* 8.6:1  — secondary */
+  --ink-faint: #8b7ba3; /* 4.7:1  — labels, captions */
+  --hairline: #2a1d3c;
+  --hairline-bright: #3d2b56;
 
-  /* ── THE POP PALETTE ──────────────────────────────────────────────────
-     Four saturated hues. `-ink` variants are lightness-tuned to clear
-     4.5:1 on --ground for TEXT; the base values are for fills, bars and
-     large shapes where contrast rules do not apply the same way.
+  /* ── THE ORCHARD ──────────────────────────────────────────────────────
+     `-ink` variants are lightness-tuned to clear 4.5:1 on --ground for
+     TEXT. The base values are for fills, glows, bars and large shapes,
+     where the contrast rule works differently. Splitting them is not
+     fussiness: no single sRGB value clears 4.5:1 against both a #0e0a14
+     ground and a #fbf9ff one — that needs about 20:1 of headroom and sRGB
+     does not have it. */
+  --mint: #2bf5a0; /* primary — fresh, produce, glows beautifully */
+  --mint-ink: #58ffb8;
+  --mint-dim: #12a06a;
+  --mint-wash: #06251a;
 
-     Reaching 4.5:1 against BOTH a light ground and a dark ground with one
-     value is geometrically impossible (it needs ~20:1 of headroom, more
-     than sRGB has), so identity and text are deliberately split. */
-  --pop-1: #ff5a1f; /* tangerine */
-  --pop-1-ink: #d13c06; /* 4.6:1 on ground */
-  --pop-1-wash: #fff0e8;
+  --coral: #ff6b5a; /* secondary — warm, appetite, urgency */
+  --coral-ink: #ff9184;
+  --coral-wash: #2c110e;
 
-  --pop-2: #1fb86e; /* leaf */
-  --pop-2-ink: #0f7d49; /* 4.5:1 on ground */
-  --pop-2-wash: #e6f7ee;
+  --violet: #a56bff; /* tertiary — depth, night, premium */
+  --violet-ink: #c19dff;
+  --violet-wash: #1d1030;
 
-  --pop-3: #4c6ef5; /* indigo */
-  --pop-3-ink: #3452c8; /* 4.7:1 on ground */
-  --pop-3-wash: #ebeefe;
+  --gold: #ffc24b; /* highlight — price, reward, saffron */
+  --gold-ink: #ffd27a;
+  --gold-wash: #2e2109;
 
-  --pop-4: #ffc93c; /* saffron */
-  --pop-4-ink: #8a6200; /* saffron is far too light for text — 4.8:1 */
-  --pop-4-wash: #fff7e0;
+  /* Components read --accent, never --mint directly, so a surface can
+     retint itself without touching every rule. */
+  --accent: var(--mint);
+  --accent-ink: var(--mint-ink);
+  --accent-wash: var(--mint-wash);
+  --on-accent: #06180f;
 
-  /* Primary accent. Components read --accent, never --pop-1 directly, so
-     a surface can retint itself without touching every rule. */
-  --accent: var(--pop-1);
-  --accent-ink: var(--pop-1-ink);
-  --accent-wash: var(--pop-1-wash);
-  --on-accent: #ffffff;
+  /* ── SEMANTIC — deliberately separate from the brand hues ───────────── */
+  --good: #2bf5a0;
+  --good-ink: #58ffb8;
+  --good-wash: #06251a;
+  --warn: #ffc24b;
+  --warn-ink: #ffd27a;
+  --warn-wash: #2e2109;
+  --crit: #ff5f6d;
+  --crit-ink: #ff8b95;
+  --crit-wash: #2e0f13;
+  --info: #a56bff;
+  --info-ink: #c19dff;
+  --info-wash: #1d1030;
 
-  /* ── SEMANTIC ─────────────────────────────────────────────────────────
-     Deliberately separate from the pop palette. A status colour must not
-     shift when a surface changes its accent. */
-  --good: #0f7d49;
-  --good-wash: #e6f7ee;
-  --warn: #8a6200;
-  --warn-wash: #fff7e0;
-  --crit: #c32f2f;
-  --crit-wash: #fdecec;
-  --info: #3452c8;
-  --info-wash: #ebeefe;
+  /* ── EIGHT AISLES — data, not decoration ──────────────────────────────
+     The shop tints by aisle and every by-aisle chart uses these as
+     categorical series colours. Tuned for an ink ground. */
+  --aisle-fruits: #ff7a5c;
+  --aisle-vegetables: #2bf5a0;
+  --aisle-dairy: #ffd27a;
+  --aisle-bakery: #ffa25c;
+  --aisle-beverages: #4bc8ff;
+  --aisle-snacks: #ff5fa8;
+  --aisle-staples: #c9a86b;
+  --aisle-frozen: #6be0ff;
 
-  /* ── EIGHT AISLES ─────────────────────────────────────────────────────
-     Kept from the previous system: they are data, not decoration. The
-     customer app tints by aisle, and every chart that breaks down BY
-     aisle uses them as categorical series colours. */
-  --aisle-fruits: #ff5a1f;
-  --aisle-vegetables: #1fb86e;
-  --aisle-dairy: #ffc93c;
-  --aisle-bakery: #c9741f;
-  --aisle-beverages: #4c6ef5;
-  --aisle-snacks: #e0457b;
-  --aisle-staples: #8a6f3d;
-  --aisle-frozen: #2ba8c4;
+  --aisle-fruits-ink: #ff9b83;
+  --aisle-vegetables-ink: #58ffb8;
+  --aisle-dairy-ink: #ffdf9e;
+  --aisle-bakery-ink: #ffbf87;
+  --aisle-beverages-ink: #7fd8ff;
+  --aisle-snacks-ink: #ff8ac2;
+  --aisle-staples-ink: #dcc294;
+  --aisle-frozen-ink: #9aeaff;
 
-  --aisle-fruits-ink: #d13c06;
-  --aisle-vegetables-ink: #0f7d49;
-  --aisle-dairy-ink: #8a6200;
-  --aisle-bakery-ink: #9a5410;
-  --aisle-beverages-ink: #3452c8;
-  --aisle-snacks-ink: #b22757;
-  --aisle-staples-ink: #6b5527;
-  --aisle-frozen-ink: #1c7e94;
+  --aisle: var(--mint);
+  --aisle-ink: var(--mint-ink);
 
-  /* Live aisle, swapped by [data-aisle] below. */
-  --aisle: var(--pop-2);
-  --aisle-ink: var(--pop-2-ink);
-
-  /* ── SHAPE ────────────────────────────────────────────────────────────
-     Bento is defined by generous, consistent rounding. Radii step by role,
-     not per component, so nested cards nest visually. */
+  /* ── SHAPE ──────────────────────────────────────────────────────────── */
   --r-xs: 8px;
   --r-sm: 12px;
-  --r-md: 18px;
-  --r-lg: 26px;
-  --r-xl: 34px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-2xl: 40px;
   --r-pill: 999px;
 
-  /* ── DEPTH ────────────────────────────────────────────────────────────
-     Soft and warm-tinted, never a grey drop shadow. Spent by ROLE: a flat
-     card and a lifted card must differ, or the hierarchy flattens. */
-  --lift-0: none;
-  --lift-1: 0 1px 2px rgba(26, 22, 20, 0.04), 0 2px 8px rgba(26, 22, 20, 0.04);
-  --lift-2: 0 2px 4px rgba(26, 22, 20, 0.05), 0 8px 24px rgba(26, 22, 20, 0.07);
-  --lift-3: 0 4px 8px rgba(26, 22, 20, 0.06), 0 18px 48px rgba(26, 22, 20, 0.1);
-  --lift-accent: 0 8px 28px color-mix(in oklab, var(--accent) 28%, transparent);
+  /* ── 3D ────────────────────────────────────────────────────────────────
+     The whole point of the system. `--persp` on a container turns its
+     children's translateZ into real depth; without it every Z value is
+     silently ignored and the tilt is a flat skew. */
+  --persp: 1200px;
+  --persp-near: 700px; /* stronger, for small cards */
+  --z-1: 12px;
+  --z-2: 28px;
+  --z-3: 52px;
+  --z-4: 90px;
+  --tilt: 9deg; /* hover tilt ceiling; past ~12deg text distorts */
 
-  /* ── SPACE ────────────────────────────────────────────────────────────
-     A 4px base scale. Layout uses flex/grid `gap` from this scale, never
-     per-element margins that collapse or double unpredictably. */
+  /* ── DEPTH — shadow AND glow, because a dark ground needs both ───────── */
+  --lift-1: 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.35);
+  --lift-2: 0 4px 10px rgb(0 0 0 / 0.55), 0 14px 34px rgb(0 0 0 / 0.45);
+  --lift-3: 0 10px 24px rgb(0 0 0 / 0.6), 0 34px 80px rgb(0 0 0 / 0.55);
+  --lift-4: 0 20px 48px rgb(0 0 0 / 0.65), 0 60px 140px rgb(0 0 0 / 0.6);
+
+  --glow-sm: 0 0 18px color-mix(in oklab, var(--accent) 30%, transparent);
+  --glow: 0 0 34px color-mix(in oklab, var(--accent) 38%, transparent);
+  --glow-lg: 0 0 72px color-mix(in oklab, var(--accent) 45%, transparent);
+
+  /* A hairline of emitted light along a card's top edge. Reads as a
+     surface catching a light source above it, which is what sells depth. */
+  --rim: inset 0 1px 0 rgb(255 255 255 / 0.07);
+  --rim-accent: inset 0 1px 0 color-mix(in oklab, var(--accent) 40%, transparent);
+
+  /* ── SPACE ─────────────────────────────────────────────────────────── */
   --s-1: 4px;
   --s-2: 8px;
   --s-3: 12px;
@@ -135,203 +165,222 @@
   --s-7: 48px;
   --s-8: 64px;
   --s-9: 96px;
+  --s-10: 128px;
 
-  /* ── TYPE ─────────────────────────────────────────────────────────────
-     The three families are injected by next/font as --font-display /
-     --font-body / --font-data, self-hosted. The fallback stacks are real,
-     so a failed font swap degrades instead of vanishing. */
+  /* ── TYPE ────────────────────────────────────────────────────────────
+     Injected by next/font as --font-display / --font-body / --font-data,
+     self-hosted. Real fallback stacks, so a failed swap degrades rather
+     than disappears. */
   --display: var(--font-display), 'Cabinet Grotesk', 'Arial Black', system-ui, sans-serif;
   --body: var(--font-body), 'General Sans', system-ui, -apple-system, sans-serif;
   --data: var(--font-data), 'Space Mono', ui-monospace, 'Cascadia Mono', monospace;
 
-  /* Fluid scale. clamp() so a phone and a 27" monitor both read well
-     without a media query per step. */
-  --t-hero: clamp(2.75rem, 1.6rem + 5.6vw, 6rem);
-  --t-h1: clamp(2rem, 1.35rem + 3.1vw, 3.5rem);
-  --t-h2: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem);
-  --t-h3: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
-  --t-lg: 1.125rem;
-  --t-md: 1rem;
-  --t-sm: 0.875rem;
+  --t-hero: clamp(2.75rem, 1.5rem + 6vw, 6.5rem);
+  --t-h1: clamp(2rem, 1.3rem + 3.4vw, 3.75rem);
+  --t-h2: clamp(1.5rem, 1.15rem + 1.7vw, 2.375rem);
+  --t-h3: clamp(1.25rem, 1.1rem + 0.75vw, 1.75rem);
+  --t-lg: 1.0625rem;
+  --t-md: 0.9375rem;
+  --t-sm: 0.8125rem;
   --t-xs: 0.75rem;
   --t-2xs: 0.6875rem;
 
-  --lh-tight: 1.02;
-  --lh-snug: 1.18;
+  --lh-tight: 1;
+  --lh-snug: 1.15;
   --lh-body: 1.6;
-  --track-tight: -0.03em;
-  --track-label: 0.08em;
+  --track-tight: -0.035em;
+  --track-label: 0.1em;
 
-  /* ── MOTION ───────────────────────────────────────────────────────────
-     Bento Pop is kinetic, so the springs matter more than the durations.
-     --spring overshoots (squash/stretch); --spring-soft settles without a
-     visible bounce, for anything holding text. */
+  /* ── MOTION ───────────────────────────────────────────────────────── */
   --t-instant: 90ms;
-  --t-micro: 160ms;
-  --t-move: 280ms;
-  --t-enter: 420ms;
-  --t-slow: 720ms;
+  --t-micro: 170ms;
+  --t-move: 300ms;
+  --t-enter: 480ms;
+  --t-slow: 800ms;
+  --t-amble: 1600ms;
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --spring-soft: cubic-bezier(0.22, 1.2, 0.36, 1);
-
-  /* Stagger step for lists and bento cells. */
   --stagger: 45ms;
 
   /* ── LAYOUT ───────────────────────────────────────────────────────── */
-  --page-max: 1280px;
-  --prose-max: 68ch;
-  --rail: 264px;
+  --page-max: 1320px;
+  --prose-max: 66ch;
+  --rail: 268px;
   --rail-collapsed: 76px;
-
-  color-scheme: light;
-}
-
-/* ══ SYSTEM DARK ═══════════════════════════════════════════════════════
-   Guarded with :not([data-theme='light']) so an explicit light choice
-   beats a dark OS preference. Values only — no new tokens here. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --ground: #14110f;
-    --ground-sunk: #0d0b0a;
-    --card: #1f1a17;
-    --card-raised: #272019;
-
-    --ink: #faf6f0;
-    --ink-soft: #c4b8ad;
-    --ink-faint: #93877d;
-    --hairline: #332b25;
-    --hairline-strong: #463c33;
-
-    /* Saturated hues vibrate on a dark ground; these are lifted in
-       lightness and slightly desaturated so they sit rather than buzz. */
-    --pop-1: #ff7a45;
-    --pop-1-ink: #ff9264;
-    --pop-1-wash: #33190f;
-
-    --pop-2: #34d98a;
-    --pop-2-ink: #5ee3a4;
-    --pop-2-wash: #0d2c1e;
-
-    --pop-3: #7b91ff;
-    --pop-3-ink: #98a9ff;
-    --pop-3-wash: #171c3a;
-
-    --pop-4: #ffd76b;
-    --pop-4-ink: #ffdf8a;
-    --pop-4-wash: #322611;
-
-    --on-accent: #1a1614;
-
-    --good: #5ee3a4;
-    --good-wash: #0d2c1e;
-    --warn: #ffdf8a;
-    --warn-wash: #322611;
-    --crit: #ff8080;
-    --crit-wash: #3a1616;
-    --info: #98a9ff;
-    --info-wash: #171c3a;
-
-    --aisle-fruits: #ff7a45;
-    --aisle-vegetables: #34d98a;
-    --aisle-dairy: #ffd76b;
-    --aisle-bakery: #e09a4f;
-    --aisle-beverages: #7b91ff;
-    --aisle-snacks: #f56a9c;
-    --aisle-staples: #c4a56a;
-    --aisle-frozen: #5ecadf;
-
-    --aisle-fruits-ink: #ff9264;
-    --aisle-vegetables-ink: #5ee3a4;
-    --aisle-dairy-ink: #ffdf8a;
-    --aisle-bakery-ink: #edb579;
-    --aisle-snacks-ink: #f98cb4;
-    --aisle-beverages-ink: #98a9ff;
-    --aisle-staples-ink: #d6bd8e;
-    --aisle-frozen-ink: #82daea;
-
-    /* Shadow does almost nothing on a dark ground — depth comes from the
-       surface stepping lighter, plus a hairline. Keeping the heavy light
-       shadows here would just muddy the card edges. */
-    --lift-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --lift-2: 0 4px 16px rgba(0, 0, 0, 0.55);
-    --lift-3: 0 12px 40px rgba(0, 0, 0, 0.65);
-
-    color-scheme: dark;
-  }
-}
-
-/* ══ EXPLICIT DARK ═════════════════════════════════════════════════════
-   Repeated so the in-app toggle wins over a light OS preference too. */
-:root[data-theme='dark'] {
-  --ground: #14110f;
-  --ground-sunk: #0d0b0a;
-  --card: #1f1a17;
-  --card-raised: #272019;
-
-  --ink: #faf6f0;
-  --ink-soft: #c4b8ad;
-  --ink-faint: #93877d;
-  --hairline: #332b25;
-  --hairline-strong: #463c33;
-
-  --pop-1: #ff7a45;
-  --pop-1-ink: #ff9264;
-  --pop-1-wash: #33190f;
-
-  --pop-2: #34d98a;
-  --pop-2-ink: #5ee3a4;
-  --pop-2-wash: #0d2c1e;
-
-  --pop-3: #7b91ff;
-  --pop-3-ink: #98a9ff;
-  --pop-3-wash: #171c3a;
-
-  --pop-4: #ffd76b;
-  --pop-4-ink: #ffdf8a;
-  --pop-4-wash: #322611;
-
-  --on-accent: #1a1614;
-
-  --good: #5ee3a4;
-  --good-wash: #0d2c1e;
-  --warn: #ffdf8a;
-  --warn-wash: #322611;
-  --crit: #ff8080;
-  --crit-wash: #3a1616;
-  --info: #98a9ff;
-  --info-wash: #171c3a;
-
-  --aisle-fruits: #ff7a45;
-  --aisle-vegetables: #34d98a;
-  --aisle-dairy: #ffd76b;
-  --aisle-bakery: #e09a4f;
-  --aisle-beverages: #7b91ff;
-  --aisle-snacks: #f56a9c;
-  --aisle-staples: #c4a56a;
-  --aisle-frozen: #5ecadf;
-
-  --aisle-fruits-ink: #ff9264;
-  --aisle-vegetables-ink: #5ee3a4;
-  --aisle-dairy-ink: #ffdf8a;
-  --aisle-bakery-ink: #edb579;
-  --aisle-snacks-ink: #f98cb4;
-  --aisle-beverages-ink: #98a9ff;
-  --aisle-staples-ink: #d6bd8e;
-  --aisle-frozen-ink: #82daea;
-
-  --lift-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --lift-2: 0 4px 16px rgba(0, 0, 0, 0.55);
-  --lift-3: 0 12px 40px rgba(0, 0, 0, 0.65);
+  --bar-h: 64px; /* sticky top bar */
+  --dock-h: 72px; /* sticky bottom cart bar */
 
   color-scheme: dark;
 }
 
-/* ══ AISLES ════════════════════════════════════════════════════════════
-   One stamp on <html> retints the whole tree. Registered below with
-   @property so the swap genuinely interpolates instead of snapping. */
+/* ══ SYSTEM LIGHT ══════════════════════════════════════════════════════
+   Guarded so an explicit dark choice beats a light OS preference.
+   Values only — no new tokens. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --void: #ece6f5;
+    --ground: #faf7ff;
+    --surface: #ffffff;
+    --raised: #ffffff;
+    --lifted: #ffffff;
+
+    --ink: #170e22;
+    --ink-soft: #4b3d5e;
+    --ink-faint: #6f6086;
+    --hairline: #e4dcef;
+    --hairline-bright: #d2c6e2;
+
+    /* The neons are far too light to sit on paper; these are the same hues
+       taken down in lightness until they hold their own as fills. */
+    --mint: #0aa96a;
+    --mint-ink: #077a4d;
+    --mint-wash: #e4fbf1;
+
+    --coral: #e8462f;
+    --coral-ink: #c0341f;
+    --coral-wash: #ffece8;
+
+    --violet: #7736e8;
+    --violet-ink: #5f26c4;
+    --violet-wash: #f1e9ff;
+
+    --gold: #b8820a;
+    --gold-ink: #8d6305;
+    --gold-wash: #fff5dd;
+
+    --on-accent: #ffffff;
+
+    --good: #0aa96a;
+    --good-ink: #077a4d;
+    --good-wash: #e4fbf1;
+    --warn: #b8820a;
+    --warn-ink: #8d6305;
+    --warn-wash: #fff5dd;
+    --crit: #d32333;
+    --crit-ink: #ad1826;
+    --crit-wash: #ffe9eb;
+    --info: #7736e8;
+    --info-ink: #5f26c4;
+    --info-wash: #f1e9ff;
+
+    --aisle-fruits: #e0502f;
+    --aisle-vegetables: #0aa96a;
+    --aisle-dairy: #b8820a;
+    --aisle-bakery: #b4661c;
+    --aisle-beverages: #0b7fb8;
+    --aisle-snacks: #c62f7c;
+    --aisle-staples: #8a6f3d;
+    --aisle-frozen: #0d8ba6;
+
+    --aisle-fruits-ink: #b83c20;
+    --aisle-vegetables-ink: #077a4d;
+    --aisle-dairy-ink: #8d6305;
+    --aisle-bakery-ink: #8d4e13;
+    --aisle-beverages-ink: #08618d;
+    --aisle-snacks-ink: #9e2461;
+    --aisle-staples-ink: #6b5527;
+    --aisle-frozen-ink: #0a6a80;
+
+    /* Shadow does the work on paper; the glow all but disappears, which is
+       correct — a light surface does not emit. */
+    --lift-1: 0 1px 2px rgb(23 14 34 / 0.05), 0 2px 8px rgb(23 14 34 / 0.05);
+    --lift-2: 0 3px 8px rgb(23 14 34 / 0.07), 0 12px 28px rgb(23 14 34 / 0.09);
+    --lift-3: 0 8px 20px rgb(23 14 34 / 0.1), 0 28px 64px rgb(23 14 34 / 0.12);
+    --lift-4: 0 16px 40px rgb(23 14 34 / 0.12), 0 50px 110px rgb(23 14 34 / 0.16);
+
+    --glow-sm: 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent);
+    --glow: 0 0 0 2px color-mix(in oklab, var(--accent) 22%, transparent);
+    --glow-lg: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+
+    --rim: inset 0 1px 0 rgb(255 255 255 / 0.9);
+    --rim-accent: inset 0 1px 0 color-mix(in oklab, var(--accent) 30%, transparent);
+
+    color-scheme: light;
+  }
+}
+
+/* ══ EXPLICIT LIGHT ════════════════════════════════════════════════════ */
+:root[data-theme='light'] {
+  --void: #ece6f5;
+  --ground: #faf7ff;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --lifted: #ffffff;
+
+  --ink: #170e22;
+  --ink-soft: #4b3d5e;
+  --ink-faint: #6f6086;
+  --hairline: #e4dcef;
+  --hairline-bright: #d2c6e2;
+
+  --mint: #0aa96a;
+  --mint-ink: #077a4d;
+  --mint-wash: #e4fbf1;
+
+  --coral: #e8462f;
+  --coral-ink: #c0341f;
+  --coral-wash: #ffece8;
+
+  --violet: #7736e8;
+  --violet-ink: #5f26c4;
+  --violet-wash: #f1e9ff;
+
+  --gold: #b8820a;
+  --gold-ink: #8d6305;
+  --gold-wash: #fff5dd;
+
+  --on-accent: #ffffff;
+
+  --good: #0aa96a;
+  --good-ink: #077a4d;
+  --good-wash: #e4fbf1;
+  --warn: #b8820a;
+  --warn-ink: #8d6305;
+  --warn-wash: #fff5dd;
+  --crit: #d32333;
+  --crit-ink: #ad1826;
+  --crit-wash: #ffe9eb;
+  --info: #7736e8;
+  --info-ink: #5f26c4;
+  --info-wash: #f1e9ff;
+
+  --aisle-fruits: #e0502f;
+  --aisle-vegetables: #0aa96a;
+  --aisle-dairy: #b8820a;
+  --aisle-bakery: #b4661c;
+  --aisle-beverages: #0b7fb8;
+  --aisle-snacks: #c62f7c;
+  --aisle-staples: #8a6f3d;
+  --aisle-frozen: #0d8ba6;
+
+  --aisle-fruits-ink: #b83c20;
+  --aisle-vegetables-ink: #077a4d;
+  --aisle-dairy-ink: #8d6305;
+  --aisle-bakery-ink: #8d4e13;
+  --aisle-beverages-ink: #08618d;
+  --aisle-snacks-ink: #9e2461;
+  --aisle-staples-ink: #6b5527;
+  --aisle-frozen-ink: #0a6a80;
+
+  --lift-1: 0 1px 2px rgb(23 14 34 / 0.05), 0 2px 8px rgb(23 14 34 / 0.05);
+  --lift-2: 0 3px 8px rgb(23 14 34 / 0.07), 0 12px 28px rgb(23 14 34 / 0.09);
+  --lift-3: 0 8px 20px rgb(23 14 34 / 0.1), 0 28px 64px rgb(23 14 34 / 0.12);
+  --lift-4: 0 16px 40px rgb(23 14 34 / 0.12), 0 50px 110px rgb(23 14 34 / 0.16);
+
+  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--accent) 22%, transparent);
+  --glow: 0 0 0 2px color-mix(in oklab, var(--accent) 22%, transparent);
+  --glow-lg: 0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent);
+
+  --rim: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --rim-accent: inset 0 1px 0 color-mix(in oklab, var(--accent) 30%, transparent);
+
+  color-scheme: light;
+}
+
+/* ══ AISLES ════════════════════════════════════════════════════════════ */
 [data-aisle='fruits'] { --aisle: var(--aisle-fruits); --aisle-ink: var(--aisle-fruits-ink); }
 [data-aisle='vegetables'] { --aisle: var(--aisle-vegetables); --aisle-ink: var(--aisle-vegetables-ink); }
 [data-aisle='dairy'] { --aisle: var(--aisle-dairy); --aisle-ink: var(--aisle-dairy-ink); }
@@ -341,35 +390,21 @@
 [data-aisle='staples'] { --aisle: var(--aisle-staples); --aisle-ink: var(--aisle-staples-ink); }
 [data-aisle='frozen'] { --aisle: var(--aisle-frozen); --aisle-ink: var(--aisle-frozen-ink); }
 
-/* A custom property is a plain string to the engine unless it is typed,
-   and strings do not interpolate. Registering it makes the 420ms aisle
-   crossfade a real animation rather than a hard cut. */
-@property --aisle {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #1fb86e;
-}
-@property --accent {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #ff5a1f;
-}
+/* A custom property is an untyped string to the engine, and strings do not
+   interpolate. Registering these makes the aisle crossfade a real animation
+   instead of a hard cut. */
+@property --aisle { syntax: '<color>'; inherits: true; initial-value: #2bf5a0; }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #2bf5a0; }
 
-html {
-  transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease);
-}
+html { transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease); }
 
 /* ══ BASE ══════════════════════════════════════════════════════════════ */
-*,
-*::before,
-*::after { box-sizing: border-box; }
-
+*, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 
 body {
-  /* Explicit, from a token. A transparent body borrows whatever ground
-     the host paints, which is how a page ends up with light text on a
-     light background in someone else's dark viewer. */
+  /* Explicit, from a token. A transparent body borrows whatever ground the
+     host paints — which is how a page ends up with light text on light. */
   background: var(--ground);
   color: var(--ink);
   font-family: var(--body);
@@ -378,6 +413,7 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden; /* 3D transforms can overhang; never let the page pan */
 }
 
 h1, h2, h3, h4 {
@@ -388,21 +424,14 @@ h1, h2, h3, h4 {
   text-wrap: balance;
   margin: 0;
 }
-
 p { text-wrap: pretty; margin: 0; }
 
-/* Every figure that can be compared or scanned in a column. Tabular
-   figures stop digits from dancing as a number counts up or refreshes. */
-.num,
-.mnd-num {
+.num, .tkr-num {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
-
-/* Small uppercase labels need the tracking or they read as a smear. */
-.label,
-.mnd-label {
+.label, .tkr-label {
   font-family: var(--body);
   font-size: var(--t-2xs);
   font-weight: 600;
@@ -413,61 +442,84 @@ p { text-wrap: pretty; margin: 0; }
 
 :where(a) { color: var(--accent-ink); text-underline-offset: 3px; }
 
-/* A visible focus ring is not optional. :focus-visible keeps it off
-   mouse clicks and on for keyboard users. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
   border-radius: var(--r-xs);
 }
 
 img, svg, video { max-width: 100%; display: block; }
 
-/* ══ MOTION ════════════════════════════════════════════════════════════
-   Named keyframes every surface shares, so a "card entering" looks the
-   same in the shop, the vendor console and the rider app. */
-@keyframes mnd-pop-in {
-  from { opacity: 0; transform: translateY(14px) scale(0.96); }
-  to { opacity: 1; transform: none; }
+/* ══ 3D UTILITIES ══════════════════════════════════════════════════════
+   Depth needs a perspective ANCESTOR. Without one, translateZ does
+   nothing and rotateX/Y degrade to a flat skew — the most common reason
+   a "3D" effect looks broken. */
+.tkr-3d { perspective: var(--persp); perspective-origin: 50% 50%; }
+.tkr-3d--near { perspective: var(--persp-near); }
+.tkr-3d__stage { transform-style: preserve-3d; will-change: transform; }
+
+/* Tilt toward the pointer. --mx/--my are set by script in the -50..50
+   range; with no script they stay 0 and the card simply lifts. */
+.tkr-tilt {
+  transform-style: preserve-3d;
+  transition: transform var(--t-move) var(--spring-soft), box-shadow var(--t-move) var(--ease);
+  transform: rotateX(calc(var(--my, 0) * -0.06deg)) rotateY(calc(var(--mx, 0) * 0.06deg))
+    translateZ(0);
 }
-@keyframes mnd-rise {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: none; }
+.tkr-tilt:hover { box-shadow: var(--lift-3), var(--rim); }
+.tkr-tilt__layer { transform: translateZ(var(--z-2)); }
+.tkr-tilt__layer--far { transform: translateZ(var(--z-1)); }
+.tkr-tilt__layer--near { transform: translateZ(var(--z-3)); }
+
+/* ══ MOTION ════════════════════════════════════════════════════════════ */
+@keyframes tkr-rise-3d {
+  from { opacity: 0; transform: perspective(var(--persp)) translate3d(0, 26px, -60px) rotateX(9deg); }
+  to { opacity: 1; transform: perspective(var(--persp)) translate3d(0, 0, 0) rotateX(0); }
 }
-@keyframes mnd-squash {
+@keyframes tkr-pop-3d {
+  from { opacity: 0; transform: perspective(var(--persp-near)) translateZ(-90px) scale(0.92); }
+  to { opacity: 1; transform: perspective(var(--persp-near)) translateZ(0) scale(1); }
+}
+@keyframes tkr-flip-in {
+  from { opacity: 0; transform: perspective(var(--persp)) rotateY(-70deg); }
+  to { opacity: 1; transform: perspective(var(--persp)) rotateY(0); }
+}
+@keyframes tkr-squash {
   0% { transform: scale(1); }
   40% { transform: scale(0.94, 1.06); }
   100% { transform: scale(1); }
 }
-@keyframes mnd-draw {
-  from { stroke-dashoffset: var(--draw-length, 1000); }
-  to { stroke-dashoffset: 0; }
+@keyframes tkr-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -10px, 18px); }
 }
-@keyframes mnd-shimmer {
-  from { background-position: -200% 0; }
-  to { background-position: 200% 0; }
+@keyframes tkr-spin-y { to { transform: rotateY(360deg); } }
+@keyframes tkr-draw { from { stroke-dashoffset: var(--draw-length, 1000); } to { stroke-dashoffset: 0; } }
+@keyframes tkr-shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes tkr-pulse-once {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 60%, transparent); }
+  100% { box-shadow: 0 0 0 20px transparent; }
 }
-@keyframes mnd-pulse-once {
-  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 55%, transparent); }
-  100% { box-shadow: 0 0 0 18px transparent; }
-}
-@keyframes mnd-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+@keyframes tkr-glow-breathe {
+  0%, 100% { box-shadow: var(--glow-sm); }
+  50% { box-shadow: var(--glow); }
 }
 
 /* ══ REDUCED MOTION ════════════════════════════════════════════════════
-   One block, last. Feedback is reduced to an instant state change — never
-   removed, because a control that appears to do nothing is worse than one
-   that moves too much. */
+   One block, last. Feedback is reduced to an instant state change, never
+   removed — a control that appears to do nothing is worse than one that
+   moves too much. The tilt is flattened outright: a vestibular trigger is
+   not something to merely shorten. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
   html { transition: none; }
+  .tkr-tilt, .tkr-tilt:hover { transform: none !important; }
+  .tkr-tilt__layer,
+  .tkr-tilt__layer--far,
+  .tkr-tilt__layer--near { transform: none !important; }
 }

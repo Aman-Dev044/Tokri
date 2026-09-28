@@ -1225,3 +1225,167 @@
   background-size: 200% 100%;
   animation: mnd-shimmer 1.4s linear infinite;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NEON ORCHARD — 3D engine + the quick-commerce layout patterns.
+   Shared by every surface, so a product card looks the same wherever it
+   is mounted.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Tilt3D ────────────────────────────────────────────────────────────
+   The WRAPPER owns perspective; the STAGE owns the transform. Putting
+   `transform: perspective(...)` on the moving element itself gives every
+   child the same vanishing point, so nested Depth layers never parallax. */
+.tkr-tilt3d {
+  display: block;
+  perspective: var(--persp);
+  perspective-origin: 50% 50%;
+  --mx: 0; --my: 0; --lift: 0px; --scale: 1;
+}
+.tkr-tilt3d__stage {
+  display: block;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transform:
+    rotateX(calc(var(--my) * var(--tilt-max, 9deg) / -50))
+    rotateY(calc(var(--mx) * var(--tilt-max, 9deg) / 50))
+    translateZ(var(--lift))
+    scale(var(--scale));
+  transition:
+    transform var(--t-move) var(--spring-soft),
+    box-shadow var(--t-move) var(--ease),
+    filter var(--t-move) var(--ease);
+}
+.tkr-tilt3d--glow:hover .tkr-tilt3d__stage { filter: drop-shadow(var(--glow-sm)); }
+
+/* A layer floating above the card face. Needs a preserve-3d ancestor —
+   which .tkr-tilt3d__stage provides — or translateZ is ignored. */
+.tkr-depth { display: block; transform: translateZ(var(--z, var(--z-2))); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tkr-tilt3d__stage { transform: none !important; transition: none !important; }
+  .tkr-depth { transform: none !important; }
+}
+
+/* ── Sticky bars ──────────────────────────────────────────────────────── */
+.tkr-topbar {
+  position: sticky; top: 0; z-index: 60;
+  height: var(--bar-h);
+  display: flex; align-items: center; gap: var(--s-4);
+  padding-inline: var(--s-4);
+  background: color-mix(in oklab, var(--ground) 82%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid var(--hairline);
+  box-shadow: var(--rim);
+}
+.tkr-dock {
+  position: sticky; bottom: 0; z-index: 60;
+  min-height: var(--dock-h);
+  display: flex; align-items: center; gap: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  padding-bottom: max(var(--s-3), env(safe-area-inset-bottom));
+  background: color-mix(in oklab, var(--raised) 92%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  border-top: 1px solid var(--hairline-bright);
+  box-shadow: var(--lift-3), var(--rim);
+}
+
+/* ── Horizontal rail ──────────────────────────────────────────────────
+   Category strips and "buy again" rows. Scroll-snap so a flick lands on
+   a card edge instead of halfway through one. */
+.tkr-rail {
+  display: flex; gap: var(--s-3);
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding: var(--s-2) var(--s-4) var(--s-4);
+  margin-inline: calc(var(--s-4) * -1);
+}
+.tkr-rail::-webkit-scrollbar { display: none; }
+.tkr-rail > * { scroll-snap-align: start; flex: 0 0 auto; }
+
+/* ── Product grid ─────────────────────────────────────────────────────
+   Two-across on a phone. Three is what every competitor ships and it is
+   why their cards are unreadable postage stamps. */
+.tkr-grid {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 720px)  { .tkr-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-4); } }
+@media (min-width: 1040px) { .tkr-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1360px) { .tkr-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+
+/* ── Card ─────────────────────────────────────────────────────────────
+   Surface steps lighter as it rises — on a dark ground a shadow alone
+   does not read as elevation. */
+.tkr-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: var(--s-2);
+  min-width: 0;
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-1), var(--rim);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.tkr-card--raised { background: var(--raised); box-shadow: var(--lift-2), var(--rim); }
+.tkr-card--flat   { background: var(--void);   box-shadow: none; border-color: transparent; }
+
+.tkr-card__media {
+  position: relative; aspect-ratio: 1;
+  border-radius: var(--r-md);
+  background: var(--void);
+  overflow: hidden;
+}
+
+/* ── ADD button / stepper ─────────────────────────────────────────────
+   The single most-tapped control in the product. Big, glowing, and it
+   squashes on press so the tap is felt as well as seen. */
+.tkr-add {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2);
+  min-height: 36px; padding-inline: var(--s-4);
+  border: 1px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  border-radius: var(--r-pill);
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-family: var(--body); font-weight: 600; font-size: var(--t-sm);
+  cursor: pointer;
+  transition: transform var(--t-micro) var(--spring), box-shadow var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease);
+}
+.tkr-add:hover { box-shadow: var(--glow-sm); background: color-mix(in oklab, var(--accent) 18%, var(--surface)); }
+.tkr-add:active { transform: scale(0.94); }
+.tkr-add--on { background: var(--accent); color: var(--on-accent); box-shadow: var(--glow-sm); }
+
+.tkr-step { display: inline-flex; align-items: center; gap: var(--s-1);
+  border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); }
+.tkr-step__btn { min-width: 34px; min-height: 34px; display: grid; place-items: center;
+  border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.tkr-step__n { min-width: 22px; text-align: center; font-family: var(--data);
+  font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* ── Price ────────────────────────────────────────────────────────────
+   Money is always mono with tabular figures; a price that shifts width
+   as digits change makes a grid jitter. */
+.tkr-price { font-family: var(--data); font-variant-numeric: tabular-nums;
+  font-weight: 700; letter-spacing: -0.03em; }
+.tkr-price__was { color: var(--ink-faint); text-decoration: line-through;
+  font-weight: 400; font-size: 0.85em; margin-left: var(--s-2); }
+
+/* ── Skeleton ─────────────────────────────────────────────────────────
+   Shaped like the content that is arriving, not a grey block. */
+.tkr-skel {
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg,
+    var(--void) 25%,
+    color-mix(in oklab, var(--void) 55%, var(--surface)) 50%,
+    var(--void) 75%);
+  background-size: 200% 100%;
+  animation: tkr-shimmer 1.4s linear infinite;
+}
+
+/* Wide content scrolls inside its own box; the page body never pans. */
+.tkr-scroll-x { overflow-x: auto; overscroll-behavior-x: contain; }

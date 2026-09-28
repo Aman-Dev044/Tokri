@@ -94,3 +94,7 @@ export type {
   BentoSpan,
   BentoTone,
 } from './components/Bento';
+
+/* ── 3D depth engine (Neon Orchard) ──────────────────────────────────────── */
+export { Tilt3D, Depth } from './components/Tilt3D';
+export type { Tilt3DProps } from './components/Tilt3D';
