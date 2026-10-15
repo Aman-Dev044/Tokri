@@ -742,6 +742,167 @@
   color: var(--ink);
 }
 
+/* ── signup tabs (customer / vendor / rider) ─────────────────────────────── */
+
+.authform__wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.authtabs {
+  display: flex;
+  gap: var(--s-1);
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--void);
+  border: 1px solid var(--hairline);
+}
+.authtabs__btn {
+  flex: 1 1 0;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: none;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
+}
+.authtabs__btn[aria-selected='true'] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--lift-1);
+}
+
+/* ── OTP step ─────────────────────────────────────────────────────────── */
+
+.authform__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
+.authform__meta strong {
+  color: var(--ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.authform__resend {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  padding: 0;
+}
+.authform__resend:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.authform__devhint {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px dashed color-mix(in oklab, var(--warn) 55%, transparent);
+  background: var(--warn-wash);
+  color: var(--warn);
+  font-size: var(--t-xs);
+}
+.authform__devhint-tag {
+  flex: 0 0 auto;
+  padding: 0.1em 0.5em;
+  border-radius: var(--r-sm);
+  background: var(--warn);
+  color: var(--void);
+  font-family: var(--data);
+  font-weight: 800;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+.authform__devhint code {
+  font-family: var(--data);
+  font-weight: 700;
+  font-size: var(--t-sm);
+  color: var(--ink);
+  letter-spacing: 0.1em;
+}
+
+/* ── vendor / rider application ──────────────────────────────────────── */
+
+.authform__mapwrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.authform__maplabel {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.authform__pin {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-soft);
+}
+
+.authform__section {
+  margin: 0;
+  padding-top: var(--s-2);
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--track-label);
+  color: var(--ink-faint);
+  border-top: 1px solid var(--hairline);
+}
+
+/* ── waiting-for-approval screen ──────────────────────────────────────── */
+
+.authwait {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  text-align: center;
+  padding: var(--s-6) 0;
+}
+.authwait__mark {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-pill);
+  background: var(--accent-wash, var(--void));
+  color: var(--accent-ink);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.authwait__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  letter-spacing: var(--track-tight);
+}
+.authwait__body {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: var(--lh-body);
+  max-width: 44ch;
+  align-self: center;
+}
+
 /* ── reduced motion ───────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

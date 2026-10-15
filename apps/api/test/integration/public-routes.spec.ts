@@ -58,6 +58,33 @@ import {
  *   GET /stores/:id/products    That store's catalogue, with live stock.
  *   GET /products/:id           One product. Also the SEO/SSR entry
  *                               point for a shared product link.
+ *   GET /products                Market-wide search and aisle browsing —
+ *                               `q`/`aisleKey` across every APPROVED,
+ *                               OPEN vendor at once instead of one
+ *                               store's shelf. Same CATALOGUE guarantee
+ *                               as the five above: nothing personal,
+ *                               nothing writable, only APPROVED+OPEN
+ *                               vendors and ACTIVE products.
+ *   GET /pincodes/:pincode      One serviceable PIN code to its
+ *                               approximate centre, read from the same
+ *                               static `pincode-table` the two browse
+ *                               routes already expose through
+ *                               `?pincode=`. It is a fact about WHERE
+ *                               THE PLATFORM DELIVERS, not about who is
+ *                               asking: the input is supplied by the
+ *                               caller, the output is identical for
+ *                               everyone, nothing is read from or
+ *                               written to any account, and it reveals
+ *                               nothing `GET /stores?pincode=` does not
+ *                               already imply. It is public because it
+ *                               HAS to be: it is the non-map way to get
+ *                               the lat/lng `CreateAddressDto` requires,
+ *                               and a customer who denied geolocation on
+ *                               a deployment with no Maps billing cannot
+ *                               save an address — and therefore cannot
+ *                               check out — without it. A location
+ *                               fallback gated behind a login would fail
+ *                               precisely the customer it exists for.
  *
  * Every one of them returns only APPROVED vendors and ACTIVE products,
  * so a suspended store is invisible rather than merely unbuyable. The
@@ -65,13 +92,51 @@ import {
  * store, a recent search, a personalised price — it stops being public
  * and comes off this list.
  *
+ * ── Signup (added with the registration flow) ────────────────────────────
+ * You cannot present a token before you have an account, so every entry
+ * point INTO an account is necessarily public. Each one is hardened a
+ * different way instead of relying on authentication:
+ *
+ *   POST /auth/register/request-otp   Hardest-throttled route in the API
+ *                                     (3/min). Behaves IDENTICALLY whether
+ *                                     or not the phone already has an
+ *                                     account — no enumeration oracle.
+ *   POST /auth/register/verify-otp    Guarded by the OTP itself: 3 wrong
+ *                                     guesses locks the challenge, and it
+ *                                     expires in 5 minutes regardless.
+ *   POST /auth/register               Cannot succeed without a
+ *                                     `registrationToken`, which only
+ *                                     `verify-otp` can mint, and only for
+ *                                     a phone that was just proven to
+ *                                     belong to the caller.
+ *   POST /auth/apply/vendor           Creates User+Vendor BOTH `pending`.
+ *                                     The account cannot log in
+ *                                     (`AuthService.login` rejects
+ *                                     anything but ACTIVE) until an admin
+ *                                     approves it — signup is not login.
+ *   POST /auth/apply/rider            Same shape as apply/vendor, but for
+ *                                     the shared platform delivery pool
+ *                                     (`DeliveryPartner.vendorId: null`).
+ *
+ * ── The payment webhook (added with the payments phase, §8.3) ───────────
+ *   POST /webhooks/razorpay   Razorpay is a server-to-server caller with
+ *                             no session to present — it cannot send a
+ *                             bearer token, so `@Public()` is the only
+ *                             way it can reach the API at all. Trust
+ *                             comes entirely from `PaymentsService.
+ *                             handleWebhook`, which verifies an
+ *                             HMAC-SHA256 signature over the RAW request
+ *                             body (never the parsed one) against
+ *                             `RAZORPAY_WEBHOOK_SECRET` before it
+ *                             believes a single byte of the payload, and
+ *                             answers 401 for anything that does not
+ *                             verify. It writes nothing based on
+ *                             `req.user` because there is none.
+ *
  * Deliberately NOT present:
- *   POST /auth/register — the signup flow (role selection, OTP, vendor KYC
- *                         gate) is still being specified; it is not
- *                         implemented, so it is not public.
- *   POST /webhooks/razorpay — arrives with the payment phase (§8.3). It
- *                         is public but HMAC-verified, and it gets a line
- *                         here at the time it lands.
+ *   Any admin/super-admin self-signup route — there is none, on purpose.
+ *                         An admin account is created only by another
+ *                         admin or by the bootstrap seed.
  */
 const EXPECTED_PUBLIC_ROUTES: readonly string[] = [
   'POST /auth/login',
@@ -85,6 +150,26 @@ const EXPECTED_PUBLIC_ROUTES: readonly string[] = [
   'GET /stores/:id/categories',
   'GET /stores/:id/products',
   'GET /products/:id',
+  // Market-wide search/browse across every APPROVED, OPEN vendor — the
+  // same CATALOGUE guarantee as the five rows above it, just not scoped
+  // to one store first. `?pincode=` on `GET /stores` (above) is the
+  // other half of this task's public surface: a query-string addition
+  // to an ALREADY-public route, not a new route signature, so it needs
+  // no separate line here.
+  'GET /products',
+  // The non-map lat/lng fallback. Static table in, static centre out —
+  // see the justification in the header block above.
+  'GET /pincodes/:pincode',
+
+  // ── Signup ──────────────────────────────────────────────────────────
+  'POST /auth/register/request-otp',
+  'POST /auth/register/verify-otp',
+  'POST /auth/register',
+  'POST /auth/apply/vendor',
+  'POST /auth/apply/rider',
+
+  // ── Payments (§8.3) ───────────────────────────────────────────────
+  'POST /webhooks/razorpay',
 ];
 
 interface RouteInfo {

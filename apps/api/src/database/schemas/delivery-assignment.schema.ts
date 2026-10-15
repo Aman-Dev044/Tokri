@@ -77,6 +77,23 @@ export class DeliveryAssignment {
   @Prop({ type: Date, default: null })
   otpLockedAt?: Date | null;
 
+  /**
+   * The pick fee actually charged when this rider accepted, integer
+   * paise. `null` on an offer that was never accepted.
+   *
+   * Persisted rather than recomputed because the fee is drawn at RANDOM
+   * per order (`crypto.randomInt`, see `RiderWalletService.drawPickFee`).
+   * A random charge that is not written down is a charge nobody can
+   * reproduce — not the rider disputing it, not the refund path that has
+   * to give back exactly what was taken, and not an auditor a year later.
+   */
+  @Prop({ type: Number, default: null })
+  pickFeePaise?: number | null;
+
+  /** Set once the fee has been given back, so it cannot be refunded twice. */
+  @Prop({ type: Date, default: null })
+  pickFeeRefundedAt?: Date | null;
+
   @Prop({ type: Boolean, default: false })
   isDemo: boolean;
 }

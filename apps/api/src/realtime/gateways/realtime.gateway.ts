@@ -15,6 +15,23 @@ import {
 import { createAdapter } from '@socket.io/redis-adapter';
 import { Model, Types } from 'mongoose';
 import { createClient, RedisClientType } from 'redis';
+
+/**
+ * Ten attempts with capped exponential backoff, then stop trying.
+ *
+ * node-redis's default is to retry forever. For a dependency that is
+ * merely slow to start that is right; for one that is absent it is an
+ * infinite error loop that hides every other line in the log. After ~30
+ * seconds of failures this is not a blip, it is a missing service, and
+ * the API has already degraded cleanly to single-replica realtime.
+ *
+ * Returning an Error (rather than a delay) is how node-redis is told to
+ * give up.
+ */
+const RECONNECT_STRATEGY = (retries: number): number | Error =>
+  retries > 10
+    ? new Error('Redis unreachable after 10 attempts — giving up.')
+    : Math.min(1000 * 2 ** retries, 8000);
 import type { Server, Socket } from 'socket.io';
 
 import { Public } from '../../common/decorators/public.decorator';
@@ -118,6 +135,12 @@ export class RealtimeGateway
 {
   private readonly logger = new Logger(RealtimeGateway.name);
 
+  /**
+   * Errors suppressed since each client last became ready. Reset on
+   * 'ready', so the count reported is the length of ONE outage.
+   */
+  private readonly redisErrorCounts = new Map<'pub' | 'sub', number>();
+
   /** Held so shutdown can close them; null when Redis is not wired. */
   private redisClients: { pub: RedisClientType; sub: RedisClientType } | null =
     null;
@@ -159,6 +182,11 @@ export class RealtimeGateway
    * An unreachable Redis degrades to single-replica behaviour with a LOUD
    * error rather than a dead API: the socket layer is not worth refusing
    * to serve HTTP over.
+   *
+   * "Loud" means ONCE, though. node-redis retries forever by default and
+   * every attempt emits an 'error', so a Redis that is merely absent used
+   * to write hundreds of identical ERROR lines a minute — which is the
+   * same as writing none, because nobody can read the log any more.
    */
   private async attachRedisAdapter(server: Server): Promise<void> {
     if (this.config.getOrThrow<string>('env') === 'test') {
@@ -169,17 +197,19 @@ export class RealtimeGateway
     const url = this.config.getOrThrow<string>('redis.url');
 
     try {
-      const pub: RedisClientType = createClient({ url });
+      const pub: RedisClientType = createClient({
+        url,
+        socket: { reconnectStrategy: RECONNECT_STRATEGY },
+      });
       const sub: RedisClientType = pub.duplicate();
 
       // Without these a dropped connection surfaces as an unhandled
-      // 'error' event, which takes the whole process down.
-      pub.on('error', (error: Error) =>
-        this.logger.error(`Redis pub error: ${error.message}`),
-      );
-      sub.on('error', (error: Error) =>
-        this.logger.error(`Redis sub error: ${error.message}`),
-      );
+      // 'error' event, which takes the whole process down. They are
+      // deliberately de-duplicating: see `logRedisError`.
+      pub.on('error', (error: Error) => this.logRedisError('pub', error));
+      sub.on('error', (error: Error) => this.logRedisError('sub', error));
+      pub.on('ready', () => this.logRedisRecovered('pub'));
+      sub.on('ready', () => this.logRedisRecovered('sub'));
 
       await Promise.all([pub.connect(), sub.connect()]);
       server.adapter(createAdapter(pub, sub));
@@ -193,6 +223,43 @@ export class RealtimeGateway
           (error instanceof Error ? error.message : String(error)),
       );
     }
+  }
+
+  /**
+   * One ERROR per outage, not one per retry.
+   *
+   * The first failure is logged in full, because it is news. Everything
+   * after it is the same fact repeating, so it is counted silently and
+   * reported once, on recovery — which also tells whoever reads the log
+   * how long the outage actually lasted.
+   *
+   * `error.message` is often empty for a refused connection, so the
+   * error's `code` (ECONNREFUSED, ENOTFOUND) is preferred: "Redis pub
+   * unavailable" with no reason is not worth printing.
+   */
+  private logRedisError(role: 'pub' | 'sub', error: Error): void {
+    const suppressed = this.redisErrorCounts.get(role) ?? 0;
+    this.redisErrorCounts.set(role, suppressed + 1);
+
+    if (suppressed > 0) return;
+
+    const code = (error as NodeJS.ErrnoException).code;
+    const reason = error.message || code || 'unknown error';
+    this.logger.error(
+      `Redis ${role} unavailable (${reason}). Realtime events will not ` +
+        'cross API replicas until it returns. Further errors from this ' +
+        'client are suppressed until it reconnects.',
+    );
+  }
+
+  private logRedisRecovered(role: 'pub' | 'sub'): void {
+    const suppressed = this.redisErrorCounts.get(role) ?? 0;
+    if (suppressed === 0) return;
+    this.redisErrorCounts.set(role, 0);
+    this.logger.log(
+      `Redis ${role} reconnected after ${suppressed} failed ` +
+        `attempt${suppressed === 1 ? '' : 's'}.`,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

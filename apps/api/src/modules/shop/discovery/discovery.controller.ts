@@ -11,12 +11,18 @@ import { Paginated } from '../../../common/dto/paginated';
 import {
   AisleGroup,
   DiscoveryService,
+  MarketProductRow,
+  PincodeResolution,
   ProductDetail,
   ProductRow,
   StoreDetail,
   StoreRow,
 } from './discovery.service';
-import { BrowseProductsQueryDto, BrowseStoresQueryDto } from './dto';
+import {
+  BrowseMarketProductsQueryDto,
+  BrowseProductsQueryDto,
+  BrowseStoresQueryDto,
+} from './dto';
 
 /**
  * ════════════════════════════════════════════════════════════════════════
@@ -27,12 +33,18 @@ import { BrowseProductsQueryDto, BrowseStoresQueryDto } from './dto';
  * `test/integration/public-routes.spec.ts`. That test asserts the public
  * set EXACTLY, so nothing can quietly join it.
  *
- * Why these five and nothing else: they return CATALOGUE — which stores
+ * Why these six and nothing else: they return CATALOGUE — which stores
  * exist, what they stock, what it costs. None of it is personal, none of
  * it is writable, and a grocery app that demands a login before it will
  * show a price loses the customer at the front door. The moment anything
  * here becomes personal (a saved store, a recent search), it stops being
  * public.
+ *
+ * `GET /products` (market-wide) joined the set alongside the original
+ * five: it is the same CATALOGUE guarantee — every APPROVED, OPEN
+ * vendor's products, filtered and paginated — just not scoped to one
+ * store first. See `test/integration/public-routes.spec.ts` for the
+ * one-line justification recorded there.
  */
 @ApiTags('shop/discovery')
 @Controller()
@@ -91,6 +103,44 @@ export class DiscoveryController {
     @Query() query: BrowseProductsQueryDto,
   ): Promise<Paginated<ProductRow>> {
     return this.discovery.browseProducts(id, query);
+  }
+
+  @Public()
+  @Get('products')
+  @ApiOperation({
+    summary: 'Market-wide search and aisle browsing, across every store',
+    description:
+      'The store-scoped listing above is `GET /stores/:id/products`; this ' +
+      'is its platform-wide sibling — every APPROVED, OPEN vendor\'s ' +
+      'products, filtered by `q` (the `searchText` text index, never a ' +
+      'regex scan) and/or `aisleKey`. Each row carries `store:{id,slug,' +
+      'storeName,distanceKm}`; `distanceKm` is null unless `lat`/`lng` ' +
+      'or a serviceable `pincode` were supplied. Neither FILTERS here — ' +
+      'they only measure. There is no `radius`; that belongs to ' +
+      '`GET /stores`, where it actually narrows the list.',
+  })
+  browseMarketProducts(
+    @Query() query: BrowseMarketProductsQueryDto,
+  ): Promise<Paginated<MarketProductRow>> {
+    return this.discovery.browseMarketProducts(query);
+  }
+
+  @Public()
+  @Get('pincodes/:pincode')
+  @ApiOperation({
+    summary: 'Resolve a serviceable PIN code to its approximate centre',
+    description:
+      'The non-map way to get a delivery point. `CreateAddressDto` ' +
+      'requires lat/lng, and the web app normally collects them from a ' +
+      'map pin — which is unavailable wherever Google Maps is not ' +
+      'billed. Reads the same static table as `?pincode=` on the two ' +
+      'browse routes; never a paid geocoding call. An unserviceable PIN ' +
+      'is a 400 carrying `PINCODE_NOT_SERVICEABLE` and the list that ' +
+      'does work.',
+  })
+  @ApiOkResponse({ description: '{ pincode, city, lat, lng }' })
+  resolvePincode(@Param('pincode') pincode: string): PincodeResolution {
+    return this.discovery.resolvePincodeCentre(pincode);
   }
 
   @Public()

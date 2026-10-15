@@ -4,12 +4,20 @@
  * The rider shell: the online toggle, today's line, the connection state, the
  * account button, and the bottom navigation.
  *
- * ── LAYOUT ──────────────────────────────────────────────────────────────────
+ * ── LAYOUT, BELOW 1024px ────────────────────────────────────────────────────
  * A short sticky header, a scrolling screen, and a dock fixed to the bottom
  * edge. The header is short on purpose — everything a thumb needs lives at the
  * BOTTOM (one-handed). The only exception is the online toggle, which is the
  * app's single most important control and belongs where it cannot be missed or
  * hit by accident: under the title, full width, 72px tall.
+ *
+ * ── LAYOUT, 1024px AND UP ───────────────────────────────────────────────────
+ * The same screens inside a console: a persistent `<RiderRail>` on the left,
+ * `main` released from its 560px phone column, and the dock gone. Both chromes
+ * are ALWAYS in the tree and `delivery.module.css` chooses between them with a
+ * media query — never a JavaScript viewport check, which paints the phone
+ * layout first and then snaps. One component, one stylesheet, no second route
+ * tree and no duplicated screens.
  *
  * ── TODAY'S NUMBERS ─────────────────────────────────────────────────────────
  * From `GET /delivery/me` → `profile.today`, which is the only endpoint that
@@ -43,6 +51,7 @@ import {
 
 import styles from './delivery.module.css';
 import { Dock, RiderNav } from './Dock';
+import { RiderRail } from './RiderRail';
 import { RiderProfileSheet } from './RiderProfileSheet';
 import { RiderProvider, useRider } from './RiderProvider';
 import { useRiderSession } from '@/lib/delivery/session';
@@ -179,53 +188,62 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
         </div>
 
         {/*
-          THE control. Everything else on this surface is secondary to it.
-          `key` on the ON state so the leaf fill pulses ONCE when it flips,
-          then holds — a toggle that keeps pulsing stops being read.
+          `headerBar` is `display: contents` below 1024px, so on a phone these
+          three are exactly what they always were — direct flex children of
+          `headerInner`, stacked, same gap, not one pixel moved. Above 1024px
+          it becomes a real row and the toggle sits beside today's numbers
+          instead of stretching a 72px bar across a console.
         */}
-        <button
-          key={online ? 'on' : 'off'}
-          type="button"
-          className={`${styles.toggle} ${online ? styles.toggleOn : ''}`}
-          onClick={onToggle}
-          disabled={availabilityPending}
-          aria-pressed={online}
-        >
-          <span className={styles.toggleLamp} aria-hidden="true" />
-          <span className={styles.toggleText}>
-            <span>{online ? "You're online" : "You're offline"}</span>
-            <span className={styles.toggleHint}>
-              {availabilityPending
-                ? 'Saving…'
-                : online
-                  ? 'Tap to stop receiving offers'
-                  : 'Tap to start receiving offers'}
+        <div className={styles.headerBar}>
+          {/*
+            THE control. Everything else on this surface is secondary to it.
+            `key` on the ON state so the leaf fill pulses ONCE when it flips,
+            then holds — a toggle that keeps pulsing stops being read.
+          */}
+          <button
+            key={online ? 'on' : 'off'}
+            type="button"
+            className={`${styles.toggle} ${online ? styles.toggleOn : ''}`}
+            onClick={onToggle}
+            disabled={availabilityPending}
+            aria-pressed={online}
+          >
+            <span className={styles.toggleLamp} aria-hidden="true" />
+            <span className={styles.toggleText}>
+              <span>{online ? "You're online" : "You're offline"}</span>
+              <span className={styles.toggleHint}>
+                {availabilityPending
+                  ? 'Saving…'
+                  : online
+                    ? 'Tap to stop receiving offers'
+                    : 'Tap to start receiving offers'}
+              </span>
             </span>
-          </span>
-        </button>
+          </button>
 
-        {toggleError === null ? null : (
-          <p className={`${styles.attempts} ${styles.attemptsLow}`} role="alert">
-            {toggleError}
-          </p>
-        )}
-
-        <div className={styles.todayStrip}>
-          <span className={styles.todayCell}>
-            Today
-            <span className={styles.todayValue}>
-              {today === null ? '—' : money(today.earningsPaise)}
-            </span>
-          </span>
-          <span className={styles.todayCell}>
-            Deliveries
-            <span className={styles.todayValue}>
-              {today === null ? '—' : today.deliveries}
-            </span>
-          </span>
-          {riderName === '' ? null : (
-            <span className={`${styles.todayCell} ${styles.todayName}`}>{riderName}</span>
+          {toggleError === null ? null : (
+            <p className={`${styles.attempts} ${styles.attemptsLow}`} role="alert">
+              {toggleError}
+            </p>
           )}
+
+          <div className={styles.todayStrip}>
+            <span className={styles.todayCell}>
+              Today
+              <span className={styles.todayValue}>
+                {today === null ? '—' : money(today.earningsPaise)}
+              </span>
+            </span>
+            <span className={styles.todayCell}>
+              Deliveries
+              <span className={styles.todayValue}>
+                {today === null ? '—' : today.deliveries}
+              </span>
+            </span>
+            {riderName === '' ? null : (
+              <span className={`${styles.todayCell} ${styles.todayName}`}>{riderName}</span>
+            )}
+          </div>
         </div>
       </div>
     </header>
@@ -240,7 +258,7 @@ function Chrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [hideNav, setHideNav] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
-  const { offers, activeOrder } = useRider();
+  const { offers, activeOrder, wallet, kyc, profile } = useRider();
 
   const value = useMemo<ChromeValue>(() => ({ hideNav, setHideNav }), [hideNav]);
 
@@ -262,9 +280,32 @@ function Chrome({ children }: { children: ReactNode }) {
       ? '/delivery'
       : `/delivery/active/${encodeURIComponent(activeOrder.orderId)}`;
 
+  // Both dots are the SERVER's verdict, not a local threshold: `lowBalance`
+  // comes off the wallet payload and the KYC status off the KYC payload. A
+  // `null` (not loaded yet) shows no dot rather than guessing in either
+  // direction. The rail and the dock read the same two booleans.
+  const walletLow = wallet?.lowBalance === true;
+  const kycPending = kyc !== null && kyc.status !== 'verified';
+
   return (
     <ChromeContext.Provider value={value}>
       <div className={styles.shell}>
+        {/*
+          ALWAYS rendered, shown by a media query at 1024px and never by a
+          viewport check in JavaScript — a layout chosen from `innerWidth`
+          paints the wrong one first and then snaps. Below 1024px this is
+          `display: none` and the dock below is the navigation; above it, the
+          dock is `display: none` and this is.
+        */}
+        <RiderRail
+          pathname={pathname}
+          offersCount={offers.length}
+          activeHref={activeHref}
+          walletLow={walletLow}
+          kycPending={kycPending}
+          riderName={profile?.name ?? ''}
+          onOpenAccount={openAccount}
+        />
         <Header onOpenAccount={openAccount} />
         <main className={styles.main} id="main">
           {children}
@@ -272,11 +313,13 @@ function Chrome({ children }: { children: ReactNode }) {
         {hideNav ? null : (
           // The screen renders its own dock when it has an action. Nothing
           // here in that case, deliberately — the dock is exclusive.
-          <Dock>
+          <Dock nav>
             <RiderNav
               pathname={pathname}
               offersCount={offers.length}
               activeHref={activeHref}
+              walletLow={walletLow}
+              kycPending={kycPending}
             />
           </Dock>
         )}

@@ -42,7 +42,13 @@ export async function createTestApp(): Promise<TestContext> {
     imports: [AppModule, DiscoveryModule],
   }).compile();
 
-  const app = moduleRef.createNestApplication();
+  const app = moduleRef.createNestApplication({
+    // Mirrors `main.ts`: without this, `req.rawBody` is never populated
+    // and the Razorpay webhook's HMAC verification — which MUST run
+    // against the exact bytes Razorpay sent, not a re-serialised body —
+    // cannot be tested at all. See `test/integration/payments.spec.ts`.
+    rawBody: true,
+  });
 
   // Mirrors `main.ts`. The refresh token arrives in an httpOnly cookie, so
   // without cookie-parser `POST /auth/refresh` can never see it.

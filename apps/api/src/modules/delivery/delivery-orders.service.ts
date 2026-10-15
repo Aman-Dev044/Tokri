@@ -26,12 +26,16 @@ import {
   otpStateOf,
 } from './assignment.service';
 import { MAX_OTP_ATTEMPTS } from './delivery.constants';
-import { DeliverOrderDto, FailDeliveryDto } from './dto';
+import { DeliverOrderDto, FailDeliveryDto, ProofPhotoPresignDto } from './dto';
 import { GeoService } from './geo.service';
 import { DeliveryService } from './delivery.service';
 import { DeliveryOtpService } from './otp.service';
+import {
+  DeliveryProofPhotoService,
+  PresignedUpload,
+} from './proof-photo.service';
 import { applyTransition } from './order-transition.util';
-import { ActiveOrder, Waypoint } from './types';
+import { ActiveOrder, DeliveryTracking, Waypoint } from './types';
 
 /** RFC 4918 423 Locked — absent from Nest's HttpStatus enum. */
 const HTTP_STATUS_LOCKED = 423;
@@ -76,6 +80,7 @@ export class DeliveryOrdersService {
     private readonly otp: DeliveryOtpService,
     private readonly geo: GeoService,
     private readonly realtime: RealtimeService,
+    private readonly proofPhoto: DeliveryProofPhotoService,
   ) {}
 
   // ──────────────────────────────────────────────────────────────────
@@ -106,6 +111,115 @@ export class DeliveryOrdersService {
     );
 
     return this.toActiveOrder(order, assignment);
+  }
+
+  /**
+   * ════════════════════════════════════════════════════════════════
+   *  LIVE TRACKING — both parties on one map
+   * ════════════════════════════════════════════════════════════════
+   *
+   * `GET /delivery/orders/:id/tracking`. What an Ola or Uber screen
+   * shows: where the rider is RIGHT NOW, where the customer is, where
+   * the store is, how far is left, and what is in the bag.
+   *
+   * The rider's position comes from `DeliveryPartner.currentLocation`,
+   * which the existing location-ping stream already rewrites every ten
+   * seconds — this endpoint is the initial paint, and
+   * `delivery.location_updated` on the order room is what moves the
+   * marker afterwards. Polling this in a loop would be a second,
+   * slower copy of a stream that already exists.
+   *
+   * `remainingKm` is measured from the RIDER to the DROP, not pickup to
+   * drop: a map that says "2.4 km" while the rider is 200 m from the
+   * door is describing the trip, not the wait. The payout, which must
+   * stay pickup-to-drop so the statement and the offer agree, is
+   * deliberately not re-derived from this number.
+   *
+   * Scoped by `{ _id, deliveryPartnerId }` like every other read here,
+   * so another rider's order is 404 rather than 403.
+   */
+  async tracking(user: JwtUser, orderId: string): Promise<DeliveryTracking> {
+    const partner = await this.delivery.requirePartner(user);
+    const order = await this.riderOrder(orderId, partner._id);
+
+    const [vendor, customer] = await Promise.all([
+      this.vendors
+        .findById(order.vendorId)
+        .select('storeName location address')
+        .lean<{
+          storeName: string;
+          location?: VendorDocument['location'] | null;
+          address?: { line1?: string; city?: string } | null;
+        } | null>()
+        .exec(),
+      this.users
+        .findById(order.customerId)
+        .select('name')
+        .lean<{ name: string } | null>()
+        .exec(),
+    ]);
+
+    const pickupPoint = vendor?.location ?? null;
+    const dropPoint = order.address.location ?? null;
+    const riderPoint = partner.currentLocation ?? null;
+
+    const pickup: Waypoint = {
+      label: vendor?.storeName ?? 'Store',
+      address: [vendor?.address?.line1, vendor?.address?.city]
+        .filter(Boolean)
+        .join(', '),
+      ...this.coords(pickupPoint),
+    };
+
+    const drop: Waypoint = {
+      label: order.address.label ?? order.address.city,
+      address: [
+        order.address.line1,
+        order.address.line2,
+        order.address.city,
+        order.address.pincode,
+      ]
+        .filter(Boolean)
+        .join(', '),
+      ...this.coords(dropPoint),
+    };
+
+    const riderLatLng = this.geo.toLatLng(riderPoint);
+    // Before pickup the rider is heading to the STORE, so what is left
+    // of the journey is rider → pickup → drop. After it, it is rider →
+    // drop. Quoting the second while the rider is still at home would
+    // under-report the wait by the whole first leg.
+    const remainingKm =
+      order.status === OrderStatus.ASSIGNED
+        ? sumKm(
+            this.geo.distanceKm(riderPoint, pickupPoint),
+            this.geo.distanceKm(pickupPoint, dropPoint),
+          )
+        : this.geo.distanceKm(riderPoint, dropPoint);
+
+    return {
+      orderId: order._id.toString(),
+      orderNo: order.orderNo,
+      status: order.status,
+      rider:
+        riderLatLng && partner.locationAt
+          ? { ...riderLatLng, at: partner.locationAt.toISOString() }
+          : null,
+      pickup,
+      drop,
+      remainingKm,
+      etaMinutes: this.geo.etaMinutes(remainingKm),
+      items: order.items.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        unit: item.unit,
+        image: item.image ?? null,
+      })),
+      itemCount: order.items.length,
+      customerName: customer?.name ?? null,
+      customerPhone: order.address.phone,
+      codAmountPaise: codAmountOf(order),
+    };
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -181,6 +295,34 @@ export class DeliveryOrdersService {
   // ──────────────────────────────────────────────────────────────────
   //  Proof of delivery
   // ──────────────────────────────────────────────────────────────────
+
+  /**
+   * `POST /delivery/orders/:id/proof-photo` — a presigned S3 PUT for an
+   * optional handover photo, exactly like the vendor's product-image
+   * presign (`VendorImagesService`). The resulting `publicUrl` is what
+   * the rider app then sends back as `photoUrl` on `POST …/deliver` —
+   * `DeliverOrderDto.photoUrl` already accepts it; that half of the
+   * contract needed no change.
+   *
+   * Ownership FIRST: `riderOrder` throws 404 before object storage is
+   * even consulted, so an unconfigured bucket is never the reason a
+   * caller learns whether another rider's order id exists — the same
+   * ordering `VendorCatalogController.presignImage` uses.
+   */
+  async presignProofPhoto(
+    user: JwtUser,
+    orderId: string,
+    dto: ProofPhotoPresignDto,
+  ): Promise<PresignedUpload> {
+    const partner = await this.delivery.requirePartner(user);
+    const order = await this.riderOrder(orderId, partner._id);
+
+    return this.proofPhoto.presignProofPhoto(
+      order._id.toString(),
+      dto.contentType,
+      dto.sizeBytes,
+    );
+  }
 
   /**
    * OUT_FOR_DELIVERY → DELIVERED, gated on the customer's OTP.
@@ -449,3 +591,13 @@ export class DeliveryOrdersService {
     return { lat: value?.lat ?? null, lng: value?.lng ?? null };
   }
 }
+
+/**
+ * Adds two distances that may each be unknown.
+ *
+ * `null` propagates: a leg whose coordinates are missing makes the WHOLE
+ * remaining distance unknown, and pretending otherwise would quote an ETA
+ * that is confidently short by however long that leg is.
+ */
+const sumKm = (a: number | null, b: number | null): number | null =>
+  a === null || b === null ? null : Math.round((a + b) * 100) / 100;

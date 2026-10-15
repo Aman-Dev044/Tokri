@@ -23,6 +23,9 @@ async function bootstrap() {
   const env = config.getOrThrow<string>('env');
   const port = config.getOrThrow<number>('port');
   const prefix = config.getOrThrow<string>('apiPrefix');
+  // The product name, from APP_NAME. The banner and the Swagger title are
+  // the two places a stale brand is most visible to whoever runs this.
+  const appName = config.getOrThrow<string>('brand.name');
 
   // ── CORS — allowlist comes from CORS_ORIGINS in .env ──────────────
   // Never '*'. The Joi schema rejects a wildcard outright, because a
@@ -86,7 +89,7 @@ async function bootstrap() {
     const doc = SwaggerModule.createDocument(
       app,
       new DocumentBuilder()
-        .setTitle('Mandi API')
+        .setTitle(`${appName} API`)
         .setDescription('Multi-vendor grocery delivery ecosystem')
         .setVersion('0.1.0')
         .addBearerAuth()
@@ -99,7 +102,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   await app.listen(port);
-  logger.log(`Mandi API [${env}] listening on http://localhost:${port}/${prefix}`);
+  logger.log(`${appName} API [${env}] listening on http://localhost:${port}/${prefix}`);
   logger.log(`CORS allowlist: ${origins.join(', ')}`);
 }
 

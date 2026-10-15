@@ -79,8 +79,8 @@ function sortValue(row: ProductRow, key: string): string | number | null {
   }
 }
 
-export function ProductsTab() {
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+export function ProductsTab({ initialQuery = '' }: { initialQuery?: string }) {
+  const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, q: initialQuery });
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState | null>({ key: 'stock', dir: 'asc' });
   const [toggling, setToggling] = useState<ProductRow | null>(null);

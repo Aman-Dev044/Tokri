@@ -1,5 +1,6 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 
 import {
@@ -14,7 +15,12 @@ const isDuplicateKeyError = (error: unknown): boolean =>
   (error as { code?: number }).code === 11000;
 
 /**
- * Allocates `MND-20260925-0001`.
+ * Allocates `TKR-20260925-0001`.
+ *
+ * The prefix comes from ORDER_NO_PREFIX so a rename does not need a code
+ * change. Existing order numbers are deliberately NOT rewritten: an order
+ * number is a customer-facing receipt reference and must never change once
+ * it has been issued.
  *
  * Human-readable is the requirement (§5.1) — a customer reads this number
  * out on the phone, and a support agent types it back. That rules out a
@@ -30,10 +36,15 @@ const isDuplicateKeyError = (error: unknown): boolean =>
  */
 @Injectable()
 export class OrderNumberService {
+  private readonly prefix: string;
+
   constructor(
     @InjectModel(OrderCounter.name)
     private readonly counters: Model<OrderCounterDocument>,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.prefix = config.getOrThrow<string>('orderNoPrefix');
+  }
 
   async next(now: Date = new Date()): Promise<string> {
     const key = now.toISOString().slice(0, 10).replace(/-/g, '');
@@ -54,7 +65,7 @@ export class OrderNumberService {
           .exec();
 
         if (counter) {
-          return `MND-${key}-${String(counter.seq).padStart(4, '0')}`;
+          return `${this.prefix}-${key}-${String(counter.seq).padStart(4, '0')}`;
         }
       } catch (error) {
         if (!isDuplicateKeyError(error)) throw error;

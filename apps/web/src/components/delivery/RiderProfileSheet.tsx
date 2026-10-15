@@ -35,6 +35,7 @@
  * thumb, alone.
  */
 
+import Link from 'next/link';
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -151,6 +152,15 @@ export function RiderProfileSheet({ onClose }: { onClose: () => void }) {
             </div>
           </>
         )}
+
+        {/*
+          History moved off the dock when Wallet and Verify took its slot.
+          It belongs here: a record a rider reads occasionally, one tap from
+          the same sheet that answers "who am I signed in as".
+        */}
+        <Link className={styles.linkBtn} href="/delivery/history" onClick={onClose}>
+          Past deliveries
+        </Link>
 
         {confirming ? (
           <div

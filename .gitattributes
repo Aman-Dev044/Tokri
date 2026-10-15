@@ -1,0 +1,31 @@
+# Normalise line endings in the repository to LF, and let Git hand each
+# platform what it expects on checkout.
+* text=auto
+
+# EXCEPT these. cmd.exe parses a .bat line by line, and with LF-only endings
+# `goto :label` and multi-line `if (...)` blocks misbehave in ways that look
+# like a logic bug rather than an encoding one. Force CRLF so run.bat still
+# works after a clone on a machine configured with core.autocrlf=input.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Shell scripts are the mirror image: CRLF makes the shebang line fail with
+# a "bad interpreter" error that names a path that clearly exists.
+*.sh text eol=lf
+
+# Binary — never touch, never diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary

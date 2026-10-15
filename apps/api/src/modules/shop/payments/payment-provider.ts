@@ -36,17 +36,37 @@ export interface VerifySignatureInput {
   signature: string;
 }
 
+/** What the gateway currently thinks happened to one of its orders. */
+export type ProviderPaymentState = 'paid' | 'pending' | 'failed';
+
+export interface ProviderOrderStatus {
+  state: ProviderPaymentState;
+  /** The captured payment's id, present only when `state === 'paid'`. */
+  providerPaymentId: string | null;
+}
+
 export interface PaymentProvider {
   readonly name: string;
 
   /**
-   * True only when every credential the adapter needs is present.
+   * True only when every credential `createOrder` / `verifySignature`
+   * need is present.
    *
    * Checkout asks BEFORE it does anything, so an unconfigured gateway is
    * a clean 503 on the online path rather than a crash — and never a
    * reason for the COD path to stop working.
    */
   isConfigured(): boolean;
+
+  /**
+   * True only when `RAZORPAY_WEBHOOK_SECRET` is present.
+   *
+   * Kept separate from `isConfigured()`: a deployment could in principle
+   * hold API keys without a webhook secret (or vice versa) while it is
+   * being provisioned, and the webhook must refuse to trust a signature
+   * it cannot actually verify rather than silently accepting everything.
+   */
+  isWebhookConfigured(): boolean;
 
   createOrder(input: CreateProviderOrderInput): Promise<ProviderOrder>;
 
@@ -57,6 +77,24 @@ export interface PaymentProvider {
    * truth. The webhook is — and it is a separate phase.
    */
   verifySignature(input: VerifySignatureInput): boolean;
+
+  /**
+   * Verifies the HMAC on a WEBHOOK delivery.
+   *
+   * `rawBody` must be the exact bytes Razorpay sent — a body that has
+   * been JSON-parsed and re-serialised will not reproduce the same HMAC,
+   * because key order and whitespace are not guaranteed to round-trip.
+   */
+  verifyWebhookSignature(rawBody: Buffer, signature: string): boolean;
+
+  /**
+   * Live lookup of an order's payment state, straight from the gateway.
+   *
+   * Used only by the reconciliation sweep (§8.3): the backstop for a
+   * webhook that never arrived. Never on the request path — a customer's
+   * checkout must never wait on a gateway round trip it doesn't need.
+   */
+  fetchOrderStatus(providerOrderId: string): Promise<ProviderOrderStatus>;
 }
 
 /** DI token. An interface has no runtime identity to inject by. */

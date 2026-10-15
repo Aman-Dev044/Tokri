@@ -87,3 +87,28 @@ export function newIdempotencyKey(): string {
   // and it is NOT a secret with a hardcoded default (plan §4.1).
   return `idem-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/**
+ * The PACK SIZE — "1 kg", "500 g", "6 pc" — from the two fields the API
+ * actually sends.
+ *
+ * `ProductRow` carries `unit` and `unitValue` as separate fields, and the
+ * product page was rendering only `unit`. "kg" is not a pack size: it does not
+ * say whether you are buying one kilo or five, which is the single most
+ * important number next to a price on a grocery listing. This is the one place
+ * the pair becomes a label, so the card, the detail page and the basket cannot
+ * disagree about what a line actually is.
+ *
+ * `unitValue` of 0 or 1 collapses to the bare unit for the units where a
+ * leading "1" reads as noise ("1 pack" → "pack"), and stays explicit for
+ * weights and volumes, where "1 kg" is the real answer and "kg" is not.
+ */
+const BARE_UNITS = new Set(['pack', 'pc', 'piece', 'unit', 'bunch', 'dozen']);
+
+export function formatPackSize(unit: string, unitValue: number): string {
+  const label = unit.trim();
+  if (label === '') return '';
+  if (!Number.isFinite(unitValue) || unitValue <= 0) return label;
+  if (unitValue === 1 && BARE_UNITS.has(label.toLowerCase())) return label;
+  return `${unitValue} ${label}`;
+}

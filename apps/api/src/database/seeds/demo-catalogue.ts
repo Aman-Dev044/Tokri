@@ -189,6 +189,9 @@ export const DEMO_CATEGORIES: readonly DemoCategorySpec[] = [
   { name: 'Snacks & Namkeen', slug: 'snacks-and-namkeen', aisleKey: AisleKey.SNACKS, sortOrder: 6 },
   { name: 'Staples & Grains', slug: 'staples-and-grains', aisleKey: AisleKey.STAPLES, sortOrder: 7 },
   { name: 'Frozen Foods', slug: 'frozen-foods', aisleKey: AisleKey.FROZEN, sortOrder: 8 },
+  // Last in the rail on purpose: it is the one non-perishable aisle, and a
+  // grocery run starts with food.
+  { name: 'Home & Electronics', slug: 'home-and-electronics', aisleKey: AisleKey.ELECTRONICS, sortOrder: 9 },
 ];
 
 export interface DemoProductSpec {
@@ -211,6 +214,7 @@ const BV = AisleKey.BEVERAGES;
 const S = AisleKey.SNACKS;
 const ST = AisleKey.STAPLES;
 const FZ = AisleKey.FROZEN;
+const EL = AisleKey.ELECTRONICS;
 
 const KG = ProductUnit.KG;
 const G = ProductUnit.G;
@@ -219,7 +223,7 @@ const ML = ProductUnit.ML;
 const PC = ProductUnit.PIECE;
 const PK = ProductUnit.PACK;
 
-/** 80 real products, ten per aisle. */
+/** 90 real products, ten per aisle across nine aisles. */
 export const DEMO_PRODUCTS: readonly DemoProductSpec[] = [
   // ── Fruits ──────────────────────────────────────────────────────────
   { name: 'Alphonso Mango', brand: 'Ratnagiri', aisleKey: F, unit: KG, unitValue: 1, mrp: 49900, price: 42900 },
@@ -316,6 +320,19 @@ export const DEMO_PRODUCTS: readonly DemoProductSpec[] = [
   { name: 'Frozen Idli', brand: 'iD Fresh', aisleKey: FZ, unit: PC, unitValue: 20, mrp: 15900, price: 14500 },
   { name: 'Cornetto Butterscotch', brand: 'Kwality Walls', aisleKey: FZ, unit: ML, unitValue: 110, mrp: 5000, price: 4500 },
   { name: 'Frozen Mixed Vegetables', brand: 'Safal', aisleKey: FZ, unit: KG, unitValue: 1, mrp: 16900, price: 15500 },
+  // ── Home & Electronics ──────────────────────────────────────────────
+  // What a kirana or a 20-minute delivery store actually keeps on the
+  // shelf: the small things you replace, not the things you research.
+  { name: 'LED Bulb 9W Cool White', brand: 'Philips', aisleKey: EL, unit: PC, unitValue: 1, mrp: 19900, price: 14900 },
+  { name: 'Extension Board 4 Socket', brand: 'Anchor', aisleKey: EL, unit: PC, unitValue: 1, mrp: 44900, price: 36900 },
+  { name: 'AA Alkaline Battery 4 Pack', brand: 'Duracell', aisleKey: EL, unit: PK, unitValue: 4, mrp: 22900, price: 18900 },
+  { name: 'USB-C Charging Cable 1m', brand: 'boAt', aisleKey: EL, unit: PC, unitValue: 1, mrp: 39900, price: 24900 },
+  { name: 'Electric Kettle 1.5L', brand: 'Prestige', aisleKey: EL, unit: PC, unitValue: 1, mrp: 149900, price: 109900 },
+  { name: 'Mixer Grinder 500W', brand: 'Bajaj', aisleKey: EL, unit: PC, unitValue: 1, mrp: 349900, price: 269900 },
+  { name: 'Immersion Rod 1500W', brand: 'Havells', aisleKey: EL, unit: PC, unitValue: 1, mrp: 89900, price: 69900 },
+  { name: 'Mosquito Repellent Machine', brand: 'Good Knight', aisleKey: EL, unit: PC, unitValue: 1, mrp: 9900, price: 7900 },
+  { name: 'Table Fan 400mm', brand: 'Usha', aisleKey: EL, unit: PC, unitValue: 1, mrp: 249900, price: 189900 },
+  { name: 'Wall Clock Silent Sweep', brand: 'Ajanta', aisleKey: EL, unit: PC, unitValue: 1, mrp: 64900, price: 44900 },
 ];
 
 /** 40 customers. */

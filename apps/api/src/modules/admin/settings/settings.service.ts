@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 
@@ -59,30 +60,55 @@ export interface SettingsResponse extends PlatformSettings {
  *
  * They match the locked decisions: Rs 2,000 COD cap (#3) and a 5 km
  * serviceable radius (#11).
+ *
+ * The ONE exception to "nothing here is read from the environment" is
+ * `platformName` and the support address derived from it: the product
+ * name lives in APP_NAME and nowhere else, so that a rename is an env
+ * change rather than a hunt through source. They are still ordinary
+ * settings once an admin edits them — this only decides what they say
+ * before anyone has.
  */
-const DEFAULTS: PlatformSettings = {
+const NUMERIC_DEFAULTS = {
   deliveryFeePaise: 2900,
   freeDeliveryThresholdPaise: 49900,
   defaultCommissionPct: 12,
   codMaxAmountPaise: 200000,
   serviceRadiusKm: 5,
-  platformName: 'Mandi',
-  supportEmail: 'support@mandi.app',
   supportPhone: '9000000000',
   maintenanceMode: false,
   slaMinutes: 30,
   stuckOrderGraceMinutes: 10,
-};
+} as const;
 
-const SETTING_KEYS = Object.keys(DEFAULTS) as (keyof PlatformSettings)[];
+/** The brand-dependent half, resolved from APP_NAME at construction. */
+function defaultsFor(appName: string): PlatformSettings {
+  return {
+    ...NUMERIC_DEFAULTS,
+    platformName: appName,
+    // `.app` to match the seeded admin addresses. A support inbox is a
+    // real operational decision an admin makes in the panel; this is only
+    // a sensible-looking starting value, never something that sends mail.
+    supportEmail: `support@${appName.toLowerCase()}.app`,
+  };
+}
+
+const SETTING_KEYS = Object.keys(
+  defaultsFor('x'),
+) as (keyof PlatformSettings)[];
 
 @Injectable()
 export class AdminSettingsService {
+  /** Resolved once at construction — APP_NAME cannot change at runtime. */
+  private readonly defaults: PlatformSettings;
+
   constructor(
     @InjectModel(Setting.name)
     private readonly settings: Model<SettingDocument>,
     private readonly audit: AuditService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.defaults = defaultsFor(config.getOrThrow<string>('brand.name'));
+  }
 
   /**
    * Reads every known key, filling in the default for any that has never
@@ -105,11 +131,11 @@ export class AdminSettingsService {
 
     const stored = new Map(rows.map((row) => [row.key, row]));
 
-    const values = { ...DEFAULTS };
+    const values = { ...this.defaults };
     for (const key of SETTING_KEYS) {
       const row = stored.get(key);
       if (row === undefined) continue;
-      if (typeof row.value === typeof DEFAULTS[key]) {
+      if (typeof row.value === typeof this.defaults[key]) {
         // Assigning through a narrowed union needs the cast; the typeof
         // check above is what actually makes it sound.
         (values[key] as unknown) = row.value;

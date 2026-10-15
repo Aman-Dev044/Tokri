@@ -19,11 +19,22 @@ import {
   Inventory,
   InventoryDocument,
 } from '../../../database/schemas/inventory.schema';
+import { GeoPoint, point } from '../../../database/schemas/geo-point';
 import { AISLE_KEYS, AisleKey } from '../../../common/constants/aisle.enum';
 import { Paginated, paginate } from '../../../common/dto/paginated';
-import { escapeRegex, toKm } from '../common/geo.util';
+import { distanceMetres, escapeRegex, toKm } from '../common/geo.util';
 import { ShopSettingsService } from '../common/shop-settings.service';
-import { BrowseProductsQueryDto, BrowseStoresQueryDto } from './dto';
+import {
+  BrowseMarketProductsQueryDto,
+  BrowseProductsQueryDto,
+  BrowseStoresQueryDto,
+} from './dto';
+import {
+  PincodeCentre,
+  resolvePincode,
+  serviceablePincodes,
+} from './pincode-table';
+import { problem } from '../common/problem';
 
 // ── Response shapes ─────────────────────────────────────────────────────
 
@@ -108,6 +119,25 @@ export interface ProductDetail extends ProductRow {
   };
 }
 
+/** `GET /pincodes/:pincode` — the centre this platform resolves a PIN to. */
+export interface PincodeResolution {
+  pincode: string;
+  city: string;
+  lat: number;
+  lng: number;
+}
+
+/** `GET /products` — the market-wide row: a `ProductRow` plus which store it's from. */
+export interface MarketProductRow extends ProductRow {
+  store: {
+    id: string;
+    slug: string;
+    storeName: string;
+    /** `null` unless the caller supplied `lat`/`lng` or a `pincode`. */
+    distanceKm: number | null;
+  };
+}
+
 // ── Lean projections ────────────────────────────────────────────────────
 
 interface VendorLean {
@@ -134,6 +164,14 @@ interface VendorLean {
 }
 
 type VendorNear = VendorLean & { distanceMetres: number };
+
+/** The narrow projection `browseMarketProducts` actually needs per store. */
+interface VendorMarketLean {
+  _id: Types.ObjectId;
+  slug: string;
+  storeName: string;
+  location: { type: 'Point'; coordinates: number[] };
+}
 
 interface CategoryLean {
   _id: Types.ObjectId;
@@ -233,7 +271,17 @@ export class DiscoveryService {
       filter.storeName = { $regex: escapeRegex(query.q), $options: 'i' };
     }
 
-    const { lat, lng } = query;
+    let { lat, lng } = query;
+
+    // No GPS fix — fall back to the PIN code, if one was sent. A real
+    // fix always wins: `pincode` is only consulted when lat/lng are both
+    // absent (the `hasLat !== hasLng` guard above has already rejected a
+    // lone coordinate).
+    if (lat === undefined && lng === undefined && query.pincode) {
+      const centre = this.centreForPincode(query.pincode);
+      lat = centre.lat;
+      lng = centre.lng;
+    }
 
     if (lat === undefined || lng === undefined) {
       const [docs, total] = await Promise.all([
@@ -317,6 +365,44 @@ export class DiscoveryService {
   async storeById(id: string): Promise<StoreDetail> {
     const vendor = await this.findApprovedVendor(id);
     return this.toStoreDetail(vendor);
+  }
+
+  // ── PIN codes ─────────────────────────────────────────────────────────
+
+  /**
+   * One PIN code to the approximate centre this platform serves it from.
+   *
+   * ── WHY THIS IS A ROUTE AND NOT A CONSTANT IN THE WEB APP ──────────────
+   * `CreateAddressDto` REQUIRES `lat`/`lng` — an address with no point is
+   * an address no rider can navigate to and no serviceability check can
+   * judge. The web app collects that point by dropping a pin on a Google
+   * map. With Maps billing off the map renders as a placeholder, the pin
+   * cannot be dropped, and a customer who denied geolocation is then
+   * unable to save ANY address, which locks them out of checkout entirely
+   * — on a screen that otherwise looks like it is working.
+   *
+   * This is the way out: the PIN code they already typed resolves to a
+   * neighbourhood centre, good to about the same tolerance as the
+   * imprecise GPS fix the map would have given them. It reads the SAME
+   * static `pincode-table` as `GET /stores?pincode=` and `GET
+   * /products?pincode=` — never a paid geocoding call (§8.7 cost
+   * control), and never a second copy of the table shipped to the client,
+   * which would drift the day a city is added.
+   *
+   * Public for the same reason the rest of this controller is: it is a
+   * fact about where the platform delivers, not about who is asking. It
+   * reveals nothing that `GET /stores?pincode=` does not already imply,
+   * and a location fallback that demanded a login would fail exactly the
+   * customer it exists to rescue.
+   */
+  resolvePincodeCentre(pincode: string): PincodeResolution {
+    const centre = this.centreForPincode(pincode);
+    return {
+      pincode,
+      city: centre.city,
+      lat: centre.lat,
+      lng: centre.lng,
+    };
   }
 
   // ── Categories, grouped by aisle ──────────────────────────────────────
@@ -468,6 +554,126 @@ export class DiscoveryService {
     );
   }
 
+  /**
+   * `GET /products?q=&lat=&lng=&aisleKey=&page=&limit=` — market-wide
+   * search and market-wide aisle browsing, across every APPROVED, OPEN
+   * vendor. `browseProducts` above is store-scoped; this is its
+   * platform-wide sibling.
+   *
+   * ── Search, never a regex scan ────────────────────────────────────────
+   * `q` goes through the SAME `{ searchText: 'text' }` index as the
+   * store-scoped listing — §8.7 bans a regex `$or` outright, and it would
+   * be strictly worse here: this query already spans every vendor's
+   * catalogue, not one store's shelf.
+   *
+   * ── The two query shapes, and the index each one rides ─────────────────
+   * `vendorId: { $in: approvedOpenVendorIds }` is ALWAYS in the filter,
+   * computed from the vendor collection's existing `{ status: 1, isOpen:
+   * 1 }` index (the same one `browseStores` and `storeCategories` use) —
+   * every APPROVED, OPEN vendor, nothing else, before a single product is
+   * touched.
+   *
+   *   • With `q`: Mongo drives the scan off the `searchText` text index,
+   *     evaluating `vendorId`/`categoryId` as additional filter
+   *     predicates on the matched set — identical to how the store-scoped
+   *     `browseProducts` already combines `$text` with other fields.
+   *   • Without `q`: the query is `{ vendorId: { $in: [...] }, isActive,
+   *     categoryId?: { $in: [...] } }`, which rides the compound
+   *     `{ vendorId: 1, categoryId: 1, isActive: 1 }` index already on
+   *     `Product` — an `$in` on a compound index's LEADING field is
+   *     index-usable, exactly like the vendor-scoped filter above it.
+   *
+   * `aisleKey` resolves to a set of category ids first, off `Category`'s
+   * existing `{ aisleKey: 1, sortOrder: 1 }` index, then narrows the
+   * product filter the same way.
+   */
+  async browseMarketProducts(
+    query: BrowseMarketProductsQueryDto,
+  ): Promise<Paginated<MarketProductRow>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    // Resolved FIRST, before a single document is read: an unserviceable
+    // PIN is a refusal, and a refusal that arrives after two collection
+    // scans is just a slower refusal.
+    const origin = this.originFor(query);
+
+    const openVendors = await this.vendors
+      .find({ status: VendorStatus.APPROVED, isOpen: true })
+      .select('slug storeName location')
+      .lean<VendorMarketLean[]>()
+      .exec();
+
+    if (openVendors.length === 0) {
+      return paginate<MarketProductRow>([], 0, page, limit);
+    }
+
+    const vendorById = new Map(openVendors.map((v) => [v._id.toString(), v]));
+
+    const filter: FilterQuery<ProductDocument> = {
+      vendorId: { $in: openVendors.map((v) => v._id) },
+      isActive: true,
+    };
+
+    if (query.aisleKey) {
+      const categoriesInAisle = await this.categories
+        .find({ aisleKey: query.aisleKey })
+        .select('_id')
+        .lean<{ _id: Types.ObjectId }[]>()
+        .exec();
+
+      // No category anywhere on the platform carries that aisle: an
+      // empty page, not an unfiltered one.
+      if (categoriesInAisle.length === 0) {
+        return paginate<MarketProductRow>([], 0, page, limit);
+      }
+      filter.categoryId = { $in: categoriesInAisle.map((c) => c._id) };
+    }
+
+    if (query.q) filter.$text = { $search: query.q };
+
+    const sort: Record<string, 1 | -1> | { score: { $meta: 'textScore' } } =
+      query.q ? { score: { $meta: 'textScore' } } : { createdAt: -1 };
+
+    const [docs, total] = await Promise.all([
+      this.products
+        .find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean<ProductLean[]>()
+        .exec(),
+      this.products.countDocuments(filter).exec(),
+    ]);
+
+    const [stock, aisleByCategory] = await Promise.all([
+      this.stockFor(docs.map((doc) => doc._id)),
+      this.categoriesFor(docs.map((doc) => doc.categoryId)),
+    ]);
+
+    return paginate(
+      docs.map((doc): MarketProductRow => {
+        const vendor = vendorById.get(doc.vendorId.toString());
+        return {
+          ...this.toProductRow(doc, stock, aisleByCategory),
+          store: {
+            id: doc.vendorId.toString(),
+            slug: vendor?.slug ?? '',
+            storeName: vendor?.storeName ?? '',
+            distanceKm:
+              origin && vendor
+                ? toKm(distanceMetres(origin, vendor.location))
+                : null,
+          },
+        };
+      }),
+      total,
+      page,
+      limit,
+    );
+  }
+
   async productById(id: string): Promise<ProductDetail> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Product not found');
@@ -525,6 +731,46 @@ export class DiscoveryService {
 
   // ── Internals ─────────────────────────────────────────────────────────
 
+  /**
+   * A PIN code to a centre, or a refusal that TELLS THE CALLER WHAT WORKS.
+   *
+   * The old message said only "unrecognised pincode", which leaves the
+   * customer typing PINs at random to find one this platform serves.
+   * `problem()` keeps a stable `code` for the client and carries the
+   * serviceable list, so the UI can name the cities instead of keeping a
+   * second, drifting copy of `pincode-table.ts`.
+   */
+  private centreForPincode(pincode: string): PincodeCentre {
+    const centre = resolvePincode(pincode);
+    if (!centre) {
+      throw new BadRequestException(
+        problem(
+          'PINCODE_NOT_SERVICEABLE',
+          `${pincode} is not one of the PIN codes this platform serves yet.`,
+          { pincode, serviceable: serviceablePincodes() },
+        ),
+      );
+    }
+    return centre;
+  }
+
+  /**
+   * The point `store.distanceKm` is measured from, for DISPLAY only.
+   *
+   * A device fix wins outright — it is strictly more precise than a PIN
+   * centre, and trusting both at once would be ambiguous about which.
+   */
+  private originFor(query: BrowseMarketProductsQueryDto): GeoPoint | null {
+    if (query.lat !== undefined && query.lng !== undefined) {
+      return point(query.lng, query.lat);
+    }
+    if (query.pincode) {
+      const centre = this.centreForPincode(query.pincode);
+      return point(centre.lng, centre.lat);
+    }
+    return null;
+  }
+
   /** Approved-or-404. A suspended store is invisible, not forbidden. */
   private async findApprovedVendor(id: string): Promise<VendorLean> {
     if (!Types.ObjectId.isValid(id)) {
@@ -572,6 +818,34 @@ export class DiscoveryService {
         category._id.toString(),
         category.aisleKey,
       ]),
+    );
+  }
+
+  /**
+   * `aisleKey` for a page of products, by their (already known)
+   * category ids — the market-wide sibling of `aisleMap`, which resolves
+   * an aisle map by VENDOR instead. A page of products spans many
+   * vendors' own categories here, so the lookup is keyed off the
+   * category ids actually present on the page rather than one vendor's
+   * whole category set.
+   */
+  private async categoriesFor(
+    categoryIds: Types.ObjectId[],
+  ): Promise<Map<string, AisleKey>> {
+    if (categoryIds.length === 0) return new Map();
+
+    const unique = [...new Set(categoryIds.map((id) => id.toString()))].map(
+      (id) => new Types.ObjectId(id),
+    );
+
+    const categories = await this.categories
+      .find({ _id: { $in: unique } })
+      .select('aisleKey')
+      .lean<{ _id: Types.ObjectId; aisleKey: AisleKey }[]>()
+      .exec();
+
+    return new Map(
+      categories.map((category) => [category._id.toString(), category.aisleKey]),
     );
   }
 

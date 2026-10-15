@@ -16,9 +16,14 @@ import {
 import {
   DeliveryPartner,
   DeliveryPartnerDocument,
+  KycStatus,
   PartnerStatus,
   VehicleType,
 } from '../../src/database/schemas/delivery-partner.schema';
+import {
+  RiderWallet,
+  RiderWalletDocument,
+} from '../../src/database/schemas/rider-wallet.schema';
 import { Order, OrderDocument } from '../../src/database/schemas/order.schema';
 import { point } from '../../src/database/schemas/geo-point';
 import { Role, UserStatus } from '../../src/common/constants/roles.enum';
@@ -147,6 +152,7 @@ describe('Delivery / rider API (integration)', () => {
   let vendors: Model<VendorDocument>;
   let partners: Model<DeliveryPartnerDocument>;
   let orders: Model<OrderDocument>;
+  let wallets: Model<RiderWalletDocument>;
   let passwords: PasswordService;
   let assignments: AssignmentService;
 
@@ -257,6 +263,14 @@ describe('Delivery / rider API (integration)', () => {
       isAvailable: true,
       activeOrderId: null,
       status: PartnerStatus.ACTIVE,
+      // Accepting an order now costs a randomly drawn pick fee and is
+      // refused outright unless KYC is VERIFIED. Both are set here, in
+      // the shared reset, rather than per-test: they are preconditions
+      // of "a rider who can work", not the subject of these cases. The
+      // fee itself — the draw, the 402, the guarded debit — is asserted
+      // in `rider-wallet-kyc.spec.ts`, where it IS the subject.
+      kycStatus: KycStatus.VERIFIED,
+      kycVerifiedAt: new Date(),
     };
 
     await partners
@@ -277,6 +291,18 @@ describe('Delivery / rider API (integration)', () => {
         },
       )
       .exec();
+
+    // ₹500 each: comfortably above the ₹50 ceiling of the fee range, so
+    // no case here ever fails for a reason it is not testing.
+    for (const partnerId of [riderOnePartnerId, riderTwoPartnerId]) {
+      await wallets
+        .updateOne(
+          { partnerId },
+          { $set: { balancePaise: 50_000 } },
+          { upsert: true },
+        )
+        .exec();
+    }
   }
 
   beforeAll(async () => {
@@ -289,6 +315,9 @@ describe('Delivery / rider API (integration)', () => {
       getModelToken(DeliveryPartner.name),
     );
     orders = ctx.app.get<Model<OrderDocument>>(getModelToken(Order.name));
+    wallets = ctx.app.get<Model<RiderWalletDocument>>(
+      getModelToken(RiderWallet.name),
+    );
     passwords = ctx.app.get(PasswordService);
     assignments = ctx.app.get(AssignmentService);
 
@@ -475,7 +504,14 @@ describe('Delivery / rider API (integration)', () => {
       `/delivery/offers/${offers.body[0].id}/accept`,
     ).send({});
     expect(accepted.status).toBe(200);
-    expect(accepted.body.status).toBe(OrderStatus.ASSIGNED);
+    // The accept response now carries the charge as well as the job, so
+    // the rider sees what it cost at the instant the money moved.
+    expect(accepted.body.order.status).toBe(OrderStatus.ASSIGNED);
+    expect(accepted.body.pickFeePaise).toBeGreaterThanOrEqual(2_500);
+    expect(accepted.body.pickFeePaise).toBeLessThanOrEqual(5_000);
+    expect(accepted.body.walletBalancePaise).toBe(
+      50_000 - (accepted.body.pickFeePaise as number),
+    );
 
     const afterAccept = await orders.findById(order._id).exec();
     expect(afterAccept?.deliveryPartnerId?.toString()).toBe(

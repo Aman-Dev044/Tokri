@@ -63,6 +63,15 @@ const PATHS: Record<AisleKey, ReactNode> = {
       <path d="m13 7 3 3 3-3M13 25l3-3 3 3" />
     </>
   ),
+  // A handset: the one shape that reads as "electronics" at 32px without
+  // needing a brand mark or a colour of its own.
+  electronics: (
+    <>
+      <rect x="10" y="4" width="12" height="24" rx="2.5" />
+      <path d="M14 7h4" />
+      <circle cx="16" cy="24" r="1.2" />
+    </>
+  ),
 };
 
 export function AisleGlyph({

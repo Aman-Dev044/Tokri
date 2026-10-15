@@ -54,10 +54,13 @@ export const SITE_URL: string = required(
  * Not required yet. These belong to phases that have not been built, and an
  * empty value is an honest statement of that. The feature that needs one must
  * assert it is present at the point of use, not silently degrade.
+ *
+ * There is deliberately NO Razorpay key here. The public key_id arrives on
+ * the checkout response as `gatewayOrder.keyId`, from the API that already
+ * holds the secret half of the pair — so there is exactly one place to
+ * configure Razorpay, and a browser env var can never drift out of step
+ * with it and open the sheet against a different merchant account.
  */
-export const RAZORPAY_KEY_ID: string | null = optional(
-  process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-);
 export const MAPS_BROWSER_KEY: string | null = optional(
   process.env.NEXT_PUBLIC_MAPS_BROWSER_KEY,
 );

@@ -50,8 +50,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MandiMap } from '@mandi/design-system/map';
 import { formatPaise } from '@mandi/design-system';
 import { api, ApiError } from '@/lib/api-client';
+import { APP_NAME } from '@/config/brand';
 import { useShopQuery, invalidateShop } from '@/hooks/useShopQuery';
 import { newIdempotencyKey, isValidPincode } from '@/lib/shop/format';
+import { openRazorpayCheckout, verifyPayment, PaymentError } from '@/lib/shop/payments';
+import { readLatLng, readPincodeRefusal, readProblemCode } from '@/lib/shop/types';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import {
   readAddresses,
   readCheckoutQuote,
@@ -82,11 +86,14 @@ const BLANK: NewAddress = { label: 'Home', line1: '', line2: '', city: '', pinco
 export function CheckoutView() {
   const basket = useBasket();
   const vendorId = basket.store?.vendorId ?? null;
+  const geo = useGeolocation();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<NewAddress>(BLANK);
   const [pin, setPin] = useState<LatLng | null>(null);
+  const [pinNotice, setPinNotice] = useState<string | null>(null);
+  const [resolvingPin, setResolvingPin] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [savingAddress, setSavingAddress] = useState(false);
 
@@ -97,6 +104,11 @@ export function CheckoutView() {
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<{ status: number; message: string } | null>(null);
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  /** Set only on the online path — what happened after the order was created. */
+  const [paymentNotice, setPaymentNotice] = useState<{
+    tone: 'good' | 'warn';
+    message: string;
+  } | null>(null);
   const idempotencyKey = useRef<string>(newIdempotencyKey());
 
   /* `GET /addresses` answers with a BARE ARRAY — not a `{ data, meta }` page. */
@@ -150,6 +162,78 @@ export function CheckoutView() {
 
   /* ── add an address ─────────────────────────────────────────────────── */
 
+  /* ── ★ TWO WAYS TO SET THE PIN THAT ARE NOT THE MAP ──────────────────
+
+     `CreateAddressDto` REQUIRES lat/lng, and this form used to collect
+     them ONLY by dropping a pin on a Google map. Google Maps billing is
+     off on this deployment, so `MandiMap` renders its placeholder — which
+     has nothing to drop a pin on. A customer who had also denied the
+     geolocation prompt could therefore save no address at all, and so
+     could never reach checkout, on a page that otherwise looked like it
+     was working perfectly. That is the worst class of bug this app has:
+     a dead end that does not announce itself.
+
+     So the pin now has three sources, and the map is only one of them:
+       · the device fix the customer may already have shared;
+       · the centre of the PIN code they are typing into this very form,
+         resolved by the API's own static table (`GET /pincodes/:pincode`)
+         rather than a paid geocode or a second copy of the table here;
+       · the map, when it loads.
+
+     The first two are always offered, not held back until the map fails —
+     a control that only appears once something is broken is a control
+     nobody has ever seen work. They are also genuinely faster. */
+  const pinFromDevice = useCallback(() => {
+    setPinNotice(null);
+    const coords = geo.location?.coords ?? null;
+    if (coords === null) {
+      geo.request();
+      return;
+    }
+    setPin(coords);
+    setPinNotice('Delivery point set to your current location.');
+  }, [geo]);
+
+  const pinFromPincode = useCallback(async () => {
+    setPinNotice(null);
+    if (!isValidPincode(draft.pincode)) {
+      setPinNotice('Enter the 6-digit PIN code above first.');
+      return;
+    }
+    setResolvingPin(true);
+    try {
+      const raw = await api.get<unknown>(
+        `/pincodes/${encodeURIComponent(draft.pincode)}`,
+        { anonymous: true },
+      );
+      const centre = readLatLng(raw);
+      if (centre === null) {
+        setPinNotice('That PIN code did not resolve to a point. Use the map instead.');
+        return;
+      }
+      setPin(centre);
+      setPinNotice(
+        `Delivery point set to the centre of ${draft.pincode}. Drag it on the map if you can — the rider navigates to this exact point.`,
+      );
+    } catch (cause) {
+      // An unserviceable PIN answers 400 with the list that DOES work.
+      // Naming those beats 'invalid pincode', which leaves the customer
+      // guessing six digits at a time.
+      const refusal = cause instanceof ApiError ? readPincodeRefusal(cause.problem) : null;
+      setPinNotice(
+        refusal !== null
+          ? `${APP_NAME} does not deliver to ${draft.pincode} yet. Serviceable PIN codes today: ${refusal.serviceable
+              .map((city) => `${city.city} ${city.pincodes.join(', ')}`)
+              .join('; ')}.`
+          : cause instanceof ApiError
+            ? cause.friendlyMessage
+            : 'We could not resolve that PIN code.',
+      );
+    } finally {
+      setResolvingPin(false);
+    }
+  }, [draft.pincode]);
+
   const saveAddress = useCallback(async () => {
     setAddressError(null);
     if (draft.line1.trim().length < 3 || draft.city.trim().length < 2) {
@@ -168,7 +252,10 @@ export function CheckoutView() {
     // geocoded once, at save time, and everything downstream runs off the
     // stored point. Without a pin there is nothing to store.
     if (pin === null) {
-      setAddressError('Drop a pin on the map so the rider has a point to navigate to.');
+      setAddressError(
+        'The rider needs a point to navigate to. Use your current location, ' +
+        'set it from the PIN code, or drop a pin on the map — any one of the three.',
+      );
       return;
     }
 
@@ -188,6 +275,7 @@ export function CheckoutView() {
       setAdding(false);
       setDraft(BLANK);
       setPin(null);
+      setPinNotice(null);
     } catch (cause) {
       setAddressError(
         cause instanceof ApiError
@@ -205,6 +293,7 @@ export function CheckoutView() {
     if (chosen === null || vendorId === null) return;
     setPlacing(true);
     setPlaceError(null);
+    setPaymentNotice(null);
     try {
       const raw = await api.post<unknown>(
         '/checkout',
@@ -221,21 +310,97 @@ export function CheckoutView() {
       const result = readPlacedOrder(raw);
       basket.clear();
       invalidateShop(['/cart', '/orders']);
+
+      // ── the online path ────────────────────────────────────────────
+      if (result.payment.next === 'gateway') {
+        const gateway = result.gatewayOrder;
+        if (gateway === null || result.order === null) {
+          // The API could not open a gateway order — today because Razorpay
+          // has no credentials in this environment, tomorrow because the
+          // gateway was down. Either way the order itself EXISTS with its
+          // stock reserved, so say that, rather than pretending the online
+          // attempt succeeded. The §8.2 sweep reclaims the reservation if
+          // the customer never retries.
+          setPaymentNotice({
+            tone: 'warn',
+            message:
+              'The order was placed, but online payment could not be started automatically. Contact support, or place a fresh order with Cash on Delivery.',
+          });
+        } else {
+          try {
+            const success = await openRazorpayCheckout({
+              keyId: gateway.keyId,
+              providerOrderId: gateway.providerOrderId,
+              // The GATEWAY's amount, never the quote's: the sheet must
+              // charge exactly what the server opened the order for, or
+              // Razorpay rejects the payment outright.
+              amount: gateway.amount,
+              currency: gateway.currency,
+              name: APP_NAME,
+              description: result.order.orderNo,
+              prefill: {
+                name: chosen?.label,
+                contact: chosen?.phone,
+              },
+            });
+            await verifyPayment({
+              orderId: result.order.id,
+              providerOrderId: success.razorpay_order_id,
+              providerPaymentId: success.razorpay_payment_id,
+              signature: success.razorpay_signature,
+            });
+            setPaymentNotice({ tone: 'good', message: 'Payment confirmed.' });
+          } catch (paymentCause) {
+            const cancelled =
+              paymentCause instanceof PaymentError && paymentCause.cancelled;
+            setPaymentNotice({
+              tone: 'warn',
+              message: cancelled
+                ? 'Payment was cancelled. The order is placed but unpaid — reopen it from your orders to pay, or pay the rider in cash.'
+                : paymentCause instanceof Error
+                  ? `${paymentCause.message} The order is placed but unpaid.`
+                  : 'Payment could not be confirmed. The order is placed but unpaid.',
+            });
+          }
+        }
+      }
+
       // ★ Stop here. The OTP in this response is never readable again.
       setPlaced(result);
     } catch (cause) {
       const error =
         cause instanceof ApiError ? cause : new ApiError('Unexpected failure', 0, {}, true);
-      // 503 is the specced answer for "no payment provider configured". It is
-      // reported verbatim: the server's own words, the real status code, and
-      // the one thing the customer can do about it.
-      setPlaceError({ status: error.status, message: error.friendlyMessage });
+
+      /* ★ The server's own words do NOT survive a 5xx.
+
+         `AllExceptionsFilter` replaces the `detail` of every 5xx with
+         'Internal server error' so internals cannot leak — correct for a
+         crash, wrong for a DELIBERATE 503. `friendlyMessage` then renders
+         'Something broke on our side', which is simply false: nothing broke,
+         this deployment has no Razorpay keys and the API said so precisely.
+
+         The machine-readable `code` DOES survive that scrub (it rides under
+         `errors`, which the filter keeps), so the honest sentence is written
+         from the code rather than string-matched out of prose. */
+      const code = readProblemCode(error.problem);
+      setPlaceError({
+        status: error.status,
+        message:
+          code === 'PAYMENT_PROVIDER_NOT_CONFIGURED'
+            ? 'This deployment has no payment gateway credentials yet, so an online payment cannot be started. Nothing was charged and no order was placed.'
+            : code === 'PAYMENT_GATEWAY_UNAVAILABLE'
+              ? 'The payment gateway did not respond. Nothing was charged and no order was placed.'
+              : error.friendlyMessage,
+      });
       // A failed attempt gets a fresh key: it is a NEW attempt, not a retry of
       // one the server may already have committed.
       idempotencyKey.current = newIdempotencyKey();
     } finally {
       setPlacing(false);
     }
+  // `quote` is deliberately absent: the Razorpay sheet charges
+  // `gatewayOrder.amount` from the server, never the locally held quote, so
+  // nothing in here reads it any more.
   }, [chosen, vendorId, method, appliedCoupon, basket]);
 
   /* ── ★ placed: the one and only sight of the delivery code ──────────── */
@@ -257,6 +422,15 @@ export function CheckoutView() {
               : 'The store will start packing shortly.'}
           </p>
         </header>
+
+        {paymentNotice !== null ? (
+          <div
+            className={`shop-notice shop-notice--${paymentNotice.tone === 'good' ? 'info' : 'warn'}`}
+            role="status"
+          >
+            {paymentNotice.message}
+          </div>
+        ) : null}
 
         {placed.deliveryOtp !== null ? (
           <section className="shop-panel" aria-labelledby="ck-otp">
@@ -478,10 +652,52 @@ export function CheckoutView() {
 
                 <div className="shop-addrform__map">
                   <p className="shop-addrform__maplabel">
-                    Drop a pin — required. Serviceability, the rider’s route and the delivery
-                    estimate are all worked out from this point, so an address without one
-                    cannot be saved.
+                    A delivery point is required. Serviceability, the rider’s route and the
+                    delivery estimate are all worked out from it, so an address without one
+                    cannot be saved. Set it any of these three ways — they are equivalent,
+                    and the map needs a Google Maps key that this deployment does not have.
                   </p>
+
+                  {/* ★ The two ways that do not need a map. Always shown, never
+                      revealed only after the map fails: a control nobody has seen
+                      work is a control nobody trusts at the moment they need it. */}
+                  <div className="shop-addrform__pinways">
+                    <button
+                      type="button"
+                      className="mnd-btn mnd-btn--outline mnd-btn--sm"
+                      onClick={pinFromDevice}
+                      disabled={geo.status === 'locating'}
+                    >
+                      {geo.status === 'locating'
+                        ? 'Finding you…'
+                        : geo.location?.coords != null
+                          ? 'Use my current location'
+                          : 'Share my location'}
+                    </button>
+                    <button
+                      type="button"
+                      className="mnd-btn mnd-btn--outline mnd-btn--sm"
+                      onClick={() => {
+                        void pinFromPincode();
+                      }}
+                      disabled={resolvingPin}
+                    >
+                      {resolvingPin ? 'Resolving…' : 'Use the centre of my PIN code'}
+                    </button>
+                  </div>
+
+                  {pinNotice !== null ? (
+                    <p className="shop-addrform__pinnotice" role="status">
+                      {pinNotice}
+                    </p>
+                  ) : geo.error !== null ? (
+                    // Never an error the customer has to dismiss: denying the
+                    // prompt is legitimate, and the PIN-code route above still
+                    // works. Stated as a fork, not a failure.
+                    <p className="shop-addrform__pinnotice" role="status">
+                      {geo.error}
+                    </p>
+                  ) : null}
                   <MandiMap
                     center={pin ?? MAP_FALLBACK_CENTER}
                     zoom={15}

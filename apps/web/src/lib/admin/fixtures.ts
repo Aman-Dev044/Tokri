@@ -166,6 +166,7 @@ const AISLE_LABELS: Record<AisleKey, string> = {
   snacks: 'Snacks',
   staples: 'Staples & Grains',
   frozen: 'Frozen',
+  electronics: 'Electronics',
 };
 
 const PRODUCTS: ReadonlyArray<{ name: string; aisleKey: AisleKey; pricePaise: number }> = [

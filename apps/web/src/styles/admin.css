@@ -100,6 +100,7 @@
   --adm-aisle-snacks: var(--aisle-snacks);
   --adm-aisle-staples: var(--aisle-staples);
   --adm-aisle-frozen: var(--aisle-frozen);
+  --adm-aisle-electronics: var(--aisle-electronics);
 
   /* ── chart series, when the breakdown is NOT by aisle ───────────────────
      The four brand hues in a fixed order. They are identity, not severity: a
@@ -1588,6 +1589,7 @@
 .adm-dot[data-aisle='snacks'] { background: var(--adm-aisle-snacks); }
 .adm-dot[data-aisle='staples'] { background: var(--adm-aisle-staples); }
 .adm-dot[data-aisle='frozen'] { background: var(--adm-aisle-frozen); }
+.adm-dot[data-aisle='electronics'] { background: var(--adm-aisle-electronics); }
 
 /* ===========================================================================
    9. DataTable

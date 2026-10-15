@@ -8,38 +8,40 @@
  * dance, no video element to leak. It is the right primitive for "take one
  * photo and move on".
  *
- * ── WHAT DOES NOT WORK YET, STATED PLAINLY ──────────────────────────────────
- * `POST /delivery/orders/:id/deliver` accepts `{ otp, photoUrl? }` where
- * `photoUrl` must be an absolute HTTPS URL (`@IsUrl({ protocols: ['https'] })`
- * on `DeliverOrderDto`). That means the file has to be uploaded somewhere
- * first — and the whole delivery API has NO upload route. Verified against the
- * live server: the only rider routes are /me, /availability, /offers,
- * /offers/:id/accept|reject, /orders/active, /orders/:id/picked-up,
- * /orders/:id/out-for-delivery, /orders/:id/deliver, /orders/:id/failed,
- * /location, /history and /earnings. There is no presign among them.
+ * ── THE UPLOAD ───────────────────────────────────────────────────────────
+ * Picking a file immediately kicks off `uploadProofPhoto` (resize → presign
+ * → PUT to S3). `onUploaded` is called with the resulting HTTPS URL once it
+ * lands, or with `null` if the photo is removed or the upload fails — either
+ * way `ActiveJobView` only ever holds a URL it can actually pass to
+ * `deliverOrder`, never a local blob URL.
  *
- * So the photo is captured, shown back to the rider, and NOT sent. Sending a
- * `blob:` object URL would simply be a 400 from the DTO, and inventing an
- * upload path here would be a 404 at the worst possible moment. The rider is
- * told the truth instead, below, rather than being allowed to believe a photo
- * was filed.
- *
- * TODO(api): there is no proof-photo upload endpoint. The rider app needs
- * `POST /delivery/orders/:id/proof-photo` returning an S3 presigned PUT (the
- * shape `POST /vendor/products/:id/images` already uses), after which this
- * component uploads the file and hands the returned HTTPS URL to
- * `deliverOrder(orderId, otp, photoUrl)`. Until that route exists, neither
- * this component nor `deliverOrder` takes a photo URL at all.
+ * The delivery is never blocked on this: the 4-digit code from the customer
+ * is what actually confirms it. A slow or failed upload just means the
+ * delivery completes without a photo attached, which this component says
+ * plainly rather than leaving the rider guessing whether it went through.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './delivery.module.css';
 import { IconCamera, IconX } from './icons';
+import { PhotoUploadError, uploadProofPhoto } from '@/lib/delivery/photo';
 
-export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
+type UploadState = 'idle' | 'uploading' | 'done' | 'failed';
+
+export function PhotoProof({
+  orderId,
+  disabled = false,
+  onUploaded,
+}: {
+  orderId: string;
+  disabled?: boolean;
+  onUploaded: (photoUrl: string | null) => void;
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [name, setName] = useState<string | null>(null);
+  const [state, setState] = useState<UploadState>('idle');
+  const [error, setError] = useState<string | null>(null);
 
   // An object URL is a live handle into the blob store. Not revoking it leaks
   // the whole image for the life of the document.
@@ -49,15 +51,37 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
     };
   }, [preview]);
 
-  const onPick = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file === undefined) return;
-    setPreview((old) => {
-      if (old !== null) URL.revokeObjectURL(old);
-      return URL.createObjectURL(file);
-    });
-    setName(file.name);
-  }, []);
+  const onPick = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file === undefined) return;
+
+      setPreview((old) => {
+        if (old !== null) URL.revokeObjectURL(old);
+        return URL.createObjectURL(file);
+      });
+      setName(file.name);
+      setError(null);
+      setState('uploading');
+      onUploaded(null);
+
+      void uploadProofPhoto(orderId, file)
+        .then((url) => {
+          setState('done');
+          onUploaded(url);
+        })
+        .catch((cause: unknown) => {
+          setState('failed');
+          setError(
+            cause instanceof PhotoUploadError
+              ? cause.message
+              : 'The photo could not be uploaded. The delivery still completes without it.',
+          );
+          onUploaded(null);
+        });
+    },
+    [orderId, onUploaded],
+  );
 
   const clear = useCallback(() => {
     setPreview((old) => {
@@ -65,8 +89,11 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
       return null;
     });
     setName(null);
+    setState('idle');
+    setError(null);
+    onUploaded(null);
     if (inputRef.current !== null) inputRef.current.value = '';
-  }, []);
+  }, [onUploaded]);
 
   return (
     <div className={styles.panelFlat}>
@@ -79,7 +106,7 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
         type="file"
         accept="image/*"
         capture="environment"
-        disabled={disabled}
+        disabled={disabled || state === 'uploading'}
         onChange={onPick}
       />
 
@@ -110,6 +137,7 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
             className={styles.ghost}
             onClick={clear}
             style={{ marginTop: '0.5rem' }}
+            disabled={disabled}
           >
             <IconX size={18} /> Remove photo
           </button>
@@ -117,8 +145,13 @@ export function PhotoProof({ disabled = false }: { disabled?: boolean }) {
       )}
 
       <p className={styles.lede} style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
-        Photo uploads are not switched on yet, so this stays on your phone and is not
-        sent with the delivery. The 4-digit code is what confirms it.
+        {state === 'uploading'
+          ? 'Uploading…'
+          : state === 'done'
+            ? 'Attached to this delivery.'
+            : state === 'failed'
+              ? (error ?? 'The photo could not be uploaded.')
+              : 'The 4-digit code is what confirms delivery — a photo is extra, not required.'}
       </p>
     </div>
   );

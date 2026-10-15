@@ -1,13 +1,24 @@
 /**
- * MANDI - the eight chromatic aisles.
+ * MANDI - the chromatic aisles.
  *
  * This is the single source of truth for Pillar 1. The `key` here is exactly
  * what gets stamped onto `<html data-aisle="...">`, and exactly what the CSS in
- * `tokens/tokens.css` keys off. Adding an aisle means adding it in both places.
+ * `tokens/tokens.css` keys off. Adding an aisle means adding it in both places,
+ * AND in `AisleKey` in `apps/api/src/common/constants/aisle.enum.ts` - the API
+ * validates `?aisleKey=` against a closed enum, so a key the UI knows and the
+ * API does not is a 400 on every tap of that tile.
  *
  * `swatch` duplicates the hue as a literal ONLY so React can paint a preview
  * chip before the attribute swap lands. Components must otherwise read
  * `var(--aisle)` - nothing in the UI hardcodes a colour.
+ *
+ * `items` is MARKETING COPY for the landing page and the ticker, not
+ * catalogue. It is deliberately EMPTY for `electronics`: that aisle was added
+ * because the platform owner asked for it by name, and nothing real is listed
+ * in it yet. Writing six plausible-looking gadgets here would put invented
+ * products back on the landing page of an app whose demo data was wiped on
+ * purpose. An aisle that shows "0 items" and an empty shelf is the honest
+ * state, and it fixes itself the day a vendor lists a real product.
  */
 
 export type AisleKey =
@@ -18,7 +29,8 @@ export type AisleKey =
   | 'beverages'
   | 'snacks'
   | 'staples'
-  | 'frozen';
+  | 'frozen'
+  | 'electronics';
 
 export interface Aisle {
   /** stamped on <html data-aisle> */
@@ -165,6 +177,16 @@ export const AISLES: readonly Aisle[] = [
       { name: 'Veg Momos', unit: '10 pc', paise: 16500 },
       { name: 'Kulfi Malai', unit: '4 pc', paise: 14000 },
     ],
+  },
+  {
+    key: 'electronics',
+    name: 'Electronics',
+    hindi: 'इलेक्ट्रॉनिक्स',
+    source: 'anodised steel',
+    swatch: '#5C6BC0',
+    blurb: 'Nothing listed here yet. The aisle is open for vendors to stock.',
+    // Empty on purpose - see the file header. Real rows only.
+    items: [],
   },
 ];
 

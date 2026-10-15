@@ -42,7 +42,7 @@ export type {
 export { useShopQuery, invalidateShop } from './useShopQuery';
 export type { ShopQueryOptions, ShopQueryResult } from './useShopQuery';
 
-export { useGeolocation, locationQuery } from './useGeolocation';
+export { useGeolocation, locationQuery, marketLocationQuery } from './useGeolocation';
 export type { GeoStatus, GeolocationState, ShopLocation, UseGeolocation } from './useGeolocation';
 
 export { useSocket } from './useSocket';

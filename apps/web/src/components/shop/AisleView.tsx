@@ -8,19 +8,15 @@
  * two-across on mobile, never three, with skeletons cut to the real card's
  * shape so nothing jumps when the data lands.
  *
- * ── WHERE THE PRODUCTS COME FROM, AND WHERE THEY CANNOT ─────────────────────
+ * ── WHERE THE PRODUCTS COME FROM ─────────────────────────────────────────────
  * With a basket open at a store, this shows THAT store's shelf for the aisle:
  * `GET /stores/:id/products?aisleKey=` — one vendor per basket (decision #1),
  * so browsing another store's fruit while holding a half-full basket is a trap.
  *
- * With NO basket there is nothing to show. The catalogue API has no
- * market-wide product listing: this view used to call `GET /products?aisle=…`,
- * which answers `404 Cannot GET /api/v1/products` — and the old fixture
- * fallback dressed that 404 up as a shelf full of sample groceries. So the page
- * now says plainly that an aisle is something you walk into inside a shop, and
- * sends you to pick one. No invented endpoint, no sample shelf.
- *   TODO(api): add `GET /products?aisleKey=&lat=&lng=` for a market-wide aisle,
- *   and this branch becomes a real shelf.
+ * With NO basket, the shelf is market-wide instead:
+ * `GET /products?aisleKey=&lat=&lng=` — every store's fruit-and-veg on one
+ * page, each row carrying which store it belongs to. Adding one starts a
+ * basket at that store, same as anywhere else.
  *
  * Note the parameter name: `aisleKey`, not `aisle`. `BrowseProductsQueryDto`
  * whitelists `category`, `aisleKey`, `q`, `page`, `limit` and `sort`, and the
@@ -30,8 +26,17 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo } from 'react';
 import { getAisle, useAisle, type AisleKey } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
+import { useGeolocation, marketLocationQuery } from '@/hooks/useGeolocation';
 import { useShopQuery } from '@/hooks/useShopQuery';
-import { readPaged, readProduct, type Paged, type Product } from '@/lib/shop/types';
+import {
+  readMarketProduct,
+  readPaged,
+  readProduct,
+  type MarketProduct,
+  type Paged,
+  type Product,
+} from '@/lib/shop/types';
 import { useBasket } from './BasketProvider';
 import { ErrorNotice, FixtureBanner } from './notices';
 import { ProductCard, ProductCardSkeleton } from './ProductCard';
@@ -65,6 +70,8 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
     };
   }, [aisleKey, setAisle]);
 
+  const geo = useGeolocation();
+
   const path = store === null ? null : `/stores/${encodeURIComponent(store.vendorId)}/products`;
 
   const products = useShopQuery<Paged<Product>>(
@@ -76,7 +83,25 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
     },
   );
 
+  /* `marketLocationQuery`, not `locationQuery`: `GET /products` does not
+     whitelist `radius`, and with `forbidNonWhitelisted` on, sending it was
+     a hard 400 for every customer who had ever set a location. */
+  const marketParams = useMemo(
+    () => ({ aisleKey, ...marketLocationQuery(geo.location), limit: 24 }),
+    [aisleKey, geo.location],
+  );
+  const marketProducts = useShopQuery<Paged<MarketProduct>>(
+    store === null ? '/products' : null,
+    marketParams,
+    {
+      anonymous: true,
+      enabled: store === null && geo.ready,
+      read: useCallback((raw: unknown) => readPaged(raw, readMarketProduct), []),
+    },
+  );
+
   const rows = products.data?.data ?? [];
+  const marketRows = marketProducts.data?.data ?? [];
 
   return (
     <div className="shell shop-page">
@@ -100,17 +125,48 @@ export function AisleView({ aisleKey }: { aisleKey: AisleKey }) {
       </header>
 
       {store === null ? (
-        /* No basket ⇒ no store ⇒ no shelf. Say so, and offer the way in. */
+        /* No basket ⇒ market-wide: every store's shelf for this aisle. */
         <section className="shop-section">
           <p className="shop-page__scope" role="status">
-            An aisle belongs to a shop. Pick a store and its {aisle.name.toLowerCase()} shelf
-            opens here, in this colour.
+            Every store on {APP_NAME}&rsquo;s {aisle.name.toLowerCase()} shelf, in
+            one place. Add something and its store becomes your basket.
           </p>
-          <p className="shop-cart__cta">
-            <Link href="/stores" className="mnd-btn mnd-btn--solid mnd-btn--md">
-              Find a store near you
-            </Link>
-          </p>
+
+          {marketProducts.isFixture ? (
+            <FixtureBanner endpoint={`GET /products?aisleKey=${aisleKey}`} />
+          ) : null}
+          {marketProducts.error !== null ? (
+            <ErrorNotice error={marketProducts.error} onRetry={marketProducts.refetch} what="this aisle" />
+          ) : null}
+
+          {marketProducts.loading && !marketProducts.hasLoadedOnce ? (
+            <div className="tkr-grid">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <ProductCardSkeleton key={i} index={i} />
+              ))}
+            </div>
+          ) : marketRows.length > 0 ? (
+            <div className="tkr-grid">
+              {marketRows.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  store={{
+                    vendorId: product.store.id,
+                    storeName: product.store.storeName,
+                    storeSlug: product.store.slug,
+                  }}
+                  aisleKey={aisleKey}
+                  priority={index < 2}
+                />
+              ))}
+            </div>
+          ) : marketProducts.error === null ? (
+            <p className="shop-empty">
+              Nobody on {APP_NAME} stocks {aisle.name.toLowerCase()} yet.{' '}
+              <Link href="/stores">Browse every store</Link>.
+            </p>
+          ) : null}
         </section>
       ) : (
         <>

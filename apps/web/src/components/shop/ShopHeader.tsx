@@ -37,6 +37,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { APP_NAME } from '@/config/brand';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { AisleRail } from './AisleRail';
+import { NotifyBell } from './NotifyBell';
 
 /** One restore attempt per page load, not per mount. */
 let restoreStarted = false;
@@ -152,8 +153,8 @@ export function ShopHeader() {
                 </button>
               </div>
               <p className="shop-loc__hint">
-                A PIN code keeps your place in the app, but it does not narrow the store list
-                yet — only sharing a position does. We say which one you are seeing.
+                A PIN code narrows the store list too — sharing your exact location just sorts
+                it by distance on top of that.
               </p>
             </form>
 
@@ -172,24 +173,30 @@ export function ShopHeader() {
           onSubmit={(event) => {
             event.preventDefault();
             const trimmed = query.trim();
-            router.push(trimmed === '' ? '/stores' : `/stores?q=${encodeURIComponent(trimmed)}`);
+            // ★ Products, not stores. `GET /products?q=` searches the whole
+            // market through the `searchText` index, so the search box can
+            // finally answer the question people actually type into it —
+            // "milk", not "which shop might sell milk".
+            router.push(trimmed === '' ? '/shop' : `/shop?q=${encodeURIComponent(trimmed)}`);
           }}
         >
           <label htmlFor="shop-q" className="mnd-visually-hidden">
-            Search for a store
+            Search for a product
           </label>
           <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
             <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
             <path d="M10.6 10.6 L14 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
           </svg>
-          {/* `GET /stores?q=` searches STORE NAMES. There is no market-wide
-              product search endpoint, so the placeholder no longer promises
-              one — see the TODO in StoresView. */}
+          {/* `GET /products?q=` is market-wide and rides the `searchText`
+              text index, so the placeholder can promise items again — it
+              used to say "find a store" because only `GET /stores?q=`
+              existed and promising products would have been a lie.
+              `/stores?q=` still searches store names; it is one link away. */}
           <input
             id="shop-q"
             type="search"
             className="shop-search__input"
-            placeholder="Find a store — dairy, kirana, bakery…"
+            placeholder="Search for milk, atta, bananas…"
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -197,7 +204,10 @@ export function ShopHeader() {
           />
         </form>
 
-        <ProfileMenu />
+        <div className="shop-head__actions">
+          <NotifyBell />
+          <ProfileMenu />
+        </div>
       </div>
 
       <div className="shop-head__rail shell">

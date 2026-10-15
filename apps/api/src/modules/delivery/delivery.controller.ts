@@ -19,6 +19,8 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiResponse,
+  ApiServiceUnavailableResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { Types } from 'mongoose';
@@ -42,13 +44,18 @@ import {
   EarningsQueryDto,
   FailDeliveryDto,
   LocationPingDto,
+  ProofPhotoPresignDto,
   RejectOfferDto,
 } from './dto';
+import { PresignedUpload } from './proof-photo.service';
 import {
+  AcceptedOffer,
   ActiveOrder,
   DeliveryHistoryRow,
+  DeliveryTracking,
   EarningsSummary,
   LocationAck,
+  OfferDetail,
   OfferRow,
   RiderProfile,
 } from './types';
@@ -136,28 +143,71 @@ export class DeliveryController {
     return this.assignments.listOffers(partner._id);
   }
 
+  @Get('offers/:id')
+  @ApiOperation({
+    summary: 'One offer in full — the confirm screen',
+    description:
+      'Everything the rider must see BEFORE the money moves: the item ' +
+      'list, pickup and drop, the payout, their current balance, and the ' +
+      'bounds the pick fee will be drawn from. The exact fee is drawn at ' +
+      'accept time, so the range is the only statement that is true when ' +
+      'it is made — and showing nothing would mean the rider discovers ' +
+      'the charge after it has been taken.',
+  })
+  @ApiNotFoundResponse({ description: 'No such offer, or not this rider\'s.' })
+  async offerDetail(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+  ): Promise<OfferDetail> {
+    const partner = await this.delivery.requirePartner(user);
+    return this.assignments.offerDetail(toObjectId(id), partner);
+  }
+
   @Post('offers/:id/accept')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Take the job',
+    summary: 'Take the job — and pay the pick fee',
     description:
-      'Moves the order READY_FOR_PICKUP → ASSIGNED and holds the rider, in ' +
-      'ONE transaction. Any competing offer on the same order is cancelled. ' +
-      'Returns the full active order.',
+      'Moves the order READY_FOR_PICKUP → ASSIGNED, holds the rider and ' +
+      'charges a RANDOM pick fee in [RIDER_PICK_FEE_MIN_PAISE, ' +
+      'RIDER_PICK_FEE_MAX_PAISE], all in ONE transaction. Any competing ' +
+      'offer on the same order is cancelled. Returns the active order ' +
+      'plus `pickFeePaise` and the resulting `walletBalancePaise`, so the ' +
+      'app can show the charge the instant it happens.',
   })
   @ApiNotFoundResponse({ description: 'No such offer, or not this rider\'s.' })
+  @ApiForbiddenResponse({
+    description: 'KYC_NOT_VERIFIED — documents must be verified first.',
+  })
   @ApiConflictResponse({
     description:
       'The offer expired or was already answered, or the rider is already ' +
       'carrying another order.',
   })
+  @ApiResponse({
+    status: HttpStatus.PAYMENT_REQUIRED,
+    description:
+      'INSUFFICIENT_WALLET_BALANCE. The body carries `errors: ' +
+      '{ code, requiredPaise, balancePaise }`. 402 and not 400: the ' +
+      'request was well-formed and the rider is being told to add money.',
+  })
   async acceptOffer(
     @CurrentUser() user: JwtUser,
     @Param('id') id: string,
-  ): Promise<ActiveOrder | null> {
+  ): Promise<AcceptedOffer> {
     const partner = await this.delivery.requirePartner(user);
-    await this.assignments.accept(toObjectId(id), partner, user.sub);
-    return this.riderOrders.active(user);
+    const charge = await this.assignments.accept(
+      toObjectId(id),
+      partner,
+      user.sub,
+    );
+    const order = await this.riderOrders.active(user);
+
+    return {
+      order,
+      pickFeePaise: charge.pickFeePaise,
+      walletBalancePaise: charge.balancePaise,
+    };
   }
 
   @Post('offers/:id/reject')
@@ -199,6 +249,24 @@ export class DeliveryController {
     return this.riderOrders.active(user);
   }
 
+  @Get('orders/:id/tracking')
+  @ApiOperation({
+    summary: 'Live tracking — rider, customer, store and the items',
+    description:
+      "The Ola/Uber view: the rider's last reported position, the " +
+      'customer drop and the store pickup with coordinates, the distance ' +
+      'and ETA still to run, and the item list being carried. This is the ' +
+      'initial paint; `delivery.location_updated` on the order room moves ' +
+      'the marker afterwards, so the app never polls this in a loop.',
+  })
+  @ApiNotFoundResponse({ description: 'Not this rider\'s order.' })
+  tracking(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+  ): Promise<DeliveryTracking> {
+    return this.riderOrders.tracking(user, id);
+  }
+
   @Patch('orders/:id/picked-up')
   @ApiOperation({
     summary: 'ASSIGNED → PICKED_UP',
@@ -227,6 +295,28 @@ export class DeliveryController {
     @Param('id') id: string,
   ): Promise<ActiveOrder> {
     return this.riderOrders.outForDelivery(user, id);
+  }
+
+  @Post('orders/:id/proof-photo')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Presigned S3 PUT for an optional handover photo',
+    description:
+      'The file NEVER passes through this API. `contentType` is ' +
+      'allowlisted and `sizeBytes` is capped at 5 MB — and both are ' +
+      'SIGNED into the URL, exactly like the vendor product-image ' +
+      'presign. Returns 503 while object storage is unconfigured; the ' +
+      'rest of the module keeps working. Send the resulting `publicUrl` ' +
+      'back as `photoUrl` on `POST .../deliver`.',
+  })
+  @ApiNotFoundResponse({ description: 'Not this rider\'s order.' })
+  @ApiServiceUnavailableResponse({ description: 'image upload not configured' })
+  presignProofPhoto(
+    @CurrentUser() user: JwtUser,
+    @Param('id') id: string,
+    @Body() dto: ProofPhotoPresignDto,
+  ): Promise<PresignedUpload> {
+    return this.riderOrders.presignProofPhoto(user, id, dto);
   }
 
   @Post('orders/:id/deliver')

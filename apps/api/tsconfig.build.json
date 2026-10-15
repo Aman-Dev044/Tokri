@@ -1,0 +1,25 @@
+{
+  // ════════════════════════════════════════════════════════════════════
+  //  THE PRODUCTION BUILD
+  // ════════════════════════════════════════════════════════════════════
+  //
+  // `nest build` looks for this file by default and falls back to
+  // `tsconfig.json` when it is absent. That fallback was doing two
+  // things wrong, both invisible until you tried to run the build:
+  //
+  //   1. `tsconfig.json` includes `test/**/*` (it has to — that is what
+  //      typechecks the suites). With two source roots, TypeScript infers
+  //      the COMMON root as the package directory, so the output landed
+  //      at `dist/src/main.js` — while `start:prod` said `node dist/main`.
+  //      Production start was simply broken.
+  //   2. The whole test suite was compiled into `dist/test/` and shipped.
+  //      Test code in a production image is dead weight at best; at worst
+  //      it is a fixture with a seeded password sitting on a server.
+  //
+  // Restricting the build to `src` fixes both at once: one root, so the
+  // entry point is `dist/main.js` exactly as `start:prod` expects, and
+  // nothing from `test/` is emitted at all.
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
+}

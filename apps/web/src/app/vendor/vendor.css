@@ -1962,6 +1962,22 @@
 
 .ven-money[data-zero='true'] { color: var(--ink-faint); }
 .ven-money[data-negative='true'] { color: var(--crit-ink); }
+.ven-num[data-negative='true'] { color: var(--crit-ink); }
+
+.ven-time-btn {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-decoration: underline dotted var(--hairline-bright);
+  text-underline-offset: 3px;
+}
+.ven-time-btn:hover {
+  color: var(--aisle-ink);
+  text-decoration-color: var(--aisle);
+}
 
 .ven-time {
   font-size: inherit;

@@ -29,6 +29,8 @@ export const envValidationSchema = Joi.object({
   // The product name lives in configuration, not in source, so renaming
   // the product is an env change rather than a find-and-replace.
   APP_NAME: Joi.string().required(),
+  // Uppercase letters only: an order number is read aloud over the phone.
+  ORDER_NO_PREFIX: Joi.string().pattern(/^[A-Z]{2,6}$/).required(),
   // The refresh cookie is namespaced by brand so two deployments on the
   // same parent domain cannot overwrite each other's session.
   REFRESH_COOKIE_NAME: Joi.string()
@@ -89,6 +91,42 @@ export const envValidationSchema = Joi.object({
   THROTTLE_TTL_MS: Joi.number().default(60_000),
   THROTTLE_LIMIT: Joi.number().default(100),
   THROTTLE_AUTH_LIMIT: Joi.number().default(5),
+
+  // ── Rider wallet & KYC ──────────────────────────────────────────
+  // Operational knobs, NOT secrets — so a `.default()` is permitted
+  // here where it would be banned three lines up. Each one is still
+  // read from `.env` and actually consumed (`config/configuration.ts`
+  // → `rider.*`), so changing the pick fee is an env change, never a
+  // code change.
+  //
+  // A rider pays a randomly drawn fee in
+  // [RIDER_PICK_FEE_MIN_PAISE, RIDER_PICK_FEE_MAX_PAISE] to accept an
+  // order. Both are integer PAISE: ₹25 is 2500, not 25 and not 25.00.
+  RIDER_PICK_FEE_MIN_PAISE: Joi.number().integer().positive().default(2_500),
+  // `Joi.ref` rather than a bare number: a max BELOW the min would make
+  // `crypto.randomInt(min, max + 1)` throw on every accept — at the
+  // moment a rider taps a job, which is the worst place to discover a
+  // typo in an environment file. Refuse to boot instead.
+  RIDER_PICK_FEE_MAX_PAISE: Joi.number()
+    .integer()
+    .positive()
+    .min(Joi.ref('RIDER_PICK_FEE_MIN_PAISE'))
+    .default(5_000)
+    .messages({
+      'number.min':
+        'RIDER_PICK_FEE_MAX_PAISE must be greater than or equal to ' +
+        'RIDER_PICK_FEE_MIN_PAISE.',
+    }),
+  // At or BELOW this balance the rider is warned, over the socket and
+  // through a notification. Not a block — a warning.
+  RIDER_LOW_BALANCE_WARN_PAISE: Joi.number()
+    .integer()
+    .positive()
+    .default(10_000),
+  // The promise made on the rider's KYC screen, in hours. It is stored
+  // on the submission as an absolute deadline, so changing it never
+  // moves a deadline a rider has already been given.
+  RIDER_KYC_SLA_HOURS: Joi.number().integer().positive().default(24),
 
   // ── Seed accounts ───────────────────────────────────────────────
   // Seed credentials are configuration, not code. Changing the bootstrap
@@ -151,4 +189,47 @@ export const envValidationSchema = Joi.object({
   // referrer-restricted browser key is a different value and lives
   // behind the NEXT_PUBLIC_ boundary in the web app.
   GOOGLE_MAPS_SERVER_KEY: Joi.string().min(20),
+
+  // ── Razorpay (used ONLY on the online-payment path) ──────────────
+  // OPTIONAL, for the same reason as GOOGLE_MAPS_SERVER_KEY above: the
+  // Razorpay merchant account is separate business setup (§1.1), so a
+  // COD-only deployment must still boot without it. `.required()` here
+  // would refuse to start the whole API over a gateway nobody has
+  // signed up for yet.
+  //
+  // `RazorpayProvider` reads all three with `config.get()` behind an
+  // `isConfigured()` / `isWebhookConfigured()` guard and throws a clean
+  // 503 `PAYMENT_PROVIDER_NOT_CONFIGURED` on the one path that needs
+  // them; `POST /webhooks/razorpay` refuses with 401 rather than trust
+  // a signature it has no secret to check. Nothing else in the platform
+  // touches these — COD checkout, catalogue, delivery and realtime are
+  // all unaffected by their absence.
+  RAZORPAY_KEY_ID: Joi.string().min(8),
+  RAZORPAY_KEY_SECRET: Joi.string().min(8),
+  // HMAC secrets are typically ~20-40 chars; a floor well below that
+  // still catches a pasted placeholder like "changeme".
+  RAZORPAY_WEBHOOK_SECRET: Joi.string().min(8),
+
+  // ── Notification providers (used ONLY by the outbox sweeper) ────
+  // OPTIONAL, for the same reason as SEED_DEMO_PASSWORD and
+  // GOOGLE_MAPS_SERVER_KEY above: a COD-only deployment with no
+  // transactional-email or SMS vendor contracted yet must still boot.
+  // `.required()` here would mean the whole API refuses to start over
+  // three features (email, SMS, push) that nothing else depends on.
+  //
+  // Each adapter (SendGridEmailProvider, Msg91SmsProvider,
+  // FcmPushProvider) reads its own keys with `config.get()` — never
+  // `getOrThrow()` — and logs a warning and returns a 'skipped' result
+  // instead of sending when they are absent. In-app notifications
+  // (the Notification row + the realtime `notification.created` event)
+  // do not depend on any of this and work with none of it configured.
+  SENDGRID_API_KEY: Joi.string(),
+  MAIL_FROM: Joi.string().email(),
+  MSG91_AUTH_KEY: Joi.string(),
+  MSG91_SENDER_ID: Joi.string(),
+  // The FCM v1 API needs the full service-account JSON (project id,
+  // client email, private key), not a single string key. It is
+  // validated only as non-empty JSON text here; NotificationsModule
+  // parses it lazily, at the one call site that needs it.
+  FCM_SERVICE_ACCOUNT_JSON: Joi.string(),
 }).unknown(true);

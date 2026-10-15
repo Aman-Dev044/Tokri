@@ -90,6 +90,51 @@ export interface PaymentUpdatedPayload {
   at: string;
 }
 
+/**
+ * The rider's wallet balance changed — a pick fee charged, a top-up
+ * credited, an admin adjustment, a refund.
+ *
+ * Emitted to `user:{riderUserId}` AFTER the transaction commits, never
+ * inside it: a balance broadcast from inside an aborted transaction is a
+ * number the database does not have, and a refresh takes it away again.
+ */
+export interface WalletUpdatedPayload {
+  /** Integer paise. */
+  balancePaise: number;
+  /** `balancePaise <= thresholdPaise`, computed server-side. */
+  lowBalance: boolean;
+}
+
+/**
+ * The balance is at or below `RIDER_LOW_BALANCE_WARN_PAISE`.
+ *
+ * A separate event rather than a flag on `wallet.updated` so the app can
+ * raise a banner exactly when it crosses, without re-deriving the
+ * threshold on the client — the threshold is server configuration and
+ * the client must not hold a second copy of it.
+ */
+export interface WalletLowBalancePayload {
+  balancePaise: number;
+  thresholdPaise: number;
+}
+
+/**
+ * A KYC decision was made, by an admin or by the rider submitting.
+ *
+ * Carries NO identifier number. The whole point of `select: false` on
+ * `aadhaarNumber` / `panNumber` is defeated the moment one crosses a
+ * socket to every device the rider has open.
+ */
+export interface KycStatusChangedPayload {
+  /** `KycStatus` — 'not_started' | 'submitted' | 'verified' | 'rejected'. */
+  status: string;
+  /** Present only on a rejection. */
+  reason: string | null;
+  /** ISO-8601 verification deadline while SUBMITTED, else null. */
+  slaDueAt: string | null;
+  at: string;
+}
+
 export interface NotificationCreatedPayload {
   id: string;
   type: string;
@@ -108,6 +153,9 @@ export interface RealtimeEventMap {
   'delivery.location_updated': DeliveryLocationUpdatedPayload;
   'payment.updated': PaymentUpdatedPayload;
   'notification.created': NotificationCreatedPayload;
+  'wallet.updated': WalletUpdatedPayload;
+  'wallet.low_balance': WalletLowBalancePayload;
+  'kyc.status_changed': KycStatusChangedPayload;
 }
 
 export type RealtimeEvent = keyof RealtimeEventMap;
@@ -125,7 +173,20 @@ export type OrderRoomEvent =
   | 'delivery.location_updated'
   | 'payment.updated';
 
-export type UserRoomEvent = 'delivery.assigned' | 'notification.created';
+/**
+ * The three wallet/KYC events are USER-room only, never order or admin.
+ *
+ * A rider's balance and their verification state are personal facts. The
+ * order room contains the customer and the vendor, and `emitToOrder`
+ * will not compile with any of them — which is the type system enforcing
+ * that, rather than a comment asking nicely.
+ */
+export type UserRoomEvent =
+  | 'delivery.assigned'
+  | 'notification.created'
+  | 'wallet.updated'
+  | 'wallet.low_balance'
+  | 'kyc.status_changed';
 
 export type VendorRoomEvent = 'order.created' | 'notification.created';
 

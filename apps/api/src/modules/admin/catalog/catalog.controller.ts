@@ -53,7 +53,7 @@ export class AdminCatalogController {
   @ApiOperation({
     summary: 'Categories grouped by aisle',
     description:
-      'Returns all eight aisles, each with its categories (possibly an ' +
+      'Returns every aisle, each with its categories (possibly an ' +
       'empty array) and a product count per category. Not paginated — the ' +
       'category tree is small and the UI renders it whole.',
   })

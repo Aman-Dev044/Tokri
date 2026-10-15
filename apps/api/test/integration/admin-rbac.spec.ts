@@ -245,6 +245,10 @@ describe('Admin RBAC (integration)', () => {
         'get /admin/team',
         'get /admin/settings',
         'put /admin/settings',
+        // Credits a rider's wallet on a deployment with no payment
+        // gateway to reconcile it against — money out of nowhere, so it
+        // sits with settlements rather than with day-to-day operations.
+        'post /admin/riders/:id/wallet/credit',
       ]),
     );
   });
@@ -343,6 +347,10 @@ describe('Admin RBAC (integration)', () => {
         'patch /admin/team/:id/status',
         'delete /admin/team/:id',
         'put /admin/settings',
+        // Credits a rider's wallet on a deployment with no payment
+        // gateway to reconcile it against — money out of nowhere, so it
+        // sits with settlements rather than with day-to-day operations.
+        'post /admin/riders/:id/wallet/credit',
       ]),
     );
   });

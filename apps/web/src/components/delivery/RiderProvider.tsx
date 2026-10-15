@@ -58,16 +58,31 @@ import {
   setAvailability as patchAvailability,
   DELIVERY_PATHS,
 } from '@/lib/delivery/api';
+import { fetchKyc, fetchWallet } from '@/lib/delivery/wallet-api';
 import { SAMPLE_ACTIVE_ORDER, sampleOffers } from '@/lib/delivery/fixtures';
 import { getRiderSocket, type SocketState } from '@/lib/delivery/socket';
 import { useNetworkOnline } from '@/lib/delivery/tracking';
-import type { ActiveOrder, Offer, RiderProfile } from '@/lib/delivery/types';
+import type {
+  ActiveOrder,
+  Offer,
+  RiderKyc,
+  RiderProfile,
+  WalletSummary,
+} from '@/lib/delivery/types';
 
 const CACHE_KEY = 'mandi.rider.activeJob.v2';
 
 /** Socket down ⇒ the offer queue is polled instead. Slow on purpose. */
 const OFFER_POLL_MS = 15_000;
 const JOB_POLL_MS = 20_000;
+
+/** What `accept()` tells the caller, including what the job cost. */
+export type AcceptOutcome =
+  | { result: 'accepted'; pickFeePaise: number; walletBalancePaise: number }
+  | { result: 'gone' }
+  | { result: 'kyc' }
+  | { result: 'funds'; requiredPaise: number | null; balancePaise: number | null }
+  | { result: 'failed' };
 
 export interface RiderContextValue {
   /** null until `/delivery/me` answers, or when it failed. */
@@ -79,6 +94,22 @@ export interface RiderContextValue {
 
   offers: Offer[];
   offersAreSample: boolean;
+
+  /**
+   * The wallet, and whether the platform says it is low.
+   *
+   * `null` until `/delivery/wallet` answers. `lowBalance` is the SERVER's
+   * verdict against its own threshold — this app never re-derives it, so
+   * there is no second copy of a business number to go stale.
+   */
+  wallet: WalletSummary | null;
+  /** Verification state. `null` until `/delivery/profile/kyc` answers. */
+  kyc: RiderKyc | null;
+  /** True only when the API has confirmed VERIFIED. Never assumed. */
+  kycVerified: boolean;
+  /** Replace the wallet after a top-up or a charge, without a round trip. */
+  setWallet: (next: WalletSummary | null) => void;
+  setKyc: (next: RiderKyc | null) => void;
 
   activeOrder: ActiveOrder | null;
   jobIsSample: boolean;
@@ -96,7 +127,7 @@ export interface RiderContextValue {
 
   refresh: () => void;
   reconnect: () => void;
-  accept: (offer: Offer) => Promise<'accepted' | 'gone' | 'failed'>;
+  accept: (offer: Offer) => Promise<AcceptOutcome>;
   decline: (offer: Offer) => Promise<void>;
   /** Drop an offer locally when its countdown reaches zero. */
   expire: (assignmentId: string) => void;
@@ -161,6 +192,9 @@ export function RiderProvider({ children }: { children: ReactNode }) {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offersAreSample, setOffersAreSample] = useState(false);
 
+  const [wallet, setWallet] = useState<WalletSummary | null>(null);
+  const [kyc, setKyc] = useState<RiderKyc | null>(null);
+
   const [activeOrder, setActiveOrderState] = useState<ActiveOrder | null>(null);
   const [jobIsSample, setJobIsSample] = useState(false);
   const [jobFromCache, setJobFromCache] = useState(false);
@@ -210,11 +244,14 @@ export function RiderProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     void (async () => {
-      const [profileResult, jobResult, offersResult] = await Promise.allSettled([
-        fetchProfile(controller.signal),
-        fetchActiveOrder(controller.signal),
-        fetchOffers(controller.signal),
-      ]);
+      const [profileResult, jobResult, offersResult, walletResult, kycResult] =
+        await Promise.allSettled([
+          fetchProfile(controller.signal),
+          fetchActiveOrder(controller.signal),
+          fetchOffers(controller.signal),
+          fetchWallet(controller.signal),
+          fetchKyc(controller.signal),
+        ]);
       if (!live) return;
 
       const problems: string[] = [];
@@ -259,6 +296,24 @@ export function RiderProvider({ children }: { children: ReactNode }) {
         problems.push(describe(offersResult.reason, DELIVERY_PATHS.offers));
       }
 
+      // ── The wallet and KYC ──────────────────────────────────────────
+      // Deliberately NOT given fixture fallbacks. A sample balance is a
+      // number a rider would plan their shift around, and a sample
+      // verification status would say "you can accept work" on a build
+      // that cannot know that. When these fail the screens show their
+      // own honest empty state instead.
+      if (walletResult.status === 'fulfilled') {
+        setWallet(walletResult.value);
+      } else if (!isNetworkFailure(walletResult.reason)) {
+        problems.push(describe(walletResult.reason, DELIVERY_PATHS.wallet));
+      }
+
+      if (kycResult.status === 'fulfilled') {
+        setKyc(kycResult.value);
+      } else if (!isNetworkFailure(kycResult.reason)) {
+        problems.push(describe(kycResult.reason, DELIVERY_PATHS.kyc));
+      }
+
       setLoadError(problems.length === 0 ? null : problems.join(' · '));
       setLoading(false);
     })();
@@ -292,11 +347,75 @@ export function RiderProvider({ children }: { children: ReactNode }) {
       refresh();
     });
 
+    // `wallet.updated` is DATA, not a doorbell — unlike `delivery.assigned`,
+    // its payload is the complete fact (`{ balancePaise, lowBalance }`), so
+    // it is applied directly. A refetch here would put a network round trip
+    // between the charge and the number the rider is watching.
+    const offWallet = socket.on('wallet.updated', (payload: unknown) => {
+      const b =
+        typeof payload === 'object' && payload !== null
+          ? (payload as Record<string, unknown>)
+          : {};
+      const balancePaise = b['balancePaise'];
+      if (typeof balancePaise !== 'number' || !Number.isFinite(balancePaise)) return;
+      const lowBalance = b['lowBalance'];
+
+      setWallet((prev) =>
+        prev === null
+          ? prev
+          : {
+              ...prev,
+              balancePaise,
+              // The server's verdict wins. Only if the event omitted it
+              // entirely does this fall back to the stored threshold.
+              lowBalance:
+                typeof lowBalance === 'boolean'
+                  ? lowBalance
+                  : balancePaise <= prev.warnThresholdPaise,
+            },
+      );
+    });
+
+    // The threshold crossing. A separate event from `wallet.updated` so the
+    // banner is raised by the SERVER's decision rather than by arithmetic
+    // repeated on the client — see `realtime.events.ts`.
+    const offLowBalance = socket.on('wallet.low_balance', (payload: unknown) => {
+      const b =
+        typeof payload === 'object' && payload !== null
+          ? (payload as Record<string, unknown>)
+          : {};
+      const balancePaise = b['balancePaise'];
+      const thresholdPaise = b['thresholdPaise'];
+
+      setWallet((prev) =>
+        prev === null
+          ? prev
+          : {
+              ...prev,
+              lowBalance: true,
+              ...(typeof balancePaise === 'number' ? { balancePaise } : {}),
+              ...(typeof thresholdPaise === 'number'
+                ? { warnThresholdPaise: thresholdPaise }
+                : {}),
+            },
+      );
+    });
+
+    // A KYC decision changes whether the rider can accept ANYTHING, so it is
+    // re-read rather than patched: the event carries the status but not the
+    // masked numbers, the documents or the deadline the screen renders.
+    const offKyc = socket.on('kyc.status_changed', () => {
+      refresh();
+    });
+
     socket.start();
     return () => {
       offState();
       offAssigned();
       offStatus();
+      offWallet();
+      offLowBalance();
+      offKyc();
       // Left RUNNING on unmount: navigating between rider screens must not
       // tear down the connection an offer is about to arrive on. `stop()` is
       // called when the rider goes offline.
@@ -374,26 +493,82 @@ export function RiderProvider({ children }: { children: ReactNode }) {
     setOffers((prev) => prev.filter((offer) => offer.id !== assignmentId));
   }, []);
 
+  /**
+   * Take the job — and pay for it.
+   *
+   * The two refusals that are NOT bugs get their own outcomes, because each
+   * one has a different thing for the rider to do next:
+   *
+   *   403 KYC_NOT_VERIFIED          → finish verification
+   *   402 INSUFFICIENT_WALLET_BALANCE → top up
+   *
+   * 402 is Payment Required, not 400: the request was perfectly well-formed.
+   * Collapsing either into "could not accept" would leave a rider tapping a
+   * button that can never work.
+   */
   const accept = useCallback(
-    async (offer: Offer): Promise<'accepted' | 'gone' | 'failed'> => {
+    async (offer: Offer): Promise<AcceptOutcome> => {
       try {
-        // Accept answers with the full active order — the job just taken.
-        const job = await acceptOffer(offer.id, idempotencyKey());
+        const accepted = await acceptOffer(offer.id, idempotencyKey());
         expire(offer.id);
-        if (job !== null) setActiveOrder(job);
+        if (accepted.order !== null) setActiveOrder(accepted.order);
+        // The balance the SERVER reports after the charge, applied at once.
+        // The socket event carries the same number, but it may be a beat
+        // behind and the rider is looking at the screen right now.
+        setWallet((prev) =>
+          prev === null
+            ? prev
+            : {
+                ...prev,
+                balancePaise: accepted.walletBalancePaise,
+                lifetimeSpentPaise: prev.lifetimeSpentPaise + accepted.pickFeePaise,
+                lowBalance: accepted.walletBalancePaise <= prev.warnThresholdPaise,
+              },
+        );
         refresh();
-        return 'accepted';
+        return {
+          result: 'accepted',
+          pickFeePaise: accepted.pickFeePaise,
+          walletBalancePaise: accepted.walletBalancePaise,
+        };
       } catch (cause) {
-        if (
-          cause instanceof ApiError &&
-          (cause.status === 409 || cause.status === 410 || cause.status === 404)
-        ) {
-          // Someone else took it, or it timed out server-side. Not an error
-          // the rider did anything about — say so and move on.
-          expire(offer.id);
-          return 'gone';
+        if (cause instanceof ApiError) {
+          const errors =
+            typeof cause.problem.errors === 'object' && cause.problem.errors !== null
+              ? (cause.problem.errors as unknown as Record<string, unknown>)
+              : {};
+          const code = typeof errors['code'] === 'string' ? errors['code'] : '';
+
+          if (cause.status === 403 && code === 'KYC_NOT_VERIFIED') {
+            return { result: 'kyc' };
+          }
+
+          if (cause.status === 402) {
+            const requiredPaise = errors['requiredPaise'];
+            const balancePaise = errors['balancePaise'];
+            // The offer is NOT expired here — the rider can top up and take
+            // the next one — so it is left on screen rather than dropped.
+            return {
+              result: 'funds',
+              requiredPaise:
+                typeof requiredPaise === 'number' ? requiredPaise : null,
+              balancePaise:
+                typeof balancePaise === 'number' ? balancePaise : null,
+            };
+          }
+
+          if (
+            cause.status === 409 ||
+            cause.status === 410 ||
+            cause.status === 404
+          ) {
+            // Someone else took it, or it timed out server-side. Not an error
+            // the rider did anything about — say so and move on.
+            expire(offer.id);
+            return { result: 'gone' };
+          }
         }
-        return 'failed';
+        return { result: 'failed' };
       }
     },
     [expire, refresh, setActiveOrder],
@@ -436,6 +611,11 @@ export function RiderProvider({ children }: { children: ReactNode }) {
       setOnline,
       offers,
       offersAreSample,
+      wallet,
+      kyc,
+      kycVerified: kyc?.status === 'verified',
+      setWallet,
+      setKyc,
       activeOrder,
       jobIsSample,
       jobFromCache,
@@ -457,6 +637,8 @@ export function RiderProvider({ children }: { children: ReactNode }) {
       setOnline,
       offers,
       offersAreSample,
+      wallet,
+      kyc,
       activeOrder,
       jobIsSample,
       jobFromCache,

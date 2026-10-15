@@ -22,15 +22,30 @@
  * scroll, which on a long job screen means the primary action of the app is
  * below the fold. It is `position: fixed` and `main` reserves its height, so
  * the action is always in the thumb and nothing is ever hidden under it.
+ *
+ * ── ON A DESKTOP, ONLY THE NAVIGATION DOCK GOES AWAY ────────────────────────
+ * Above 1024px the rail is the navigation, so the dock holding `RiderNav` is
+ * hidden — that one, and ONLY that one, which is why it is marked `nav`. The
+ * action docks stay: "Accept", "Picked up", "Deliver" and "Continue delivery"
+ * all live in here, and hiding the dock wholesale would leave a rider on a
+ * laptop looking at an offer they cannot accept and a job they cannot move.
+ * They simply shift right of the rail and stop stretching the full window.
  */
 
 import Link from 'next/link';
 import styles from './delivery.module.css';
-import { IconBox, IconList, IconNavigate, IconWallet } from './icons';
+import { isCurrent, riderNavItems } from './nav';
 
-export function Dock({ children }: { children: React.ReactNode }) {
+export function Dock({
+  children,
+  nav = false,
+}: {
+  children: React.ReactNode;
+  /** True for the one dock that holds navigation rather than an action. */
+  nav?: boolean;
+}) {
   return (
-    <div className={styles.dock}>
+    <div className={`${styles.dock} ${nav ? styles.dockNav : ''}`}>
       <div className={styles.dockInner}>{children}</div>
     </div>
   );
@@ -40,41 +55,46 @@ export function Dock({ children }: { children: React.ReactNode }) {
 /* Navigation — shown only when there is no action to take             */
 /* ------------------------------------------------------------------ */
 
-export interface NavTarget {
-  href: string;
-  label: string;
-  badge?: number;
-}
-
 export function RiderNav({
   pathname,
   offersCount,
   activeHref,
+  walletLow = false,
+  kycPending = false,
 }: {
   pathname: string;
   offersCount: number;
   /** The live job's URL, or `/delivery` when there is no job. */
   activeHref: string;
+  /** Puts a dot on Wallet when the platform says the balance is low. */
+  walletLow?: boolean;
+  /** Puts a dot on Verify until the rider is actually VERIFIED. */
+  kycPending?: boolean;
 }) {
-  const items: Array<NavTarget & { icon: React.ReactNode }> = [
-    {
-      href: '/delivery/offers',
-      label: 'Offers',
-      icon: <IconNavigate size={24} />,
-      ...(offersCount > 0 ? { badge: offersCount } : {}),
-    },
-    { href: activeHref, label: 'Active', icon: <IconBox size={24} /> },
-    { href: '/delivery/history', label: 'History', icon: <IconList size={24} /> },
-    { href: '/delivery/earnings', label: 'Earnings', icon: <IconWallet size={24} /> },
-  ];
+  /*
+    Five destinations, which is the ceiling for a thumb-reachable dock. The
+    list itself lives in `nav.tsx` and is shared with the desktop rail; what
+    this dock does is DROP the two entries marked `railOnly` — Dashboard and
+    History — because five is what a thumb reaches, not because they matter
+    less. The dashboard is one tap away from the header brand; History is a
+    record read occasionally and the rail has room for it.
+
+    Wallet and Verify earn their place because BOTH can stop a rider working
+    entirely — an empty wallet is a 402 on the next accept and an unverified
+    rider is a 403 — and a blocker the rider cannot navigate to is a blocker
+    they cannot clear.
+  */
+  const items = riderNavItems({
+    offersCount,
+    activeHref,
+    walletLow,
+    kycPending,
+  }).filter((item) => item.railOnly !== true);
 
   return (
     <nav className={styles.nav} aria-label="Rider sections">
       {items.map((item) => {
-        const active =
-          item.href === '/delivery'
-            ? pathname === '/delivery'
-            : pathname.startsWith(item.href.split('?')[0] ?? item.href);
+        const active = isCurrent(pathname, item.match);
         return (
           <Link
             key={item.label}
@@ -91,6 +111,13 @@ export function RiderNav({
                   <span className={styles.navBadge}>{item.badge}</span>
                 </>
               )}
+              {item.dot === true ? (
+                <>
+                  {' '}
+                  <span className={styles.navDot} aria-hidden="true" />
+                  <span className={styles.srOnly}> needs attention</span>
+                </>
+              ) : null}
             </span>
           </Link>
         );

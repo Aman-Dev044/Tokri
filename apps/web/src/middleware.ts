@@ -64,8 +64,29 @@ const PROTECTED_PREFIXES: ReadonlyArray<{ prefix: string; roles: readonly string
   { prefix: '/orders', roles: ['customer'] },
 ];
 
+/**
+ * Paths under a protected prefix that must stay reachable WITHOUT a
+ * session, because the browser — not a page — fetches them, and it does so
+ * with no credentials attached.
+ *
+ * Both are public by nature. The manifest is a name, some colours and icon
+ * paths; the service worker is static JavaScript, byte-identical for every
+ * visitor. Neither describes a rider.
+ *
+ * Without this the rider PWA cannot install at all: the manifest request
+ * is redirected to /login, and `upgrade-insecure-requests` then rewrites
+ * that redirect to https, which nothing serves in development. The failure
+ * is invisible — "Add to Home Screen" simply does nothing.
+ */
+const PUBLIC_UNDER_PROTECTED: ReadonlySet<string> = new Set([
+  '/delivery/manifest.webmanifest',
+  '/delivery/sw.js',
+]);
+
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  if (PUBLIC_UNDER_PROTECTED.has(pathname)) return NextResponse.next();
 
   const match = PROTECTED_PREFIXES.find(
     ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`),

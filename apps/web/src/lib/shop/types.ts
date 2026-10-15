@@ -101,8 +101,14 @@ function strings(source: Dict, key: string): string[] {
   return list(source, key).filter((v): v is string => typeof v === 'string');
 }
 
-/** Every location the customer API returns is already `{ lat, lng }`. */
-function readLatLng(value: unknown): LatLng | null {
+/**
+ * Every location the customer API returns is already `{ lat, lng }`.
+ *
+ * Exported because `GET /pincodes/:pincode` returns a bare point of exactly
+ * this shape at the top level, and the checkout address form reads it to set
+ * a delivery pin without a map.
+ */
+export function readLatLng(value: unknown): LatLng | null {
   if (!isDict(value)) return null;
   const lat = num(value, 'lat');
   const lng = num(value, 'lng');
@@ -332,6 +338,42 @@ export function readProduct(value: unknown): Product | null {
     inStock: bool(value, 'inStock') ?? false,
     availableQty: int(value, 'availableQty'),
   };
+}
+
+/**
+ * `GET /products` → `ProductRow` with `store`. Market-wide search and the
+ * market-wide aisle both use this endpoint; every row carries which store it
+ * belongs to (`store.id` is the vendor id `add()` needs), so a result grid can
+ * mix products from many stores in one page.
+ */
+export interface MarketProduct extends Product {
+  store: {
+    id: string;
+    slug: string;
+    storeName: string;
+    /** Null when the caller sent no `lat`/`lng`. */
+    distanceKm: number | null;
+  };
+}
+
+function readMarketProductStore(value: unknown): MarketProduct['store'] | null {
+  if (!isDict(value)) return null;
+  const id = str(value, 'id');
+  if (id === null) return null;
+  return {
+    id,
+    slug: str(value, 'slug') ?? id,
+    storeName: str(value, 'storeName') ?? 'A store',
+    distanceKm: num(value, 'distanceKm'),
+  };
+}
+
+export function readMarketProduct(value: unknown): MarketProduct | null {
+  const base = readProduct(value);
+  if (base === null || !isDict(value)) return null;
+  const store = readMarketProductStore(value['store']);
+  if (store === null) return null;
+  return { ...base, store };
 }
 
 export function readProductDetail(value: unknown): ProductDetail | null {
@@ -1037,11 +1079,36 @@ export interface PlacedOrder {
     status: string | null;
     next: 'pay_on_delivery' | 'gateway' | null;
   };
+  /**
+   * The Razorpay order to open Checkout against. TOP-LEVEL, a sibling of
+   * `payment` — not a field inside it. `CheckoutService` returns
+   * `{ order, deliveryOtp, payment, gatewayOrder }`, and reading this off
+   * `payment` instead found `undefined` on every online order, so the
+   * sheet could never open.
+   *
+   * `null` for COD, and also `null` for an ONLINE order whose gateway
+   * order could not be created — the order still EXISTS with its stock
+   * reserved, so the customer is told payment could not start rather than
+   * shown a phantom order.
+   *
+   * `keyId` is the PUBLIC key, handed over by the server that already
+   * holds the secret. Taking it from here rather than from a
+   * `NEXT_PUBLIC_` variable keeps ONE source of truth: the two can never
+   * drift into a sheet opened against the wrong merchant account.
+   */
+  gatewayOrder: {
+    providerOrderId: string;
+    /** INTEGER PAISE — what Razorpay Checkout should charge. */
+    amount: number;
+    currency: string;
+    keyId: string;
+  } | null;
 }
 
 export function readPlacedOrder(value: unknown): PlacedOrder {
+  const emptyPayment = { method: null, status: null, next: null } as const;
   if (!isDict(value)) {
-    return { order: null, deliveryOtp: null, payment: { method: null, status: null, next: null } };
+    return { order: null, deliveryOtp: null, payment: emptyPayment, gatewayOrder: null };
   }
   const payment = dict(value, 'payment');
   const next = payment === null ? null : str(payment, 'next');
@@ -1054,7 +1121,25 @@ export function readPlacedOrder(value: unknown): PlacedOrder {
       status: payment === null ? null : str(payment, 'status'),
       next: next === 'pay_on_delivery' || next === 'gateway' ? next : null,
     },
+    gatewayOrder: readGatewayOrder(value['gatewayOrder']),
   };
+}
+
+/**
+ * All four fields or nothing. A half-read block would open Checkout
+ * against an undefined order id or charge a NaN amount, which is worse
+ * than telling the customer online payment could not be started.
+ */
+function readGatewayOrder(value: unknown): PlacedOrder['gatewayOrder'] {
+  if (!isDict(value)) return null;
+  const providerOrderId = str(value, 'providerOrderId');
+  const amount = num(value, 'amount');
+  const currency = str(value, 'currency');
+  const keyId = str(value, 'keyId');
+  if (providerOrderId === null || amount === null || currency === null || keyId === null) {
+    return null;
+  }
+  return { providerOrderId, amount, currency, keyId };
 }
 
 /* ═════════════════════════════ list envelope ═══════════════════════════ */
@@ -1080,4 +1165,60 @@ export function readPaged<T>(value: unknown, reader: (item: unknown) => T | null
       pages: meta === null ? 1 : (num(meta, 'pages') ?? 1),
     },
   };
+}
+
+/* ═══════════════════ the PIN-code refusal (400 on browse) ═══════════════ */
+
+/**
+ * `GET /stores?pincode=` and `GET /products?pincode=` answer `400` with
+ * `errors: { code: 'PINCODE_NOT_SERVICEABLE', pincode, serviceable }` for a
+ * PIN this platform cannot resolve.
+ *
+ * ── WHY THE LIST COMES FROM THE SERVER ──────────────────────────────────────
+ * "That PIN is not serviceable" on its own leaves the customer typing six
+ * digits at random until one sticks. The other half of the answer is "here is
+ * what IS", and the only honest source of that is `pincode-table.ts` on the
+ * API — a second copy of the table here would drift the day a city is added,
+ * and the UI would then confidently name a city that no longer works (or fail
+ * to mention one that does). So the refusal carries the list and this reads it.
+ *
+ * Returns `null` for any other failure, including a 400 that is not this one:
+ * a caller must be able to tell "unserviceable PIN" from "the API is down"
+ * without string-matching English prose.
+ */
+export interface PincodeRefusal {
+  pincode: string | null;
+  serviceable: { city: string; pincodes: string[] }[];
+}
+
+export function readPincodeRefusal(problem: unknown): PincodeRefusal | null {
+  if (!isDict(problem)) return null;
+  const errors = dict(problem, 'errors');
+  if (errors === null || str(errors, 'code') !== 'PINCODE_NOT_SERVICEABLE') return null;
+
+  return {
+    pincode: str(errors, 'pincode'),
+    serviceable: compact(list(errors, 'serviceable'), (row) => {
+      if (!isDict(row)) return null;
+      const city = str(row, 'city');
+      if (city === null) return null;
+      return { city, pincodes: strings(row, 'pincodes') };
+    }),
+  };
+}
+
+/**
+ * The machine-readable `code` on any problem body that carries one — the
+ * `problem()` helper on the API nests it under `errors` precisely so the
+ * client never has to read the sentence.
+ *
+ * This matters most at 503: `AllExceptionsFilter` replaces the `detail` of
+ * every 5xx with "Internal server error" so internals cannot leak, which means
+ * a DELIBERATE 503 (`PAYMENT_PROVIDER_NOT_CONFIGURED`) arrives with no usable
+ * prose at all. The code survives that scrub; the sentence does not.
+ */
+export function readProblemCode(problem: unknown): string | null {
+  if (!isDict(problem)) return null;
+  const errors = dict(problem, 'errors');
+  return errors === null ? null : str(errors, 'code');
 }

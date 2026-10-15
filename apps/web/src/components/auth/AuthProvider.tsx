@@ -41,10 +41,20 @@ export const HOME_FOR_ROLE: Record<Role, string> = {
   admin: '/admin',
   vendor: '/vendor',
   delivery: '/delivery',
-  // `/stores`, not `/`. The root route is the marketing landing page, so
-  // sending a signed-in customer there drops them back on the page they
-  // just signed in from — indistinguishable from the login having failed.
-  customer: '/stores',
+  // `/shop`, not `/` and no longer `/stores`.
+  //
+  // Not `/`: the root route is the marketing landing page, so sending a
+  // signed-in customer there drops them back on the page they just signed
+  // in from — indistinguishable from the login having failed.
+  //
+  // Not `/stores` either: that is a list of SHOPS, and it asks a customer
+  // who wants milk to first pick a merchant. Every app this one competes
+  // with opens on PRODUCTS across every category and treats the store as
+  // an implementation detail of the item. `/shop` is that page. `/stores`
+  // is still reachable and still linked — it is the right screen when you
+  // actually want to browse a particular kirana — it is just not where a
+  // login lands any more.
+  customer: '/shop',
 };
 
 export interface SessionUser {
@@ -67,6 +77,18 @@ interface AuthContextValue {
   /** true once a token is held in memory */
   isAuthenticated: boolean;
   login: (identifier: string, password: string) => Promise<SessionUser>;
+  /**
+   * The last step of the customer signup flow — `POST /auth/register`, once
+   * the phone is OTP-verified. Same shape as `login`: sets the in-memory
+   * token and the session, and hands back the user so the caller can route
+   * by role.
+   */
+  register: (input: {
+    registrationToken: string;
+    name: string;
+    password: string;
+    email?: string;
+  }) => Promise<SessionUser>;
   logout: () => Promise<void>;
   /** silently re-acquire an access token from the refresh cookie */
   restore: () => Promise<boolean>;
@@ -89,6 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
     return res.user;
   }, []);
+
+  const register = useCallback(
+    async (input: {
+      registrationToken: string;
+      name: string;
+      password: string;
+      email?: string;
+    }) => {
+      const res = await api.post<LoginResponse>('/auth/register', input, { anonymous: true });
+      setAccessToken(res.accessToken); // memory only
+      setUser(res.user);
+      return res.user;
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -132,8 +169,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     // Truthiness, not `!== null`: a half-restored session that left `user`
     // undefined used to read as authenticated.
-    () => ({ user, isAuthenticated: Boolean(user), login, logout, restore }),
-    [user, login, logout, restore],
+    () => ({ user, isAuthenticated: Boolean(user), login, register, logout, restore }),
+    [user, login, register, logout, restore],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

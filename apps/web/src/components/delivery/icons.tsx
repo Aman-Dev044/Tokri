@@ -172,3 +172,21 @@ export function IconResting({ size = 72, className }: IconProps) {
     </svg>
   );
 }
+
+/** The dashboard mark — four panes, the shape of a console landing page. */
+export function IconGrid({ size = 24, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+    </svg>
+  );
+}
+
+/** Earnings — bars climbing, not a wallet. The wallet is a different place. */
+export function IconChart({ size = 24, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  );
+}

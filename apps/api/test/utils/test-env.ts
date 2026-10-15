@@ -34,6 +34,7 @@ export function applyTestEnv(mongoUri: string): void {
     // Brand is configuration: the app refuses to boot without these, and
     // the cookie name must match what the auth spec reads back.
     APP_NAME: 'Tokri',
+    ORDER_NO_PREFIX: 'TKR',
     REFRESH_COOKIE_NAME: 'tokri_rt',
     PORT: '4100',
     API_PREFIX: 'api/v1',

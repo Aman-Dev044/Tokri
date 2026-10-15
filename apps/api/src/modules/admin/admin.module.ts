@@ -33,10 +33,16 @@ import {
   InventoryLog,
   InventoryLogSchema,
 } from '../../database/schemas/inventory-log.schema';
+import {
+  RiderWallet,
+  RiderWalletSchema,
+} from '../../database/schemas/rider-wallet.schema';
 
 import { UsersModule } from '../users/users.module';
 import { IdempotencyModule } from '../../common/idempotency.module';
 import { AdminAuditModule } from './audit/audit.module';
+import { DeliveryModule } from '../delivery/delivery.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { AdminAnalyticsController } from './analytics/analytics.controller';
 import { AdminAnalyticsService } from './analytics/analytics.service';
@@ -58,6 +64,8 @@ import { AdminTeamController } from './team/team.controller';
 import { AdminTeamService } from './team/team.service';
 import { AdminSettingsController } from './settings/settings.controller';
 import { AdminSettingsService } from './settings/settings.service';
+import { AdminRidersController } from './riders/riders.controller';
+import { AdminRidersService } from './riders/riders.service';
 
 import { AdminOpsController } from './ops/ops.controller';
 import { AdminOpsApprovalsController } from './ops/ops-approvals.controller';
@@ -109,6 +117,7 @@ import { OpsCardsService } from './ops/ops-cards.service';
       { name: Address.name, schema: AddressSchema },
       { name: Issue.name, schema: IssueSchema },
       { name: InventoryLog.name, schema: InventoryLogSchema },
+      { name: RiderWallet.name, schema: RiderWalletSchema },
     ]),
 
     // Reused, not reimplemented: UsersService owns the account invariants
@@ -123,6 +132,17 @@ import { OpsCardsService } from './ops/ops-cards.service';
     // Supplies AuditService + AuditInterceptor, and owns
     // GET /admin/audit-logs.
     AdminAuditModule,
+
+    // Reused, not reimplemented: `RiderWalletService` and
+    // `RiderKycService` own the wallet invariants (the guarded debit,
+    // the signed ledger, the masking rule) and the admin console must
+    // move a balance through the SAME code the rider surface uses. A
+    // second credit path here is a second place the ledger can drift
+    // from the balance.
+    DeliveryModule,
+
+    // Every KYC decision and every wallet credit tells the rider.
+    NotificationsModule,
   ],
 
   controllers: [
@@ -136,6 +156,7 @@ import { OpsCardsService } from './ops/ops-cards.service';
     AdminCouponsController,
     AdminTeamController,
     AdminSettingsController,
+    AdminRidersController,
 
     // ── The ADMIN operations console (§ ops) ──────────────────────────
     //  Read-heavy, action-oriented, live. Every route is
@@ -159,6 +180,7 @@ import { OpsCardsService } from './ops/ops-cards.service';
     AdminCouponsService,
     AdminTeamService,
     AdminSettingsService,
+    AdminRidersService,
 
     OpsCardsService,
     AdminOpsService,

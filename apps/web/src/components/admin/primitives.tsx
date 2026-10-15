@@ -104,6 +104,7 @@ const AISLE_NAMES: Record<AisleKey, string> = {
   snacks: 'Snacks',
   staples: 'Staples & Grains',
   frozen: 'Frozen',
+  electronics: 'Electronics',
 };
 
 interface AisleDotBase {
@@ -167,6 +168,7 @@ export const AISLE_SERIES_COLOR: Record<AisleKey, string> = {
   snacks: 'var(--adm-aisle-snacks)',
   staples: 'var(--adm-aisle-staples)',
   frozen: 'var(--adm-aisle-frozen)',
+  electronics: 'var(--adm-aisle-electronics)',
 };
 
 /* ================================================================== */

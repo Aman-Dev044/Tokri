@@ -9,6 +9,7 @@ export const configuration = () => ({
   env: process.env.NODE_ENV as 'development' | 'test' | 'production',
   port: parseInt(process.env.PORT as string, 10),
   apiPrefix: process.env.API_PREFIX as string,
+  orderNoPrefix: process.env.ORDER_NO_PREFIX as string,
 
   brand: {
     name: process.env.APP_NAME as string,
@@ -70,10 +71,54 @@ export const configuration = () => ({
     serverKey: process.env.GOOGLE_MAPS_SERVER_KEY,
   },
 
+  /**
+   * Outbound notification channels — email, SMS, push.
+   *
+   * All five values are `undefined` on a deployment that has not
+   * contracted a provider yet, exactly like `maps.serverKey` above.
+   * Each adapter reads its own subset with `ConfigService.get()` and
+   * degrades to a logged no-op rather than throwing; nothing here is
+   * read with `getOrThrow()` because nothing here may stop the API
+   * booting.
+   */
+  notifications: {
+    sendgridApiKey: process.env.SENDGRID_API_KEY,
+    mailFrom: process.env.MAIL_FROM,
+    msg91AuthKey: process.env.MSG91_AUTH_KEY,
+    msg91SenderId: process.env.MSG91_SENDER_ID,
+    fcmServiceAccountJson: process.env.FCM_SERVICE_ACCOUNT_JSON,
+  },
+
   throttle: {
     ttlMs: parseInt(process.env.THROTTLE_TTL_MS as string, 10),
     limit: parseInt(process.env.THROTTLE_LIMIT as string, 10),
+    // Consumed by `src/config/throttle.ts`, not by injection: it feeds a
+    // route DECORATOR, which is evaluated before any provider exists.
+    // Kept here so the typed surface still describes the whole
+    // environment rather than silently omitting one variable.
     authLimit: parseInt(process.env.THROTTLE_AUTH_LIMIT as string, 10),
+  },
+
+  /**
+   * Rider wallet and KYC knobs.
+   *
+   * Every value is INTEGER PAISE except `kycSlaHours`, which is hours.
+   * All four carry a Joi `.default()` — they are operational settings,
+   * not credentials — so they are always present and are read with
+   * `getOrThrow`, never `get(x, fallback)`.
+   */
+  rider: {
+    /** Inclusive lower bound of the random per-order pick fee. */
+    pickFeeMinPaise: parseInt(process.env.RIDER_PICK_FEE_MIN_PAISE as string, 10),
+    /** Inclusive upper bound. Joi refuses to boot if it is below the min. */
+    pickFeeMaxPaise: parseInt(process.env.RIDER_PICK_FEE_MAX_PAISE as string, 10),
+    /** Warn at or below this balance. */
+    lowBalanceWarnPaise: parseInt(
+      process.env.RIDER_LOW_BALANCE_WARN_PAISE as string,
+      10,
+    ),
+    /** How long the platform has to verify a KYC submission. */
+    kycSlaHours: parseInt(process.env.RIDER_KYC_SLA_HOURS as string, 10),
   },
 
   seed: {

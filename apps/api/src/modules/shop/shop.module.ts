@@ -37,6 +37,8 @@ import {
 
 import { IdempotencyModule } from '../../common/idempotency.module';
 import { PasswordService } from '../../common/utils/password.service';
+import { RealtimeModule } from '../../realtime/realtime.module';
+import { AdminAuditModule } from '../admin/audit/audit.module';
 
 import { ShopSettingsService } from './common/shop-settings.service';
 import { DiscoveryController } from './discovery/discovery.controller';
@@ -53,6 +55,10 @@ import { ShopOrdersController } from './orders/orders.controller';
 import { ShopOrdersService } from './orders/orders.service';
 import { PAYMENT_PROVIDER } from './payments/payment-provider';
 import { RazorpayProvider } from './payments/razorpay.provider';
+import { PaymentsController } from './payments/payments.controller';
+import { PaymentsService } from './payments/payments.service';
+import { StockReleaseSweeperService } from './jobs/stock-release-sweeper.service';
+import { PaymentReconciliationSweeperService } from './jobs/payment-reconciliation-sweeper.service';
 
 /**
  * ════════════════════════════════════════════════════════════════════════
@@ -100,8 +106,23 @@ import { RazorpayProvider } from './payments/razorpay.provider';
     ]),
 
     // Supplies IdempotencyInterceptor for POST /checkout, where the
-    // Idempotency-Key header is REQUIRED (§6.1).
+    // Idempotency-Key header is REQUIRED (§6.1). Also re-exports the
+    // `IdempotencyKey` model, which `PaymentsService` injects directly to
+    // dedupe Razorpay webhook deliveries on the provider's own event id
+    // (§8.3) — a second, ad-hoc claim mechanism would be a second place
+    // that logic could drift from the one `IdempotencyInterceptor` uses.
     IdempotencyModule,
+
+    // `PaymentsService` emits `payment.updated` / `order.status_changed`
+    // through this, never through the gateway directly — see
+    // `RealtimeModule`'s own module comment for why that keeps the
+    // dependency graph acyclic.
+    RealtimeModule,
+
+    // Supplies AuditService + AuditContext + AuditInterceptor, exactly as
+    // `VendorModule` does. Every payment mutation — webhook-driven,
+    // client-callback-driven, or sweeper-driven — writes an audit row.
+    AdminAuditModule,
   ],
 
   controllers: [
@@ -110,6 +131,7 @@ import { RazorpayProvider } from './payments/razorpay.provider';
     AddressesController,
     CheckoutController,
     ShopOrdersController,
+    PaymentsController,
   ],
 
   providers: [
@@ -121,6 +143,13 @@ import { RazorpayProvider } from './payments/razorpay.provider';
     OrderNumberService,
     CheckoutService,
     ShopOrdersService,
+    PaymentsService,
+
+    // §8.2 / §8.3: the two interval sweepers. Neither is BullMQ — see
+    // their own module comments for why an interval sweeper mirroring
+    // `AssignmentSweeperService` is the right call here.
+    StockReleaseSweeperService,
+    PaymentReconciliationSweeperService,
 
     // argon2id + pepper, reused for the delivery OTP hash. Provided the
     // same way AuthModule and UsersModule provide it: it is a stateless

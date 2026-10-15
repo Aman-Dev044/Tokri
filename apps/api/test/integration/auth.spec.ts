@@ -20,8 +20,21 @@ import {
  * Read from the environment, never hardcoded. The cookie name is
  * configuration (REFRESH_COOKIE_NAME), so a literal here would turn a
  * rename into three confusing assertion failures instead of a clear one.
+ *
+ * No `?? 'tokri_rt'` fallback: that is exactly the pattern the repo's
+ * ESLint rule bans, and the reasoning holds in a test too. A default here
+ * would let the suite pass against a cookie the app never sets, which is
+ * worse than a missing-variable error — `test-env.ts` supplies it.
  */
-const REFRESH_COOKIE = process.env.REFRESH_COOKIE_NAME ?? 'tokri_rt';
+const REFRESH_COOKIE = (() => {
+  const name = process.env.REFRESH_COOKIE_NAME;
+  if (!name) {
+    throw new Error(
+      'REFRESH_COOKIE_NAME is not set. test/utils/test-env.ts must supply it.',
+    );
+  }
+  return name;
+})();
 
 /** Long enough to satisfy the DTO; generated per-run, never a literal. */
 const PASSWORD = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;

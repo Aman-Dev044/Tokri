@@ -509,9 +509,12 @@
   margin: 0 auto;
 }
 
+/* FIVE columns for five tabs. This said `repeat(4, 1fr)` while `RiderNav`
+   rendered five items, so "Earnings" wrapped onto a second row and the dock
+   was two rows tall on every phone. */
 .nav {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: var(--s-1);
 }
 
@@ -1990,5 +1993,705 @@
   .signOut {
     transition-duration: 0.01ms;
     animation: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   WALLET, THE PICK FEE AND VERIFICATION
+   ══════════════════════════════════════════════════════════════════════
+
+   Added with the wallet / KYC work. Every rule below reuses the existing
+   Neon Orchard tokens — no new colour is introduced here, because a
+   one-off hex in a component stylesheet is exactly what stops a theme
+   from being a theme.
+
+   The money classes are the reason this block exists at all: a pick fee
+   is a DEBIT from a real person's balance, and a ledger that renders a
+   debit and a credit identically is a ledger nobody can read at a
+   glance. Colour is never the only carrier — the sign is always printed
+   too, so this works in greyscale and to a colour-blind reader.
+   ────────────────────────────────────────────────────────────────── */
+
+/* The charge, stated inline on the offer and job screens. Deliberately
+   quiet: it is a fact the rider must see, not an alarm. */
+.feeNote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: var(--violet-wash);
+  color: var(--violet-ink);
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+}
+
+.feeHead {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink-soft);
+}
+
+/* The fee range on the confirm screen. Mono and large, because it is the
+   number the rider is agreeing to. */
+.feeAmount {
+  margin: var(--s-2) 0 var(--s-1);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-h2);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+.feeRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-3) 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.feeRowLabel {
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+
+.feeRowValue {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Ledger amounts. The SIGN is printed by the component; the colour is a
+   second, redundant cue rather than the only one. */
+.amountDebit {
+  color: var(--stop-ink);
+}
+
+.amountCredit {
+  color: var(--go-ink);
+}
+
+/* Top-up amounts, and the document-kind buttons on the KYC screen. A row
+   of equal, thumb-sized choices — never a free-text amount field, which
+   on this surface is a way to type ₹5,000 instead of ₹500. */
+.topupRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-3) 0;
+}
+
+.topupChip {
+  flex: 1 1 auto;
+  min-width: 96px;
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 2px solid var(--hairline-bright);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--t-move) var(--ease-out);
+}
+
+.topupChip:active {
+  transform: scale(0.97);
+}
+
+.topupChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* An attention dot on a nav item. No number, because there is no count
+   worth printing — "1" beside Wallet would read as one rupee. */
+.navDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--hot);
+  vertical-align: middle;
+}
+
+/* An inline link inside a banner or a paragraph. Underlined, not just
+   coloured: a link identified by colour alone is not a link to everyone. */
+.inlineLink {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── The KYC form ────────────────────────────────────────────────────
+   48px+ fields and a 16px font size. Anything under 16px makes iOS Safari
+   zoom the whole page on focus, which on a form a rider is filling in on
+   a scooter seat is genuinely disorienting. */
+.fieldLabel {
+  display: block;
+  margin: var(--s-4) 0 var(--s-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.field {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--s-4);
+  border-radius: var(--r-md);
+  border: 2px solid var(--hairline-bright);
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  /* 16px floor — see above. */
+  font-size: var(--t-md);
+  letter-spacing: 0.04em;
+}
+
+.field:focus-visible {
+  outline: 2px solid var(--way);
+  outline-offset: 2px;
+  border-color: var(--way);
+}
+
+.field:disabled {
+  opacity: 0.6;
+}
+
+/* ── Live tracking ───────────────────────────────────────────────────
+   The two ends of the trip, always readable whether or not a map tile
+   ever loads. On this deployment it never does — Maps billing is off —
+   so this list IS the tracking view, not a caption under it. */
+.trackLegend {
+  list-style: none;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.trackLegendRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  color: var(--ink-soft);
+}
+
+/* ══ THE RESPONSIVE SHELL ══════════════════════════════════════════════════
+   Below 1024px this whole block does nothing: the rail is `display: none`,
+   `headerBar` is `display: contents` (so the toggle, the error line and the
+   today strip are still direct flex children of `headerInner`, stacked,
+   same gap, not one pixel moved), and the phone layout above is untouched.
+
+   At 1024px and up the rail appears, the dock disappears, and `main` is
+   released from its 560px phone column to a console width. The swap is a
+   MEDIA QUERY and nothing else — a layout chosen by reading `innerWidth` in
+   JavaScript paints the phone first and then snaps to the desktop, and the
+   one surface read one-handed in a hurry is the worst place for that flash.
+
+   Structure mirrors `ven-rail`: sticky full-height column, hairline edge,
+   a 3px bar on the current item. The COLOURS are the rider's — `--way`,
+   this surface's standing role for navigation, which is already what the
+   phone dock lights up with. One active colour, two chromes. */
+
+.headerBar {
+  display: contents;
+}
+
+/* ── the rail, hidden until there is a desktop to put it on ────────── */
+
+.rail {
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s-3) var(--s-2);
+  background: var(--surface);
+  border-right: 1px solid var(--hairline);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.railBrand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-2);
+  margin-bottom: var(--s-2);
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--r-sm);
+}
+
+.railWho {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.railName {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: var(--t-lg);
+  line-height: 1.15;
+  letter-spacing: var(--track-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railRole {
+  align-self: flex-start;
+  font-family: var(--body);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--hot-on);
+  background: var(--hot);
+  border-radius: var(--r-pill);
+  padding: 2px var(--s-2);
+}
+
+.railLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.railLink {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  /* Still a generous target — a rider on a laptop is the same rider. */
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  transition:
+    background-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+
+.railLink svg {
+  width: 22px;
+  height: 22px;
+  color: var(--ink-faint);
+}
+
+.railLink:hover {
+  background: var(--lifted);
+  color: var(--ink);
+}
+
+.railLink[aria-current='page'] {
+  background: var(--way-wash);
+  color: var(--way-ink);
+  font-weight: 800;
+}
+
+.railLink[aria-current='page'] svg {
+  color: var(--way-ink);
+}
+
+.railLink[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 8px;
+  left: -8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--way);
+}
+
+.railLabel {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.railCount {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: var(--r-pill);
+  background: var(--hot);
+  color: var(--hot-on);
+}
+
+.railDot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--r-pill);
+  background: var(--hot);
+  box-shadow: var(--hot-glow-sm);
+}
+
+.railFoot {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  margin-top: auto;
+  padding: var(--s-3);
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+  border-radius: 0;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--t-micro) var(--ease);
+}
+
+.railFoot:hover {
+  color: var(--ink);
+}
+
+/* ══ DASHBOARD ═════════════════════════════════════════════════════════════
+   Section headings, the needs strip and the statement row. Everything else
+   on `/delivery` reuses the panels and tiles this file already had. */
+
+.sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.secHead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.secTitle {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--ink);
+}
+
+.secNote {
+  margin: 0;
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-faint);
+}
+
+/* ── the needs strip ────────────────────────────────────────────────
+   Ordered by cost in the MARKUP, not by CSS: a strip whose order depends
+   on a grid property is a strip that reorders itself on a narrow screen,
+   and "the blocker first" is the only thing this component promises. */
+
+.needs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--s-3);
+}
+
+.need {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'icon value'
+    'label label'
+    'detail detail';
+  align-items: center;
+  gap: var(--s-1) var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--ink-faint);
+  background: var(--surface);
+  box-shadow: var(--lift-1), var(--rim);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  animation: rdPop var(--t-enter) var(--spring-soft) backwards;
+  transition:
+    transform var(--t-micro) var(--spring-soft),
+    box-shadow var(--t-micro) var(--ease);
+}
+
+.need:hover {
+  box-shadow: var(--lift-2), var(--rim);
+}
+
+.need:active {
+  transform: scale(0.98);
+}
+
+.need:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.need[data-tone='good'] {
+  border-left-color: var(--go);
+}
+
+.need[data-tone='warn'] {
+  border-left-color: var(--cash);
+}
+
+.need[data-tone='crit'] {
+  border-left-color: var(--stop);
+  background: var(--stop-wash);
+}
+
+.needIcon {
+  grid-area: icon;
+  display: inline-flex;
+  color: var(--ink-faint);
+}
+
+.need[data-tone='good'] .needIcon {
+  color: var(--go-ink);
+}
+
+.need[data-tone='warn'] .needIcon {
+  color: var(--cash-ink);
+}
+
+.need[data-tone='crit'] .needIcon {
+  color: var(--stop-ink);
+}
+
+.needValue {
+  grid-area: value;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.needLabel {
+  grid-area: label;
+  font-family: var(--body);
+  font-size: var(--t-md);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+}
+
+.needDetail {
+  grid-area: detail;
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-faint);
+}
+
+.need[data-tone='crit'] .needDetail {
+  color: var(--stop-ink);
+}
+
+/* Tones on a KPI tile — the value only, so the tile itself stays calm. */
+.summaryTile[data-tone='warn'] .summaryValue {
+  color: var(--cash-ink);
+}
+
+.summaryTile[data-tone='crit'] .summaryValue {
+  color: var(--stop-ink);
+}
+
+/* ── the statement row ─────────────────────────────────────────────── */
+
+.statement {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label value'
+    'note note';
+  align-items: baseline;
+  gap: var(--s-1) var(--s-3);
+  min-height: var(--tap);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: var(--raised);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background var(--t-micro) var(--ease);
+}
+
+.statement:hover {
+  background: var(--lifted);
+}
+
+.statementLabel {
+  grid-area: label;
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.statementValue {
+  grid-area: value;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--cash-ink);
+}
+
+.statementNote {
+  grid-area: note;
+  font-size: var(--t-sm);
+  line-height: var(--lh-body);
+  color: var(--ink-faint);
+}
+
+/* ══ 1024px AND UP — THE CONSOLE ═══════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  .shell {
+    --rid-rail: 252px;
+    --rid-console: 1120px;
+    grid-template-columns: var(--rid-rail) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+
+  .rail {
+    display: flex;
+    grid-column: 1;
+    grid-row: 1 / -1;
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
+  }
+
+  /* The inline padding moves ONTO `headerInner` so the header and `main`
+     are the same box: both are a <=1120px column, centred in the space
+     right of the rail, padded by s-6. Left on the header itself the two
+     centred differently and the toggle sat 18px left of every heading
+     under it — small, and visible on every single screen. */
+  .header {
+    grid-column: 2;
+    grid-row: 1;
+    padding-inline: 0;
+  }
+
+  .headerInner {
+    max-width: var(--rid-console);
+    padding-inline: var(--s-6);
+  }
+
+  /* The rail carries the brand now; two of them on one screen is sloppy.
+     What is left in the top row is the connection state and the account
+     button, right-aligned — the same thin bar `ven-top` is. */
+  .brand {
+    display: none;
+  }
+
+  .headerActions {
+    margin-left: auto;
+  }
+
+  .headerBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-4);
+  }
+
+  /* The toggle stays the biggest control on the surface, but a 72px bar
+     stretched across 1100px is not emphasis, it is a banner. */
+  .toggle {
+    flex: 0 1 380px;
+  }
+
+  .todayStrip {
+    flex: 1 1 auto;
+  }
+
+  /* The availability error takes its own line rather than squeezing the
+     two controls beside it. */
+  .attempts {
+    flex-basis: 100%;
+  }
+
+  .main {
+    grid-column: 2;
+    grid-row: 2;
+    max-width: var(--rid-console);
+    gap: var(--s-6);
+    /* Still reserves the dock height: an action dock is fixed up here too,
+       so the last control on a job screen must not sit under it. */
+    padding: var(--s-6) var(--s-6) calc(var(--dock-h) + var(--s-4));
+  }
+
+  /* ONLY the navigation dock goes. The action docks — Accept, Picked up,
+     Deliver, Continue delivery — stay anchored to the bottom, because a
+     desktop rider still has exactly one thing to do and hiding the bar it
+     lives in would leave them looking at an offer they cannot accept. */
+  .dockNav {
+    display: none;
+  }
+
+  /* Clear of the rail, and no longer stretched across the whole window. */
+  .dock {
+    left: var(--rid-rail);
+  }
+
+  .dockInner {
+    max-width: 720px;
+  }
+
+  /* Four across at this width. WalletView and EarningsView both show
+     exactly four tiles, so they land as one clean row instead of the
+     3 + 1 orphan a hard three-column rule leaves behind. */
+  .summaryGrid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  /* The dashboard shows six, and six reads best as two rows of three. */
+  .grid3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

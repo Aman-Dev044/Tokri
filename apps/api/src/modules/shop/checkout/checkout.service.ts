@@ -124,6 +124,21 @@ export interface PlacedOrder {
     /** What the client does next. `none` = nothing to pay now. */
     next: 'pay_on_delivery' | 'gateway';
   };
+  /**
+   * What the client needs to open Razorpay's checkout sheet. `null` for
+   * COD, and also `null` for an ONLINE order if the gateway order could
+   * not be created (logged loudly on the server) — the order still
+   * EXISTS with its stock correctly reserved, so the customer sees a
+   * clear "payment could not start" rather than a phantom order, and the
+   * §8.2 release sweep reclaims the reservation if they never retry.
+   */
+  gatewayOrder: {
+    providerOrderId: string;
+    /** INTEGER PAISE. */
+    amount: number;
+    currency: 'INR';
+    keyId: string;
+  } | null;
 }
 
 interface VendorFull {
@@ -406,6 +421,11 @@ export class CheckoutService {
     // transaction commits, never inside it (§8.2). Emitting inside would
     // announce an order that can still roll back.
 
+    const gatewayOrder =
+      dto.paymentMethod === PaymentMethod.ONLINE
+        ? await this.createGatewayOrder(order)
+        : null;
+
     return {
       order: toOrderDetail(order, store as StoreRef | null),
       deliveryOtp: otp,
@@ -417,7 +437,57 @@ export class CheckoutService {
             ? 'pay_on_delivery'
             : 'gateway',
       },
+      gatewayOrder,
     };
+  }
+
+  /**
+   * Opens the Razorpay order for a just-placed ONLINE order.
+   *
+   * Deliberately called AFTER the transaction commits — an HTTP round
+   * trip to a third party has no business holding transaction locks, and
+   * §8.2's rule ("emit after commit, never inside") applies just as much
+   * to a call that can only ever add, never roll back.
+   *
+   * If it fails, the order still exists exactly as `placeInTransaction`
+   * left it: stock correctly reserved, `payment.status` still `pending`,
+   * `payment.providerOrderId` still `null`. That is a safe state, not a
+   * half-built one — the §8.2 release sweep will reclaim the reservation
+   * on schedule if the customer never gets a working checkout sheet to
+   * retry with, exactly as it would for any other abandoned online
+   * checkout.
+   */
+  private async createGatewayOrder(
+    order: OrderLean,
+  ): Promise<PlacedOrder['gatewayOrder']> {
+    try {
+      const gatewayOrder = await this.payments.createOrder({
+        receipt: order.orderNo,
+        amount: order.pricing.grandTotal,
+        notes: { orderId: order._id.toString() },
+      });
+
+      await this.orders
+        .updateOne(
+          { _id: order._id },
+          { 'payment.providerOrderId': gatewayOrder.providerOrderId },
+        )
+        .exec();
+
+      return {
+        providerOrderId: gatewayOrder.providerOrderId,
+        amount: gatewayOrder.amount,
+        currency: gatewayOrder.currency,
+        keyId: gatewayOrder.keyId,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to open a Razorpay order for ${order.orderNo}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return null;
+    }
   }
 
   /**
@@ -510,13 +580,16 @@ export class CheckoutService {
       }
     }
 
-    // TODO(jobs-phase, §8.2): a BullMQ delayed job must release
-    // `reserved` back to `stock` when an ONLINE order has not been paid
-    // within 15 minutes, and convert it to a permanent decrement on
-    // DELIVERED. Deliberately not started here — half a queue (a timer
-    // in this process, say) would release stock on a restart and lose it
-    // on a crash, which is worse than the honest gap. COD orders are
-    // unaffected: they are reserved at PLACED and committed on delivery.
+    // §8.2's release path lives in `modules/shop/jobs/` and
+    // `modules/shop/payments/payments.service.ts`, not here:
+    // `StockReleaseSweeperService` releases `reserved` back to `stock`
+    // when an ONLINE order has not been paid within 15 minutes (asking
+    // Razorpay first, so a slow webhook is never mistaken for an
+    // abandoned checkout — see that file), and `PaymentsService.
+    // confirmPaidOrder` clears `reserved` the moment `payment.captured`
+    // arrives. COD orders are unaffected: they are reserved at PLACED
+    // and confirm immediately, so nothing online-specific ever applies
+    // to them.
 
     // ── 2. Re-price, server-side, from what was just reserved ───────
     const lines = cart.items.map((item) => {
@@ -629,7 +702,13 @@ export class CheckoutService {
         byUserId: buyer,
         at: placedAt,
       })),
-      { session },
+      // `ordered: true` is REQUIRED, not a tuning option: Mongoose 8
+      // rejects an unordered multi-document insert inside a session,
+      // so without it a basket with two different products fails
+      // checkout with a 500. Ordered is also the only sane semantic
+      // here — stop at the first error and let the transaction roll
+      // the whole thing back.
+      { session, ordered: true },
     );
 
     if (quote.coupon) {

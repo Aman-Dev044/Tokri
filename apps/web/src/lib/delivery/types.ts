@@ -403,3 +403,161 @@ export const VEHICLE_LABEL: Record<VehicleType, string> = {
   motorcycle: 'Motorcycle',
   ev_scooter: 'Electric scooter',
 };
+
+/* ------------------------------------------------------------------ */
+/* THE WALLET — GET /delivery/wallet                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `WalletTxnType` on the API — lower snake on the wire.
+ *
+ * `pick_fee` is the charge for ACCEPTING an order. It is a debit, and the
+ * ledger row's `amountPaise` is NEGATIVE for it — the sign carries the
+ * direction, so nothing here needs a second "isDebit" flag that could
+ * disagree with the number beside it.
+ */
+export type WalletTxnType =
+  | 'topup'
+  | 'pick_fee'
+  | 'earning'
+  | 'adjustment'
+  | 'refund';
+
+export interface WalletSummary {
+  /** Integer paise. */
+  balancePaise: number;
+  /** Computed by the SERVER against its own threshold. Never re-derived here. */
+  lowBalance: boolean;
+  warnThresholdPaise: number;
+  lifetimeEarnedPaise: number;
+  lifetimeToppedUpPaise: number;
+  lifetimeSpentPaise: number;
+  totalDelivered: number;
+  /**
+   * The bounds the per-order pick fee is drawn from.
+   *
+   * The exact fee is drawn at the moment of accepting, so the only honest
+   * thing to show beforehand is the range. It comes from the server so the
+   * app never holds a second, stale copy of a business number.
+   */
+  pickFeeMinPaise: number;
+  pickFeeMaxPaise: number;
+}
+
+export interface WalletLedgerRow {
+  id: string;
+  type: WalletTxnType;
+  /** SIGNED integer paise: positive credits, negative debits. */
+  amountPaise: number;
+  balanceAfterPaise: number;
+  orderId: string | null;
+  reference: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* KYC — GET/POST /delivery/profile/kyc                                */
+/* ------------------------------------------------------------------ */
+
+export type KycStatus = 'not_started' | 'submitted' | 'verified' | 'rejected';
+
+export type KycDocumentKind = 'aadhaar' | 'pan' | 'driving_licence' | 'selfie';
+
+export interface KycDocumentRow {
+  kind: KycDocumentKind;
+  url: string;
+  uploadedAt: string;
+}
+
+/**
+ * The rider's own KYC record.
+ *
+ * Every identifier is MASKED — `XXXX XXXX 1234`. This app never receives a
+ * full Aadhaar, PAN or licence number and has nowhere to put one. The only
+ * place a whole number exists is the admin verification screen, which is a
+ * different surface behind a different role.
+ */
+export interface RiderKyc {
+  status: KycStatus;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+  rejectedReason: string | null;
+  slaDueAt: string | null;
+  /** Milliseconds left on the promise, clamped at 0. Drives the countdown. */
+  slaRemainingMs: number | null;
+  /** The promise itself, in hours. Server configuration, not a constant here. */
+  slaHours: number;
+  aadhaarNumberMasked: string | null;
+  panNumberMasked: string | null;
+  drivingLicenceNumberMasked: string | null;
+  documents: KycDocumentRow[];
+  canResubmit: boolean;
+}
+
+export interface KycSubmission {
+  aadhaarNumber: string;
+  panNumber: string;
+  drivingLicenceNumber: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* The confirm screen — GET /delivery/offers/:id                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * One offer in full, for the screen shown BEFORE accepting.
+ *
+ * It exists so a rider never discovers the pick fee after the money has
+ * gone: the item list, both ends of the trip, the payout, the balance and
+ * the fee range are all on screen while the decision is still reversible.
+ */
+export interface OfferDetail extends Offer {
+  items: ActiveOrderItem[];
+  pickFeeMinPaise: number;
+  pickFeeMaxPaise: number;
+  walletBalancePaise: number;
+  /** False when the balance cannot cover even the cheapest possible draw. */
+  canAfford: boolean;
+  kycStatus: KycStatus;
+}
+
+/** `POST /delivery/offers/:id/accept` — the job, and what it just cost. */
+export interface AcceptedOffer {
+  order: ActiveOrder | null;
+  pickFeePaise: number;
+  walletBalancePaise: number;
+}
+
+/* ------------------------------------------------------------------ */
+/* Live tracking — GET /delivery/orders/:id/tracking                   */
+/* ------------------------------------------------------------------ */
+
+/** The rider's own last reported position, with the time it was reported. */
+export interface RiderFix extends LatLng {
+  at: string;
+}
+
+/**
+ * Both parties on one map.
+ *
+ * `remainingKm` is what is LEFT of the journey — rider → pickup → drop
+ * before collection, rider → drop after it — not the pickup-to-drop
+ * distance the payout is derived from. The two are different numbers and
+ * conflating them is how a map says "2.4 km" to a rider at the door.
+ */
+export interface DeliveryTracking {
+  orderId: string;
+  orderNo: string;
+  status: OrderStatus;
+  rider: RiderFix | null;
+  pickup: Waypoint;
+  drop: Waypoint;
+  remainingKm: number | null;
+  etaMinutes: number | null;
+  items: ActiveOrderItem[];
+  itemCount: number;
+  customerName: string | null;
+  customerPhone: string;
+  codAmountPaise: number;
+}

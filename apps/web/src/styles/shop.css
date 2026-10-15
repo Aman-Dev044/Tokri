@@ -490,9 +490,136 @@
   color: var(--aisle-ink);
 }
 
-.shop-profile {
+.shop-head__actions {
   grid-area: profile;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.shop-profile {
   position: relative;
+}
+
+/* ── notifications ──────────────────────────────────────────────────────── */
+
+.shop-notify {
+  position: relative;
+}
+.shop-notify__button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring);
+}
+.shop-notify__button:hover {
+  border-color: var(--shop-edge);
+  transform: translateY(-1px);
+}
+.shop-notify__button:active {
+  transform: scale(0.96);
+}
+.shop-notify__count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--r-pill);
+  background: var(--crit-wash);
+  color: var(--crit-ink);
+  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
+  font-family: var(--data);
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.shop-notify__panel {
+  position: absolute;
+  z-index: 65;
+  top: calc(100% + var(--s-2));
+  right: 0;
+  width: min(22rem, calc(100vw - var(--s-6)));
+  max-height: min(28rem, 70vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
+}
+.shop-notify__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+}
+.shop-notify__empty {
+  padding: var(--s-4) var(--s-3);
+  color: var(--ink-faint);
+  font-size: var(--t-sm);
+}
+.shop-notify__list {
+  list-style: none;
+  margin: 0;
+  padding: var(--s-1);
+  overflow-y: auto;
+}
+.shop-notify__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-2);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
+}
+.shop-notify__item:hover {
+  background: var(--shop-wash);
+}
+.shop-notify__dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+.shop-notify__item[data-unread='true'] .shop-notify__dot {
+  background: var(--aisle);
+}
+.shop-notify__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: var(--t-sm);
+}
+.shop-notify__text strong {
+  font-weight: 700;
+}
+.shop-notify__time {
+  color: var(--ink-faint);
+  font-size: var(--t-2xs);
 }
 .shop-profile__button {
   display: inline-flex;
@@ -702,6 +829,7 @@
 .shop-rail__swatch[data-key='snacks'] { background: var(--aisle-snacks); }
 .shop-rail__swatch[data-key='staples'] { background: var(--aisle-staples); }
 .shop-rail__swatch[data-key='frozen'] { background: var(--aisle-frozen); }
+.shop-rail__swatch[data-key='electronics'] { background: var(--aisle-electronics); }
 
 .shop-rail__hindi {
   font-size: var(--t-xs);
@@ -1918,6 +2046,7 @@
 .shop-tab__swatch[data-key='snacks'] { background: var(--aisle-snacks); }
 .shop-tab__swatch[data-key='staples'] { background: var(--aisle-staples); }
 .shop-tab__swatch[data-key='frozen'] { background: var(--aisle-frozen); }
+.shop-tab__swatch[data-key='electronics'] { background: var(--aisle-electronics); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    12 · THE PRODUCT PAGE
@@ -2919,4 +3048,151 @@
   .shop-media__plate-art {
     transition: none !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   20 · /shop — THE CUSTOMER HOME (market-wide product grid)
+   ═══════════════════════════════════════════════════════════════════════════
+
+   The category rail and the two pieces of furniture under the grid. Everything
+   else on this page reuses what the aisle and storefront screens already own —
+   `.tkr-grid`, `.shop-card`, `.shop-tab`, `.shop-empty` — so a change to a
+   product card lands here too, rather than drifting into a second copy. */
+
+.shop-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--s-2);
+  padding-block: var(--s-2);
+  /* The rail scrolls INSIDE itself; the page body never scrolls sideways. */
+  scroll-snap-type: x proximity;
+}
+.shop-tabs > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+.shop-page__count {
+  margin: var(--s-4) 0 0;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-page__more {
+  display: flex;
+  justify-content: center;
+  margin-block: var(--s-4) var(--s-6);
+}
+
+/* ── the product gallery (detail page) ──────────────────────────────────── */
+
+.shop-product__gallery {
+  display: grid;
+  gap: var(--s-3);
+  align-content: start;
+}
+@media (min-width: 900px) {
+  .shop-product__gallery {
+    position: sticky;
+    top: calc(var(--shop-head-h) + var(--s-4));
+  }
+  /* The stage inside a sticky wrapper must not also be sticky, or the strip
+     scrolls out from under it. */
+  .shop-product__gallery .shop-product__media {
+    position: relative;
+    top: auto;
+  }
+}
+
+.shop-gallery__strip {
+  display: flex;
+  gap: var(--s-2);
+  padding-block: var(--s-1);
+}
+.shop-gallery__thumb {
+  flex: 0 0 auto;
+  /* Explicit box, so the strip holds its height before any image loads. */
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  border: 1px solid var(--shop-edge-soft);
+  background: color-mix(in oklab, var(--aisle) 8%, var(--void));
+  cursor: pointer;
+  transition: transform var(--t-micro) var(--spring), border-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+.shop-gallery__thumb:hover {
+  transform: translateY(-2px);
+  border-color: var(--shop-edge);
+}
+.shop-gallery__thumb[data-active='true'] {
+  border-color: var(--aisle);
+  box-shadow: var(--glow-sm);
+}
+.shop-gallery__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shop-gallery__note {
+  margin: 0;
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* ── product body additions ─────────────────────────────────────────────── */
+
+.shop-product__saving {
+  margin: 0;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--good-ink, var(--ink-soft));
+}
+
+.shop-product__spec {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-5) 0 0;
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--hairline);
+}
+.shop-product__spec > div {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) minmax(0, 1fr);
+  gap: var(--s-3);
+  align-items: baseline;
+}
+.shop-product__spec dt {
+  font-family: var(--body);
+  font-size: var(--t-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.shop-product__spec dd {
+  margin: 0;
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--ink);
+}
+
+/* ── the address form's non-map pin controls ────────────────────────────── */
+
+.shop-addrform__pinways {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin-block: var(--s-3);
+}
+.shop-addrform__pinnotice {
+  margin: 0 0 var(--s-3);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
 }

@@ -23,6 +23,10 @@ import {
   Inventory,
   InventoryDocument,
 } from '../../src/database/schemas/inventory.schema';
+import {
+  InventoryLog,
+  InventoryLogDocument,
+} from '../../src/database/schemas/inventory-log.schema';
 import { Order, OrderDocument } from '../../src/database/schemas/order.schema';
 import {
   Coupon,
@@ -39,6 +43,24 @@ import {
   createTestApp,
   nextIp,
 } from '../utils/test-app';
+
+/**
+ * The order-number prefix is configuration (ORDER_NO_PREFIX), not a
+ * constant — the product can be renamed without touching source.
+ * Hardcoding it here is what made this assertion fail the moment the
+ * brand changed, and a fallback would be the very pattern the repo's own
+ * ESLint rule bans: it would let the suite pass against a prefix the
+ * app never emits. test/utils/test-env.ts supplies it.
+ */
+const ORDER_NO_PREFIX = (() => {
+  const prefix = process.env.ORDER_NO_PREFIX;
+  if (!prefix) {
+    throw new Error(
+      'ORDER_NO_PREFIX is not set. test/utils/test-env.ts must supply it.',
+    );
+  }
+  return prefix;
+})();
 
 /** Generated per run, never a literal. */
 const PASSWORD = `Pw-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -89,6 +111,7 @@ describe('Customer shop API (integration)', () => {
   let categories: Model<CategoryDocument>;
   let products: Model<ProductDocument>;
   let inventory: Model<InventoryDocument>;
+  let inventoryLogs: Model<InventoryLogDocument>;
   let orders: Model<OrderDocument>;
   let coupons: Model<CouponDocument>;
   let passwords: PasswordService;
@@ -263,6 +286,9 @@ describe('Customer shop API (integration)', () => {
     products = ctx.app.get<Model<ProductDocument>>(getModelToken(Product.name));
     inventory = ctx.app.get<Model<InventoryDocument>>(
       getModelToken(Inventory.name),
+    );
+    inventoryLogs = ctx.app.get<Model<InventoryLogDocument>>(
+      getModelToken(InventoryLog.name),
     );
     orders = ctx.app.get<Model<OrderDocument>>(getModelToken(Order.name));
     coupons = ctx.app.get<Model<CouponDocument>>(getModelToken(Coupon.name));
@@ -822,7 +848,7 @@ describe('Customer shop API (integration)', () => {
 
       expect(res.status).toBe(201);
       expect(res.body.order.status).toBe(OrderStatus.PLACED);
-      expect(res.body.order.orderNo).toMatch(/^MND-\d{8}-\d{4}$/);
+      expect(res.body.order.orderNo).toMatch(new RegExp(`^${ORDER_NO_PREFIX}-\\d{8}-\\d{4}$`));
       expect(res.body.order.statusHistory).toHaveLength(1);
       expect(res.body.payment.next).toBe('pay_on_delivery');
       // The OTP is returned exactly once, in plain text, to the buyer.
@@ -914,6 +940,77 @@ describe('Customer shop API (integration)', () => {
         .delete('/cart')
         .set('Authorization', `Bearer ${tokenA}`)
         .set('X-Forwarded-For', nextIp());
+    });
+
+    // ── TWO LINES, NOT ONE ───────────────────────────────────────────
+    // Every other checkout case in this file buys a SINGLE product, and
+    // that is exactly why a real bug shipped: the inventory-log write is
+    // `items.map(...)` with a session, and Mongoose 8 refuses an
+    // UNORDERED multi-document insert inside a transaction. One line is
+    // one document, so it never tripped; two lines returned a bare 500
+    // on every checkout.
+    //
+    // A basket with one item in it is not a basket. This buys two.
+    //
+    // It seeds its OWN products and runs last on purpose: the cases above
+    // are sequential — the COD test checks out a basket an earlier test
+    // filled, and asserts absolute stock — so a test that reserves shared
+    // stock or empties the cart ahead of them breaks all three.
+    it('places an order with TWO different products in one basket', async () => {
+      const oneId = await seedProduct(storeA, 'Basmati Rice', 24_900, 30, AisleKey.STAPLES);
+      const twoId = await seedProduct(storeA, 'Toor Dal', 17_500, 30, AisleKey.STAPLES);
+
+      for (const [productId, qty] of [
+        [oneId, 2],
+        [twoId, 3],
+      ] as const) {
+        const added = await request(server)
+          .post('/cart/items')
+          .set('Authorization', `Bearer ${tokenA}`)
+          .set('X-Forwarded-For', nextIp())
+          .send({ vendorId: storeA.toString(), productId, qty });
+        expect(added.status).toBe(201);
+      }
+
+      const res = await request(server)
+        .post('/checkout')
+        .set('Authorization', `Bearer ${tokenA}`)
+        .set('X-Forwarded-For', nextIp())
+        .set('Idempotency-Key', `multi-${Date.now()}-${uniqueSuffix()}`)
+        .send({
+          vendorId: storeA.toString(),
+          addressId,
+          paymentMethod: 'cod',
+        });
+
+      // The assertion that matters: 201, not 500.
+      expect(res.status).toBe(201);
+      expect(res.body.order.items).toHaveLength(2);
+
+      // Both lines reserved independently. A partial commit would be worse
+      // than the 500 — an order the customer owes money for, whose stock
+      // was never taken off the shelf.
+      const one = await inventory
+        .findOne({ productId: new Types.ObjectId(oneId) })
+        .lean()
+        .exec();
+      const two = await inventory
+        .findOne({ productId: new Types.ObjectId(twoId) })
+        .lean()
+        .exec();
+
+      expect(one?.stock).toBe(28);
+      expect(one?.reserved).toBe(2);
+      expect(two?.stock).toBe(27);
+      expect(two?.reserved).toBe(3);
+
+      // One inventory log per LINE, not per order: this is the collection
+      // whose multi-document insert was the actual bug.
+      const logs = await inventoryLogs
+        .find({ refId: new Types.ObjectId(res.body.order.id as string) })
+        .lean()
+        .exec();
+      expect(logs).toHaveLength(2);
     });
   });
 

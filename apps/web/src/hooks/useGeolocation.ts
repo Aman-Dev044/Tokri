@@ -222,29 +222,59 @@ export function useGeolocation(): UseGeolocation {
 /**
  * The query the store list sends.
  *
- * `GET /stores` accepts EXACTLY `lat`, `lng`, `radius`, `q`, `page`, `limit`
- * and `sort` (`BrowseStoresQueryDto`). The API runs `forbidNonWhitelisted`, so
- * anything else is a hard 400, not an ignored extra — this used to send
- * `?pincode=560076` and every PIN-code search answered
- * `400 property pincode should not exist`, which the fixture fallback then hid
- * behind a "sample data" banner.
+ * `GET /stores` accepts `lat`, `lng`, `radius`, `pincode`, `q`, `page`,
+ * `limit` and `sort` (`BrowseStoresQueryDto`). The API runs
+ * `forbidNonWhitelisted`, so anything else is a hard 400 — this used to send
+ * `?pincode=560076` before the DTO accepted it and every PIN-code search
+ * answered `400 property pincode should not exist`.
  *
- * So a PIN code contributes NO parameter. The list still loads, unfiltered, and
- * `StoresView` says so in words rather than implying a filter that never ran.
- *
- * TODO(api): accept `?pincode=` on `GET /stores` and resolve it to a centre
- * point server-side (geocoding in the browser would need a Maps key we may not
- * have). Until that endpoint exists, `hasServerSideFilter` below stays false
- * for the PIN-code path and the UI is honest about it.
+ * A device fix always wins when we have one (it is strictly more precise);
+ * the PIN code is the fallback for when geolocation was denied or never
+ * asked. Never both at once — the API resolves a PIN to a centre point
+ * server-side, and sending `lat`/`lng` alongside it would be ambiguous about
+ * which one to trust.
  */
 export function locationQuery(
   location: ShopLocation | null,
 ): Record<string, string | number | undefined> {
-  if (location === null || location.coords === null) return {};
-  return { lat: location.coords.lat, lng: location.coords.lng, radius: 5 };
+  if (location === null) return {};
+  if (location.coords !== null) {
+    return { lat: location.coords.lat, lng: location.coords.lng, radius: 5 };
+  }
+  if (location.pincode !== null) return { pincode: location.pincode };
+  return {};
 }
 
-/** True when the chosen location actually narrowed the server-side query. */
+/**
+ * ★ The query the MARKET-WIDE product grid sends — `GET /products`.
+ *
+ * Same location object, a DIFFERENT whitelist, and that difference was a
+ * live bug: `BrowseMarketProductsQueryDto` accepts `lat`, `lng`, `pincode`,
+ * `q`, `aisleKey`, `page` and `limit` — and NOT `radius`. Sending
+ * `locationQuery()` at `/products` therefore answered
+ * `400 property radius should not exist` for every customer who had ever
+ * shared their location, which is to say the aisle grid was broken for
+ * exactly the people who had used the app before.
+ *
+ * `radius` is absent there on purpose rather than by oversight: on
+ * `GET /stores` it FILTERS ("within 5 km"), while on `GET /products`
+ * nothing filters by distance at all — a market-wide search is "does
+ * anyone sell this", not "what is near me". Position is carried only so
+ * each row can say how far its store is. Two endpoints, two honest
+ * shapes, so this is a second function rather than a flag on the first.
+ */
+export function marketLocationQuery(
+  location: ShopLocation | null,
+): Record<string, string | number | undefined> {
+  if (location === null) return {};
+  if (location.coords !== null) {
+    return { lat: location.coords.lat, lng: location.coords.lng };
+  }
+  if (location.pincode !== null) return { pincode: location.pincode };
+  return {};
+}
+
+/** True when the chosen location actually narrows the server-side query. */
 export function isLocationFiltered(location: ShopLocation | null): boolean {
-  return location !== null && location.coords !== null;
+  return location !== null && (location.coords !== null || location.pincode !== null);
 }

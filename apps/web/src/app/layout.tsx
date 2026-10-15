@@ -111,13 +111,16 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  // Both grounds are fully designed, so the browser chrome follows the ground.
-  // These are --ground from tokens.css. A <meta> tag is evaluated outside any
-  // CSS cascade, so it cannot read a custom property and must be kept in step
-  // by hand; they were still on the previous palette's values until now.
+  // Both grounds are fully designed, so the browser chrome follows the
+  // ground. These are `--ground` from tokens.css, and they are the ONLY
+  // place in the app allowed to restate it: a <meta> tag is evaluated
+  // outside any CSS cascade, so it cannot read a custom property and has
+  // to be kept in step by hand. If `--ground` changes, change these —
+  // otherwise the phone's status bar sits in one colour directly above a
+  // page in another.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fbf7f0' },
-    { media: '(prefers-color-scheme: dark)', color: '#14110f' },
+    { media: '(prefers-color-scheme: light)', color: '#faf7ff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e0a14' },
   ],
 };
 

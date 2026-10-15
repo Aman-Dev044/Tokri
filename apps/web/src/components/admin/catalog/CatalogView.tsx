@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { AdminPage } from '@/components/admin';
@@ -15,8 +16,18 @@ const TABS: readonly { key: TabKey; label: string }[] = [
   { key: 'products', label: 'Products' },
 ];
 
+/**
+ * `/admin/catalog?tab=products&q=…` — the deep link `StockView`'s "Catalogue"
+ * button already builds. Read once, from the URL this page loaded with: this
+ * only steers the INITIAL tab and search box, never fights the tabs' own
+ * `useState` on a later click.
+ */
 export function CatalogView() {
-  const [tab, setTab] = useState<TabKey>('aisles');
+  const params = useSearchParams();
+  const initialTab: TabKey = params.get('tab') === 'products' ? 'products' : 'aisles';
+  const initialQuery = params.get('q') ?? '';
+
+  const [tab, setTab] = useState<TabKey>(initialTab);
 
   return (
     <AdminPage
@@ -55,7 +66,7 @@ export function CatalogView() {
         className={styles.enter}
         key={tab}
       >
-        {tab === 'aisles' ? <AislesTab /> : <ProductsTab />}
+        {tab === 'aisles' ? <AislesTab /> : <ProductsTab initialQuery={initialQuery} />}
       </div>
     </AdminPage>
   );

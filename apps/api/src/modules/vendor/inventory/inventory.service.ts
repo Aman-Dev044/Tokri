@@ -32,6 +32,7 @@ import { scopeId, toObjectIdOrNull } from '../common/vendor-scope.decorator';
 import {
   AdjustStockDto,
   BulkAdjustStockDto,
+  ListInventoryLogsQueryDto,
   ListInventoryQueryDto,
   VendorInventoryReason,
 } from './dto';
@@ -60,6 +61,19 @@ export interface InventoryRow {
 export interface BulkAdjustResult {
   adjusted: number;
   items: InventoryRow[];
+}
+
+/** One row of the per-product movement trail (`GET .../:productId/logs`). */
+export interface InventoryLogRow {
+  id: string;
+  productId: string;
+  vendorId: string;
+  /** Signed: +25 on a restock, -2 when an order commits. */
+  delta: number;
+  reason: InventoryReason;
+  refId: string | null;
+  byUserId: string | null;
+  at: string;
 }
 
 interface InventoryAggregateRow {
@@ -105,8 +119,10 @@ export class VendorInventoryService {
     @InjectConnection() private readonly connection: Connection,
     @InjectModel(Inventory.name)
     private readonly inventory: Model<InventoryDocument>,
+    // Named `inventoryLogs`, not `logs`: `logs()` below is the public
+    // `GET .../:productId/logs` method, and the two names would collide.
     @InjectModel(InventoryLog.name)
-    private readonly logs: Model<InventoryLogDocument>,
+    private readonly inventoryLogs: Model<InventoryLogDocument>,
     private readonly audit: AuditService,
   ) {}
 
@@ -271,6 +287,58 @@ export class VendorInventoryService {
 
     if (!row) throw new NotFoundException('Inventory row not found');
     return toInventoryRow(row);
+  }
+
+  /**
+   * `GET /vendor/inventory/:productId/logs` — the per-product movement
+   * trail. Every adjustment already writes an `InventoryLog` row in the
+   * SAME transaction as the stock `$inc` (`applyAdjustment` below);
+   * nothing before this read it back.
+   *
+   * Ownership is checked the same way every other route in this
+   * controller checks it: the Inventory row must exist for THIS
+   * vendor's scope, or it is a 404 — never a 403, so a foreign product
+   * id cannot be distinguished from one that does not exist. The
+   * `InventoryLog` query itself is filtered by `vendorId` too, as
+   * defence in depth (the same double-check `applyAdjustment` already
+   * applies).
+   *
+   * Sorted newest-first off the existing `{ productId: 1, at: -1 }`
+   * index on `InventoryLog` — no new index needed.
+   */
+  async logs(
+    vendorScope: string,
+    productId: string,
+    query: ListInventoryLogsQueryDto,
+  ): Promise<Paginated<InventoryLogRow>> {
+    if (!Types.ObjectId.isValid(productId)) {
+      throw new NotFoundException('Inventory row not found');
+    }
+
+    const vendorId = scopeId(vendorScope);
+    const product = new Types.ObjectId(productId);
+
+    const owns = await this.inventory
+      .exists({ productId: product, vendorId })
+      .exec();
+    if (!owns) throw new NotFoundException('Inventory row not found');
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const filter = { productId: product, vendorId };
+
+    const [docs, total] = await Promise.all([
+      this.inventoryLogs
+        .find(filter)
+        .sort({ at: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean<InventoryLogLean[]>()
+        .exec(),
+      this.inventoryLogs.countDocuments(filter).exec(),
+    ]);
+
+    return paginate(docs.map(toInventoryLogRow), total, page, limit);
   }
 
   // ──────────────────────────────────────────────────────────────────
@@ -461,7 +529,7 @@ export class VendorInventoryService {
     // Same transaction as the $inc. A movement without its log row is a
     // quantity nobody can explain; a log row without its movement is a
     // quantity nobody can reproduce. Neither may exist alone.
-    await this.logs.create(
+    await this.inventoryLogs.create(
       [
         {
           vendorId,
@@ -502,5 +570,29 @@ function toInventoryRow(row: InventoryAggregateRow): InventoryRow {
     isLowStock: stock <= threshold,
     isOutOfStock: stock <= 0,
     updatedAt: iso(row.updatedAt),
+  };
+}
+
+interface InventoryLogLean {
+  _id: Types.ObjectId;
+  vendorId: Types.ObjectId;
+  productId: Types.ObjectId;
+  delta: number;
+  reason: InventoryReason;
+  refId?: Types.ObjectId | null;
+  byUserId?: Types.ObjectId | null;
+  at: Date;
+}
+
+function toInventoryLogRow(row: InventoryLogLean): InventoryLogRow {
+  return {
+    id: row._id.toString(),
+    productId: row.productId.toString(),
+    vendorId: row.vendorId.toString(),
+    delta: row.delta,
+    reason: row.reason,
+    refId: row.refId ? row.refId.toString() : null,
+    byUserId: row.byUserId ? row.byUserId.toString() : null,
+    at: new Date(row.at).toISOString(),
   };
 }

@@ -14,12 +14,24 @@
  *   · The countdown is derived from the server's `expiresAt` on every tick,
  *     never decremented locally — a suspended tab must not leave a rider
  *     believing they still have time.
- *   · Accept and Decline are the deliberate exception to "one action per
+ *   · Review and Decline are the deliberate exception to "one action per
  *     screen": the offer is a genuine binary. They are still not peers.
  *   · On expiry it says so plainly and returns to waiting. No silent vanish.
+ *
+ * ── WHY "REVIEW" AND NOT "ACCEPT" ───────────────────────────────────────────
+ * Accepting now CHARGES the rider a pick fee, drawn at random per order. A
+ * button that takes money out of someone's wallet must not be the same reflex
+ * tap as a button that only takes a job, so the accept itself lives one screen
+ * deeper — `/delivery/offers/[id]` — where the items, both addresses, the
+ * balance and the fee are all on screen while the decision is still
+ * reversible. The countdown continues there; the extra screen costs a tap, not
+ * a second of the 45.
+ *
+ * Decline stays HERE, because declining costs nothing and a rider who has
+ * decided should not have to open anything to do it.
  */
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import styles from './delivery.module.css';
@@ -28,7 +40,7 @@ import { FixtureBanner, Notice } from './Banners';
 import { PlaceCard } from './PlaceCard';
 import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
-import { IconBox, IconCheck, IconResting, IconX } from './icons';
+import { IconBox, IconNavigate, IconResting, IconWallet, IconX } from './icons';
 import { clock, distanceKm, money, rupeesOnly, secondsUntil } from '@/lib/delivery/format';
 import { useTicker } from '@/lib/delivery/tracking';
 import type { Offer } from '@/lib/delivery/types';
@@ -42,11 +54,11 @@ const RING_RADIUS = 45;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function OffersView() {
-  const router = useRouter();
   const {
     offers,
     offersAreSample,
-    accept,
+    wallet,
+    kyc,
     decline,
     expire,
     refresh,
@@ -63,7 +75,6 @@ export function OffersView() {
   const [busy, setBusy] = useState(false);
   const [expired, setExpired] = useState(false);
   const [gone, setGone] = useState(false);
-  const [failed, setFailed] = useState(false);
 
   const offer: Offer | undefined = offers[0];
   const remaining = offer === undefined ? 0 : secondsUntil(offer.expiresAt, now);
@@ -82,22 +93,7 @@ export function OffersView() {
     if (assignmentId === undefined) return;
     setExpired(false);
     setGone(false);
-    setFailed(false);
   }, [assignmentId]);
-
-  const onAccept = useCallback(async () => {
-    if (offer === undefined || busy) return;
-    setBusy(true);
-    setFailed(false);
-    const outcome = await accept(offer);
-    setBusy(false);
-    if (outcome === 'accepted') {
-      router.push(`/delivery/active/${encodeURIComponent(offer.orderId)}`);
-      return;
-    }
-    if (outcome === 'gone') setGone(true);
-    else setFailed(true);
-  }, [offer, busy, accept, router]);
 
   const onDecline = useCallback(async () => {
     if (offer === undefined || busy) return;
@@ -228,8 +224,22 @@ export function OffersView() {
       <p className={styles.srOnly} role="status">
         {`New delivery offer. You earn ${rupeesOnly(offer.payoutPaise)} rupees. ${
           Math.ceil(remaining / 5) * 5
-        } seconds left to accept.`}
+        } seconds left to review and accept.`}
       </p>
+
+      {/*
+        The rest of the working list, as ONE line of text rather than a
+        second card. A queue of cards is a decision; this screen is a
+        reflex, and the 45 seconds belong to the offer on top. The count
+        is live — it is driven by `delivery.assigned` over the socket and
+        by offers expiring locally, not by a poll.
+      */}
+      {offers.length > 1 ? (
+        <p className={styles.lede}>
+          {offers.length - 1} more offer{offers.length === 2 ? '' : 's'} behind
+          this one. They are answered in order.
+        </p>
+      ) : null}
 
       <PlaceCard kind="pickup" place={offer.pickup} />
       <PlaceCard kind="drop" place={offer.drop} />
@@ -241,10 +251,28 @@ export function OffersView() {
         </div>
       ) : null}
 
-      {failed ? (
-        <Notice tone="crit" title="Could not accept">
-          The request did not get through. Try once more, or let it expire and wait for
-          the next offer.
+      {/*
+        The charge, stated on the reflex screen as well as on the confirm
+        screen. A rider glancing at this card should already know that taking
+        it costs them something before they tap anything at all.
+      */}
+      {wallet === null ? null : (
+        <div className={styles.feeNote}>
+          <IconWallet size={18} />
+          <span>
+            Accepting costs a pick fee of {money(wallet.pickFeeMinPaise)}–
+            {money(wallet.pickFeeMaxPaise)}, taken from your wallet. Balance{' '}
+            {money(wallet.balancePaise)}.
+          </span>
+        </div>
+      )}
+
+      {kyc !== null && kyc.status !== 'verified' ? (
+        <Notice tone="warn" title="You cannot accept jobs yet">
+          Your documents are {kyc.status === 'submitted' ? 'being checked' : 'not verified'}.{' '}
+          <Link href="/delivery/profile" className={styles.inlineLink}>
+            Open verification
+          </Link>
         </Notice>
       ) : null}
 
@@ -258,15 +286,13 @@ export function OffersView() {
           >
             <IconX size={20} /> Decline
           </button>
-          <button
-            type="button"
+          <Link
             className={styles.primary}
-            onClick={() => void onAccept()}
-            disabled={busy}
+            href={`/delivery/offers/${encodeURIComponent(offer.id)}`}
           >
-            <IconCheck size={24} />
-            {busy ? 'Accepting…' : `Accept ${money(offer.payoutPaise)}`}
-          </button>
+            <IconNavigate size={24} />
+            {`Review · ${money(offer.payoutPaise)}`}
+          </Link>
         </div>
       </Dock>
     </>

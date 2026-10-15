@@ -31,6 +31,7 @@
 
 import { ApiError, api, type RequestOptions } from '@/lib/api-client';
 import type {
+  AcceptedOffer,
   ActiveOrder,
   ActiveOrderItem,
   ActiveOrderPayment,
@@ -72,6 +73,21 @@ export const DELIVERY_PATHS = {
   location: '/delivery/location',
   history: '/delivery/history',
   earnings: '/delivery/earnings',
+
+  // ── Added with the wallet / KYC work ────────────────────────────────
+  // Verified against the running API on :4000 before being written here,
+  // exactly like the paths above. `offerDetail` and `tracking` are GETs
+  // on ids the API scopes to the caller's own partner row, so a
+  // mistyped id is a 404 rather than another rider's job.
+  offerDetail: (id: string) => `/delivery/offers/${encodeURIComponent(id)}`,
+  tracking: (id: string) =>
+    `/delivery/orders/${encodeURIComponent(id)}/tracking`,
+  wallet: '/delivery/wallet',
+  walletTransactions: '/delivery/wallet/transactions',
+  walletTopup: '/delivery/wallet/topup',
+  kyc: '/delivery/profile/kyc',
+  kycDocument: '/delivery/profile/kyc/document',
+  kycDocumentAttach: '/delivery/profile/kyc/document/attach',
 } as const;
 
 /** How many finished jobs the history screen asks for. The API caps at 100. */
@@ -81,31 +97,40 @@ export const HISTORY_PAGE_SIZE = 50;
 /* Safe readers                                                        */
 /* ------------------------------------------------------------------ */
 
-type Bag = Record<string, unknown>;
+/**
+ * The shared safe readers.
+ *
+ * EXPORTED, not copied: `wallet-api.ts` normalises the wallet, KYC and
+ * tracking payloads with the same primitives this file uses for offers and
+ * jobs. A second set of readers is a second set of fallback decisions, and
+ * the first time the two disagree one screen prints a dash where the other
+ * prints a zero.
+ */
+export type Bag = Record<string, unknown>;
 
-function bag(value: unknown): Bag {
+export function bag(value: unknown): Bag {
   return typeof value === 'object' && value !== null ? (value as Bag) : {};
 }
 
-function str(value: unknown, fallback = ''): string {
+export function str(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
 }
 
 /** A string, or null. An empty string is null: it is not a value. */
-function nullableStr(value: unknown): string | null {
+export function nullableStr(value: unknown): string | null {
   return typeof value === 'string' && value !== '' ? value : null;
 }
 
-function num(value: unknown, fallback: number): number {
+export function num(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 /** A number, or null. Used for every `| null` field the API declares. */
-function nullableNum(value: unknown): number | null {
+export function nullableNum(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-function bool(value: unknown, fallback = false): boolean {
+export function bool(value: unknown, fallback = false): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
@@ -128,7 +153,7 @@ const ORDER_STATUSES: readonly OrderStatus[] = [
  * ASSIGNED is the least destructive reading: it shows the job, offers only the
  * pickup action, and the API answers 409 if that turns out to be wrong.
  */
-function readStatus(value: unknown): OrderStatus {
+export function readStatus(value: unknown): OrderStatus {
   const text = str(value);
   return ORDER_STATUSES.find((status) => status === text) ?? 'ASSIGNED';
 }
@@ -174,7 +199,7 @@ function readPaymentStatus(value: unknown): PaymentStatus {
 }
 
 /** The flat `{ label, address, lat, lng }` the API actually sends. */
-function waypoint(value: unknown, fallbackLabel: string): Waypoint {
+export function waypoint(value: unknown, fallbackLabel: string): Waypoint {
   const raw = bag(value);
   return {
     label: nullableStr(raw['label']) ?? fallbackLabel,
@@ -184,7 +209,7 @@ function waypoint(value: unknown, fallbackLabel: string): Waypoint {
   };
 }
 
-function latLng(value: unknown): LatLng | null {
+export function latLng(value: unknown): LatLng | null {
   const raw = bag(value);
   const lat = nullableNum(raw['lat']);
   const lng = nullableNum(raw['lng']);
@@ -257,7 +282,7 @@ export function normaliseOffer(raw: unknown): Offer | null {
   };
 }
 
-function normaliseItem(raw: unknown): ActiveOrderItem {
+export function normaliseItem(raw: unknown): ActiveOrderItem {
   const b = bag(raw);
   return {
     name: str(b['name'], 'Item'),
@@ -356,7 +381,7 @@ export function normaliseEarnings(raw: unknown): EarningsSummary {
 }
 
 /** `{ data, meta }` — the envelope every list endpoint returns. */
-function unwrapList(raw: unknown): unknown[] {
+export function unwrapList(raw: unknown): unknown[] {
   if (Array.isArray(raw)) return raw;
   const data = bag(raw)['data'];
   return Array.isArray(data) ? data : [];
@@ -450,17 +475,35 @@ function idempotent(key: string): RequestOptions {
   return { idempotencyKey: key };
 }
 
-/** Accept returns the full active order — the job the rider just took. */
+/**
+ * Accept returns the job the rider just took AND what it cost them.
+ *
+ * ── Why the shape changed ───────────────────────────────────────────────────
+ * Accepting now charges a PICK FEE, drawn at random per order inside the same
+ * transaction that assigns the job. The response carries `pickFeePaise` and
+ * the resulting `walletBalancePaise` so the app can show the charge at the
+ * instant it happens — a rider must never learn what a job cost them by
+ * noticing it later in a ledger.
+ *
+ * The fee is a whole number of paise and the balance is the server's, not a
+ * local subtraction: a client that computes `balance - fee` itself is a client
+ * that drifts the moment anything else moves the balance.
+ */
 export async function acceptOffer(
   assignmentId: string,
   key: string,
-): Promise<ActiveOrder | null> {
+): Promise<AcceptedOffer> {
   const raw = await api.post<unknown>(
     DELIVERY_PATHS.acceptOffer(assignmentId),
     undefined,
     idempotent(key),
   );
-  return normaliseActiveOrder(raw);
+  const b = bag(raw);
+  return {
+    order: normaliseActiveOrder(b['order']),
+    pickFeePaise: num(b['pickFeePaise'], 0),
+    walletBalancePaise: num(b['walletBalancePaise'], 0),
+  };
 }
 
 /**
@@ -505,13 +548,20 @@ export async function markOutForDelivery(orderId: string): Promise<ActiveOrder |
  * The final transition. `otp` is passed straight through to the request body
  * and is not retained anywhere in this app — see the file header.
  *
- * `photoUrl` is deliberately NOT a parameter. The API accepts one, but there
- * is no endpoint anywhere that turns a captured photo into a URL, so a
- * parameter here would be an invitation to send a blob URL that the API would
- * reject with 400. See `PhotoProof.tsx` for the missing endpoint.
+ * `photoUrl` is optional and, when present, MUST be the absolute HTTPS URL
+ * `uploadProofPhoto` (`lib/delivery/photo.ts`) returned from the presigned
+ * upload — `DeliverOrderDto` validates it with `@IsUrl({ protocols: ['https'] })`,
+ * so a local `blob:` URL is a 400, never sent here.
  */
-export async function deliverOrder(orderId: string, otp: string): Promise<ActiveOrder | null> {
-  const raw = await api.post<unknown>(DELIVERY_PATHS.deliver(orderId), { otp });
+export async function deliverOrder(
+  orderId: string,
+  otp: string,
+  photoUrl?: string | null,
+): Promise<ActiveOrder | null> {
+  const raw = await api.post<unknown>(DELIVERY_PATHS.deliver(orderId), {
+    otp,
+    ...(photoUrl ? { photoUrl } : {}),
+  });
   return normaliseActiveOrder(raw);
 }
 

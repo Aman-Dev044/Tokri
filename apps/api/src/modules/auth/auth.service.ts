@@ -84,8 +84,12 @@ export class AuthService {
    * Issues an access/refresh pair and starts (or continues) a token family.
    * The refresh token is stored only as a SHA-256 hash, so a database leak
    * does not hand an attacker usable session tokens.
+   *
+   * Public (not `private`) so `RegistrationService` can log a brand-new
+   * account straight in after signup, without duplicating the token
+   * machinery or the refresh-token-family bookkeeping.
    */
-  private async issueTokens(
+  async issueTokens(
     user: UserDocument,
     // Explicitly `string`: an inferred default from randomUUID() narrows the
     // parameter to a UUID template-literal type, which a family id read back

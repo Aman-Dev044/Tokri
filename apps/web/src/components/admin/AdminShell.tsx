@@ -35,10 +35,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from '@mandi/design-system';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { opsBadges, useAdminQuery, useMediaQuery, useOpsSummary } from '@/hooks';
+import { opsBadges, useMediaQuery, useOpsSummary } from '@/hooks';
+import { useNotifications } from '@/hooks/useNotifications';
+import { formatRelative } from '@/lib/admin/format';
 import { isActiveHref, isRestrictedHref, navItemFor, visibleNav } from '@/lib/admin/nav';
 import { ADMIN_LEVEL_LABEL, ADMIN_LEVEL_PILL, useAdminRole } from '@/lib/admin/session';
-import type { AdminLevel, AdminNotification } from '@/lib/admin/types';
+import type { AdminLevel } from '@/lib/admin/types';
 import { CommandPalette } from './CommandPalette';
 import {
   IconBell,
@@ -450,12 +452,25 @@ function ThemeToggle() {
   );
 }
 
+/**
+ * `GET /notifications` returns `{ id, type, title, body, data, readAt,
+ * createdAt }` — there is no `href`. An earlier draft of this bell invented
+ * one and linked every row to it; that guess is gone. A row is now a plain
+ * button: click it and it is marked read, nothing more, because the payload
+ * in `data` is type-dependent and this bell does not know how to route it.
+ */
 function NotificationBell({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const { data } = useAdminQuery<AdminNotification[]>('/notifications');
-  const items = useMemo(() => data ?? [], [data]);
-  const unread = items.filter((item) => item.readAt === null).length;
+  const { unreadCount, items, loading, error, fetchList, markRead, markAllRead } =
+    useNotifications();
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (open) fetchList(1);
+    // Fires once per open, not on every keystroke elsewhere on the page —
+    // `fetchList` is stable across renders (see `useNotifications`).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -476,13 +491,13 @@ function NotificationBell({ open, onToggle }: { open: boolean; onToggle: () => v
         aria-haspopup="menu"
       >
         <IconBell />
-        {unread > 0 ? (
+        {unreadCount > 0 ? (
           <span className="adm-iconbtn__count" aria-hidden="true">
-            {unread > 9 ? '9+' : unread}
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}
         <span className="adm-sr">
-          Notifications{unread > 0 ? `, ${unread} unread` : ', none unread'}
+          Notifications{unreadCount > 0 ? `, ${unreadCount} unread` : ', none unread'}
         </span>
       </button>
 
@@ -490,13 +505,37 @@ function NotificationBell({ open, onToggle }: { open: boolean; onToggle: () => v
         <div className="adm-menu" role="menu" style={{ minWidth: 320 }}>
           <div className="adm-menu__head">
             <strong>Notifications</strong>
-            <p className="adm-menu__email">{unread} unread</p>
+            {unreadCount > 0 ? (
+              <button
+                type="button"
+                className="adm-menu__email"
+                style={{ border: 0, background: 'none', cursor: 'pointer', padding: 0 }}
+                onClick={() => markAllRead()}
+              >
+                Mark all {unreadCount} read
+              </button>
+            ) : (
+              <p className="adm-menu__email">Nothing unread</p>
+            )}
           </div>
-          {items.length === 0 ? (
+          {error !== null ? (
+            <p style={{ padding: 'var(--s-3)', color: 'var(--crit)' }}>{error.friendlyMessage}</p>
+          ) : loading && items.length === 0 ? (
+            <p style={{ padding: 'var(--s-3)', color: 'var(--adm-dim)' }}>Loading…</p>
+          ) : items.length === 0 ? (
             <p style={{ padding: 'var(--s-3)', color: 'var(--adm-dim)' }}>Nothing waiting.</p>
           ) : (
-            items.slice(0, 6).map((item) => (
-              <Link key={item.id} href={item.href} className="adm-menu__item" role="menuitem">
+            items.slice(0, 8).map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="adm-menu__item"
+                role="menuitem"
+                style={{ border: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                onClick={() => {
+                  if (item.readAt === null) markRead(item.id);
+                }}
+              >
                 <span
                   className="adm-dot"
                   style={{
@@ -510,8 +549,11 @@ function NotificationBell({ open, onToggle }: { open: boolean; onToggle: () => v
                 <span style={{ minWidth: 0 }}>
                   <strong style={{ display: 'block' }}>{item.title}</strong>
                   <span className="adm-palette__hint">{item.body}</span>
+                  <span className="adm-palette__hint">
+                    {formatRelative(item.createdAt, Date.now())}
+                  </span>
                 </span>
-              </Link>
+              </button>
             ))
           )}
         </div>

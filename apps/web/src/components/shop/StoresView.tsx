@@ -9,26 +9,35 @@
  * in this flow that says "enable location to continue", because that is a dead
  * end dressed as a feature.
  *
- * ── WHAT `q` ACTUALLY SEARCHES ──────────────────────────────────────────────
- * `GET /stores?q=` matches STORE NAMES (`BrowseStoresQueryDto.q`). This view
- * used to also fire `GET /products?q=` for a market-wide item search — that
- * endpoint does not exist and answers 404, so the whole results section was a
- * permanent fixture banner. It is gone, and the copy now says what the search
- * really does.
- *   TODO(api): add `GET /products?q=&lat=&lng=` for market-wide item search.
- *   The catalogue API only exposes products scoped to one store today
- *   (`GET /stores/:id/products?q=`), so until that lands the only way to search
- *   items is from inside a storefront.
+ * ── WHAT `q` SEARCHES ────────────────────────────────────────────────────────
+ * `GET /stores?q=` matches STORE NAMES (`BrowseStoresQueryDto.q`). Alongside
+ * it, `GET /products?q=&lat=&lng=` now searches ITEMS across every store on
+ * {APP_NAME} — this view fires both and shows them as two separate sections,
+ * because "stores named X" and "products named X" are different questions
+ * with different answers.
  */
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { APP_NAME } from '@/config/brand';
-import { useGeolocation, locationQuery, isLocationFiltered } from '@/hooks/useGeolocation';
+import {
+  useGeolocation,
+  locationQuery,
+  marketLocationQuery,
+  isLocationFiltered,
+} from '@/hooks/useGeolocation';
 import { useShopQuery } from '@/hooks/useShopQuery';
-import { readPaged, readStore, type Paged, type Store } from '@/lib/shop/types';
+import {
+  readMarketProduct,
+  readPaged,
+  readStore,
+  type MarketProduct,
+  type Paged,
+  type Store,
+} from '@/lib/shop/types';
 import { FixtureBanner, ErrorNotice } from './notices';
+import { ProductCard, ProductCardSkeleton } from './ProductCard';
 import { StoreCard, StoreCardSkeleton } from './StoreCard';
 
 export function StoresView() {
@@ -50,8 +59,29 @@ export function StoresView() {
     read: useCallback((raw: unknown) => readPaged(raw, readStore), []),
   });
 
+  /* Market-wide item search — `GET /products?q=&lat=&lng=`. Only fired when
+     there is a query: an empty `q` here would ask for "every product on
+     {APP_NAME}", which is not what an empty search box means.
+
+     `marketLocationQuery`, NOT `locationQuery`: `/products` does not
+     whitelist `radius`, so the store-shaped query was a hard 400 here. */
+  const productParams = useMemo(
+    () => (query === '' ? undefined : { ...marketLocationQuery(geo.location), q: query, limit: 24 }),
+    [geo.location, query],
+  );
+  const products = useShopQuery<Paged<MarketProduct>>(
+    query === '' ? null : '/products',
+    productParams,
+    {
+      anonymous: true,
+      enabled: geo.ready && query !== '',
+      read: useCallback((raw: unknown) => readPaged(raw, readMarketProduct), []),
+    },
+  );
+
   const needsLocation = geo.ready && geo.location === null;
   const rows = stores.data?.data ?? [];
+  const productRows = products.data?.data ?? [];
 
   return (
     <div className="shell shop-page">
@@ -131,21 +161,58 @@ export function StoresView() {
         </section>
       ) : null}
 
-      {/* A PIN code is remembered for the header, but it does not filter the
-          list — the API has no `pincode` parameter. Saying so is the whole
-          point; sending it anyway was a 400. */}
       {geo.location?.source === 'pincode' ? (
         <p className="shop-page__scope" role="status">
-          Saved PIN <strong className="mono">{geo.location.pincode}</strong>. This list is not
-          narrowed to it yet — share your location to sort by distance.{' '}
+          Showing stores near PIN <strong className="mono">{geo.location.pincode}</strong>.{' '}
           <button type="button" className="shop-linkish" onClick={geo.request}>
-            Use my location
+            Use my location instead
           </button>{' '}
           ·{' '}
           <button type="button" className="shop-linkish" onClick={geo.clear}>
             Clear
           </button>
         </p>
+      ) : null}
+
+      {/* ── market-wide product search ──────────────────────────────────── */}
+      {query !== '' ? (
+        <section className="shop-section" aria-labelledby="shop-products-title">
+          <h2 id="shop-products-title" className="shop-section__title">
+            Products matching “{query}”
+          </h2>
+
+          {products.isFixture ? <FixtureBanner endpoint="GET /products" /> : null}
+          {products.error !== null ? (
+            <ErrorNotice error={products.error} onRetry={products.refetch} what="matching products" />
+          ) : null}
+
+          {products.loading && !products.hasLoadedOnce ? (
+            <div className="tkr-grid">
+              {[0, 1, 2, 3].map((i) => (
+                <ProductCardSkeleton key={i} index={i} />
+              ))}
+            </div>
+          ) : productRows.length > 0 ? (
+            <div className="tkr-grid">
+              {productRows.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  store={{
+                    vendorId: product.store.id,
+                    storeName: product.store.storeName,
+                    storeSlug: product.store.slug,
+                  }}
+                  priority={index < 2}
+                />
+              ))}
+            </div>
+          ) : products.error === null ? (
+            <p className="shop-empty">
+              No product matched “{query}” across any store on {APP_NAME}.
+            </p>
+          ) : null}
+        </section>
       ) : null}
 
       {/* ── the stores ───────────────────────────────────────────────────── */}

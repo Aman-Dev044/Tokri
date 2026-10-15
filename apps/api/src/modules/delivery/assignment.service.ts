@@ -33,7 +33,8 @@ import {
 } from './delivery.constants';
 import { GeoService } from './geo.service';
 import { applyTransition } from './order-transition.util';
-import { OfferRow, Waypoint } from './types';
+import { RiderWalletService } from './rider-wallet.service';
+import { OfferDetail, OfferRow, Waypoint } from './types';
 
 /** Why a dispatch attempt ended, for the sweeper's log line. */
 export type DispatchOutcome =
@@ -101,6 +102,7 @@ export class AssignmentService {
     @InjectModel(Vendor.name) private readonly vendors: Model<VendorDocument>,
     private readonly geo: GeoService,
     private readonly realtime: RealtimeService,
+    private readonly wallet: RiderWalletService,
   ) {}
 
   // ══════════════════════════════════════════════════════════════════
@@ -317,25 +319,119 @@ export class AssignmentService {
   }
 
   /**
-   * The rider takes the job.
+   * ════════════════════════════════════════════════════════════════
+   *  THE CONFIRM SCREEN — what accepting will cost, BEFORE it costs it
+   * ════════════════════════════════════════════════════════════════
+   *
+   * One live offer in full: the item list, both ends of the trip, the
+   * payout, the rider's current balance and the bounds the pick fee
+   * will be drawn from.
+   *
+   * ── Why a RANGE and not the exact fee ───────────────────────────────
+   * The fee is drawn at ACCEPT time, inside the transaction that takes
+   * it (§1.5). Drawing it here instead would mean either holding a
+   * quoted fee somewhere between two requests — a reservation with no
+   * expiry, on money — or quoting one number and charging another.
+   * Showing `₹25–₹50` is the only statement that is true at the moment
+   * it is made, and it is still the difference between a rider knowing
+   * what accepting costs and discovering it afterwards.
+   *
+   * Scoped by partner in the same query that loads it: another rider's
+   * offer is 404.
+   */
+  async offerDetail(
+    assignmentId: Types.ObjectId,
+    partner: DeliveryPartnerDocument,
+  ): Promise<OfferDetail> {
+    const now = new Date();
+
+    const assignment = await this.assignments
+      .findOne({ _id: assignmentId, partnerId: partner._id })
+      .exec();
+    if (!assignment) throw new NotFoundException('Offer not found');
+
+    const order = await this.orders.findById(assignment.orderId).exec();
+    if (!order) throw new NotFoundException('Offer not found');
+
+    const vendor = await this.vendors
+      .findById(order.vendorId)
+      .select('storeName location address serviceRadiusKm')
+      .exec();
+    if (!vendor) throw new NotFoundException('Offer not found');
+
+    const row = this.toOfferRow(assignment, order, vendor, now);
+    const wallet = await this.wallet.ensureWallet(partner._id);
+    const pickFeeMinPaise = this.wallet.pickFeeMinPaise;
+
+    return {
+      ...row,
+      items: order.items.map((item) => ({
+        name: item.name,
+        qty: item.qty,
+        unit: item.unit,
+        image: item.image ?? null,
+      })),
+      pickFeeMinPaise,
+      pickFeeMaxPaise: this.wallet.pickFeeMaxPaise,
+      walletBalancePaise: wallet.balancePaise,
+      // Against the MINIMUM: a balance that covers ₹25 but not ₹50 can
+      // still succeed, and telling the rider "you cannot afford this"
+      // when they might would send them to top up for nothing.
+      canAfford: wallet.balancePaise >= pickFeeMinPaise,
+      kycStatus: partner.kycStatus,
+    };
+  }
+
+  /**
+   * The rider takes the job — and pays for it.
    *
    * Everything that can say no says no BEFORE anything is written: the
-   * offer must be live, it must be theirs, the order must still be in the
-   * pool, and the rider must not already be carrying something.
+   * rider must be KYC-VERIFIED, the offer must be live, it must be
+   * theirs, the order must still be in the pool, the rider must not
+   * already be carrying something, and their wallet must cover the pick
+   * fee.
+   *
+   * ── THE PICK FEE ────────────────────────────────────────────────────
+   * Accepting costs the rider a fee drawn at RANDOM per order in
+   * `[RIDER_PICK_FEE_MIN_PAISE, RIDER_PICK_FEE_MAX_PAISE]`. The draw,
+   * the balance check, the debit and the ledger row all happen INSIDE
+   * the same transaction that moves the order, so there is no state in
+   * which the rider has been charged for an order they did not get, or
+   * has an order they did not pay for.
+   *
+   * The wallet row is created BEFORE the transaction opens: an upsert is
+   * idempotent and safe to repeat, and keeping it out leaves the
+   * transaction to the writes that genuinely have to be atomic.
    */
   async accept(
     assignmentId: Types.ObjectId,
     partner: DeliveryPartnerDocument,
     riderUserId: string,
-  ): Promise<{ orderId: Types.ObjectId; assignmentId: Types.ObjectId }> {
+  ): Promise<{
+    orderId: Types.ObjectId;
+    assignmentId: Types.ObjectId;
+    pickFeePaise: number;
+    balancePaise: number;
+  }> {
     const now = new Date();
+
+    await this.wallet.ensureWallet(partner._id);
+
     const session = await this.connection.startSession();
 
     let orderId: Types.ObjectId | null = null;
     let from: OrderStatus = OrderStatus.READY_FOR_PICKUP;
+    let charge: { pickFeePaise: number; balanceAfterPaise: number } | null =
+      null;
 
     try {
       await session.withTransaction(async () => {
+        // 1. Identity first. A rider nobody has verified must not be
+        //    able to spend money or take custody of a customer's goods,
+        //    and finding that out AFTER the debit would mean refunding
+        //    a fee that should never have been charged.
+        this.wallet.assertKycVerified(partner);
+
         const assignment = await this.assignments
           .findById(assignmentId)
           .session(session)
@@ -379,8 +475,23 @@ export class AssignmentService {
         order.deliveryPartnerId = partner._id;
         await order.save({ session });
 
+        // 2-6. Draw the fee, read the balance, take the money under a
+        //       guard, and write the ledger row — all in this
+        //       transaction. Throws 402 INSUFFICIENT_WALLET_BALANCE if
+        //       the rider cannot cover it, which aborts everything
+        //       above: the order stays in the pool for someone else.
+        charge = await this.wallet.chargePickFee(
+          partner._id,
+          order._id,
+          session,
+        );
+
         assignment.status = AssignmentStatus.ACCEPTED;
         assignment.respondedAt = now;
+        // 7. The exact amount taken, on the attempt it was taken for.
+        //    A random charge that is not written down is a charge
+        //    nobody can reproduce or refund.
+        assignment.pickFeePaise = charge.pickFeePaise;
         await assignment.save({ session });
 
         // Any other live offer on this order is dead the moment one
@@ -422,7 +533,162 @@ export class AssignmentService {
     // ── Committed. Now, and only now, tell the world. ──
     this.emitStatusChanged(orderId, from, OrderStatus.ASSIGNED, now);
 
-    return { orderId, assignmentId };
+    // TypeScript narrows `charge` to `null` inside the closure above and
+    // cannot see that `withTransaction` ran it — the same reason
+    // `PaymentsService` re-casts its committed order. The `orderId`
+    // guard three lines up already proves the body completed.
+    const applied = charge as unknown as {
+      pickFeePaise: number;
+      balanceAfterPaise: number;
+    };
+
+    // `wallet.updated`, plus `wallet.low_balance` and a notification when
+    // the balance is at or under the threshold. Never inside the
+    // transaction: an emit from an aborted transaction is a balance the
+    // database does not have.
+    await this.wallet.announceBalance(riderUserId, applied.balanceAfterPaise);
+
+    return {
+      orderId,
+      assignmentId,
+      pickFeePaise: applied.pickFeePaise,
+      balancePaise: applied.balanceAfterPaise,
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  Refunding a pick fee
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Gives back the pick fee on an order that was taken AWAY from the
+   * rider, rather than handed back by them.
+   *
+   * A rider must not pay for an order the platform or the vendor
+   * cancelled. Idempotent on `pickFeeRefundedAt`, which is claimed
+   * atomically: two sweeps, or a sweep racing an admin action, cannot
+   * both pay.
+   *
+   * Returns the number of assignments actually refunded — 0 is the
+   * normal answer, and means there was nothing to give back.
+   */
+  async refundPickFeeForOrder(orderId: Types.ObjectId, note: string): Promise<number> {
+    const chargeable = await this.assignments
+      .find({
+        orderId,
+        status: AssignmentStatus.ACCEPTED,
+        pickFeePaise: { $gt: 0 },
+        pickFeeRefundedAt: null,
+      })
+      .exec();
+
+    let refunded = 0;
+
+    for (const assignment of chargeable) {
+      // The claim: whoever flips `pickFeeRefundedAt` from null owns the
+      // refund. A second caller matches nothing and does not pay again.
+      const claimed = await this.assignments
+        .findOneAndUpdate(
+          { _id: assignment._id, pickFeeRefundedAt: null },
+          { $set: { pickFeeRefundedAt: new Date() } },
+          { new: true },
+        )
+        .exec();
+      if (!claimed) continue;
+
+      const amountPaise = assignment.pickFeePaise ?? 0;
+      if (amountPaise <= 0) continue;
+
+      try {
+        const balancePaise = await this.wallet.refundPickFee(
+          assignment.partnerId,
+          orderId,
+          amountPaise,
+          note,
+        );
+        refunded += 1;
+
+        const partner = await this.partners
+          .findById(assignment.partnerId)
+          .select('userId')
+          .lean<{ userId: Types.ObjectId } | null>()
+          .exec();
+
+        if (partner) {
+          await this.wallet.announceBalance(
+            partner.userId.toString(),
+            balancePaise,
+          );
+        }
+      } catch (error) {
+        // Hand the claim back so the next sweep retries, rather than
+        // leaving a rider permanently out of pocket because one credit
+        // failed.
+        await this.assignments
+          .updateOne(
+            { _id: assignment._id },
+            { $set: { pickFeeRefundedAt: null } },
+          )
+          .exec();
+        this.logger.error(
+          `Failed to refund pick fee on assignment ${assignment._id.toString()}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    }
+
+    return refunded;
+  }
+
+  /**
+   * Every accepted assignment whose order has since been CANCELLED and
+   * whose fee has not been given back.
+   *
+   * Driven by the sweeper rather than wired into each cancellation site:
+   * orders are cancelled from the admin console, the vendor console and
+   * the payment-timeout sweep — three modules this one does not own —
+   * and a refund that depends on all three remembering to call it is a
+   * refund that will be missed. Reading the outcome instead of listening
+   * for the event also means it self-heals after a crash.
+   *
+   * A rider who handed the order back themselves is NOT refunded: the
+   * assignment is CANCELLED by `returnToPool`, not ACCEPTED, so it never
+   * matches the filter above.
+   */
+  async refundCancelledOrderFees(limit = SWEEP_BATCH): Promise<number> {
+    const candidates = await this.assignments
+      .find({
+        status: AssignmentStatus.ACCEPTED,
+        pickFeePaise: { $gt: 0 },
+        pickFeeRefundedAt: null,
+      })
+      .sort({ updatedAt: 1 })
+      .limit(limit)
+      .select('orderId')
+      .lean<{ orderId: Types.ObjectId }[]>()
+      .exec();
+
+    if (candidates.length === 0) return 0;
+
+    const cancelled = await this.orders
+      .find({
+        _id: { $in: candidates.map((row) => row.orderId) },
+        status: OrderStatus.CANCELLED,
+      })
+      .select('_id')
+      .lean<{ _id: Types.ObjectId }[]>()
+      .exec();
+
+    let refunded = 0;
+    for (const order of cancelled) {
+      refunded += await this.refundPickFeeForOrder(
+        order._id,
+        'Order cancelled — pick fee refunded',
+      );
+    }
+
+    return refunded;
   }
 
   /** The rider declines. The next rider is asked immediately. */

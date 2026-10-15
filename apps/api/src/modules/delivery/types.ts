@@ -158,3 +158,163 @@ export interface LocationAck {
   orderId: string;
   etaMinutes: number | null;
 }
+
+// ══════════════════════════════════════════════════════════════════════
+//  WALLET
+// ══════════════════════════════════════════════════════════════════════
+
+/** `GET /delivery/wallet`. Every money field is INTEGER PAISE. */
+export interface WalletSummary {
+  balancePaise: number;
+  /** `balancePaise <= warnThresholdPaise`. Computed here, never client-side. */
+  lowBalance: boolean;
+  warnThresholdPaise: number;
+  lifetimeEarnedPaise: number;
+  lifetimeToppedUpPaise: number;
+  lifetimeSpentPaise: number;
+  /** Lifetime completed deliveries — `DeliveryPartner.completedCount`. */
+  totalDelivered: number;
+  /**
+   * The bounds the per-order pick fee is drawn from.
+   *
+   * Exposed so the confirm screen can state the charge HONESTLY before
+   * the rider taps accept. The exact fee is drawn at accept time (§1.5),
+   * so the only truthful thing to show beforehand is the range — and
+   * showing nothing at all would mean the rider discovers the charge
+   * after the money has gone, which is the thing this must never do.
+   */
+  pickFeeMinPaise: number;
+  pickFeeMaxPaise: number;
+}
+
+/** One row of `GET /delivery/wallet/transactions`. */
+export interface WalletLedgerRow {
+  id: string;
+  /** `WalletTxnType` — topup | pick_fee | earning | adjustment | refund. */
+  type: string;
+  /** SIGNED integer paise: positive credits, negative debits. */
+  amountPaise: number;
+  balanceAfterPaise: number;
+  orderId: string | null;
+  reference: string | null;
+  note: string | null;
+  createdAt: string;
+}
+
+/** `POST /delivery/wallet/topup`. `null` while the gateway has no keys. */
+export interface WalletTopupResponse {
+  /** Our own wallet top-up order id — what `/topup/:orderId/verify` takes. */
+  topupId: string;
+  amountPaise: number;
+  gatewayOrder: {
+    providerOrderId: string;
+    /** Integer paise, echoed from the gateway. */
+    amount: number;
+    currency: 'INR';
+    /** The PUBLIC key id. The secret never leaves the server. */
+    keyId: string;
+  } | null;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  KYC
+// ══════════════════════════════════════════════════════════════════════
+
+export interface KycDocumentRow {
+  /** `KycDocumentKind` — aadhaar | pan | driving_licence | selfie. */
+  kind: string;
+  url: string;
+  uploadedAt: string;
+}
+
+/**
+ * `GET /delivery/profile/kyc`.
+ *
+ * The three identifier fields are MASKED (`XXXX XXXX 1234`) or null.
+ * The full numbers exist on exactly one endpoint in this platform,
+ * `GET /admin/riders/:id/kyc`, and this is not it.
+ */
+export interface RiderKycView {
+  /** `KycStatus` — not_started | submitted | verified | rejected. */
+  status: string;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+  rejectedReason: string | null;
+  /** The verification deadline while SUBMITTED. */
+  slaDueAt: string | null;
+  /** Milliseconds until `slaDueAt`, clamped at 0. For the countdown. */
+  slaRemainingMs: number | null;
+  /** The promise, in hours — `RIDER_KYC_SLA_HOURS`. */
+  slaHours: number;
+  aadhaarNumberMasked: string | null;
+  panNumberMasked: string | null;
+  drivingLicenceNumberMasked: string | null;
+  documents: KycDocumentRow[];
+  /** False once VERIFIED: a verified rider may not overwrite their identity. */
+  canResubmit: boolean;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  THE OFFER CONFIRM SCREEN
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * `GET /delivery/offers/:id` — everything the rider must see BEFORE the
+ * money moves: what was ordered, where it goes, and what accepting costs.
+ */
+export interface OfferDetail extends OfferRow {
+  items: ActiveOrderItem[];
+  /** The bounds the fee will be drawn from, integer paise. */
+  pickFeeMinPaise: number;
+  pickFeeMaxPaise: number;
+  /** The rider's balance right now, so the screen can pre-empt a 402. */
+  walletBalancePaise: number;
+  /** False when the balance cannot cover even the cheapest possible draw. */
+  canAfford: boolean;
+  /** `KycStatus`. Accepting is refused unless this is `verified`. */
+  kycStatus: string;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LIVE TRACKING
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * `GET /delivery/orders/:id/tracking` — the Ola/Uber-style view.
+ *
+ * Both parties on one map: where the rider is right now, where the
+ * customer is, where the store is, plus the items being carried.
+ */
+export interface DeliveryTracking {
+  orderId: string;
+  orderNo: string;
+  status: OrderStatus;
+  /** The rider's last reported position, or null if they have never pinged. */
+  rider: (LatLngDto & { at: string }) | null;
+  pickup: Waypoint;
+  drop: Waypoint;
+  /** Straight-line distance from the rider to the drop, km. */
+  remainingKm: number | null;
+  etaMinutes: number | null;
+  items: ActiveOrderItem[];
+  itemCount: number;
+  customerName: string | null;
+  customerPhone: string;
+  codAmountPaise: number;
+}
+
+/**
+ * `POST /delivery/offers/:id/accept`.
+ *
+ * The active order AND what it just cost. The fee is reported in the
+ * same response that creates the charge, so the rider sees the number
+ * the instant the money moves rather than discovering it later in a
+ * ledger — the whole reason this is not simply `ActiveOrder`.
+ */
+export interface AcceptedOffer {
+  order: ActiveOrder | null;
+  /** The randomly drawn fee actually charged, integer paise. */
+  pickFeePaise: number;
+  /** The balance after the charge, integer paise. */
+  walletBalancePaise: number;
+}

@@ -93,10 +93,16 @@ export class AssignmentSweeperService implements OnModuleInit, OnModuleDestroy {
       const now = new Date();
       const expired = await this.assignments.expireDueOffers(now);
       const dispatched = await this.assignments.redispatchIdleOrders(now);
+      // A rider must not pay for an order that was taken away from them.
+      // Read from the ORDER's outcome rather than wired into each of the
+      // three modules that can cancel one — a refund that depends on
+      // every caller remembering it is a refund that gets missed.
+      const refunded = await this.assignments.refundCancelledOrderFees();
 
-      if (expired > 0 || dispatched > 0) {
+      if (expired > 0 || dispatched > 0 || refunded > 0) {
         this.logger.log(
-          `Sweep: ${expired} offer(s) expired, ${dispatched} order(s) offered`,
+          `Sweep: ${expired} offer(s) expired, ${dispatched} order(s) offered, ` +
+            `${refunded} pick fee(s) refunded`,
         );
       }
     } catch (error) {

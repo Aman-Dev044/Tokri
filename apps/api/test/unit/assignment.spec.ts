@@ -19,6 +19,7 @@ import {
 import { OrderStatus } from '../../src/common/constants/order-status.enum';
 import { AssignmentStatus } from '../../src/database/schemas/delivery-assignment.schema';
 import { RealtimeService } from '../../src/realtime/realtime.service';
+import { RiderWalletService } from '../../src/modules/delivery/rider-wallet.service';
 
 /**
  * ════════════════════════════════════════════════════════════════════════
@@ -231,6 +232,24 @@ function harness(options: {
     get: () => undefined,
   } as unknown as ConfigService);
 
+  // The wallet is stubbed, not built: none of the properties under test
+  // here is a question about money. The pick fee — the draw, the guarded
+  // debit, the 402 and the ledger row — is asserted against a real
+  // replica set in `test/integration/delivery.spec.ts`, because the
+  // transaction IS the property and a stub would prove nothing about it.
+  const wallet = {
+    ensureWallet: jest.fn(async () => ({ balancePaise: 0 })),
+    assertKycVerified: jest.fn(),
+    chargePickFee: jest.fn(async () => ({
+      pickFeePaise: 0,
+      balanceAfterPaise: 0,
+    })),
+    refundPickFee: jest.fn(async () => 0),
+    announceBalance: jest.fn(async () => undefined),
+    pickFeeMinPaise: 2_500,
+    pickFeeMaxPaise: 5_000,
+  } as unknown as RiderWalletService;
+
   const service = new AssignmentService(
     {} as unknown as Connection,
     orders,
@@ -239,6 +258,7 @@ function harness(options: {
     vendors,
     geo,
     realtime,
+    wallet,
   );
 
   return {

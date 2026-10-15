@@ -28,12 +28,14 @@ import { AuditInterceptor } from '../../../common/interceptors/audit.interceptor
 import { VendorScope } from '../common/vendor-scope.decorator';
 import {
   BulkAdjustResult,
+  InventoryLogRow,
   InventoryRow,
   VendorInventoryService,
 } from './inventory.service';
 import {
   AdjustStockDto,
   BulkAdjustStockDto,
+  ListInventoryLogsQueryDto,
   ListInventoryQueryDto,
 } from './dto';
 
@@ -85,6 +87,22 @@ export class VendorInventoryController {
     @Param('productId') productId: string,
   ): Promise<InventoryRow> {
     return this.inventory.findOne(scope, productId);
+  }
+
+  @Get(':productId/logs')
+  @ApiOperation({
+    summary: 'The per-product movement trail (paginated)',
+    description:
+      'Every adjustment already writes an `InventoryLog` row in the same ' +
+      'transaction as the stock change; this reads it back, newest ' +
+      'first.',
+  })
+  logs(
+    @VendorScope() scope: string,
+    @Param('productId') productId: string,
+    @Query() query: ListInventoryLogsQueryDto,
+  ): Promise<Paginated<InventoryLogRow>> {
+    return this.inventory.logs(scope, productId, query);
   }
 
   @Patch(':productId')

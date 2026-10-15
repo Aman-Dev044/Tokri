@@ -27,7 +27,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import styles from './delivery.module.css';
 import { CachedBanner, FixtureBanner, Notice } from './Banners';
@@ -36,10 +36,11 @@ import { LocationBadge } from './LocationBadge';
 import { OtpEntry } from './OtpEntry';
 import { PhotoProof } from './PhotoProof';
 import { PlaceCard } from './PlaceCard';
+import { TrackingPanel } from './TrackingPanel';
 import { CardSkeleton } from './Skeletons';
 import { useHideNav } from './RiderShell';
 import { useRider } from './RiderProvider';
-import { IconBox, IconCheck, IconStore } from './icons';
+import { IconBox, IconCheck, IconStore, IconWallet } from './icons';
 import { ApiError } from '@/lib/api-client';
 import { APP_NAME } from '@/config/brand';
 import {
@@ -72,6 +73,18 @@ const OTP_LENGTH = 4;
 export function ActiveJobView({ orderId }: { orderId: string }) {
   useHideNav();
   const router = useRouter();
+  /*
+    `?fee=…&balance=…` is set by the confirm screen when an accept succeeds.
+    It is how the rider is told what the job cost AT THE MOMENT it cost it —
+    the alternative is finding the charge later in a ledger, which is exactly
+    the outcome the whole fee flow exists to prevent.
+
+    Read as a display value only: nothing is decided from it, so a
+    hand-edited URL changes a sentence and nothing else.
+  */
+  const searchParams = useSearchParams();
+  const chargedFeePaise = readPaise(searchParams.get('fee'));
+  const chargedBalancePaise = readPaise(searchParams.get('balance'));
   const {
     activeOrder,
     jobIsSample,
@@ -95,6 +108,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
 
   const [otp, setOtp] = useState('');
   const [otpWrong, setOtpWrong] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   /** Overrides the server figure between a rejection and the next refresh. */
   const [attemptsOverride, setAttemptsOverride] = useState<number | null>(null);
   const [lockedOverride, setLockedOverride] = useState(false);
@@ -167,8 +181,9 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
     try {
       // The OTP goes straight out and is cleared straight after. It is never
       // held, logged or compared locally.
-      await deliverOrder(job.orderId, otp);
+      await deliverOrder(job.orderId, otp, photoUrl);
       setOtp('');
+      setPhotoUrl(null);
       setDone(true);
       setActiveOrder(null);
       refresh();
@@ -196,7 +211,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
     } finally {
       setBusy(false);
     }
-  }, [busy, job, otp, refresh, setActiveOrder]);
+  }, [busy, job, otp, photoUrl, refresh, setActiveOrder]);
 
   const onFail = useCallback(
     async (reason: string) => {
@@ -205,6 +220,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
       try {
         await failDelivery(job.orderId, reason);
         setActiveOrder(null);
+        setPhotoUrl(null);
         setFailOpen(false);
         refresh();
         router.push('/delivery');
@@ -328,6 +344,23 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
         </div>
       </div>
 
+      {/*
+        The charge, named in the same breath as the job it paid for. Shown
+        only on the step where the rider has just arrived from accepting;
+        after that it is history and belongs in the wallet ledger.
+      */}
+      {chargedFeePaise !== null && step === 'GO_TO_STORE' ? (
+        <div className={styles.feeNote}>
+          <IconWallet size={18} />
+          <span>
+            Pick fee of {money(chargedFeePaise)} charged.
+            {chargedBalancePaise === null
+              ? ''
+              : ` Wallet balance ${money(chargedBalancePaise)}.`}
+          </span>
+        </div>
+      ) : null}
+
       {problem === null ? null : (
         <Notice tone="crit" title="Something went wrong">
           {problem}
@@ -414,6 +447,15 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
           <>
             <LocationBadge tracking={tracking} now={now} />
 
+            {/*
+              Both parties on one map, from `GET /delivery/orders/:id/tracking`.
+              It is mounted only on the step where the rider is actually
+              carrying the goods to a person — that is the one step where the
+              customer's position matters, and mounting it earlier would poll
+              an endpoint nobody is looking at.
+            */}
+            {jobIsSample ? null : <TrackingPanel orderId={job.orderId} />}
+
             <PlaceCard
               kind="drop"
               place={job.drop}
@@ -456,7 +498,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
               </section>
             )}
 
-            <PhotoProof disabled={busy} />
+            <PhotoProof orderId={job.orderId} disabled={busy} onUploaded={setPhotoUrl} />
 
             {failOpen ? (
               <section className={styles.panelFlat}>
@@ -547,4 +589,17 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
       ) : null}
     </>
   );
+}
+
+/**
+ * A query-string paise value, or null.
+ *
+ * Integers only, non-negative, and capped well above any plausible fee — a
+ * hand-edited URL should change a sentence, never produce `₹NaN` or a
+ * nonsense figure the rider might believe.
+ */
+function readPaise(raw: string | null): number | null {
+  if (raw === null || !/^\d{1,9}$/.test(raw)) return null;
+  const value = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(value) ? value : null;
 }

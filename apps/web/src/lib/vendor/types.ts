@@ -475,6 +475,39 @@ export interface InventoryBulkResult {
   items: InventoryRow[];
 }
 
+/**
+ * Every reason an `InventoryLog` row can carry — the vendor's own two
+ * (`restock`, `manual`) plus the three the ORDER lifecycle writes
+ * (`order_reserve` at checkout, `order_release` on a cancellation or a
+ * partial-fulfilment drop, `order_commit` on delivery). `InventoryAdjust`
+ * only accepts the first two from a vendor; the log shows all five because
+ * the trail is written by every one of them.
+ */
+export type InventoryLogReason =
+  | 'restock'
+  | 'manual'
+  | 'order_reserve'
+  | 'order_release'
+  | 'order_commit';
+
+/**
+ * `InventoryLogRow` — `GET /vendor/inventory/:productId/logs`, verified
+ * against the live response. There is no `note` and no `balanceAfter` — the
+ * log is the delta and the reason only; `refId` is the order id for the
+ * three order-driven reasons and null for `restock` / `manual`.
+ */
+export interface InventoryLogRow {
+  id: string;
+  productId: string;
+  vendorId: string;
+  /** SIGNED — the change this row made, not a running total. */
+  delta: number;
+  reason: InventoryLogReason;
+  refId: string | null;
+  byUserId: string | null;
+  at: string;
+}
+
 /* ================================================================== */
 /* Delivery partners                                                   */
 /* ================================================================== */

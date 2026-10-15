@@ -34,6 +34,7 @@ function validEnv(): Record<string, string> {
     // refresh-cookie name both come from the environment so renaming the
     // product never means a find-and-replace.
     APP_NAME: 'Tokri',
+    ORDER_NO_PREFIX: 'TKR',
     REFRESH_COOKIE_NAME: 'tokri_rt',
 
     CORS_ORIGINS: 'http://localhost:3000,https://tokri.app',
@@ -246,5 +247,54 @@ describe('Environment validation (the config gate)', () => {
     expect(value.PORT).toBe(4000);
     expect(value.JWT_ACCESS_TTL).toBe('15m');
     expect(value.THROTTLE_LIMIT).toBe(100);
+  });
+
+  // ══════════════════════════════════════════════════════════════════
+  //  The rider wallet knobs
+  // ══════════════════════════════════════════════════════════════════
+  //
+  //  These four decide how much money comes out of a real person's
+  //  balance. They are not secrets, so a default is permitted — but a
+  //  MAX below the MIN would make `crypto.randomInt(min, max + 1)` throw
+  //  at the exact moment a rider taps Accept, which is the worst
+  //  possible place to discover a typo in an environment file. The
+  //  schema refuses to boot instead.
+
+  it('defaults the rider pick-fee window to INTEGER PAISE, not rupees', () => {
+    const env = validEnv();
+    const { error, value } = validate(env);
+
+    expect(error).toBeUndefined();
+    // 2500 paise = Rs 25. A `25` here would be twenty-five PAISE.
+    expect(value.RIDER_PICK_FEE_MIN_PAISE).toBe(2500);
+    expect(value.RIDER_PICK_FEE_MAX_PAISE).toBe(5000);
+    expect(value.RIDER_LOW_BALANCE_WARN_PAISE).toBe(10000);
+    expect(value.RIDER_KYC_SLA_HOURS).toBe(24);
+  });
+
+  it('REFUSES TO BOOT when the pick-fee MAX is below the MIN', () => {
+    const env = validEnv();
+    env.RIDER_PICK_FEE_MIN_PAISE = '5000';
+    env.RIDER_PICK_FEE_MAX_PAISE = '2500';
+
+    const { error } = validate(env);
+    expect(error).toBeDefined();
+    expect(error?.message).toMatch(/RIDER_PICK_FEE_MAX_PAISE/);
+  });
+
+  it('accepts a window where MAX equals MIN — a fixed fee is legitimate', () => {
+    const env = validEnv();
+    env.RIDER_PICK_FEE_MIN_PAISE = '3000';
+    env.RIDER_PICK_FEE_MAX_PAISE = '3000';
+
+    expect(validate(env).error).toBeUndefined();
+  });
+
+  it('REJECTS a fractional or negative pick fee', () => {
+    for (const bad of ['25.5', '-2500', '0']) {
+      const env = validEnv();
+      env.RIDER_PICK_FEE_MIN_PAISE = bad;
+      expect(validate(env).error).toBeDefined();
+    }
   });
 });

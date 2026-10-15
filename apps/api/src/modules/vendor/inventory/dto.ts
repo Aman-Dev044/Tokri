@@ -16,6 +16,7 @@ import {
 } from 'class-validator';
 
 import { InventoryReason } from '../../../database/schemas/inventory-log.schema';
+import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
 import { VendorListQueryDto } from '../common/dto';
 
 /**
@@ -135,3 +136,6 @@ export class BulkAdjustStockDto {
   @Matches(/^.{1,200}$/s)
   note?: string;
 }
+
+/** `GET /vendor/inventory/:productId/logs?page=&limit=` — no extra filters. */
+export class ListInventoryLogsQueryDto extends PaginationQueryDto {}

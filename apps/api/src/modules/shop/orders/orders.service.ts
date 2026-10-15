@@ -380,7 +380,11 @@ export class ShopOrdersService {
         byUserId: order.customerId,
         at: new Date(),
       })),
-      { session },
+      // `ordered: true`: Mongoose 8 rejects an unordered
+      // multi-document insert in a session. Without it, cancelling
+      // an order with two or more lines throws instead of releasing
+      // the stock. See the note in `checkout.service.ts`.
+      { session, ordered: true },
     );
   }
 

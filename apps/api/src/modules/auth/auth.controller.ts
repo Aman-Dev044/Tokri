@@ -11,10 +11,15 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
+import { authThrottle } from '../../config/throttle';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { RegistrationService } from './registration.service';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto, RequestOtpDto, VerifyOtpDto } from './dto/register.dto';
+import { ApplyVendorDto } from './dto/apply-vendor.dto';
+import { ApplyRiderDto } from './dto/apply-rider.dto';
 import { Public } from '../../common/decorators/public.decorator';
 import {
   CurrentUser,
@@ -35,6 +40,7 @@ const cookieName = (config: ConfigService) =>
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly registration: RegistrationService,
     private readonly config: ConfigService,
   ) {}
 
@@ -64,7 +70,11 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  // The ONE throttle on this controller that is an operations knob rather
+  // than a fixed security decision, so it is the one that reads the
+  // environment (THROTTLE_AUTH_LIMIT). See `src/config/throttle.ts` for
+  // why it has to be a function and not a number.
+  @Throttle({ default: authThrottle() })
   @ApiOperation({ summary: 'Sign in with email or phone' })
   async login(
     @Body() dto: LoginDto,
@@ -109,10 +119,69 @@ export class AuthController {
     return this.auth.me(user.sub);
   }
 
-  // ───────────────────────────────────────────────────────────────
-  // POST /auth/register — INTENTIONALLY NOT IMPLEMENTED YET.
-  // The signup flow is being specified by the product owner
-  // (role selection, OTP step, vendor KYC gate). It will be added
-  // once that flow is defined, rather than guessed at here.
-  // ───────────────────────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════════
+  //  SIGNUP
+  //
+  //  Three independent flows — see RegistrationService for the full
+  //  design rationale (no user enumeration, single-use registration
+  //  token, why vendor/rider applications start PENDING).
+  //
+  //  There is deliberately NO admin/super-admin self-signup route.
+  //  Nothing here ever reads a `role` off a request body — every DTO
+  //  hardcodes the role it creates, and `ValidationPipe`'s
+  //  `forbidNonWhitelisted: true` turns any attempt to smuggle one in
+  //  (`{ role: 'admin' }`) into a 400.
+  // ═══════════════════════════════════════════════════════════════
+
+  @Public()
+  @Post('register/request-otp')
+  @HttpCode(HttpStatus.OK)
+  // The hardest-throttled route in the API: this is the one an attacker
+  // would use to spam SMS costs or brute-force-probe phone numbers.
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Request a 6-digit OTP to verify a phone number for signup' })
+  requestOtp(@Body() dto: RequestOtpDto) {
+    return this.registration.requestOtp(dto);
+  }
+
+  @Public()
+  @Post('register/verify-otp')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Verify the OTP and receive a short-lived registrationToken' })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.registration.verifyOtp(dto);
+  }
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Complete customer signup with a verified registrationToken' })
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { refreshToken, ...rest } = await this.registration.register(dto);
+    this.setRefreshCookie(res, refreshToken);
+    return rest;
+  }
+
+  @Public()
+  @Post('apply/vendor')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Apply to become a vendor (pending admin approval)' })
+  applyVendor(@Body() dto: ApplyVendorDto) {
+    return this.registration.applyVendor(dto);
+  }
+
+  @Public()
+  @Post('apply/rider')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Apply to become a platform-pool delivery rider (pending admin approval)' })
+  applyRider(@Body() dto: ApplyRiderDto) {
+    return this.registration.applyRider(dto);
+  }
 }

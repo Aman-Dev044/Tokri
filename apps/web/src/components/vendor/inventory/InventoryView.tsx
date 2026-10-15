@@ -30,10 +30,10 @@
  * already on screen. One request, and the two halves of the page can never
  * disagree about which products are short.
  *
- * ── WHAT IS NOT HERE ────────────────────────────────────────────────────────
- * Per-product movement history. `GET /vendor/inventory/:productId/logs` does
- * not exist — see the TODO by `InventoryHistory`. The affordance is disabled
- * rather than pointed at a 404.
+ * ── PER-PRODUCT MOVEMENT HISTORY ────────────────────────────────────────────
+ * `GET /vendor/inventory/:productId/logs` — every restock, correction and
+ * order-driven change to one product, opened from the "Changed" column as a
+ * drawer (`InventoryHistory`).
  */
 
 import { useMemo, useState } from 'react';
@@ -58,6 +58,7 @@ import {
   WriteFailure,
 } from '../primitives';
 import { ConfirmDialog } from '../overlay';
+import { InventoryHistory } from './InventoryHistory';
 import {
   SearchBox,
   SelectBox,
@@ -126,6 +127,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
   const [reason, setReason] = useState<InventoryAdjust['reason']>('restock');
   const [confirmBulk, setConfirmBulk] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [historyRow, setHistoryRow] = useState<{ productId: string; name: string } | null>(null);
 
   const setDelta = (productId: string, delta: number) => {
     setPending((previous) => {
@@ -267,16 +269,18 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
     {
       key: 'updatedAt',
       header: 'Changed',
-      // TODO: link this to the per-product movement trail once
-      // `GET /vendor/inventory/:productId/logs` exists. The `InventoryLog`
-      // collection is written on every adjustment but no vendor-facing
-      // endpoint reads it back, so there is nothing to open — and a button
-      // that opens a 404 is worse than a timestamp that is only a timestamp.
       render: (row) =>
         row.updatedAt === null ? (
           <span className="ven-dim">never</span>
         ) : (
-          <RelativeTime value={row.updatedAt} live={false} />
+          <button
+            type="button"
+            className="ven-time-btn"
+            onClick={() => setHistoryRow({ productId: row.productId, name: row.name })}
+            title="Open the movement history for this product"
+          >
+            <RelativeTime value={row.updatedAt} live={false} />
+          </button>
         ),
     },
   ];
@@ -447,6 +451,12 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
             </ul>
           </div>
         }
+      />
+
+      <InventoryHistory
+        productId={historyRow?.productId ?? null}
+        productName={historyRow?.name ?? ''}
+        onClose={() => setHistoryRow(null)}
       />
     </VenPage>
   );
