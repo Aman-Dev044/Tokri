@@ -30,9 +30,9 @@ export function ShopFooter() {
 
         <nav className="shop-foot__nav" aria-label="About">
           <h2 className="shop-foot__title">About</h2>
-          <Link href="/how-it-works">How it works</Link>
-          <Link href="/for-vendors">Sell on {APP_NAME}</Link>
-          <Link href="/for-riders">Deliver with {APP_NAME}</Link>
+          <Link href="/#how-it-works">How it works</Link>
+          <Link href="/#vendors">Sell on {APP_NAME}</Link>
+          <Link href="/#riders">Deliver with {APP_NAME}</Link>
         </nav>
 
         <div className="shop-foot__nav">

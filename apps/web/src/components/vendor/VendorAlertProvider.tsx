@@ -44,6 +44,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import { playNewOrderChime, readSoundPreference, writeSoundPreference } from '@/lib/vendor/alert';
 import type { Paged, VendorOrder } from '@/lib/vendor/types';
 
@@ -88,18 +89,29 @@ const VendorAlertContext = createContext<VendorAlertState | null>(null);
 
 export function VendorAlertProvider({
   children,
-  enabled = true,
+  enabled,
 }: {
   children: ReactNode;
-  /** off until the session is known — polling with no token is 401 noise */
+  /**
+   * Off until the session is known — polling with no token is 401 noise.
+   *
+   * This now DEFAULTS to the session's own readiness instead of to `true`.
+   * The prop existed from the start and the only mount site never passed it,
+   * so the poll started the moment the layout rendered, raced `/auth/me`,
+   * and every vendor page load opened with a 401 on `/vendor/orders` —
+   * then another on each poll tick until the token landed. The caller
+   * should not have to remember a thing the provider can see for itself.
+   */
   enabled?: boolean;
 }) {
+  const session = useVendorSession();
+  const isEnabled = enabled ?? session.status === 'ready';
   // `status` is a single enum value — exactly what this poll needs. `sort` is
   // checked against the service's own allowlist, and `placedAt` is on it.
   const query = useVendorQuery<Paged<VendorOrder>>(
     '/vendor/orders',
     { status: 'PLACED', limit: 50, sort: 'placedAt' },
-    { refreshMs: ORDER_POLL_MS, enabled },
+    { refreshMs: ORDER_POLL_MS, enabled: isEnabled },
   );
 
   const [soundOn, setSoundOn] = useState(false);

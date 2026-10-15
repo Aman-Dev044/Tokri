@@ -36,7 +36,7 @@ import { APP_NAME } from '@/config/brand';
 export const metadata: Metadata = {
   title: {
     default: 'Console',
-    template: '%s · Mandi Console',
+    template: `%s · ${APP_NAME} Console`,
   },
   description: `${APP_NAME} platform administration.`,
   // An admin console has no business in an index, and no OG card to render.

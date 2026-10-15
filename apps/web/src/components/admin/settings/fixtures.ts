@@ -9,6 +9,8 @@
  * Money is INTEGER PAISE.
  */
 
+import { APP_NAME } from '@/config/brand';
+
 export interface PlatformSettings {
   platformName: string;
   supportEmail: string;
@@ -24,7 +26,7 @@ export interface PlatformSettings {
 export type SettingKey = keyof PlatformSettings;
 
 export const SETTINGS_FIXTURE: PlatformSettings = {
-  platformName: 'Mandi',
+  platformName: APP_NAME,
   supportEmail: 'help@mandi.example.in',
   supportPhone: '+91 80 4718 2200',
   deliveryFeePaise: 3_500,

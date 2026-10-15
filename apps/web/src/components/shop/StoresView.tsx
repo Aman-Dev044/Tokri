@@ -247,12 +247,12 @@ export function StoresView() {
             ) : isLocationFiltered(geo.location) ? (
               <>
                 No store on {APP_NAME} reaches this address yet. We are onboarding vendors daily —{' '}
-                <Link href="/for-vendors">know a shop that should be here?</Link>
+                <Link href="/#vendors">know a shop that should be here?</Link>
               </>
             ) : (
               <>
                 No stores are listed yet. We are onboarding vendors daily —{' '}
-                <Link href="/for-vendors">know a shop that should be here?</Link>
+                <Link href="/#vendors">know a shop that should be here?</Link>
               </>
             )}
           </p>

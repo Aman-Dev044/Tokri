@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTheme } from '@mandi/design-system';
+import { APP_NAME } from '@/config/brand';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { opsBadges, useMediaQuery, useOpsSummary } from '@/hooks';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -161,7 +162,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </p>
           <div className="adm-row">
             <Link className="adm-btn adm-btn--primary" href="/">
-              Back to Mandi
+              Back to {APP_NAME}
             </Link>
             <Link className="adm-btn" href="/login">
               Sign in as someone else
@@ -216,7 +217,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             />
             <path d="M9.5 19.5v-5h5v5" fill="none" stroke="currentColor" strokeWidth="1.6" />
           </svg>
-          <span className="adm-rail__wordmark">Mandi</span>
+          <span className="adm-rail__wordmark">{APP_NAME}</span>
           <span className="adm-rail__env">{level === 'SUPER_ADMIN' ? 'super' : 'ops'}</span>
         </Link>
 
