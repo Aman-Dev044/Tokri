@@ -109,7 +109,7 @@
 }
 .mnd-btn--solid:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px -18px var(--aisle-glow);
+  box-shadow: var(--lift-2);
 }
 
 .mnd-btn--outline {
@@ -814,18 +814,8 @@
   color: var(--ink);
   animation: mnd-fade-in 160ms var(--ease) both;
 }
-/* a faint aisle wash behind the basket, so route loads are still chromatic */
-.mnd-loader-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    60% 50% at 50% 42%,
-    var(--aisle-wash-strong),
-    transparent 70%
-  );
-  pointer-events: none;
-}
+/* The aisle wash behind the loading basket is gone: a tinted cloud under a
+   spinner is decoration on a surface nobody looks at for more than 400ms. */
 .mnd-loader-page > * {
   position: relative;
 }
@@ -1241,14 +1231,31 @@
   perspective: var(--persp);
   perspective-origin: 50% 50%;
   --mx: 0; --my: 0; --lift: 0px; --scale: 1;
+
+  /* THE DESIGN SYSTEM SETS THE CEILING, THE COMPONENT ASKS FOR AN AMOUNT.
+     `Tilt3D` writes `--tilt-max` as an INLINE style from its `max` prop, and
+     an inline custom property beats anything a stylesheet says. So a token
+     named `--tilt` could never switch 3D off by itself — the component
+     overrode it on every card, tile, hero and chart in the product.
+
+     That mattered more than it sounds. `perspective` is `none` in this
+     system, and rotateX/rotateY without a vanishing point do not read as
+     depth — they read as a card that skews when you point at it. Half-off
+     3D looks broken in a way that fully-on 3D does not.
+
+     `min()` resolves it without taking the prop away: the component's
+     request is honoured up to whatever the active token allows, so this is
+     flat at `--tilt: 0deg` today and tilts again, by the amount each caller
+     asked for, the day a system sets `--tilt` back to 9deg. */
+  --tkr-tilt: min(var(--tilt-max, 9deg), var(--tilt));
 }
 .tkr-tilt3d__stage {
   display: block;
   transform-style: preserve-3d;
   will-change: transform;
   transform:
-    rotateX(calc(var(--my) * var(--tilt-max, 9deg) / -50))
-    rotateY(calc(var(--mx) * var(--tilt-max, 9deg) / 50))
+    rotateX(calc(var(--my) * var(--tkr-tilt) / -50))
+    rotateY(calc(var(--mx) * var(--tkr-tilt) / 50))
     translateZ(var(--lift))
     scale(var(--scale));
   transition:
@@ -1256,7 +1263,10 @@
     box-shadow var(--t-move) var(--ease),
     filter var(--t-move) var(--ease);
 }
-.tkr-tilt3d--glow:hover .tkr-tilt3d__stage { filter: drop-shadow(var(--glow-sm)); }
+/* No hover glow in this system. The rule is gone rather than pointed at an
+   empty token, because `--glow-*` are focus RINGS here — four lengths — and
+   `drop-shadow()` accepts three. It was invalid CSS being silently dropped,
+   which is indistinguishable from working until the day a glow comes back. */
 
 /* A layer floating above the card face. Needs a preserve-3d ancestor —
    which .tkr-tilt3d__stage provides — or translateZ is ignored. */

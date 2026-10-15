@@ -374,7 +374,7 @@
   font-weight: 700;
   font-size: var(--t-sm);
   text-decoration: none;
-  box-shadow: 0 0 20px color-mix(in oklab, var(--crit) 32%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--crit) 16%, transparent);
   animation: ven-alert-pulse 900ms var(--ease-out) 1 both;
 }
 
@@ -2611,7 +2611,7 @@
 @keyframes ven-alert-pulse {
   0% { transform: scale(0.96); box-shadow: 0 0 0 0 color-mix(in oklab, var(--crit) 45%, transparent); }
   55% { transform: scale(1); box-shadow: 0 0 0 9px color-mix(in oklab, var(--crit) 0%, transparent); }
-  100% { transform: none; box-shadow: 0 0 20px color-mix(in oklab, var(--crit) 32%, transparent); }
+  100% { transform: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--crit) 16%, transparent); }
 }
 
 @keyframes ven-pop {

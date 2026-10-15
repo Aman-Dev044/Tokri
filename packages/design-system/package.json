@@ -18,7 +18,7 @@
     "src"
   ],
   "scripts": {
-    "lint": "echo \"(lint runs from the consuming app)\" && exit 0",
+    "lint": "node scripts/audit-tokens.mjs",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf .turbo node_modules"
   },

@@ -223,10 +223,13 @@
 .shop .mnd-btn--solid {
   background: var(--shop-fill);
   color: var(--shop-on-fill);
-  box-shadow: 0 8px 22px -12px var(--shop-glow);
+  /* A neutral lift, not a coloured bloom. The button already carries the
+     aisle hue as its FILL; throwing the same hue onto the ground under it
+     doubled the signal and, on a white page, read as a smudge. */
+  box-shadow: var(--lift-1);
 }
 .shop .mnd-btn--solid:hover:not(:disabled) {
-  box-shadow: 0 16px 34px -14px var(--shop-glow), var(--glow-sm);
+  box-shadow: var(--lift-2);
 }
 .shop .mnd-btn--outline {
   background: var(--surface);
@@ -948,7 +951,6 @@
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--shop-vivid);
-  box-shadow: 0 0 10px color-mix(in oklab, var(--aisle) 60%, transparent);
   opacity: 0.9;
 }
 .shop-dock[data-empty='true'] .shop-dock__mass::after {
@@ -1167,6 +1169,16 @@
 .shop-card {
   --card-hue: var(--aisle);
   --card-hue-ink: var(--aisle-ink);
+
+  /* The card's hue, derived IN THE CARD'S SCOPE.
+     `ProductCard` sets `--card-hue` inline per product, but a derived token
+     declared on `:root` — like `--aisle-wash-strong` — resolves once at the
+     root and is inherited as a finished colour. The drawn plate inside the
+     media read those root tokens, so an electronics card had a violet media
+     block with a MINT circle drawn on it: ninety cards, two hues each.
+     Re-deriving here is what makes the plate follow the product. */
+  --card-wash: color-mix(in oklab, var(--card-hue) 16%, var(--surface));
+  --card-edge: color-mix(in oklab, var(--card-hue) 45%, transparent);
   min-width: 0;
   border-radius: var(--r-lg);
   background: var(--surface);
@@ -1572,8 +1584,9 @@
   flex: 0 0 auto;
 }
 .shop-conn[data-tone='good'] .shop-conn__dot {
+  /* The dot is green and it pulses. On paper that is already the whole
+     message — a halo around a 9px circle only blurs its edge. */
   background: var(--good);
-  box-shadow: 0 0 8px color-mix(in oklab, var(--good) 70%, transparent);
   animation: shop-pulse 2.2s var(--ease) infinite;
 }
 .shop-conn[data-tone='warn'] .shop-conn__dot { background: var(--warn); }
@@ -1905,12 +1918,10 @@
   gap: var(--s-3);
   padding: var(--s-6) var(--s-5);
   border-radius: var(--r-xl);
-  background: radial-gradient(
-      120% 140% at 88% 0%,
-      color-mix(in oklab, var(--aisle) 36%, transparent) 0%,
-      transparent 62%
-    ),
-    color-mix(in oklab, var(--aisle) 12%, var(--surface));
+  /* Flat, so the band is a tinted panel rather than a lit one. `--aisle` is
+     still @property-registered, so this single colour genuinely crossfades
+     when the aisle changes — the crossfade was the point, not the bloom. */
+  background: color-mix(in oklab, var(--aisle) 9%, var(--surface));
   border: 1px solid var(--shop-edge-soft);
   box-shadow: var(--rim);
   animation: tkr-pop-3d var(--t-enter) var(--spring-soft) both;
@@ -1954,7 +1965,7 @@
   height: 34px;
   border-radius: var(--r-sm);
   background: var(--aisle);
-  box-shadow: 0 6px 18px -8px var(--shop-glow), var(--glow-sm);
+  box-shadow: var(--lift-1);
 }
 
 .shop-front__facts {

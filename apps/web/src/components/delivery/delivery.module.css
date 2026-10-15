@@ -92,6 +92,15 @@
   --hot-glow-sm: 0 0 16px color-mix(in oklab, var(--hot) 38%, transparent);
   --hot-glow: 0 0 34px color-mix(in oklab, var(--hot) 46%, transparent);
   --stop-glow: 0 0 28px color-mix(in oklab, var(--stop) 42%, transparent);
+
+  /* `--*-emit` exists because `drop-shadow()` AND `box-shadow` cannot share
+     a token here. The glows above become 4-length RINGS in light (see
+     below), and `drop-shadow()` accepts three lengths — so the one rule
+     that filters the countdown ring would have silently evaluated to
+     nothing on a light screen. These two stay blur-only in both themes, so
+     the urgency on a 104px countdown survives the repaint. */
+  --hot-emit: 0 0 14px color-mix(in oklab, var(--hot) 38%, transparent);
+  --stop-emit: 0 0 18px color-mix(in oklab, var(--stop) 45%, transparent);
 }
 
 /* Glow, light: a blur vanishes on paper, so it becomes a crisp coloured
@@ -105,6 +114,8 @@
     --hot-glow-sm: 0 0 0 1px color-mix(in oklab, var(--hot) 32%, transparent);
     --hot-glow: 0 0 0 2px color-mix(in oklab, var(--hot) 32%, transparent);
     --stop-glow: 0 0 0 2px color-mix(in oklab, var(--stop) 32%, transparent);
+    --hot-emit: 0 0 6px color-mix(in oklab, var(--hot) 45%, transparent);
+    --stop-emit: 0 0 8px color-mix(in oklab, var(--stop) 50%, transparent);
   }
 }
 :global(:root[data-theme='light']) .shell,
@@ -114,6 +125,8 @@
   --hot-glow-sm: 0 0 0 1px color-mix(in oklab, var(--hot) 32%, transparent);
   --hot-glow: 0 0 0 2px color-mix(in oklab, var(--hot) 32%, transparent);
   --stop-glow: 0 0 0 2px color-mix(in oklab, var(--stop) 32%, transparent);
+  --hot-emit: 0 0 6px color-mix(in oklab, var(--hot) 45%, transparent);
+  --stop-emit: 0 0 8px color-mix(in oklab, var(--stop) 50%, transparent);
 }
 
 /* ══ MOTION ════════════════════════════════════════════════════════════════
@@ -1074,7 +1087,7 @@
   height: 104px;
   flex: 0 0 auto;
   border-radius: var(--r-pill);
-  filter: drop-shadow(var(--hot-glow-sm));
+  filter: drop-shadow(var(--hot-emit));
   transition: filter var(--t-move) var(--ease);
 }
 
@@ -1130,7 +1143,7 @@
 }
 
 .countdownUrgent {
-  filter: drop-shadow(var(--stop-glow));
+  filter: drop-shadow(var(--stop-emit));
 }
 .countdownUrgent .ringDrain {
   stroke: var(--stop);

@@ -72,8 +72,8 @@ export function ProductMedia({
   return (
     <span className="shop-media__plate" aria-hidden="true">
       <svg viewBox="0 0 120 120" className="shop-media__plate-art">
-        <circle cx="60" cy="60" r="38" fill="var(--aisle-wash-strong)" />
-        <circle cx="60" cy="60" r="38" fill="none" stroke="var(--aisle-edge)" strokeWidth="1.5" />
+        <circle cx="60" cy="60" r="38" fill="var(--card-wash)" />
+        <circle cx="60" cy="60" r="38" fill="none" stroke="var(--card-edge)" strokeWidth="1.5" />
         <text
           x="60"
           y="60"
