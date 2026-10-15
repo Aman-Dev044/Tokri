@@ -52,9 +52,6 @@ import {
 } from '@/lib/admin/format';
 import type {
   OrdersByStatusSlice,
-  OverviewResponse,
-  SalesByAisleRow,
-  TimeseriesPoint,
   TopProductRow,
   TopVendorRow,
 } from '@/lib/admin/types';
@@ -62,7 +59,6 @@ import {
   AISLE_SERIES_COLOR,
   AdminPage,
   AdminSection,
-  AisleDot,
   BarChart,
   DataTable,
   DonutChart,
@@ -77,10 +73,52 @@ import {
 } from '@/components/admin';
 import { OpsDashboard } from '@/components/admin/ops';
 import { useAdminRole } from '@/lib/admin/session';
+import {
+  toKpis,
+  toSalesByAisle,
+  toTopProducts,
+  toTopVendors,
+  toNeedsAttention,
+  toRecentOrders,
+  toTimeseries,
+  type AdminOrderRow,
+  type AnalyticsOverview,
+  type AnalyticsAisleRow,
+  type AnalyticsSeriesPoint,
+  type AnalyticsTopProduct,
+  type AnalyticsTopVendor,
+  type OpsSummary,
+} from '@/lib/admin/overview-adapter';
 
 type Range = '7d' | '30d' | '90d';
 
 const RANGE_DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Module scope, so the params object is referentially stable per render. */
+const RECENT_ORDERS_QUERY = { limit: 8, sort: '-placedAt' } as const;
+
+/**
+ * Turn "the last N days" into the window the API actually accepts.
+ *
+ * Every analytics endpoint takes `?from=&to=` as ISO-8601, and its DTO runs
+ * under `forbidNonWhitelisted`. This screen used to send `?days=30`, so all
+ * SIX of its requests came back `400 property days should not exist` and the
+ * governance overview rendered as an empty shell — no GMV, no trend, no
+ * vendors — while looking like a dashboard that simply had no data yet.
+ *
+ * `days` stays the vocabulary of the UI, because every label on this page
+ * says "the last 30 days" and a range picker that spoke in timestamps would
+ * be unreadable. It is converted to a window exactly once, here.
+ */
+function windowFor(days: number): { from: string; to: string } {
+  const to = new Date();
+  return {
+    from: new Date(to.getTime() - days * DAY_MS).toISOString(),
+    to: to.toISOString(),
+  };
+}
 
 export default function AdminHomePage() {
   const { isSuperAdmin, loading } = useAdminRole();
@@ -123,31 +161,66 @@ function GovernanceOverview() {
   const [range, setRange] = useState<Range>('30d');
   const days = RANGE_DAYS[range];
 
-  const overview = useAdminQuery<OverviewResponse>('/admin/analytics/overview', { days });
-  const timeseries = useAdminQuery<TimeseriesPoint[]>('/admin/analytics/timeseries', { days });
-  const byStatus = useAdminQuery<OrdersByStatusSlice[]>('/admin/analytics/orders-by-status', {
-    days,
-  });
-  const byAisle = useAdminQuery<SalesByAisleRow[]>('/admin/analytics/sales-by-aisle', { days });
-  const topVendors = useAdminQuery<TopVendorRow[]>('/admin/analytics/top-vendors', {
-    days,
-    limit: 8,
-  });
-  const topProducts = useAdminQuery<TopProductRow[]>('/admin/analytics/top-products', {
-    days,
-    limit: 8,
-  });
+  // Memoised on `days`, not rebuilt per render: `useAdminQuery` keys its
+  // effect on JSON.stringify(params), and a fresh `new Date()` every render
+  // would produce a new `to` every time — six requests in an endless loop.
+  const analyticsWindow = useMemo(() => windowFor(days), [days]);
+
+  const overview = useAdminQuery<AnalyticsOverview>('/admin/analytics/overview', analyticsWindow);
+  const series = useAdminQuery<AnalyticsSeriesPoint[]>(
+    '/admin/analytics/timeseries',
+    analyticsWindow,
+  );
+
+  // Two endpoints the governance screen always needed and never called: the
+  // attention queues and the order feed came out of the fixture, which is
+  // why both panels looked populated while the API was never asked.
+  const ops = useAdminQuery<OpsSummary>('/admin/ops/summary');
+  const recent = useAdminQuery<{ data: AdminOrderRow[] }>('/admin/orders', RECENT_ORDERS_QUERY);
+  const byStatus = useAdminQuery<OrdersByStatusSlice[]>(
+    '/admin/analytics/orders-by-status',
+    analyticsWindow,
+  );
+  const byAisleRaw = useAdminQuery<AnalyticsAisleRow[]>(
+    '/admin/analytics/sales-by-aisle',
+    analyticsWindow,
+  );
+  const byAisleRows = useMemo(() => toSalesByAisle(byAisleRaw.data), [byAisleRaw.data]);
+  const topVendorsParams = useMemo(() => ({ ...analyticsWindow, limit: 8 }), [analyticsWindow]);
+  const topProductsParams = useMemo(() => ({ ...analyticsWindow, limit: 8 }), [analyticsWindow]);
+  const topVendorsRaw = useAdminQuery<AnalyticsTopVendor[]>(
+    '/admin/analytics/top-vendors',
+    topVendorsParams,
+  );
+  const topProductsRaw = useAdminQuery<AnalyticsTopProduct[]>(
+    '/admin/analytics/top-products',
+    topProductsParams,
+  );
+  const topVendorRows = useMemo(() => toTopVendors(topVendorsRaw.data), [topVendorsRaw.data]);
+  const topProductRows = useMemo(
+    () => toTopProducts(topProductsRaw.data, topVendorsRaw.data),
+    [topProductsRaw.data, topVendorsRaw.data],
+  );
 
   const fixturePaths = [
     overview.isFixture ? 'overview' : null,
-    timeseries.isFixture ? 'timeseries' : null,
+    series.isFixture ? 'timeseries' : null,
     byStatus.isFixture ? 'orders-by-status' : null,
-    byAisle.isFixture ? 'sales-by-aisle' : null,
-    topVendors.isFixture ? 'top-vendors' : null,
-    topProducts.isFixture ? 'top-products' : null,
+    byAisleRaw.isFixture ? 'sales-by-aisle' : null,
+    topVendorsRaw.isFixture ? 'top-vendors' : null,
+    topProductsRaw.isFixture ? 'top-products' : null,
   ].filter((value): value is string => value !== null);
 
-  const kpis = overview.data?.kpis;
+  const kpis = useMemo(
+    () => toKpis(overview.data, series.data),
+    [overview.data, series.data],
+  );
+  const needsAttention = useMemo(() => toNeedsAttention(ops.data), [ops.data]);
+  const recentOrders = useMemo(() => toRecentOrders(recent.data?.data ?? null), [recent.data]);
+  const timeseries = useMemo(
+    () => ({ ...series, data: toTimeseries(series.data) }),
+    [series],
+  );
   const loadingKpis = overview.loading && !overview.data;
 
   /* ---- charts ---- */
@@ -197,18 +270,6 @@ function GovernanceOverview() {
         align: 'right',
         render: (row) => <Money value={row.gmvPaise} />,
       },
-      {
-        key: 'commissionPaise',
-        header: 'Commission',
-        align: 'right',
-        render: (row) => <Money value={row.commissionPaise} />,
-      },
-      {
-        key: 'rating',
-        header: 'Rating',
-        align: 'right',
-        render: (row) => <span className="adm-num">{row.rating.toFixed(1)}</span>,
-      },
     ],
     [],
   );
@@ -220,10 +281,11 @@ function GovernanceOverview() {
         header: 'Product',
         render: (row) => (
           <span className="adm-row">
-            <AisleDot aisleKey={row.aisleKey} />
             <span style={{ minWidth: 0 }}>
               {row.name}
-              <span className="adm-table__sub">{row.vendorName}</span>
+              {row.vendorName !== undefined ? (
+                <span className="adm-table__sub">{row.vendorName}</span>
+              ) : null}
             </span>
           </span>
         ),
@@ -249,7 +311,7 @@ function GovernanceOverview() {
       title="Overview"
       description={
         overview.data
-          ? `Marketplace health for the last ${days} days. Read-model generated ${formatDate(overview.data.generatedAt, 'short')}.`
+          ? `Marketplace health from ${formatDate(overview.data.range.from, 'short')} to ${formatDate(overview.data.range.to, 'short')}.`
           : `Marketplace health for the last ${days} days.`
       }
       isFixture={fixturePaths.length > 0}
@@ -380,13 +442,13 @@ function GovernanceOverview() {
 
         <AdminSection title="Needs attention" description="Oldest first. Each one is a queue.">
           <div className="adm-panel">
-            {overview.loading && !overview.data ? (
+            {ops.loading && !ops.data ? (
               <div style={{ padding: 'var(--s-3)' }}>
                 {Array.from({ length: 4 }, (_, i) => (
                   <div className="adm-skel adm-skel--row" key={i} />
                 ))}
               </div>
-            ) : (overview.data?.needsAttention.length ?? 0) === 0 ? (
+            ) : needsAttention.length === 0 ? (
               <div className="adm-empty">
                 <IconInbox className="adm-empty__icon" />
                 <p className="adm-empty__title">Nothing is waiting</p>
@@ -396,7 +458,7 @@ function GovernanceOverview() {
               </div>
             ) : (
               <div className="adm-attn">
-                {(overview.data?.needsAttention ?? []).map((item) => (
+                {needsAttention.map((item) => (
                   <Link
                     key={item.id}
                     href={item.href}
@@ -407,7 +469,13 @@ function GovernanceOverview() {
                     <span style={{ minWidth: 0 }}>
                       <span className="adm-attn__title">{item.title}</span>
                       <span className="adm-attn__detail">
-                        {item.detail} · oldest <RelativeTime value={item.at} />
+                        {item.detail}
+                        {item.at !== undefined ? (
+                          <>
+                            {' · oldest '}
+                            <RelativeTime value={item.at} />
+                          </>
+                        ) : null}
                       </span>
                     </span>
                     <IconChevronRight className="adm-attn__chev" />
@@ -442,11 +510,11 @@ function GovernanceOverview() {
           description="The one place this console uses the chromatic-aisle palette — here the hue is the data."
         >
           <div className="adm-panel adm-panel--pad">
-            {byAisle.loading && !byAisle.data ? (
+            {byAisleRaw.loading && !byAisleRaw.data ? (
               <div className="adm-skel adm-skel--chart" />
             ) : (
               <BarChart
-                data={byAisle.data ?? []}
+                data={byAisleRows}
                 xKey="aisle"
                 horizontal
                 height={232}
@@ -466,7 +534,7 @@ function GovernanceOverview() {
               />
             )}
             <div className="adm-legend">
-              {(byAisle.data ?? []).map((row) => (
+              {byAisleRows.map((row) => (
                 <span className="adm-legend__item" key={row.aisleKey}>
                   <span
                     className="adm-swatch"
@@ -493,8 +561,8 @@ function GovernanceOverview() {
         >
           <DataTable
             columns={vendorColumns}
-            rows={topVendors.data ?? []}
-            loading={topVendors.loading && !topVendors.data}
+            rows={topVendorRows}
+            loading={topVendorsRaw.loading && !topVendorsRaw.data}
             rowKey={(row) => row.id}
             skeletonRows={6}
           />
@@ -503,8 +571,8 @@ function GovernanceOverview() {
         <AdminSection title="Top products" description="By GMV in the selected window.">
           <DataTable
             columns={productColumns}
-            rows={topProducts.data ?? []}
-            loading={topProducts.loading && !topProducts.data}
+            rows={topProductRows}
+            loading={topProductsRaw.loading && !topProductsRaw.data}
             rowKey={(row) => row.id}
             skeletonRows={6}
           />
@@ -522,7 +590,7 @@ function GovernanceOverview() {
       >
         <div className="adm-panel">
           <div className="adm-feed">
-            {(overview.data?.recentOrders ?? []).map((order, i) => (
+            {recentOrders.map((order, i) => (
               <Link
                 key={order.id}
                 href={`/admin/orders/${order.id}`}

@@ -59,15 +59,25 @@ export type KpiKey =
 export interface KpiDatum {
   /** paise for money keys, a count for counts, a 0-100 number for rates */
   value: number;
-  /** signed percentage change against the previous window */
-  delta: number;
-  /** trailing series for the sparkline, oldest first */
-  spark: number[];
+  /**
+   * Signed percentage change against the previous window. OPTIONAL: the API
+   * reports `null` when the previous window was empty, and "+100% against
+   * zero" is not a measurement — the tile then shows the value alone.
+   */
+  delta?: number;
+  /**
+   * Trailing series for the sparkline, oldest first. OPTIONAL, because only
+   * GMV has a real series behind it; the rest would need an invented one.
+   */
+  spark?: number[];
 }
 
+/**
+ * The shape this screen RENDERS, composed from three endpoints by
+ * `overview-adapter.ts`. It is not the shape of any single response — see
+ * that file for why the two were ever different.
+ */
 export interface OverviewResponse {
-  /** ISO string — when the read-model was computed */
-  generatedAt: string;
   windowDays: number;
   kpis: Record<KpiKey, KpiDatum>;
   needsAttention: NeedsAttentionItem[];
@@ -76,14 +86,20 @@ export interface OverviewResponse {
 
 export interface NeedsAttentionItem {
   id: string;
-  kind: 'vendor_approval' | 'failed_delivery' | 'low_stock' | 'unpaid_settlement';
+  /** which queue this is — the key `/admin/ops/summary` counts it under */
+  kind: string;
   title: string;
   detail: string;
   /** how urgent — drives the semantic colour, never decoration */
   tone: 'warn' | 'crit' | 'neutral';
   count: number;
   href: string;
-  at: string;
+  /**
+   * When the oldest item in the queue arrived. OPTIONAL, because
+   * `/admin/ops/summary` counts queues without timestamping them — the view
+   * drops "oldest …" rather than printing a time nobody measured.
+   */
+  at?: string;
 }
 
 export interface RecentOrder {
@@ -123,15 +139,13 @@ export interface TopVendorRow {
   city: string;
   orders: number;
   gmvPaise: number;
-  commissionPaise: number;
-  rating: number;
 }
 
 export interface TopProductRow {
   id: string;
   name: string;
-  vendorName: string;
-  aisleKey: AisleKey;
+  /** absent when the product's vendor is outside the vendor leaderboard */
+  vendorName?: string;
   unitsSold: number;
   gmvPaise: number;
 }

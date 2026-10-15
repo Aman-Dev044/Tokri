@@ -157,7 +157,17 @@ const dateFormatters: Record<DateStyle, Intl.DateTimeFormat> = {
 };
 
 /** ISO string (or Date) -> a pinned en-IN / IST string. */
-export function formatDate(value: string | Date, style: DateStyle = 'short'): string {
+export function formatDate(
+  value: string | Date | null | undefined,
+  style: DateStyle = 'short',
+): string {
+  // Nullish is handled before `new Date()`, not after. This used to take
+  // only `string | Date`, so a field the API turned out not to send arrived
+  // as `undefined`, reached `date.getTime()` and threw — taking the whole
+  // admin overview down to an error boundary. A formatter has no business
+  // being the thing that crashes a page: a missing date renders as the same
+  // em dash an unparseable one does.
+  if (value === null || value === undefined) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return '—';
   const formatter = dateFormatters[style];

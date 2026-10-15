@@ -24,6 +24,13 @@
  */
 
 import type {
+  AnalyticsAisleRow,
+  AnalyticsOverview,
+  AnalyticsSeriesPoint,
+  AnalyticsTopProduct,
+  AnalyticsTopVendor,
+} from './overview-adapter';
+import type {
   AdminNotification,
   OrderDetail,
   OrderListRow,
@@ -32,11 +39,7 @@ import type {
   OverviewResponse,
   Paginated,
   RecentOrder,
-  SalesByAisleRow,
   TeamMember,
-  TimeseriesPoint,
-  TopProductRow,
-  TopVendorRow,
   VendorDetail,
   VendorListRow,
   VendorProductRow,
@@ -157,17 +160,6 @@ const AISLE_KEYS_LOCAL: readonly AisleKey[] = [
   'frozen',
 ];
 
-const AISLE_LABELS: Record<AisleKey, string> = {
-  fruits: 'Fruits',
-  vegetables: 'Vegetables',
-  dairy: 'Dairy & Eggs',
-  bakery: 'Bakery',
-  beverages: 'Beverages',
-  snacks: 'Snacks',
-  staples: 'Staples & Grains',
-  frozen: 'Frozen',
-  electronics: 'Electronics',
-};
 
 const PRODUCTS: ReadonlyArray<{ name: string; aisleKey: AisleKey; pricePaise: number }> = [
   { name: 'Tomato Hybrid · 1 kg', aisleKey: 'vegetables', pricePaise: 3400 },
@@ -205,18 +197,8 @@ const ORDER_STATUSES: readonly OrderStatus[] = [
 /* Builders                                                            */
 /* ------------------------------------------------------------------ */
 
-function sparkOf(seed: number, points: number, base: number, swing: number): number[] {
-  const rng = seeded(seed);
-  const out: number[] = [];
-  let cursor = base;
-  for (let i = 0; i < points; i += 1) {
-    cursor = Math.max(base * 0.35, cursor + (rng() - 0.45) * swing);
-    out.push(Math.round(cursor));
-  }
-  return out;
-}
 
-function buildOverview(): OverviewResponse {
+function buildOverview(): AnalyticsOverview {
   const rng = seeded(7);
 
   const needsAttention: OverviewResponse['needsAttention'] = [
@@ -272,27 +254,44 @@ function buildOverview(): OverviewResponse {
     placedAt: ago(i * 11 * MINUTE + 3 * MINUTE),
   }));
 
+  // Shaped like the ENDPOINT, not like the screen. `overview-adapter.ts`
+  // composes the screen out of three responses, and a fixture that skipped
+  // that step would be testing a shape the API never sends — which is
+  // precisely how this page came to be written against data that did not
+  // exist. `needsAttention` and `recentOrders` are served by the fixtures
+  // for /admin/ops/summary and /admin/orders instead.
+  void needsAttention;
+  void recentOrders;
+
+  const metric = (value: number, deltaPct: number | null) => ({
+    value,
+    previous: deltaPct === null ? 0 : Math.round(value / (1 + deltaPct / 100)),
+    deltaPct,
+  });
+
   return {
-    generatedAt: ago(90_000),
-    windowDays: 30,
-    kpis: {
-      gmv: { value: 184_250_00 * 7, delta: 12.4, spark: sparkOf(11, 24, 1_290_000, 260_000) },
-      orders: { value: 8_412, delta: 9.1, spark: sparkOf(12, 24, 320, 70) },
-      aov: { value: 153_400, delta: 3.2, spark: sparkOf(13, 24, 1500, 180) },
-      activeVendors: { value: 214, delta: 4.7, spark: sparkOf(14, 24, 200, 12) },
-      pendingApprovals: { value: 6, delta: -18.0, spark: sparkOf(15, 24, 9, 4) },
-      onlineRiders: { value: 87, delta: -2.4, spark: sparkOf(16, 24, 90, 18) },
-      cancellationRate: { value: 3.8, delta: -0.6, spark: sparkOf(17, 24, 40, 9) },
-      codShare: { value: 41.2, delta: 1.9, spark: sparkOf(18, 24, 410, 40) },
+    range: { from: new Date(NOW - 30 * DAY).toISOString(), to: new Date(NOW).toISOString() },
+    previousRange: {
+      from: new Date(NOW - 60 * DAY).toISOString(),
+      to: new Date(NOW - 30 * DAY).toISOString(),
     },
-    needsAttention,
-    recentOrders,
+    gmv: metric(184_250_00 * 7, 12.4),
+    orderCount: metric(8_412, 9.1),
+    aov: metric(153_400, 3.2),
+    activeVendors: metric(214, 4.7),
+    pendingVendors: metric(6, -18.0),
+    customerCount: metric(12_904, 6.3),
+    riderCount: metric(311, 2.1),
+    onlineRiders: metric(87, -2.4),
+    cancellationRate: metric(3.8, -0.6),
+    codShare: metric(41.2, 1.9),
   };
 }
 
-function buildTimeseries(days: number): TimeseriesPoint[] {
+/** `{ date, value }`, one metric per call — exactly what the API returns. */
+function buildTimeseries(days: number): AnalyticsSeriesPoint[] {
   const rng = seeded(days === 7 ? 101 : days === 90 ? 103 : 102);
-  const out: TimeseriesPoint[] = [];
+  const out: AnalyticsSeriesPoint[] = [];
   let gmv = 1_150_000;
   let orders = 268;
 
@@ -304,11 +303,10 @@ function buildTimeseries(days: number): TimeseriesPoint[] {
     orders = Math.max(120, orders * (0.985 + rng() * 0.035));
 
     const iso = date.toISOString().slice(0, 10);
-    out.push({
-      date: iso,
-      gmvPaise: Math.round(gmv * weekendLift),
-      orders: Math.round(orders * weekendLift),
-    });
+    // One metric per point, like the endpoint. `orders` is still walked so
+    // the GMV curve keeps the shape a real marketplace has.
+    void orders;
+    out.push({ date: iso, value: Math.round(gmv * weekendLift) });
   }
   return out;
 }
@@ -326,41 +324,39 @@ function buildOrdersByStatus(): OrdersByStatusSlice[] {
   ];
 }
 
-function buildSalesByAisle(): SalesByAisleRow[] {
+function buildSalesByAisle(): AnalyticsAisleRow[] {
   const rng = seeded(31);
   return AISLE_KEYS_LOCAL.map((key, i) => ({
     aisleKey: key,
-    aisle: AISLE_LABELS[key],
-    gmvPaise: Math.round((2_400_000 - i * 180_000) * (0.75 + rng() * 0.6)),
-    orders: Math.round((1400 - i * 90) * (0.7 + rng() * 0.7)),
+    gmv: Math.round((2_400_000 - i * 180_000) * (0.75 + rng() * 0.6)),
+    orderCount: Math.round((1400 - i * 90) * (0.7 + rng() * 0.7)),
   }));
 }
 
-function buildTopVendors(): TopVendorRow[] {
+/** The endpoint's shape — `overview-adapter.ts` turns it into table rows. */
+function buildTopVendors(): AnalyticsTopVendor[] {
   const rng = seeded(41);
-  return STORE_NAMES.slice(0, 8).map((storeName, i) => {
-    const gmvPaise = Math.round((3_100_000 - i * 260_000) * (0.85 + rng() * 0.3));
-    return {
-      id: `ven-${i + 1}`,
-      storeName,
-      city: pick(rng, CITIES),
-      orders: Math.round((820 - i * 62) * (0.85 + rng() * 0.3)),
-      gmvPaise,
-      commissionPaise: Math.round(gmvPaise * 0.12),
-      rating: Math.round((4.1 + rng() * 0.8) * 10) / 10,
-    };
-  });
+  return STORE_NAMES.slice(0, 8).map((storeName, i) => ({
+    vendorId: `ven-${i + 1}`,
+    storeName,
+    city: pick(rng, CITIES),
+    status: 'approved',
+    orderCount: Math.round((820 - i * 62) * (0.85 + rng() * 0.3)),
+    gmv: Math.round((3_100_000 - i * 260_000) * (0.85 + rng() * 0.3)),
+  }));
 }
 
-function buildTopProducts(): TopProductRow[] {
+function buildTopProducts(): AnalyticsTopProduct[] {
   const rng = seeded(43);
   return PRODUCTS.slice(0, 8).map((p, i) => ({
-    id: `prd-${i + 1}`,
+    productId: `prd-${i + 1}`,
     name: p.name,
-    vendorName: pick(rng, STORE_NAMES),
-    aisleKey: p.aisleKey,
+    image: null,
+    // Points INTO the vendor fixture above, so the join the adapter does
+    // against the real API has something to find here too.
+    vendorId: `ven-${(i % 8) + 1}`,
     unitsSold: Math.round((2400 - i * 180) * (0.8 + rng() * 0.4)),
-    gmvPaise: Math.round(p.pricePaise * (2400 - i * 180) * (0.8 + rng() * 0.4)),
+    gmv: Math.round(p.pricePaise * (2400 - i * 180) * (0.8 + rng() * 0.4)),
   }));
 }
 
@@ -816,6 +812,15 @@ function matches(haystack: string, needle: string): boolean {
  * for it — in which case `useAdminQuery` surfaces the real error rather than
  * inventing something. A missing fixture must look like a missing endpoint.
  */
+/** Read the fixture's span back out of the ISO window the caller sent. */
+function daysBetween(from: unknown, to: unknown): number {
+  const start = Date.parse(String(from ?? ''));
+  const end = Date.parse(String(to ?? ''));
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 30;
+  const days = Math.round((end - start) / (24 * 60 * 60 * 1000));
+  return days === 7 || days === 90 ? days : 30;
+}
+
 export function resolveFixture(path: string, params: QueryParams = {}): unknown | null {
   const clean = path.split('?')[0] ?? path;
 
@@ -823,8 +828,11 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
   if (clean === '/admin/analytics/overview') return buildOverview();
 
   if (clean === '/admin/analytics/timeseries') {
-    const days = Number(params.days ?? 30) || 30;
-    return buildTimeseries(days === 7 || days === 90 ? days : 30);
+    // The window arrives as `from`/`to`, which is what the API takes. This
+    // used to read `params.days`, and when the caller switched to a real
+    // window it quietly fell back to 30 for every range — the 7d and 90d
+    // buttons would have moved the label and not the chart.
+    return buildTimeseries(daysBetween(params.from, params.to));
   }
 
   if (clean === '/admin/analytics/orders-by-status') return buildOrdersByStatus();
