@@ -1336,99 +1336,6 @@
    with it.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── hero: copy beside a plate of real food ──────────────────────────────── */
-.mk-hero__grid {
-  display: grid;
-  gap: clamp(28px, 5vw, 64px);
-  align-items: center;
-  padding-block: clamp(32px, 6vw, 88px) clamp(24px, 4vw, 56px);
-}
-@media (min-width: 900px) {
-  .mk-hero__grid {
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  }
-}
-
-.mk-hero__copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-  min-width: 0;
-}
-.mk-hero__accent {
-  color: var(--accent-ink);
-}
-
-.mk-hero__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: clamp(20px, 4vw, 44px);
-  margin: var(--s-3) 0 0;
-  padding: var(--s-4) 0 0;
-  border-top: 1px solid var(--hairline);
-  list-style: none;
-}
-.mk-hero__stat {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.mk-hero__stat-value {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.125rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  color: var(--ink);
-}
-.mk-hero__stat-unit {
-  font-size: 0.5em;
-  margin-left: 2px;
-  color: var(--ink-faint);
-}
-.mk-hero__stat-label {
-  font-size: var(--t-xs);
-  color: var(--ink-faint);
-}
-
-/* The plate. A lead photograph with three smaller ones tucked around it — a
-   composition rather than a grid, so it reads as a counter of produce. */
-.mk-plate {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(8px, 1.6vw, 14px);
-  min-width: 0;
-}
-.mk-plate__cell {
-  position: relative;
-  margin: 0;
-  overflow: hidden;
-  border-radius: var(--r-lg);
-  border: 1px solid var(--hairline);
-  background: color-mix(in oklab, var(--aisle) 8%, var(--surface));
-  aspect-ratio: 1;
-  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
-}
-.mk-plate__cell--lead {
-  grid-column: span 2;
-  grid-row: span 2;
-}
-.mk-plate__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.mk-hero__note {
-  margin: 0;
-  padding-bottom: clamp(16px, 3vw, 32px);
-  text-align: center;
-  font-size: var(--t-sm);
-}
-
 /* ── the live shelf ──────────────────────────────────────────────────────── */
 .mk-shelf {
   display: grid;
@@ -1706,4 +1613,465 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE FRONT DOOR, SECOND PASS
+   ═══════════════════════════════════════════════════════════════════════════
+   The marquee, the serif hero, the arch and everything orbiting it.
+
+   Every animation here is decorative. All of them stop under
+   `prefers-reduced-motion` at the end of this block — a strip that scrolls
+   forever at the top of the viewport is exactly what makes a page unusable
+   with a vestibular disorder.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── the running strip ───────────────────────────────────────────────────── */
+.mk-marquee {
+  overflow: hidden;
+  background: var(--aisle-vegetables-ink);
+  color: var(--ground);
+  border-bottom: 1px solid color-mix(in oklab, black 18%, transparent);
+}
+.mk-marquee__track {
+  display: flex;
+  width: max-content;
+  animation: mk-marquee 38s linear infinite;
+}
+.mk-marquee__run {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+.mk-marquee__item {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(18px, 3vw, 34px);
+  padding-block: 8px;
+  padding-inline-end: clamp(18px, 3vw, 34px);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.mk-marquee__sep {
+  color: var(--gold);
+  font-size: 0.8em;
+}
+@keyframes mk-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+/* ── hero shell ──────────────────────────────────────────────────────────── */
+.mk-hero {
+  position: relative;
+  overflow: clip;
+}
+.mk-hero__wash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      58% 50% at 72% 18%,
+      color-mix(in oklab, var(--accent) 12%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      44% 40% at 6% 88%,
+      color-mix(in oklab, var(--gold) 14%, transparent),
+      transparent 72%
+    );
+}
+
+.mk-hero__grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: clamp(36px, 5vw, 72px);
+  align-items: center;
+  padding-block: clamp(34px, 6vw, 86px) clamp(30px, 5vw, 70px);
+}
+@media (min-width: 940px) {
+  .mk-hero__grid {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+  }
+}
+
+.mk-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.mk-hero__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.mk-hero__rule {
+  display: block;
+  width: clamp(26px, 4vw, 44px);
+  height: 1.5px;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* The headline. Serif, because this half of the page is selling freshness
+   and provenance, and the second line goes italic under a drawn swash. */
+.mk-hero__title {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 1.5rem + 4.6vw, 4.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  animation: mk-rise 700ms var(--spring-soft) both;
+}
+.mk-hero__em {
+  position: relative;
+  display: block;
+  font-style: italic;
+  color: var(--accent-ink);
+  animation: mk-rise 700ms var(--spring-soft) 90ms both;
+}
+.mk-hero__swash {
+  position: absolute;
+  left: 0;
+  bottom: -0.12em;
+  width: min(100%, 11em);
+  height: 0.28em;
+  color: var(--gold);
+  overflow: visible;
+}
+
+.mk-hero__lede {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--ink-soft);
+  font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.0625rem);
+  line-height: 1.7;
+  animation: mk-rise 700ms var(--spring-soft) 150ms both;
+}
+
+/* ── pill actions ────────────────────────────────────────────────────────── */
+.mk-hero__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  animation: mk-rise 700ms var(--spring-soft) 210ms both;
+}
+.mk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.85rem 1.6rem;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  font-weight: 640;
+  font-size: var(--t-sm);
+  text-decoration: none;
+  transition:
+    transform var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
+}
+.mk-pill:hover { transform: translateY(-1px); }
+.mk-pill:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.mk-pill--solid {
+  background: var(--aisle-vegetables-ink);
+  color: var(--ground);
+  box-shadow: var(--lift-2);
+}
+.mk-pill--solid:hover { background: var(--ink); }
+.mk-pill--outline {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--hairline-bright);
+}
+.mk-pill--outline:hover { background: var(--lifted); }
+.mk-pill__arrow {
+  width: 17px;
+  height: 17px;
+  transition: transform var(--t-micro) var(--ease);
+}
+.mk-pill:hover .mk-pill__arrow { transform: translateX(3px); }
+
+/* ── trust chips ─────────────────────────────────────────────────────────── */
+.mk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(14px, 2.4vw, 26px);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+  animation: mk-rise 700ms var(--spring-soft) 270ms both;
+}
+.mk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.mk-chip__badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background: var(--mint-wash);
+  color: var(--accent-ink);
+  flex: 0 0 auto;
+}
+.mk-chip__badge svg { width: 16px; height: 16px; fill: none; }
+
+/* ── scroll cue ──────────────────────────────────────────────────────────── */
+.mk-scroll {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: var(--s-4) 0 0;
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.mk-scroll__mouse {
+  display: block;
+  width: 17px;
+  height: 27px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid currentColor;
+  position: relative;
+  opacity: 0.6;
+}
+.mk-scroll__dot {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 3px;
+  height: 5px;
+  margin-left: -1.5px;
+  border-radius: var(--r-pill);
+  background: currentColor;
+  animation: mk-scroll-dot 1.8s var(--ease) infinite;
+}
+@keyframes mk-scroll-dot {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  60% { transform: translateY(9px); opacity: 0; }
+}
+
+/* ── the stage: arch, seal, floating cards ───────────────────────────────── */
+.mk-stage {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1.08;
+  display: grid;
+  place-items: center;
+  animation: mk-rise 800ms var(--spring-soft) 120ms both;
+}
+
+/* A dotted orbit behind the arch — the one piece of pure decoration, and
+   the thing that stops the photograph looking pasted on. */
+.mk-stage__ring {
+  position: absolute;
+  inset: 2%;
+  border-radius: var(--r-pill);
+  border: 1.5px dashed color-mix(in oklab, var(--accent) 26%, transparent);
+}
+
+.mk-arch {
+  position: relative;
+  margin: 0;
+  width: min(100%, 23rem);
+  aspect-ratio: 1 / 1.22;
+  overflow: hidden;
+  /* The arch. A rectangle reads as a screenshot; this reads as a window. */
+  border-radius: 14rem 14rem var(--r-xl) var(--r-xl);
+  border: 1px solid var(--hairline);
+  background: var(--mint-wash);
+  box-shadow: var(--lift-3);
+}
+.mk-arch__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mk-seal {
+  position: absolute;
+  top: 4%;
+  left: 2%;
+  display: grid;
+  place-items: center;
+  width: clamp(74px, 9vw, 96px);
+  height: clamp(74px, 9vw, 96px);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-2);
+}
+.mk-seal__type {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: mk-spin 22s linear infinite;
+}
+.mk-seal__type text {
+  font-family: var(--data);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  fill: var(--accent-ink);
+}
+.mk-seal__leaf {
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+@keyframes mk-spin {
+  to { transform: rotate(360deg); }
+}
+
+.mk-float {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-3);
+  font-size: var(--t-xs);
+  line-height: 1.35;
+  animation: mk-float 6s var(--ease) infinite;
+}
+.mk-float--eta {
+  top: 10%;
+  right: -2%;
+  background: var(--aisle-vegetables-ink);
+  color: var(--ground);
+  border-color: transparent;
+  font-weight: 620;
+  animation-delay: 0.4s;
+}
+.mk-float--eta svg { width: 16px; height: 16px; flex: 0 0 auto; }
+.mk-float--price {
+  right: -4%;
+  bottom: 22%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  animation-delay: 1.1s;
+}
+.mk-float--pick {
+  left: -4%;
+  bottom: 7%;
+  animation-delay: 1.8s;
+}
+.mk-float__thumb {
+  display: block;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.mk-float__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mk-float__eyebrow {
+  display: block;
+  font-family: var(--data);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-ink);
+}
+.mk-float--eta .mk-float__eyebrow { color: inherit; }
+.mk-float__name { display: block; font-weight: 640; }
+.mk-float__value {
+  display: block;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+@keyframes mk-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+.mk-leaf {
+  position: absolute;
+  color: color-mix(in oklab, var(--accent) 45%, transparent);
+  animation: mk-float 7s var(--ease) infinite;
+}
+.mk-leaf svg { width: 100%; height: 100%; display: block; }
+.mk-leaf--a {
+  top: 1%;
+  right: 20%;
+  width: 26px;
+  height: 26px;
+  transform: rotate(18deg);
+  animation-delay: 0.8s;
+}
+.mk-leaf--b {
+  bottom: 24%;
+  left: 2%;
+  width: 20px;
+  height: 20px;
+  transform: rotate(-34deg);
+  animation-delay: 2.4s;
+}
+
+@keyframes mk-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Small screens: the stage still earns its place, but the cards crowd it. */
+@media (max-width: 620px) {
+  .mk-float--price,
+  .mk-leaf--b {
+    display: none;
+  }
+  .mk-float--eta { right: 0; }
+  .mk-float--pick { left: 0; }
+}
+
+/* ── everything above stops moving on request ────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .mk-marquee__track,
+  .mk-seal__type,
+  .mk-float,
+  .mk-leaf,
+  .mk-scroll__dot {
+    animation: none !important;
+  }
+  .mk-hero__title,
+  .mk-hero__em,
+  .mk-hero__lede,
+  .mk-hero__cta,
+  .mk-chips,
+  .mk-stage {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
 }

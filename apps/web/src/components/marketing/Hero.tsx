@@ -1,128 +1,229 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { CountUp } from '@/components/marketing/CountUp';
-import { MagneticLink } from '@/components/marketing/MagneticLink';
-
 /**
  * ════════════════════════════════════════════════════════════════════════
  *  THE FRONT DOOR
  * ════════════════════════════════════════════════════════════════════════
  *
- * What this replaced: a parallax rig of tinted glyphs behind a headline
- * about the app changing colour. It was about the INTERFACE. Somebody
- * arriving at a grocery service wants to know what is in the shop, how
- * fast it comes and whether it reaches their street — none of which an
- * abstract glyph can answer.
+ * Modelled closely on the reference the owner chose: a serif headline whose
+ * second line turns italic under a hand-drawn gold swash, two pill actions,
+ * three trust chips, and — carrying the whole right half — a photograph of
+ * the food inside an ARCH, orbited by a rotating seal and two floating
+ * cards that quote real numbers.
  *
- * So the hero now leads with food. Four real photographs from the
- * catalogue, the same files `/shop` serves, sized and cropped by
- * `next/image`.
+ * ── Why an arch ─────────────────────────────────────────────────────────
+ * A rectangle reads as a screenshot; an arch reads as a window onto
+ * something. It is one `border-radius` with a huge top value, which costs
+ * nothing and changes the whole temperature of the section.
  *
- * ── It is a SERVER component now ────────────────────────────────────────
- * The old one was `'use client'` for a hover state that re-tinted the page
- * and a 3D tilt rig. Both are gone, so the largest, first-painted section
- * of the site now ships no JavaScript at all and arrives as HTML. The
- * stat counters below are the one client island, and they are deliberately
- * small.
+ * ── It is still a SERVER component ──────────────────────────────────────
+ * Every moving part here is CSS: the seal rotates on `spin`, the leaves on
+ * `float`, the cards arrive on `rise`, the scroll dot on `scroll-dot`. None
+ * of it needs state, so the largest and first-painted section of the site
+ * ships no JavaScript — and all of it stops under
+ * `prefers-reduced-motion`.
  *
- * ── Why the photographs are in the markup, not a background ─────────────
- * `background-image` is invisible to `next/image`, so it cannot be resized
- * per breakpoint, cannot be lazily loaded and cannot carry alt text. These
- * are real `<Image>` elements with `priority` on the one that lands above
- * the fold, which is also the Largest Contentful Paint on most screens.
+ * ── The numbers are real ────────────────────────────────────────────────
+ * "from ₹28" is Amul Taaza at its seeded price and "under 22 minutes" is
+ * the figure quoted everywhere else on this page. A hero that invents a
+ * price is the first thing a visitor catches you on.
  */
 
-/** Four from the shelf, chosen to read as "groceries" in one glance. */
-const PLATE: ReadonlyArray<{ src: string; alt: string; aisle: string }> = [
-  { src: '/products/mango.jpg', alt: 'Alphonso mangoes', aisle: 'fruits' },
-  { src: '/products/milk.jpg', alt: 'Fresh milk being poured', aisle: 'dairy' },
-  { src: '/products/tomato.jpg', alt: 'Ripe tomatoes', aisle: 'vegetables' },
-  { src: '/products/bread.jpg', alt: 'Fresh bread', aisle: 'bakery' },
+/** Trust chips. Each is a fact this service actually keeps. */
+const CHIPS: ReadonlyArray<{ label: string; icon: React.ReactNode }> = [
+  {
+    label: 'Picked today',
+    icon: (
+      <path d="M12 3c0 4-3 5-3 8a3 3 0 0 0 6 0c0-3-3-4-3-8Z" fill="none" strokeWidth="1.6" />
+    ),
+  },
+  {
+    label: 'Shops near you',
+    icon: (
+      <path
+        d="M4 10 12 4l8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z"
+        fill="none"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
+    label: 'Cash or online',
+    icon: (
+      <>
+        <rect x="3" y="6" width="18" height="12" rx="2" fill="none" strokeWidth="1.6" />
+        <path d="M3 10h18" strokeWidth="1.6" />
+      </>
+    ),
+  },
 ];
 
-const STATS: ReadonlyArray<{ to: number; unit: string; label: string; money?: boolean }> = [
-  { to: 22, unit: 'min', label: 'Typical handover' },
-  { to: 5, unit: 'km', label: 'Serviceable radius' },
-  { to: 9, unit: '', label: 'Aisles, every shop' },
-];
+/** The two photographs tucked behind the arch, and the one inside it. */
+const LEAD = { src: '/products/mango.jpg', alt: 'Alphonso mangoes on the branch' };
 
 export function Hero() {
   return (
     <section className="mk-hero" id="top">
+      {/* Soft cream-to-green wash behind everything, and two drifting leaves.
+          Decorative only, so it is hidden from assistive technology. */}
+      <div className="mk-hero__wash" aria-hidden="true" />
+
       <div className="mk-shell mk-hero__grid">
         <div className="mk-hero__copy">
-          <p className="mk-eyebrow">मंडी · multi-vendor grocery, India</p>
+          <p className="mk-hero__eyebrow">
+            <span className="mk-hero__rule" aria-hidden="true" />
+            मंडी · fresh · local
+          </p>
 
           <h1 className="mk-hero__title">
             Fresh from the mandi,
-            <br />
-            <span className="mk-hero__accent">to your door.</span>
+            <span className="mk-hero__em">
+              to your door.
+              {/* A drawn swash, not a border: it has the wobble of a pen,
+                  which a straight 2px rule cannot imitate. */}
+              <svg
+                className="mk-hero__swash"
+                viewBox="0 0 320 14"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M3 9.5C54 4.5 120 2.5 186 4.5c47 1.4 90 3.6 131 6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
           </h1>
 
-          <p className="mk-lede">
+          <p className="mk-hero__lede">
             Not a warehouse with a catalogue stapled on. It is the kirana, the dairy
             and the bakery already on your street — picked by a real shop near you and
             handed over in about twenty minutes.
           </p>
 
           <div className="mk-hero__cta">
-            <MagneticLink href="/shop">Start shopping</MagneticLink>
-            <MagneticLink href="/#how-it-works" variant="quiet">
+            <Link className="mk-pill mk-pill--solid" href="/shop">
+              Start shopping
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="mk-pill__arrow">
+                <path
+                  d="M5 12h13m0 0-5-5m5 5-5 5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
+            <Link className="mk-pill mk-pill--outline" href="/#how-it-works">
               See how it works
-            </MagneticLink>
+            </Link>
           </div>
 
-          <ul className="mk-hero__stats">
-            {STATS.map((stat) => (
-              <li className="mk-hero__stat" key={stat.label}>
-                <span className="mk-hero__stat-value">
-                  <CountUp to={stat.to} />
-                  {stat.unit !== '' ? (
-                    <span className="mk-hero__stat-unit">{stat.unit}</span>
-                  ) : null}
+          <ul className="mk-chips">
+            {CHIPS.map((chip) => (
+              <li className="mk-chip" key={chip.label}>
+                <span className="mk-chip__badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" stroke="currentColor">
+                    {chip.icon}
+                  </svg>
                 </span>
-                <span className="mk-hero__stat-label">{stat.label}</span>
+                {chip.label}
               </li>
             ))}
           </ul>
+
+          <p className="mk-scroll" aria-hidden="true">
+            <span className="mk-scroll__mouse">
+              <span className="mk-scroll__dot" />
+            </span>
+            scroll to explore
+          </p>
         </div>
 
-        {/* The plate: one large photograph with three behind it. Decorative
-            as a composition, but each image still carries real alt text —
-            a screen reader is told what the food is, not that there is a
-            "hero image". */}
-        <div className="mk-plate" aria-hidden="false">
-          {PLATE.map((shot, i) => (
-            <figure
-              className={i === 0 ? 'mk-plate__cell mk-plate__cell--lead' : 'mk-plate__cell'}
-              key={shot.src}
-              data-aisle={shot.aisle}
-              style={{ ['--i' as string]: i }}
-            >
-              <Image
-                src={shot.src}
-                alt={shot.alt}
-                width={i === 0 ? 720 : 360}
-                height={i === 0 ? 720 : 360}
-                className="mk-plate__img"
-                priority={i === 0}
-                sizes={
-                  i === 0
-                    ? '(max-width: 900px) 90vw, 420px'
-                    : '(max-width: 900px) 30vw, 200px'
-                }
+        {/* ── the stage ──────────────────────────────────────────────── */}
+        <div className="mk-stage">
+          <span className="mk-stage__ring" aria-hidden="true" />
+
+          <figure className="mk-arch">
+            <Image
+              src={LEAD.src}
+              alt={LEAD.alt}
+              width={760}
+              height={900}
+              className="mk-arch__img"
+              priority
+              sizes="(max-width: 900px) 86vw, 460px"
+            />
+          </figure>
+
+          {/* The rotating seal. The text is drawn around a circular path, so
+              it curves properly instead of being faked with per-letter
+              rotations that break at any other font size. */}
+          <span className="mk-seal" aria-hidden="true">
+            <svg viewBox="0 0 120 120" className="mk-seal__type">
+              <defs>
+                <path
+                  id="mk-seal-path"
+                  d="M60,60 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0"
+                  fill="none"
+                />
+              </defs>
+              <text>
+                <textPath href="#mk-seal-path" startOffset="0">
+                  · FROM THE MANDI · TO YOUR DOOR
+                </textPath>
+              </text>
+            </svg>
+            <svg viewBox="0 0 24 24" className="mk-seal__leaf">
+              <path
+                d="M12 3c0 4-3 5-3 8a3 3 0 0 0 6 0c0-3-3-4-3-8Z"
+                fill="currentColor"
               />
-            </figure>
-          ))}
+            </svg>
+          </span>
+
+          <span className="mk-float mk-float--eta">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M12 8v4l3 2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            At your door in 22 minutes
+          </span>
+
+          <span className="mk-float mk-float--price">
+            <span className="mk-float__eyebrow">On the shelf today</span>
+            <span className="mk-float__name">Amul Taaza Milk</span>
+            <span className="mk-float__value">from ₹28</span>
+          </span>
+
+          <span className="mk-float mk-float--pick">
+            <span className="mk-float__thumb">
+              <Image src="/products/curd.jpg" alt="" width={96} height={96} />
+            </span>
+            <span>
+              <span className="mk-float__eyebrow">Picked at dawn</span>
+              <span className="mk-float__name">Nandini Fresh Curd</span>
+            </span>
+          </span>
+
+          <span className="mk-leaf mk-leaf--a" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3c0 4-3 5-3 8a3 3 0 0 0 6 0c0-3-3-4-3-8Z" fill="currentColor" />
+            </svg>
+          </span>
+          <span className="mk-leaf mk-leaf--b" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3c0 4-3 5-3 8a3 3 0 0 0 6 0c0-3-3-4-3-8Z" fill="currentColor" />
+            </svg>
+          </span>
         </div>
       </div>
-
-      <p className="mk-hero__note">
-        <Link className="mk-link" href="/stores">
-          Or browse store by store →
-        </Link>
-      </p>
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { TopBar } from '@/components/marketing/TopBar';
+import { Marquee } from '@/components/marketing/Marquee';
 import { Footer } from '@/components/marketing/Footer';
 import { SITE_URL } from '@/config/env';
 import { APP_NAME, APP_DESCRIPTION } from '@/config/brand';
@@ -39,6 +40,7 @@ const jsonLd = {
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
     <div className="marketing">
+      <Marquee />
       <TopBar />
       <main id="main">{children}</main>
       <Footer />

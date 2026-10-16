@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
-import { Space_Mono } from 'next/font/google';
+import { Lora, Space_Mono } from 'next/font/google';
 import { THEME_INIT_SCRIPT } from '@mandi/design-system';
 
 import '@mandi/design-system/tokens.css';
@@ -57,6 +57,27 @@ const body = localFont({
   display: 'swap',
   variable: '--font-body',
   fallback: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+});
+
+/**
+ * The marketing serif.
+ *
+ * Only the landing page uses it, and only for display sizes. A grocery
+ * front door is selling freshness and provenance, and a serif — especially
+ * its italic — carries that in a way a grotesque cannot. The consoles stay
+ * on the grotesque, because a vendor reading a table of orders needs a face
+ * that disappears, not one with an opinion.
+ *
+ * Both weights and the italic are loaded because the headline uses upright
+ * and italic in the SAME line; a synthesised oblique would shear the serifs.
+ */
+const serif = Lora({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-serif',
+  fallback: ['Georgia', 'Times New Roman', 'serif'],
 });
 
 const data = Space_Mono({
@@ -129,7 +150,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${display.variable} ${body.variable} ${data.variable}`}>
+    <html lang="en-IN" className={`${display.variable} ${body.variable} ${serif.variable} ${data.variable}`}>
       <head>
         {/*
           Runs before first paint, on the user's own machine, reading the user's
