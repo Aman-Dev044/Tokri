@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     template: `%s · ${APP_NAME}`,
   },
   description:
-    'Order from the kirana, the dairy and the bakery actually near you. Eight aisles, eight colours, one market.',
+    'Order from the kirana, the dairy and the bakery actually near you. Nine aisles, nine colours, one market.',
 };
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {

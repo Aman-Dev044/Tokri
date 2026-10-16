@@ -13,10 +13,20 @@
  * through the CSP, no third party that can rate-limit the shop, and no
  * stranger who can delete a photo and leave a hole in the catalogue.
  *
- * Commons was chosen over a stock-photo CDN for one reason: the FILENAME
- * declares the subject. A photo id that returns 200 proves only that the
- * id exists — one candidate for the LED bulb turned out to be a photograph
- * of an electric guitar. `LED_bulb.jpg` cannot be a guitar.
+ * Commons is preferred over a stock-photo CDN because a filename is at
+ * least a HINT at the subject, which an opaque photo id is not: one
+ * Unsplash candidate for the LED bulb turned out to be an electric guitar.
+ *
+ * A HINT, and nothing more. `Mango.jpg` on Commons is a photograph of a
+ * MAN SINGING — there is a musician called Mango — and it shipped as the
+ * lead image of the hero, watermark and all, because the filename was
+ * trusted instead of the picture. `Ginger_roots.jpg` was a sleeping cat.
+ * `Sugar.jpg` was Sugarloaf Mountain. `Tea.jpg` was a river.
+ *
+ * So every file in `public/products/` has been LOOKED AT, as one contact
+ * sheet with the names burned underneath, and anything added here gets the
+ * same treatment. A filename, a 200 and a plausible byte count are not
+ * evidence of what is in a picture.
  *
  * ── Why a keyword table and not a per-product field ─────────────────────
  * A product named here is matched on what it IS, not on its exact row, so
@@ -27,10 +37,12 @@
  *
  * ── What is deliberately missing ────────────────────────────────────────
  * Five subjects had no usable file on Commons: mosambi, toor dal, chana
- * dal, besan and the mosquito vaporiser. They resolve to `null` and keep
- * the letter plate. Showing an orange for a sweet lime, or mung beans for
- * toor dal, would be a picture of the wrong food on a grocery listing —
- * worse than an honest placeholder, because a customer would believe it.
+ * dal, besan and the mosquito vaporiser — and, after the audit above, tea,
+ * ghee and crisps, whose files turned out to be something else. They
+ * resolve to `null` and keep the letter plate. Showing an orange for a
+ * sweet lime, or mung beans for toor dal, would be a picture of the wrong
+ * food on a grocery listing — worse than an honest placeholder, because a
+ * customer would believe it.
  */
 
 /** Public URL of a file in `apps/web/public/products/`. */
@@ -45,7 +57,6 @@ const BY_KEYWORD: ReadonlyArray<readonly [string, string]> = (
     // fruit
     ['alphonso mango', 'mango'],
     ['mango', 'mango'],
-    ['banana chips', 'chips'],
     ['banana', 'banana'],
     ['pomegranate', 'pomegranate'],
     ['apple', 'apple'],
@@ -78,7 +89,6 @@ const BY_KEYWORD: ReadonlyArray<readonly [string, string]> = (
     ['cheese', 'cheese'],
     ['egg', 'egg'],
     ['paneer', 'paneer'],
-    ['ghee', 'ghee'],
     ['lassi', 'lassi'],
 
     // bakery
@@ -96,7 +106,6 @@ const BY_KEYWORD: ReadonlyArray<readonly [string, string]> = (
     ['dil pasand', 'pastry'],
 
     // beverages
-    ['tea', 'tea'],
     ['coffee', 'coffee'],
     ['juice', 'juice'],
     ['aam panna', 'juice'],
@@ -107,8 +116,6 @@ const BY_KEYWORD: ReadonlyArray<readonly [string, string]> = (
     ['kool badam', 'milk'],
 
     // snacks
-    ['chips', 'chips'],
-    ['lays', 'chips'],
     ['kurkure', 'namkeen'],
     ['mixture', 'namkeen'],
     ['murukku', 'namkeen'],

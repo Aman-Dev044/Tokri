@@ -1326,3 +1326,384 @@
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THE PRODUCT-LED FRONT DOOR
+   ═══════════════════════════════════════════════════════════════════════════
+   Four sections that replaced an abstract hero: the plate of photographs,
+   the live shelf, the serviceability check and the FAQ. Everything here is
+   warm and quiet — the food carries the colour, the layout does not compete
+   with it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── hero: copy beside a plate of real food ──────────────────────────────── */
+.mk-hero__grid {
+  display: grid;
+  gap: clamp(28px, 5vw, 64px);
+  align-items: center;
+  padding-block: clamp(32px, 6vw, 88px) clamp(24px, 4vw, 56px);
+}
+@media (min-width: 900px) {
+  .mk-hero__grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  }
+}
+
+.mk-hero__copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.mk-hero__accent {
+  color: var(--accent-ink);
+}
+
+.mk-hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(20px, 4vw, 44px);
+  margin: var(--s-3) 0 0;
+  padding: var(--s-4) 0 0;
+  border-top: 1px solid var(--hairline);
+  list-style: none;
+}
+.mk-hero__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mk-hero__stat-value {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2.125rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+}
+.mk-hero__stat-unit {
+  font-size: 0.5em;
+  margin-left: 2px;
+  color: var(--ink-faint);
+}
+.mk-hero__stat-label {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* The plate. A lead photograph with three smaller ones tucked around it — a
+   composition rather than a grid, so it reads as a counter of produce. */
+.mk-plate {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(8px, 1.6vw, 14px);
+  min-width: 0;
+}
+.mk-plate__cell {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: color-mix(in oklab, var(--aisle) 8%, var(--surface));
+  aspect-ratio: 1;
+  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.mk-plate__cell--lead {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.mk-plate__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mk-hero__note {
+  margin: 0;
+  padding-bottom: clamp(16px, 3vw, 32px);
+  text-align: center;
+  font-size: var(--t-sm);
+}
+
+/* ── the live shelf ──────────────────────────────────────────────────────── */
+.mk-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr));
+  gap: clamp(12px, 2vw, 20px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The <li> has to stretch, or the card's `height: 100%` resolves against a
+   box that is only as tall as its own content and every card in the row
+   sits at a different height. */
+.mk-shelf > li {
+  display: flex;
+  min-width: 0;
+}
+
+.mk-prod {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--lift-1);
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
+  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 7) * var(--stagger));
+}
+.mk-prod:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--lift-2);
+  border-color: color-mix(in oklab, var(--aisle) 40%, var(--hairline));
+}
+.mk-prod:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.mk-prod__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  background: color-mix(in oklab, var(--aisle) 9%, var(--surface));
+}
+.mk-prod__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.mk-prod__plate {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 650;
+  color: var(--aisle-ink);
+}
+.mk-prod__off {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  background: var(--aisle);
+  color: var(--aisle-on);
+  font-family: var(--data);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+}
+
+.mk-prod__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--s-3);
+}
+.mk-prod__name {
+  font-weight: 620;
+  font-size: var(--t-sm);
+  line-height: 1.3;
+}
+.mk-prod__meta {
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+.mk-prod__price {
+  margin-top: 2px;
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: var(--t-sm);
+}
+.mk-prod__mrp {
+  margin-left: 6px;
+  color: var(--ink-faint);
+  font-weight: 400;
+  font-size: 0.85em;
+}
+
+.mk-shelf__more {
+  margin: var(--s-5) 0 0;
+  text-align: center;
+  font-size: var(--t-sm);
+}
+
+/* ── "do we deliver to you?" ─────────────────────────────────────────────── */
+.mk-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: clamp(22px, 4vw, 40px);
+  border-radius: var(--r-xl);
+  background: var(--mint-wash);
+  border: 1px solid color-mix(in oklab, var(--accent) 22%, var(--hairline));
+}
+.mk-check__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.mk-check__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  align-items: center;
+}
+.mk-check__input {
+  flex: 1 1 11rem;
+  min-width: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline-bright);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-md);
+  letter-spacing: 0.08em;
+}
+.mk-check__input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.mk-check__btn {
+  flex: 0 0 auto;
+  padding: 0.75rem 1.4rem;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+  font-size: var(--t-sm);
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
+}
+.mk-check__btn:hover:not(:disabled) {
+  background: var(--accent-ink);
+}
+.mk-check__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mk-check__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.mk-check__out {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--t-sm);
+  line-height: 1.6;
+}
+.mk-check__out[data-state="yes"] strong {
+  color: var(--good-ink);
+}
+.mk-check__out[data-state="no"] strong {
+  color: var(--warn-ink);
+}
+.mk-check__hint {
+  color: var(--ink-faint);
+}
+
+/* ── FAQ, on native <details> ────────────────────────────────────────────── */
+.mk-faq {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-xl);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  overflow: hidden;
+}
+.mk-faq__item + .mk-faq__item {
+  border-top: 1px solid var(--hairline);
+}
+
+.mk-faq__q {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: clamp(14px, 2.4vw, 20px) clamp(16px, 3vw, 26px);
+  cursor: pointer;
+  font-weight: 620;
+  font-size: var(--t-md);
+  list-style: none;
+  transition: background-color var(--t-micro) var(--ease);
+}
+.mk-faq__q::-webkit-details-marker {
+  display: none;
+}
+.mk-faq__q:hover {
+  background: var(--lifted);
+}
+.mk-faq__q:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* A plus that becomes a minus. Drawn from two rules rather than a glyph, so
+   it cannot pick up a font fallback or shift the row height. */
+.mk-faq__mark {
+  position: relative;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+.mk-faq__mark::before,
+.mk-faq__mark::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 1.5px;
+  background: var(--ink-faint);
+  transition: transform var(--t-micro) var(--ease);
+}
+.mk-faq__mark::after {
+  transform: rotate(90deg);
+}
+.mk-faq__item[open] .mk-faq__mark::after {
+  transform: rotate(0deg);
+}
+
+.mk-faq__a {
+  margin: 0;
+  padding: 0 clamp(16px, 3vw, 26px) clamp(16px, 2.6vw, 22px);
+  max-width: var(--prose-max);
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+  line-height: 1.7;
+}
+
+.mk-title--sm {
+  font-size: var(--t-h2);
+}
+
+.mk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -257,7 +257,7 @@ export function CustomerSignupFlow() {
         <header className="authform__head">
           <p className="auth-eyebrow">Create an account</p>
           <h1 className="authform__title">
-            Eight aisles,
+            Nine aisles,
             <br />
             <span className="authform__title-accent">one basket.</span>
           </h1>

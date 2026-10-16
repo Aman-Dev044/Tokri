@@ -1,296 +1,128 @@
-'use client';
+import Image from 'next/image';
+import Link from 'next/link';
 
-/**
- * THE HERO — layered 3D parallax, not a picture of it.
- *
- * A single <Tilt3D> rig owns the top of the hero. Three depths sit inside
- * it: a background glow at --z-1, a ring of aisle glyphs at --z-2/--z-3, and
- * the headline card nearest the viewer at --z-4. Moving the pointer over the
- * rig rotates the whole stage a few degrees, and because the layers sit at
- * different Z they part company at different speeds — that difference *is*
- * the parallax; nothing here hand-rolls scroll-linked motion for it.
- *
- * Below the rig, the aisle picker is a live control, not a picture of one:
- * hovering a swatch previews that hue across the entire page, clicking
- * commits it, and every accent — buttons, rules, washes, the CTA glow —
- * crossfades over --t-enter because --aisle is registered with @property
- * and --accent is re-pointed at it in marketing.css.
- *
- * All of it is load-time CSS. The headline words rise in sequence from a
- * `backwards` fill, the stat and feature cards spring in on the shared
- * --stagger cascade, and the figures count up once on mount from a value
- * that is already correct in the server-rendered HTML. Nothing waits on a
- * scroll observer, so the hero is complete in a crawl, a link preview and a
- * screenshot — and it is sized to its content, not to 100vh.
- */
-
-import { useState, type CSSProperties } from 'react';
-import { AISLES, Tilt3D, Depth, formatPaise, useAisle } from '@mandi/design-system';
-import type { AisleKey } from '@mandi/design-system';
-
-import { AisleGlyph } from '@/components/marketing/AisleGlyph';
 import { CountUp } from '@/components/marketing/CountUp';
 import { MagneticLink } from '@/components/marketing/MagneticLink';
 
-/* The headline, as words, so each can rise on its own delay. Splitting on a
-   space at render time would break the non-breaking pairs below. */
-const TITLE: ReadonlyArray<{ text: string; accent?: boolean }> = [
-  { text: 'A' },
-  { text: 'market' },
-  { text: 'that' },
-  { text: 'changes', accent: true },
-  { text: 'colour', accent: true },
-  { text: 'as' },
-  { text: 'you' },
-  { text: 'walk' },
-  { text: 'through' },
-  { text: 'it.' },
+/**
+ * ════════════════════════════════════════════════════════════════════════
+ *  THE FRONT DOOR
+ * ════════════════════════════════════════════════════════════════════════
+ *
+ * What this replaced: a parallax rig of tinted glyphs behind a headline
+ * about the app changing colour. It was about the INTERFACE. Somebody
+ * arriving at a grocery service wants to know what is in the shop, how
+ * fast it comes and whether it reaches their street — none of which an
+ * abstract glyph can answer.
+ *
+ * So the hero now leads with food. Four real photographs from the
+ * catalogue, the same files `/shop` serves, sized and cropped by
+ * `next/image`.
+ *
+ * ── It is a SERVER component now ────────────────────────────────────────
+ * The old one was `'use client'` for a hover state that re-tinted the page
+ * and a 3D tilt rig. Both are gone, so the largest, first-painted section
+ * of the site now ships no JavaScript at all and arrives as HTML. The
+ * stat counters below are the one client island, and they are deliberately
+ * small.
+ *
+ * ── Why the photographs are in the markup, not a background ─────────────
+ * `background-image` is invisible to `next/image`, so it cannot be resized
+ * per breakpoint, cannot be lazily loaded and cannot carry alt text. These
+ * are real `<Image>` elements with `priority` on the one that lands above
+ * the fold, which is also the Largest Contentful Paint on most screens.
+ */
+
+/** Four from the shelf, chosen to read as "groceries" in one glance. */
+const PLATE: ReadonlyArray<{ src: string; alt: string; aisle: string }> = [
+  { src: '/products/mango.jpg', alt: 'Alphonso mangoes', aisle: 'fruits' },
+  { src: '/products/milk.jpg', alt: 'Fresh milk being poured', aisle: 'dairy' },
+  { src: '/products/tomato.jpg', alt: 'Ripe tomatoes', aisle: 'vegetables' },
+  { src: '/products/bread.jpg', alt: 'Fresh bread', aisle: 'bakery' },
 ];
 
-/* Three real lines off the real catalogue. Looked up by name rather than
-   retyped, so a price change in the design system's aisle data reaches the
-   landing page instead of quietly disagreeing with it. */
-const COUNTER: ReadonlyArray<{ aisle: AisleKey; item: string }> = [
-  { aisle: 'fruits', item: 'Alphonso Mango' },
-  { aisle: 'dairy', item: 'Amul Taaza Milk' },
-  { aisle: 'snacks', item: 'Bhavnagari Gathiya' },
+const STATS: ReadonlyArray<{ to: number; unit: string; label: string; money?: boolean }> = [
+  { to: 22, unit: 'min', label: 'Typical handover' },
+  { to: 5, unit: 'km', label: 'Serviceable radius' },
+  { to: 9, unit: '', label: 'Aisles, every shop' },
 ];
-
-/* A slim ring of aisle glyphs for the mid-plane of the parallax rig — five
-   is plenty to read as "produce", the full eight belong to the picker below
-   where each one is an actual control. */
-const ORBIT_KEYS: ReadonlyArray<AisleKey> = [
-  'fruits',
-  'vegetables',
-  'dairy',
-  'snacks',
-  'beverages',
-];
-
-interface CounterLine {
-  aisle: AisleKey;
-  aisleName: string;
-  name: string;
-  unit: string;
-  paise: number;
-}
-
-function counterLines(): CounterLine[] {
-  const out: CounterLine[] = [];
-  for (const wanted of COUNTER) {
-    const aisle = AISLES.find((a) => a.key === wanted.aisle);
-    const item = aisle?.items.find((i) => i.name === wanted.item);
-    if (aisle && item) {
-      out.push({
-        aisle: aisle.key,
-        aisleName: aisle.name,
-        name: item.name,
-        unit: item.unit,
-        paise: item.paise,
-      });
-    }
-  }
-  return out;
-}
-
-function swatchVar(key: AisleKey): CSSProperties {
-  return { ['--sw' as string]: `var(--aisle-${key})` };
-}
 
 export function Hero() {
-  const { aisle, setAisle, preview, clearPreview } = useAisle();
-  const [locked, setLocked] = useState(false);
-  const [hovered, setHovered] = useState<AisleKey | null>(null);
-
-  const shownKey = hovered ?? aisle;
-  const shown = AISLES.find((a) => a.key === shownKey) ?? AISLES[0];
-  const lines = counterLines();
-
   return (
     <section className="mk-hero" id="top">
-      <div className="mk-shell">
-        {/* ── the parallax rig: background glow · mid-plane produce · headline ── */}
-        <Tilt3D as="div" max={6} lift={0} scale={1} className="mk-rig">
-          <Depth depth={1} className="mk-rig__glow">
-            {null}
-          </Depth>
+      <div className="mk-shell mk-hero__grid">
+        <div className="mk-hero__copy">
+          <p className="mk-eyebrow">मंडी · multi-vendor grocery, India</p>
 
-          <Depth depth={2} className="mk-rig__orbit">
-            {ORBIT_KEYS.map((key, i) => (
-              <span
-                className={i === 0 ? 'mk-rig__glyph mk-rig__glyph--float' : 'mk-rig__glyph'}
-                key={key}
-                style={{ ...swatchVar(key), ['--i' as string]: i }}
-              >
-                <AisleGlyph aisleKey={key} />
-              </span>
-            ))}
-          </Depth>
+          <h1 className="mk-hero__title">
+            Fresh from the mandi,
+            <br />
+            <span className="mk-hero__accent">to your door.</span>
+          </h1>
 
-          <Depth depth={4} className="mk-rig__fore">
-            <p className="mk-eyebrow">मंडी · multi-vendor grocery, India</p>
+          <p className="mk-lede">
+            Not a warehouse with a catalogue stapled on. It is the kirana, the dairy
+            and the bakery already on your street — picked by a real shop near you and
+            handed over in about twenty minutes.
+          </p>
 
-            <h1 className="mk-hero__title">
-              {TITLE.map((word, i) => (
-                <span
-                  key={`${word.text}-${i}`}
-                  className={word.accent ? 'mk-word mk-word--accent' : 'mk-word'}
-                  style={{ ['--w' as string]: i }}
-                >
-                  {word.text}
-                  {i < TITLE.length - 1 ? ' ' : null}
+          <div className="mk-hero__cta">
+            <MagneticLink href="/shop">Start shopping</MagneticLink>
+            <MagneticLink href="/#how-it-works" variant="quiet">
+              See how it works
+            </MagneticLink>
+          </div>
+
+          <ul className="mk-hero__stats">
+            {STATS.map((stat) => (
+              <li className="mk-hero__stat" key={stat.label}>
+                <span className="mk-hero__stat-value">
+                  <CountUp to={stat.to} />
+                  {stat.unit !== '' ? (
+                    <span className="mk-hero__stat-unit">{stat.unit}</span>
+                  ) : null}
                 </span>
-              ))}
-            </h1>
+                <span className="mk-hero__stat-label">{stat.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-            <p className="mk-lede">
-              Not a warehouse with a catalogue stapled on. It is the kirana, the dairy
-              and the bakery already on your street — and every aisle you enter re-tints
-              the whole app, so you always know where you are standing.
-            </p>
-
-            <div className="mk-hero__cta">
-              <MagneticLink href="/signup" variant="solid" className="mk-btn--pulse">
-                Start shopping
-              </MagneticLink>
-              <MagneticLink href="/#how-it-works" variant="quiet">
-                See how it works
-              </MagneticLink>
-            </div>
-
-            <p className="mk-hero__note">
-              <span className="mk-live-dot" aria-hidden="true" />
-              {locked
-                ? `Locked to ${shown?.name ?? 'an aisle'} — pick another any time.`
-                : 'Hover an aisle below. The page follows you into it.'}
-            </p>
-          </Depth>
-        </Tilt3D>
-
-        {/* ── the live aisle picker + the numbers + three real lines ──────────── */}
-        <div className="mk-grid">
-          <div className="mk-cell mk-cell--6 tkr-card" style={{ ['--i' as string]: 0 }}>
-            <div className="mk-picker">
-              <p className="mk-eyebrow">{locked ? 'Your aisle' : 'Now tinting'}</p>
-
-              <ul
-                className="mk-picker__grid"
-                onMouseLeave={() => {
-                  setHovered(null);
-                  clearPreview();
-                }}
-              >
-                {AISLES.map((a) => {
-                  const on = shown?.key === a.key;
-                  return (
-                    <li key={a.key}>
-                      <button
-                        type="button"
-                        className="mk-pick"
-                        style={swatchVar(a.key)}
-                        data-on={on}
-                        aria-pressed={on}
-                        onMouseEnter={() => {
-                          setHovered(a.key);
-                          preview(a.key);
-                        }}
-                        onFocus={() => {
-                          setHovered(a.key);
-                          preview(a.key);
-                        }}
-                        onBlur={() => {
-                          setHovered(null);
-                          clearPreview();
-                        }}
-                        onClick={() => {
-                          setHovered(null);
-                          setLocked(true);
-                          setAisle(a.key);
-                        }}
-                      >
-                        <span className="mk-pick__dot" aria-hidden="true" />
-                        <span className="mk-pick__name">{a.name}</span>
-                        <span className="mk-pick__hi" aria-hidden="true">
-                          {a.hindi}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-
-              {shown ? (
-                <p className="mk-picker__blurb">
-                  <span className="mk-picker__src">hue from {shown.source}</span>
-                  {shown.blurb}
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mk-cell mk-cell--3 mk-cell--tone-mint tkr-card" style={{ ['--i' as string]: 1 }}>
-            <div className="mk-stat">
-              <span className="mk-stat__value">
-                <CountUp to={AISLES.length} format={(n) => String(Math.round(n)).padStart(2, '0')} />
-              </span>
-              <span className="mk-stat__label">Chromatic aisles</span>
-            </div>
-          </div>
-
-          <div className="mk-cell mk-cell--3 mk-cell--tone-coral tkr-card" style={{ ['--i' as string]: 2 }}>
-            <div className="mk-stat">
-              <span className="mk-stat__value">
-                <CountUp to={22} />
-                <span className="mk-stat__unit">min</span>
-              </span>
-              <span className="mk-stat__label">Typical handover</span>
-            </div>
-          </div>
-
-          <div className="mk-cell mk-cell--3 mk-cell--tone-violet tkr-card" style={{ ['--i' as string]: 3 }}>
-            <div className="mk-stat">
-              <span className="mk-stat__value">
-                <CountUp to={5} />
-                <span className="mk-stat__unit">km</span>
-              </span>
-              <span className="mk-stat__label">Serviceable radius</span>
-            </div>
-          </div>
-
-          <div className="mk-cell mk-cell--3 mk-cell--tone-gold tkr-card" style={{ ['--i' as string]: 4 }}>
-            <div className="mk-stat">
-              <span className="mk-stat__value">
-                <CountUp to={49900} format={(n) => formatPaise(Math.round(n))} />
-              </span>
-              <span className="mk-stat__label">Free delivery over</span>
-            </div>
-          </div>
-
-          {lines.map((line, i) => (
-            <div
-              className="mk-cell mk-cell--4 tkr-card"
-              style={{ ['--i' as string]: 5 + i }}
-              key={line.name}
+        {/* The plate: one large photograph with three behind it. Decorative
+            as a composition, but each image still carries real alt text —
+            a screen reader is told what the food is, not that there is a
+            "hero image". */}
+        <div className="mk-plate" aria-hidden="false">
+          {PLATE.map((shot, i) => (
+            <figure
+              className={i === 0 ? 'mk-plate__cell mk-plate__cell--lead' : 'mk-plate__cell'}
+              key={shot.src}
+              data-aisle={shot.aisle}
+              style={{ ['--i' as string]: i }}
             >
-              <div className="mk-feature" style={swatchVar(line.aisle)}>
-                <div className="mk-feature__art" style={{ color: `var(--aisle-${line.aisle}-ink)` }}>
-                  <AisleGlyph aisleKey={line.aisle} />
-                </div>
-                <div className="mk-feature__row">
-                  <span className="mk-feature__name">{line.name}</span>
-                  <span className="mk-feature__price">
-                    <CountUp to={line.paise} format={(n) => formatPaise(Math.round(n))} />
-                  </span>
-                </div>
-                <div className="mk-feature__row">
-                  <span className="mk-feature__unit">{line.unit}</span>
-                  <span className="mk-feature__unit">{line.aisleName}</span>
-                </div>
-              </div>
-            </div>
+              <Image
+                src={shot.src}
+                alt={shot.alt}
+                width={i === 0 ? 720 : 360}
+                height={i === 0 ? 720 : 360}
+                className="mk-plate__img"
+                priority={i === 0}
+                sizes={
+                  i === 0
+                    ? '(max-width: 900px) 90vw, 420px'
+                    : '(max-width: 900px) 30vw, 200px'
+                }
+              />
+            </figure>
           ))}
         </div>
       </div>
+
+      <p className="mk-hero__note">
+        <Link className="mk-link" href="/stores">
+          Or browse store by store →
+        </Link>
+      </p>
     </section>
   );
 }

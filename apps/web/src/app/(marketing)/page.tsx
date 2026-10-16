@@ -5,6 +5,9 @@ import { AISLES } from '@mandi/design-system';
 import { Hero } from '@/components/marketing/Hero';
 import { ProduceTicker } from '@/components/marketing/ProduceTicker';
 import { AisleShowcase } from '@/components/marketing/AisleShowcase';
+import { FeaturedShelf } from '@/components/marketing/FeaturedShelf';
+import { DeliveryCheck } from '@/components/marketing/DeliveryCheck';
+import { Faq } from '@/components/marketing/Faq';
 import { MagneticLink } from '@/components/marketing/MagneticLink';
 import { APP_NAME, APP_TITLE } from '@/config/brand';
 
@@ -14,12 +17,12 @@ export const metadata: Metadata = {
   // template appends the brand to a title that already carries it.
   title: { absolute: APP_TITLE },
   description:
-    'Groceries from the kirana, dairy and bakery already near you. Eight aisles, each with its own colour, and an app that re-tints as you walk through them. Delivery in about 22 minutes across a 5 km radius.',
+    'Groceries from the kirana, dairy and bakery already near you. Nine aisles, each with its own colour, and an app that re-tints as you walk through them. Delivery in about 22 minutes across a 5 km radius.',
   alternates: { canonical: '/' },
   openGraph: {
     title: APP_TITLE,
     description:
-      'Eight aisles, eight colours, one market. Multi-vendor grocery delivery built for India.',
+      'Nine aisles, nine colours, one market. Multi-vendor grocery delivery built for India.',
     url: '/',
     type: 'website',
   },
@@ -80,6 +83,9 @@ export default function LandingPage() {
       <Hero />
       <ProduceTicker />
 
+      {/* ── WHAT IS ACTUALLY ON THE SHELF ──────────────────────────────── */}
+      <FeaturedShelf />
+
       {/* ── HOW IT WORKS ───────────────────────────────────────────────── */}
       <section className="mk-sec" id="how-it-works">
         <div className="mk-shell">
@@ -110,6 +116,9 @@ export default function LandingPage() {
           </ul>
         </div>
       </section>
+
+      {/* ── CAN THEY EVEN USE IT? ──────────────────────────────────────── */}
+      <DeliveryCheck />
 
       {/* ── PILLAR 1: THE CHROMATIC AISLES ─────────────────────────────── */}
       <AisleShowcase />
@@ -310,6 +319,9 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── FAQ ────────────────────────────────────────────────────────── */}
+      <Faq />
+
       {/* ── CLOSING ────────────────────────────────────────────────────── */}
       <section className="mk-sec mk-sec--tight">
         <div className="mk-shell">
@@ -333,7 +345,7 @@ export default function LandingPage() {
                   ))}
                 </h2>
                 <p className="mk-lede">
-                  Eight aisles waiting. Create an account and the market opens in the
+                  Nine aisles waiting. Create an account and the market opens in the
                   colour of whatever you reach for first.
                 </p>
                 <div className="mk-closer__cta">

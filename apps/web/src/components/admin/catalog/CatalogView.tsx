@@ -32,7 +32,7 @@ export function CatalogView() {
   return (
     <AdminPage
       title="Catalog"
-      description="The shape of the shop: eight aisles, the categories inside them, and every product across every vendor."
+      description="The shape of the shop: nine aisles, the categories inside them, and every product across every vendor."
       breadcrumbs={[
         { label: 'Admin', href: '/admin' },
         { label: 'Catalog', href: '/admin/catalog' },

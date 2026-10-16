@@ -53,7 +53,7 @@ export function AisleShowcase() {
         <header className="mk-sec__head">
           <p className="mk-eyebrow">Pillar one</p>
           <h2 className="mk-title">
-            Eight aisles. Eight colours.
+            Nine aisles. Nine colours.
             <br />
             <em>One market.</em>
           </h2>
