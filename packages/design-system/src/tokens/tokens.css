@@ -92,18 +92,18 @@
   /* ── SEMANTIC — deliberately separate from the brand hues ─────────────
      `--good` happening to equal `--mint` today is a coincidence, not a
      rule. Status must stay re-colourable without touching the brand. */
-  --good: #16a34a;
-  --good-ink: #15803d;
-  --good-wash: #f0fdf4;
-  --warn: #d97706;
-  --warn-ink: #b45309;
-  --warn-wash: #fffbeb;
-  --crit: #dc2626;
-  --crit-ink: #b91c1c;
-  --crit-wash: #fef2f2;
-  --info: #2563eb;
-  --info-ink: #1d4ed8;
-  --info-wash: #eff6ff;
+  --good: #4f7a28;
+  --good-ink: #3f5f1f;
+  --good-wash: #eef4e3;
+  --warn: #b98e35;
+  --warn-ink: #8a6a22;
+  --warn-wash: #faf2dd;
+  --crit: #b03a2e;
+  --crit-ink: #8c2d24;
+  --crit-wash: #f9ebe8;
+  --info: #3f7d78;
+  --info-ink: #2c5c58;
+  --info-wash: #e9f2f1;
 
   /* ── THE AISLES — data, not decoration ────────────────────────────────
      Nine hues a shopper learns by sight. The base is the dot, the chip,
@@ -285,18 +285,18 @@
 
     --on-accent: #0d130c;
 
-    --good: #22c55e;
-    --good-ink: #4ade80;
-    --good-wash: #0b2015;
-    --warn: #eab308;
-    --warn-ink: #fde047;
+    --good: #7fae45;
+    --good-ink: #a9cf72;
+    --good-wash: #15270f;
+    --warn: #e2bf6c;
+    --warn-ink: #f6e7bb;
     --warn-wash: #271d05;
-    --crit: #ef4444;
-    --crit-ink: #fca5a5;
-    --crit-wash: #2a1012;
-    --info: #60a5fa;
-    --info-ink: #93c5fd;
-    --info-wash: #0e1c33;
+    --crit: #e07a6a;
+    --crit-ink: #f0a99c;
+    --crit-wash: #2a1210;
+    --info: #6fb0a9;
+    --info-ink: #9bd0ca;
+    --info-wash: #0e2220;
 
     --aisle-fruits: #e2884f;
     --aisle-vegetables: #7fae45;
@@ -366,18 +366,18 @@
 
   --on-accent: #0d130c;
 
-  --good: #22c55e;
-  --good-ink: #4ade80;
-  --good-wash: #0b2015;
-  --warn: #eab308;
-  --warn-ink: #fde047;
+  --good: #7fae45;
+  --good-ink: #a9cf72;
+  --good-wash: #15270f;
+  --warn: #e2bf6c;
+  --warn-ink: #f6e7bb;
   --warn-wash: #271d05;
-  --crit: #ef4444;
-  --crit-ink: #fca5a5;
-  --crit-wash: #2a1012;
-  --info: #60a5fa;
-  --info-ink: #93c5fd;
-  --info-wash: #0e1c33;
+  --crit: #e07a6a;
+  --crit-ink: #f0a99c;
+  --crit-wash: #2a1210;
+  --info: #6fb0a9;
+  --info-ink: #9bd0ca;
+  --info-wash: #0e2220;
 
   --aisle-fruits: #e2884f;
   --aisle-vegetables: #7fae45;
@@ -447,7 +447,7 @@
    interpolate. Registering these makes the aisle crossfade a real animation
    instead of a hard cut. The initial values track the light palette. */
 @property --aisle { syntax: '<color>'; inherits: true; initial-value: #5d8a2a; }
-@property --accent { syntax: '<color>'; inherits: true; initial-value: #16a34a; }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #5d8a2a; }
 
 html { transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease); }
 
