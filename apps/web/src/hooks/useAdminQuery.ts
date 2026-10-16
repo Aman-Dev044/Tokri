@@ -11,13 +11,19 @@
  *     order (the classic "stale response overwrites fresh" bug).
  *   · Re-runs when `invalidateAdmin()` fires for a matching path prefix, which
  *     is how a mutation refreshes the list it just changed.
- *   · On failure, falls back to a LABELLED fixture — see below.
+ *   · On a NETWORK failure, falls back to a LABELLED fixture — see below.
  *
- * ── THE FIXTURE FALLBACK, AND WHY IT IS SAFE ────────────────────────────────
- * Worker A's `/admin/*` endpoints are landing in parallel with this console, so
- * without a fallback every screen would be an error state and none of it would
- * be reviewable. When the request fails and `resolveFixture` knows the path,
- * the hook returns sample data with `isFixture: true`.
+ * ── THE FIXTURE FALLBACK, AND WHERE ITS LINE IS ──────────────────────
+ * This console was built while its endpoints were still landing, so without
+ * a fallback every screen would have been an error state and none of it
+ * reviewable. When the API is UNREACHABLE and `resolveFixture` knows the
+ * path, the hook returns sample data with `isFixture: true`.
+ *
+ * It stands in for an API that did not answer, NEVER for one that answered
+ * with a refusal. A 4xx or 5xx is a bug in the request this hook just made,
+ * and painting a plausible marketplace over it hides the one thing that
+ * needs fixing — which is exactly what happened to the SUPER_ADMIN overview
+ * for weeks.
  *
  * `isFixture` is not advisory. `<AdminPage>` renders an amber "sample data —
  * API not reachable" banner whenever any query on the page reports it, and the
@@ -127,7 +133,22 @@ export function useAdminQuery<T>(
             ? cause
             : new ApiError('Unexpected failure', 0, {}, true);
 
-        const fixture = resolveFixture(path, stableParams);
+        // ONLY a genuine network failure earns sample data. A 4xx or 5xx is
+        // the API answering — a refusal, not an absence — and standing a
+        // plausible marketplace over it hides the very thing that needs
+        // fixing. `useVendorQuery` and `useShopQuery` have always drawn this
+        // line; this hook did not, and that is precisely how the SUPER_ADMIN
+        // overview shipped sending `?days=30` to a DTO that takes
+        // `?from=&to=`: all six requests 400'd forever, the fixture answered
+        // every one of them, and the console displayed a complete invented
+        // marketplace — crores of GMV, thousands of orders — behind an amber
+        // banner nobody reads twice on a dashboard that looks correct.
+        //
+        // Every admin fixture stands in for an endpoint that genuinely
+        // exists, so nothing legitimately depends on the old behaviour.
+        const fixture = apiError.isNetworkError
+          ? resolveFixture(path, stableParams)
+          : null;
         if (fixture !== null) {
           // Sample data. `isFixture` forces the amber banner; see the file
           // header. Never let this path go quiet.

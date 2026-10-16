@@ -20,8 +20,10 @@
  * signed-out visitor reaches this page rather than being bounced. That is
  * handled here, in words, instead of letting the API's 401 render as a broken
  * screen. The API is the real guard either way — the middleware is UX only.
- *   TODO(middleware): add `/addresses` to `PROTECTED_PREFIXES` so a signed-out
- *   visitor is redirected to `/login?next=/addresses` like `/orders` is.
+ *   `/addresses` is in `PROTECTED_PREFIXES` now, so a signed-out visitor is
+ *   redirected to `/login?next=/addresses` exactly like `/orders` is. The
+ *   signed-out copy below is still the right fallback for the case the
+ *   middleware cannot cover: a session that expires while the page is open.
  */
 
 import Link from 'next/link';

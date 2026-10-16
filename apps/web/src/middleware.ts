@@ -62,6 +62,7 @@ const PROTECTED_PREFIXES: ReadonlyArray<{ prefix: string; roles: readonly string
   { prefix: '/cart', roles: ['customer'] },
   { prefix: '/checkout', roles: ['customer'] },
   { prefix: '/orders', roles: ['customer'] },
+  { prefix: '/addresses', roles: ['customer'] },
 ];
 
 /**

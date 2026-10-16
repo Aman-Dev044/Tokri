@@ -841,7 +841,10 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
   if (clean === '/admin/analytics/top-products') return buildTopProducts();
 
   /* ---- notifications ---- */
-  if (clean === '/notifications' || clean === '/admin/notifications') {
+  // `/admin/notifications` was an alias nothing has called for a long time.
+  // A fixture keyed to a path the app never requests is a shape with no
+  // endpoint to stay honest against — exactly what this file must not hold.
+  if (clean === '/notifications') {
     return buildNotifications();
   }
 
