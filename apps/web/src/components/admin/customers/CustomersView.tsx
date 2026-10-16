@@ -14,6 +14,7 @@ import {
 } from '@/components/admin';
 import { useDebounced } from '@/hooks';
 import { formatCount } from '@/lib/admin/format';
+import { CUSTOMER_SORT, toSortParam } from '@/lib/admin/sort';
 
 import { SampleBanner } from '../_shared-pages/SampleBanner';
 import styles from '../_shared-pages/pages.module.css';
@@ -80,7 +81,7 @@ export function CustomersView() {
         status: filters.status,
         page,
         limit: LIMIT,
-        sort: sort === null ? undefined : `${sort.dir === 'desc' ? '-' : ''}${sort.key}`,
+        sort: toSortParam(sort, CUSTOMER_SORT),
       }),
     [debouncedQ, filters.status, page, sort],
   );

@@ -20,6 +20,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAdminMutation, useAdminQuery, useDebounced } from '@/hooks';
 import { formatCount, formatPct } from '@/lib/admin/format';
+import { toSortParam, VENDOR_SORT } from '@/lib/admin/sort';
 import type { Paginated, VendorListRow, VendorStatus } from '@/lib/admin/types';
 import {
   AdminPage,
@@ -75,7 +76,7 @@ export default function AdminVendorsPage() {
     status: values.status === 'all' ? undefined : values.status,
     page,
     limit: 20,
-    sort: `${sort.dir === 'desc' ? '-' : ''}${sort.key}`,
+    sort: toSortParam(sort, VENDOR_SORT),
   });
 
   const statusMutation = useAdminMutation<{ status: VendorStatus }, VendorListRow>(

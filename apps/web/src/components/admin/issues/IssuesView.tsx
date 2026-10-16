@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { AdminPage, DataTable, DetailDrawer, FilterBar, KpiTile } from '@/components/admin';
 import { useAdminMutation, useDebounced } from '@/hooks';
 import { formatDate } from '@/lib/admin/format';
+import { ISSUE_SORT, toSortParam } from '@/lib/admin/sort';
 
 import { SampleBanner } from '../_shared-pages/SampleBanner';
 import shared from '../_shared-pages/pages.module.css';
@@ -168,7 +169,7 @@ export function IssuesView() {
         assignedToUserId: filters.assignee === UNASSIGNED ? undefined : filters.assignee,
         page,
         limit: LIMIT,
-        sort: sort === null ? undefined : `${sort.dir === 'desc' ? '-' : ''}${sort.key}`,
+        sort: toSortParam(sort, ISSUE_SORT),
       }),
     [debouncedQ, filters.status, filters.priority, filters.type, filters.assignee, page, sort],
   );
