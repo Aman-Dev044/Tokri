@@ -73,16 +73,16 @@
   --mint-wash: #eef4e3; /* the palest fill that still reads green */
 
   --coral: #b8743f; /* earth, not fire */
-  --coral-ink: #c2282d;
-  --coral-wash: #fef2f2;
+  --coral-ink: #8a5229; /* text on a clay wash */
+  --coral-wash: #f9efe6;
 
   --violet: #8a5a2b; /* kept as a NAME; it is a brown in this palette */
-  --violet-ink: #4f46e5;
-  --violet-wash: #eef2ff;
+  --violet-ink: #6b4520;
+  --violet-wash: #f4ece1;
 
   --gold: #b98e35; /* the warm secondary — ghee, honey, brass */
   --gold-ink: #8a6a22;
-  --gold-wash: #fefce8;
+  --gold-wash: #faf2dd;
 
   --accent: var(--mint);
   --accent-ink: var(--mint-ink);
@@ -272,12 +272,12 @@
     --mint-wash: #15270f;
 
     --coral: #d08a52;
-    --coral-ink: #ff7b7f;
-    --coral-wash: #2a1012;
+    --coral-ink: #ecb795;
+    --coral-wash: #2a1a10;
 
     --violet: #c09a6a;
-    --violet-ink: #a5b4fc;
-    --violet-wash: #171731;
+    --violet-ink: #dbb08a;
+    --violet-wash: #241a10;
 
     --gold: #e2bf6c;
     --gold-ink: #f6e7bb;
@@ -353,12 +353,12 @@
   --mint-wash: #15270f;
 
   --coral: #d08a52;
-  --coral-ink: #ff7b7f;
-  --coral-wash: #2a1012;
+  --coral-ink: #ecb795;
+  --coral-wash: #2a1a10;
 
   --violet: #c09a6a;
-  --violet-ink: #a5b4fc;
-  --violet-wash: #171731;
+  --violet-ink: #dbb08a;
+  --violet-wash: #241a10;
 
   --gold: #e2bf6c;
   --gold-ink: #f6e7bb;
