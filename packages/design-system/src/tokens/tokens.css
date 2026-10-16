@@ -46,18 +46,18 @@
      Four values still, but they differ by a few percent rather than by
      lightness steps. On a white interface, separation comes from the 1px
      rule between things, not from stacking tones. */
-  --void: #f4f4f5; /* behind everything; the page gutter */
-  --ground: #fafafa; /* the page */
-  --surface: #ffffff; /* a card */
-  --raised: #ffffff; /* a popover — told apart by its rule, not its fill */
-  --lifted: #f4f4f5; /* hover, pressed, the row under the cursor */
+  --void: #f2ece0; /* behind everything; the page gutter */
+  --ground: #fbf8f1; /* the page — warm cream, not white */
+  --surface: #fffdf7; /* a card */
+  --raised: #fffdf7; /* a popover — told apart by its rule, not its fill */
+  --lifted: #f4efe2; /* hover, pressed, the row under the cursor */
 
   /* ── INK ──────────────────────────────────────────────────────────── */
-  --ink: #09090b; /* 19.3:1 on surface */
-  --ink-soft: #52525b; /* 8.1:1  — secondary */
-  --ink-faint: #71717a; /* 5.1:1  — labels, captions; still AA at 14px */
-  --hairline: #e4e4e7; /* the workhorse: every card, table row, input */
-  --hairline-bright: #d4d4d8; /* a rule that needs to be seen, not felt */
+  --ink: #1f2a1b; /* 14.6:1 on surface — green-black, never pure black */
+  --ink-soft: #3d4636; /* 8.4:1  — secondary */
+  --ink-faint: #6b7363; /* 4.8:1  — labels, captions */
+  --hairline: #e7dfcc; /* the workhorse: every card, table row, input */
+  --hairline-bright: #d8cdb2; /* a rule that needs to be seen, not felt */
 
   /* ── THE ACCENT ────────────────────────────────────────────────────────
      ONE. A grocery platform that was already green stays green, so the
@@ -67,27 +67,27 @@
      The other three hues remain defined because the aisles, the delivery
      states and the charts all reference them. They are no longer brand
      colours; they are vocabulary. */
-  --mint: #16a34a;
-  --mint-ink: #15803d; /* text on a mint wash */
+  --mint: #5d8a2a; /* leaf green — the one accent */
+  --mint-ink: #3f5f1f; /* text on a green wash */
   --mint-dim: #86efac; /* a disabled or inactive mint */
-  --mint-wash: #f0fdf4; /* the palest fill that still reads as mint */
+  --mint-wash: #eef4e3; /* the palest fill that still reads green */
 
-  --coral: #e5484d;
+  --coral: #b8743f; /* earth, not fire */
   --coral-ink: #c2282d;
   --coral-wash: #fef2f2;
 
-  --violet: #6366f1;
+  --violet: #8a5a2b; /* kept as a NAME; it is a brown in this palette */
   --violet-ink: #4f46e5;
   --violet-wash: #eef2ff;
 
-  --gold: #ca8a04;
-  --gold-ink: #a16207;
+  --gold: #b98e35; /* the warm secondary — ghee, honey, brass */
+  --gold-ink: #8a6a22;
   --gold-wash: #fefce8;
 
   --accent: var(--mint);
   --accent-ink: var(--mint-ink);
   --accent-wash: var(--mint-wash);
-  --on-accent: #ffffff;
+  --on-accent: #fffdf7;
 
   /* ── SEMANTIC — deliberately separate from the brand hues ─────────────
      `--good` happening to equal `--mint` today is a coincidence, not a
@@ -110,25 +110,25 @@
      the 2px rule; `-ink` is the darker sibling for text ON that hue's
      wash. On a dark ground the ink variant was LIGHTER than the base;
      here it is darker. That inversion is the whole reason both exist. */
-  --aisle-fruits: #ea580c;
-  --aisle-vegetables: #16a34a;
-  --aisle-dairy: #ca8a04;
-  --aisle-bakery: #d97706;
-  --aisle-beverages: #0284c7;
-  --aisle-snacks: #db2777;
-  --aisle-staples: #a16207;
-  --aisle-frozen: #0891b2;
-  --aisle-electronics: #4f46e5;
+  --aisle-fruits: #c2561f;
+  --aisle-vegetables: #5d8a2a;
+  --aisle-dairy: #b98e35;
+  --aisle-bakery: #b8743f;
+  --aisle-beverages: #3f7d78;
+  --aisle-snacks: #b05b53;
+  --aisle-staples: #8a5a2b;
+  --aisle-frozen: #5a8794;
+  --aisle-electronics: #6b7a4a;
 
-  --aisle-fruits-ink: #c2410c;
-  --aisle-vegetables-ink: #15803d;
-  --aisle-dairy-ink: #a16207;
-  --aisle-bakery-ink: #b45309;
-  --aisle-beverages-ink: #0369a1;
-  --aisle-snacks-ink: #be185d;
-  --aisle-staples-ink: #854d0e;
-  --aisle-frozen-ink: #0e7490;
-  --aisle-electronics-ink: #4338ca;
+  --aisle-fruits-ink: #9c4318;
+  --aisle-vegetables-ink: #3f5f1f;
+  --aisle-dairy-ink: #8a6a22;
+  --aisle-bakery-ink: #8a5229;
+  --aisle-beverages-ink: #2c5c58;
+  --aisle-snacks-ink: #8a443e;
+  --aisle-staples-ink: #6b4520;
+  --aisle-frozen-ink: #416571;
+  --aisle-electronics-ink: #4e5b34;
 
   --aisle: var(--mint);
   --aisle-ink: var(--mint-ink);
@@ -254,36 +254,36 @@
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    --void: #09090b;
-    --ground: #0c0c0e;
-    --surface: #141417;
-    --raised: #1b1b1f;
-    --lifted: #232328;
+    --void: #080c07;
+    --ground: #0d130c;
+    --surface: #13240f;
+    --raised: #1a2c15;
+    --lifted: #22371c;
 
-    --ink: #fafafa;
-    --ink-soft: #a1a1aa;
-    --ink-faint: #8b8b93;
-    --hairline: #26262b;
-    --hairline-bright: #35353c;
+    --ink: #f4efe2;
+    --ink-soft: #b9c4ac;
+    --ink-faint: #94a089;
+    --hairline: #243a1e;
+    --hairline-bright: #35502c;
 
-    --mint: #22c55e;
-    --mint-ink: #4ade80;
+    --mint: #7fae45;
+    --mint-ink: #a9cf72;
     --mint-dim: #166534;
-    --mint-wash: #0b2015;
+    --mint-wash: #15270f;
 
-    --coral: #f05055;
+    --coral: #d08a52;
     --coral-ink: #ff7b7f;
     --coral-wash: #2a1012;
 
-    --violet: #818cf8;
+    --violet: #c09a6a;
     --violet-ink: #a5b4fc;
     --violet-wash: #171731;
 
-    --gold: #eab308;
-    --gold-ink: #fde047;
+    --gold: #e2bf6c;
+    --gold-ink: #f6e7bb;
     --gold-wash: #271d05;
 
-    --on-accent: #052e16;
+    --on-accent: #0d130c;
 
     --good: #22c55e;
     --good-ink: #4ade80;
@@ -298,25 +298,25 @@
     --info-ink: #93c5fd;
     --info-wash: #0e1c33;
 
-    --aisle-fruits: #fb923c;
-    --aisle-vegetables: #22c55e;
-    --aisle-dairy: #eab308;
-    --aisle-bakery: #f59e0b;
-    --aisle-beverages: #38bdf8;
-    --aisle-snacks: #f472b6;
-    --aisle-staples: #d4a373;
-    --aisle-frozen: #22d3ee;
-    --aisle-electronics: #818cf8;
+    --aisle-fruits: #e2884f;
+    --aisle-vegetables: #7fae45;
+    --aisle-dairy: #e2bf6c;
+    --aisle-bakery: #d8926a;
+    --aisle-beverages: #6fb0a9;
+    --aisle-snacks: #d4857c;
+    --aisle-staples: #c08b5c;
+    --aisle-frozen: #86b2c0;
+    --aisle-electronics: #9db176;
 
-    --aisle-fruits-ink: #fdba74;
-    --aisle-vegetables-ink: #4ade80;
-    --aisle-dairy-ink: #fde047;
-    --aisle-bakery-ink: #fbbf24;
-    --aisle-beverages-ink: #7dd3fc;
-    --aisle-snacks-ink: #f9a8d4;
-    --aisle-staples-ink: #e5c29f;
-    --aisle-frozen-ink: #67e8f9;
-    --aisle-electronics-ink: #a5b4fc;
+    --aisle-fruits-ink: #f0ad80;
+    --aisle-vegetables-ink: #a9cf72;
+    --aisle-dairy-ink: #f6e7bb;
+    --aisle-bakery-ink: #ecb795;
+    --aisle-beverages-ink: #9bd0ca;
+    --aisle-snacks-ink: #e8aaa3;
+    --aisle-staples-ink: #dbb08a;
+    --aisle-frozen-ink: #aed0da;
+    --aisle-electronics-ink: #c0cf9f;
 
     /* Black shadows vanish on a dark ground; these carry a little more
        weight so a dialog still separates from the page behind it. */
@@ -335,36 +335,36 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --void: #09090b;
-  --ground: #0c0c0e;
-  --surface: #141417;
-  --raised: #1b1b1f;
-  --lifted: #232328;
+  --void: #080c07;
+  --ground: #0d130c;
+  --surface: #13240f;
+  --raised: #1a2c15;
+  --lifted: #22371c;
 
-  --ink: #fafafa;
-  --ink-soft: #a1a1aa;
-  --ink-faint: #8b8b93;
-  --hairline: #26262b;
-  --hairline-bright: #35353c;
+  --ink: #f4efe2;
+  --ink-soft: #b9c4ac;
+  --ink-faint: #94a089;
+  --hairline: #243a1e;
+  --hairline-bright: #35502c;
 
-  --mint: #22c55e;
-  --mint-ink: #4ade80;
+  --mint: #7fae45;
+  --mint-ink: #a9cf72;
   --mint-dim: #166534;
-  --mint-wash: #0b2015;
+  --mint-wash: #15270f;
 
-  --coral: #f05055;
+  --coral: #d08a52;
   --coral-ink: #ff7b7f;
   --coral-wash: #2a1012;
 
-  --violet: #818cf8;
+  --violet: #c09a6a;
   --violet-ink: #a5b4fc;
   --violet-wash: #171731;
 
-  --gold: #eab308;
-  --gold-ink: #fde047;
+  --gold: #e2bf6c;
+  --gold-ink: #f6e7bb;
   --gold-wash: #271d05;
 
-  --on-accent: #052e16;
+  --on-accent: #0d130c;
 
   --good: #22c55e;
   --good-ink: #4ade80;
@@ -379,25 +379,25 @@
   --info-ink: #93c5fd;
   --info-wash: #0e1c33;
 
-  --aisle-fruits: #fb923c;
-  --aisle-vegetables: #22c55e;
-  --aisle-dairy: #eab308;
-  --aisle-bakery: #f59e0b;
-  --aisle-beverages: #38bdf8;
-  --aisle-snacks: #f472b6;
-  --aisle-staples: #d4a373;
-  --aisle-frozen: #22d3ee;
-  --aisle-electronics: #818cf8;
+  --aisle-fruits: #e2884f;
+  --aisle-vegetables: #7fae45;
+  --aisle-dairy: #e2bf6c;
+  --aisle-bakery: #d8926a;
+  --aisle-beverages: #6fb0a9;
+  --aisle-snacks: #d4857c;
+  --aisle-staples: #c08b5c;
+  --aisle-frozen: #86b2c0;
+  --aisle-electronics: #9db176;
 
-  --aisle-fruits-ink: #fdba74;
-  --aisle-vegetables-ink: #4ade80;
-  --aisle-dairy-ink: #fde047;
-  --aisle-bakery-ink: #fbbf24;
-  --aisle-beverages-ink: #7dd3fc;
-  --aisle-snacks-ink: #f9a8d4;
-  --aisle-staples-ink: #e5c29f;
-  --aisle-frozen-ink: #67e8f9;
-  --aisle-electronics-ink: #a5b4fc;
+  --aisle-fruits-ink: #f0ad80;
+  --aisle-vegetables-ink: #a9cf72;
+  --aisle-dairy-ink: #f6e7bb;
+  --aisle-bakery-ink: #ecb795;
+  --aisle-beverages-ink: #9bd0ca;
+  --aisle-snacks-ink: #e8aaa3;
+  --aisle-staples-ink: #dbb08a;
+  --aisle-frozen-ink: #aed0da;
+  --aisle-electronics-ink: #c0cf9f;
 
   --lift-1: 0 1px 2px rgb(0 0 0 / 0.4);
   --lift-2: 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.3);
@@ -446,7 +446,7 @@
 /* A custom property is an untyped string to the engine, and strings do not
    interpolate. Registering these makes the aisle crossfade a real animation
    instead of a hard cut. The initial values track the light palette. */
-@property --aisle { syntax: '<color>'; inherits: true; initial-value: #16a34a; }
+@property --aisle { syntax: '<color>'; inherits: true; initial-value: #5d8a2a; }
 @property --accent { syntax: '<color>'; inherits: true; initial-value: #16a34a; }
 
 html { transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease); }

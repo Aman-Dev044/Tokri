@@ -8,6 +8,7 @@ import { Model, Types } from 'mongoose';
 
 import { SeedCatalogueModule } from './seed-catalogue.module';
 import { DEMO_CATEGORIES, DEMO_PRODUCTS } from './demo-catalogue';
+import { imageForProduct } from './product-images';
 import { Category, CategoryDocument } from '../schemas/category.schema';
 import { Inventory, InventoryDocument } from '../schemas/inventory.schema';
 import { Product, ProductDocument } from '../schemas/product.schema';
@@ -145,6 +146,7 @@ async function run(ctx: INestApplicationContext): Promise<void> {
   // ── Products + stock ─────────────────────────────────────────────────
   let created = 0;
   let updated = 0;
+  let withImage = 0;
 
   for (const [index, spec] of DEMO_PRODUCTS.entries()) {
     const categoryId = categoryIdByAisle.get(spec.aisleKey);
@@ -161,6 +163,11 @@ async function run(ctx: INestApplicationContext): Promise<void> {
     // than computed in a view, so every surface shows the same number.
     const discountPct =
       spec.mrp > 0 ? Math.round(((spec.mrp - spec.price) / spec.mrp) * 100) : 0;
+
+    // Matched on what the product IS, so a product added later picks up
+    // the right photograph without anyone wiring one by hand. `null` keeps
+    // the drawn plate, which is the honest answer when no photo fits.
+    const image = imageForProduct(spec.name);
 
     const searchText = [spec.name, spec.brand ?? '', spec.aisleKey]
       .filter(Boolean)
@@ -186,9 +193,15 @@ async function run(ctx: INestApplicationContext): Promise<void> {
           searchText,
           description: `${spec.name}${spec.brand ? ` by ${spec.brand}` : ''}.`,
         },
-        // `images: []` on insert only — never on update, or a vendor who
-        // uploaded a photo would lose it on the next seed run.
-        $setOnInsert: { vendorId, sku, images: [], isDemo: true },
+        // The catalogue photograph, on INSERT ONLY — never on update, or a
+        // vendor who uploaded their own picture of the shelf would lose it
+        // the next time anyone ran the seed.
+        $setOnInsert: {
+          vendorId,
+          sku,
+          images: image === null ? [] : [image],
+          isDemo: true,
+        },
       },
       { upsert: true, new: true },
     );
@@ -198,6 +211,7 @@ async function run(ctx: INestApplicationContext): Promise<void> {
     } else {
       created++;
     }
+    if (image !== null) withImage++;
 
     await inventory.findOneAndUpdate(
       { vendorId, productId: doc._id },
@@ -217,6 +231,10 @@ async function run(ctx: INestApplicationContext): Promise<void> {
   logger.log(
     `Products: ${created} created, ${updated} updated. ` +
       `${STOCK_PER_PRODUCT} units of stock each.`,
+  );
+  logger.log(
+    `Photographs: ${withImage} of ${DEMO_PRODUCTS.length} products have one. ` +
+      'The rest keep the drawn plate on purpose — see product-images.ts.',
   );
   logger.log(
     'Everything written is isDemo:true — remove it with ' +

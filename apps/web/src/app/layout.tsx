@@ -118,9 +118,12 @@ export const viewport: Viewport = {
   // to be kept in step by hand. If `--ground` changes, change these —
   // otherwise the phone's status bar sits in one colour directly above a
   // page in another.
+  // These two must track `--ground` in tokens.css: the browser paints the
+  // address bar and the area behind an overscroll with them, so a stale
+  // value shows as a band of the PREVIOUS design system above the page.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf7ff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0e0a14' },
+    { media: '(prefers-color-scheme: light)', color: '#fbf8f1' },
+    { media: '(prefers-color-scheme: dark)', color: '#0d130c' },
   ],
 };
 
