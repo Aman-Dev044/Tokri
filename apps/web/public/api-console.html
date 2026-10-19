@@ -277,6 +277,10 @@
       (() => {
         'use strict';
 
+        // Written this way because a literal escape in this file has been
+        // mangled by the tooling that generates it more than once.
+        const NEWLINE = String.fromCharCode(10);
+
         const $ = (id) => document.getElementById(id);
         const el = (tag, attrs, ...kids) => {
           const node = document.createElement(tag);
@@ -307,14 +311,29 @@
           spec: null,
           baseUrl: saved.baseUrl || '',
           tokens: saved.tokens || {},
+          // Asked once per role, then kept HERE — in this browser's
+          // localStorage, which is not git and not something the web app
+          // serves. That is the whole distinction: the generated
+          // `api-console.json` is fetched by anyone who can reach the
+          // site, so a password in it is published; a password you typed
+          // into your own browser is not.
+          secrets: saved.secrets || {},
           current: null,
           respTab: 'body',
+          reqTab: 'json',
           lastResponse: null,
         };
 
         const persist = () => {
           try {
-            localStorage.setItem(STORE, JSON.stringify({ baseUrl: state.baseUrl, tokens: state.tokens }));
+            localStorage.setItem(
+              STORE,
+              JSON.stringify({
+                baseUrl: state.baseUrl,
+                tokens: state.tokens,
+                secrets: state.secrets,
+              }),
+            );
           } catch { /* private window; the console still works for this session */ }
         };
 
@@ -346,6 +365,21 @@
           $('search').addEventListener('input', renderTree);
           renderTokens();
           renderTree();
+
+          // The placeholder said "Loading the endpoint list…" and stayed
+          // saying it after the list had loaded, because nothing replaced
+          // it until an endpoint was picked. It is a resting state, not a
+          // loading one, so it should say what to do next.
+          $('detail').replaceChildren(
+            el('p', { class: 'empty' },
+              'Pick an endpoint on the left. ',
+              spec.endpointCount + ' of them, grouped by the role allowed to call it.'),
+            el('p', { class: 'empty', style: 'margin-top:14px' },
+              'Sign in with a chip at the top first — you are asked for the password ',
+              'once per role and it is remembered in this browser only. It is not in ',
+              el('code', { text: 'api-console.json' }),
+              ', which this site serves to anyone.'),
+          );
         }
 
         /* ── sign in ────────────────────────────────────────────────── */
@@ -366,6 +400,7 @@
 
         function signOut(login) {
           delete state.tokens[login.tokenVar];
+          delete state.secrets[login.tokenVar];
           persist();
           renderTokens();
           if (state.current) renderDetail(state.current);
@@ -385,8 +420,22 @@
          * token is, and tokens expire.
          */
         function askPassword(login) {
+          // Already typed once on this browser — do not ask again.
+          const remembered = state.secrets[login.tokenVar];
+          if (remembered) return Promise.resolve(remembered);
+
           return new Promise((resolve) => {
-            const pass = el('input', { type: 'password', placeholder: 'password', autocomplete: 'current-password' });
+            // `autocomplete="off"` and a name the browser does not
+            // recognise: Chrome's saved-password dropdown was opening on
+            // top of this dialog and covering the Sign in button.
+            const pass = el('input', {
+              type: 'password',
+              placeholder: 'password',
+              autocomplete: 'off',
+              name: 'tokri-console-secret',
+            });
+            const remember = el('input', { type: 'checkbox' });
+            remember.checked = true;
             const go = el('button', { class: 'primary', text: 'Sign in' });
             const cancel = el('button', { text: 'Cancel' });
             const panel = el('div', {
@@ -407,10 +456,19 @@
                   el('code', { text: 'SEED_' + login.label.toUpperCase().replace(' ', '') + '_PASSWORD' }),
                   ' in apps/api/.env'),
                 pass,
+                el('label', { class: 'hint', style: 'display:flex;gap:7px;align-items:center;margin:0' },
+                  remember, 'Remember on this browser — then you are never asked again'),
                 el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' }, cancel, go),
               ),
             );
-            const done = (value) => { panel.remove(); resolve(value || null); };
+            const done = (value) => {
+              panel.remove();
+              if (value && remember.checked) {
+                state.secrets[login.tokenVar] = value;
+                persist();
+              }
+              resolve(value || null);
+            };
             cancel.addEventListener('click', () => done(null));
             panel.addEventListener('click', (e) => { if (e.target === panel) done(null); });
             document.body.append(panel);
@@ -599,7 +657,78 @@
           const send = el('button', { class: 'primary', text: 'Send request' });
           const curl = el('button', { text: 'Copy as cURL' });
           const note = el('span', { class: 'hint' });
-          parts.push(el('div', { class: 'actions' }, send, curl, note));
+          const preview = el('button', { text: 'Show request' });
+          parts.push(el('div', { class: 'actions' }, send, preview, curl, note));
+
+          /* ── the request, exactly as it will go out ───────────────────
+             Postman shows you the raw request next to the response, and
+             that is the thing you paste into a bug report. Built from the
+             same `build()` the Send button uses, so it cannot describe a
+             request different from the one that is sent.
+
+             The token is MASKED here. This panel is for pasting into
+             tickets and chats, and a bearer token in a screenshot is a
+             live credential until it expires. */
+          const requestBox = el('div', { id: 'request', style: 'display:none' });
+          parts.push(requestBox);
+
+          function renderRequest() {
+            const { url, headers, body } = build();
+            const lines = [`${endpoint.method} ${url} HTTP/1.1`];
+            for (const [k, v] of Object.entries(headers)) {
+              lines.push(`${k}: ${k === 'Authorization' ? 'Bearer <' + tokenVar + '>' : v}`);
+            }
+            if (body) {
+              lines.push('');
+              lines.push(body);
+            }
+            const raw = lines.join(NEWLINE);
+            const json = JSON.stringify(
+              {
+                method: endpoint.method,
+                url,
+                headers: Object.fromEntries(
+                  Object.entries(headers).map(([k, v]) =>
+                    [k, k === 'Authorization' ? 'Bearer <' + tokenVar + '>' : v]),
+                ),
+                body: body ? JSON.parse(body) : undefined,
+              },
+              null,
+              2,
+            );
+
+            const tab = (key, label) =>
+              el('button', {
+                'aria-pressed': String(state.reqTab === key),
+                onclick: () => { state.reqTab = key; renderRequest(); },
+                text: label,
+              });
+
+            requestBox.replaceChildren(
+              el('div', { class: 'tabs' }, tab('json', 'JSON'), tab('raw', 'Raw')),
+              el('pre', { text: state.reqTab === 'raw' ? raw : json }),
+              el('p', { class: 'hint' },
+                'The bearer token is masked here so this can be pasted anywhere safely.'),
+            );
+          }
+
+          preview.addEventListener('click', () => {
+            const open = requestBox.style.display !== 'none';
+            if (open) {
+              requestBox.style.display = 'none';
+              preview.textContent = 'Show request';
+              return;
+            }
+            try {
+              renderRequest();
+            } catch (cause) {
+              note.textContent = 'Body is not valid JSON — ' + cause.message;
+              note.className = 'hint err';
+              return;
+            }
+            requestBox.style.display = '';
+            preview.textContent = 'Hide request';
+          });
 
           const responseBox = el('div', { id: 'response' });
           parts.push(responseBox);
