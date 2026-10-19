@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('health')
@@ -11,12 +11,28 @@ class HealthController {
   constructor(@InjectConnection() private readonly mongo: Connection) {}
 
   @Public()
+  @ApiOperation({
+    summary: 'Liveness probe',
+    description:
+      'Answers as long as the process is up. It touches nothing else on ' +
+      'purpose: a liveness probe that checks the database restarts a ' +
+      'healthy API every time the database hiccups.',
+  })
   @Get('live')
   live() {
     return { status: 'ok', at: new Date().toISOString() };
   }
 
   @Public()
+  @ApiOperation({
+    summary: 'Readiness probe',
+    description:
+      'Whether this instance can actually serve traffic: MongoDB reachable, ' +
+      'and the deployment a REPLICA SET rather than a standalone mongod. ' +
+      'Transactions do not exist on standalone, and without them the ' +
+      'checkout stock reservation cannot be atomic — so a standalone ' +
+      'deployment is not ready even though it answers.',
+  })
   @Get('ready')
   async ready() {
     const mongoUp = this.mongo.readyState === 1;

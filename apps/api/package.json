@@ -14,7 +14,9 @@
     "test:unit": "jest",
     "test:integration": "jest --config test/jest-integration.json",
     "seed:roles": "ts-node -r tsconfig-paths/register src/database/seeds/seed-roles.ts",
-    "seed:catalogue": "ts-node -r tsconfig-paths/register src/database/seeds/seed-catalogue.ts"
+    "seed:catalogue": "ts-node -r tsconfig-paths/register src/database/seeds/seed-catalogue.ts",
+    "docs:api": "node scripts/build-api-docs.mjs",
+    "docs:verify": "node scripts/verify-api-docs.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
