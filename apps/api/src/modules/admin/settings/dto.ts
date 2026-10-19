@@ -84,7 +84,7 @@ export class UpdateSettingsDto {
   @Length(2, 60)
   platformName?: string;
 
-  @ApiPropertyOptional({ example: 'support@mandi.app' })
+  @ApiPropertyOptional({ example: 'support@example.com' })
   @IsOptional()
   @IsEmail()
   @Length(5, 120)

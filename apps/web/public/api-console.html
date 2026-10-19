@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Tokri API console</title>
+
+    <!--
+      ════════════════════════════════════════════════════════════════════
+       A CONSOLE FOR THE API, SERVED BY THE WEB APP
+      ════════════════════════════════════════════════════════════════════
+
+      Open it at http://localhost:3000/api-console.html
+
+      ── Why it lives in the web app's public folder ─────────────────────
+      Because of CORS, and that is not an implementation detail. The API's
+      allowlist comes from CORS_ORIGINS in .env and contains exactly
+      http://localhost:3000 and http://127.0.0.1:3000. Opened from the
+      filesystem this page would send `Origin: null` and every request
+      would be refused — a console that cannot call the API.
+
+      Served from :3000 it is already an allowed origin, so nothing about
+      the API's security has to be loosened to use it.
+
+      ── Why everything is inline ────────────────────────────────────────
+      No CDN, no build step, no dependency to go stale. The page works with
+      no network beyond the API itself. The CSP this app sets allows
+      'unsafe-inline' for script and style, so inline is also the only way
+      this file can run without being added to a bundler.
+
+      ── What it reads ───────────────────────────────────────────────────
+      `api-console.json`, written by `pnpm --filter @mandi/api docs:api`
+      from the live OpenAPI document plus the @Roles()/@Public() decorators
+      on the controllers. The data is never hand-edited: regenerate it and
+      this page is current.
+    -->
+
+    <style>
+      /* The app's own palette, so the console does not look like a
+         different product bolted on. */
+      :root {
+        --ground: #fbf8f1;
+        --surface: #fffdf7;
+        --sunk: #f4efe2;
+        --ink: #1f2a1b;
+        --ink-soft: #3d4636;
+        --ink-faint: #6b7363;
+        --line: #e7dfcc;
+        --line-strong: #d8cdb2;
+        --accent: #5d8a2a;
+        --accent-ink: #3f5f1f;
+        --gold: #b98e35;
+        --good: #4f7a28;
+        --warn: #b98e35;
+        --crit: #b03a2e;
+        --info: #3f7d78;
+        --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Menlo, monospace;
+        --sans: "Segoe UI", system-ui, -apple-system, sans-serif;
+        --r: 8px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --ground: #0d130c;
+          --surface: #13240f;
+          --sunk: #1a2c15;
+          --ink: #f4efe2;
+          --ink-soft: #b9c4ac;
+          --ink-faint: #94a089;
+          --line: #243a1e;
+          --line-strong: #35502c;
+          --accent: #7fae45;
+          --accent-ink: #a9cf72;
+          --gold: #e2bf6c;
+          --good: #7fae45;
+          --warn: #e2bf6c;
+          --crit: #e07a6a;
+          --info: #6fb0a9;
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        font-size: 14px;
+        color: var(--ink);
+        background: var(--ground);
+        display: grid;
+        grid-template-rows: auto 1fr;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* ── top bar ───────────────────────────────────────────────────── */
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+      }
+      .brand { font-weight: 700; letter-spacing: -0.01em; }
+      .brand span { color: var(--accent-ink); }
+      .grow { flex: 1 1 auto; }
+
+      label.field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-faint); }
+      input[type="text"], input[type="password"], textarea, select {
+        font-family: var(--mono);
+        font-size: 12.5px;
+        color: var(--ink);
+        background: var(--ground);
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        padding: 6px 8px;
+      }
+      input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+      #baseUrl { width: 260px; }
+
+      button {
+        font-family: var(--sans);
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--ink);
+        background: var(--sunk);
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        padding: 6px 11px;
+        cursor: pointer;
+      }
+      button:hover { border-color: var(--accent); }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fffdf7; }
+      button.primary:hover { background: var(--accent-ink); }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+      /* ── token chips ───────────────────────────────────────────────── */
+      .tokens { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 8px; border-radius: 999px;
+        border: 1px solid var(--line-strong); background: var(--ground);
+        font-size: 11.5px; cursor: pointer;
+      }
+      .chip[data-on="true"] { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 12%, var(--surface)); }
+      .chip .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--line-strong); }
+      .chip[data-on="true"] .dot { background: var(--good); }
+
+      /* ── layout ────────────────────────────────────────────────────── */
+      main { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 0; }
+      @media (max-width: 900px) { main { grid-template-columns: 1fr; } nav { display: none; } }
+
+      nav {
+        border-right: 1px solid var(--line);
+        background: var(--surface);
+        overflow-y: auto;
+        min-height: 0;
+      }
+      .search { position: sticky; top: 0; padding: 10px; background: var(--surface); border-bottom: 1px solid var(--line); }
+      .search input { width: 100%; }
+
+      .sec { padding: 10px 10px 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-ink); }
+      .sec small { display: block; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-faint); margin-top: 3px; }
+      details.grp { border-top: 1px solid var(--line); }
+      details.grp > summary {
+        padding: 7px 12px; cursor: pointer; font-size: 12px; font-weight: 600;
+        color: var(--ink-soft); list-style: none;
+      }
+      details.grp > summary::-webkit-details-marker { display: none; }
+      details.grp > summary:hover { background: var(--sunk); }
+      details.grp > summary .count { color: var(--ink-faint); font-weight: 400; }
+
+      .ep {
+        display: flex; align-items: baseline; gap: 7px; width: 100%;
+        padding: 6px 12px 6px 18px; border: 0; border-radius: 0;
+        background: transparent; text-align: left; cursor: pointer;
+        font-family: var(--mono); font-size: 11.5px; font-weight: 400;
+        color: var(--ink-soft);
+      }
+      .ep:hover { background: var(--sunk); border-color: transparent; }
+      .ep[aria-current="true"] { background: color-mix(in oklab, var(--accent) 14%, var(--surface)); color: var(--ink); }
+      .ep .p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+      .verb { font-family: var(--mono); font-size: 10.5px; font-weight: 700; flex: 0 0 46px; }
+      .verb.GET { color: var(--info); }
+      .verb.POST { color: var(--good); }
+      .verb.PATCH, .verb.PUT { color: var(--warn); }
+      .verb.DELETE { color: var(--crit); }
+
+      /* ── detail pane ───────────────────────────────────────────────── */
+      section.detail { overflow-y: auto; min-height: 0; padding: 18px 22px 60px; }
+      .empty { color: var(--ink-faint); max-width: 48ch; line-height: 1.7; }
+
+      h1.route { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0 0 6px; font-size: 18px; font-family: var(--mono); }
+      .summary { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+      .desc { margin: 0 0 14px; max-width: 78ch; line-height: 1.65; color: var(--ink-soft); }
+
+      .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+      .badge { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line-strong); }
+      .badge.role { border-color: var(--accent); color: var(--accent-ink); }
+      .badge.pub { border-color: var(--good); color: var(--good); }
+      .badge.warn { border-color: var(--warn); color: var(--warn); }
+
+      fieldset { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin: 0 0 14px; background: var(--surface); }
+      legend { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); padding: 0 6px; }
+
+      table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 600; padding: 4px 8px 6px 0; }
+      td { padding: 4px 8px 4px 0; vertical-align: top; border-top: 1px solid var(--line); }
+      td.k { font-family: var(--mono); white-space: nowrap; }
+      td.t { color: var(--ink-faint); font-family: var(--mono); font-size: 11.5px; white-space: nowrap; }
+      td input[type="text"] { width: 100%; }
+      td.d { color: var(--ink-faint); line-height: 1.5; }
+      .req { color: var(--crit); }
+
+      textarea { width: 100%; min-height: 150px; resize: vertical; line-height: 1.5; }
+
+      .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 18px; }
+
+      .resp-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 8px; font-size: 12.5px; }
+      .status { font-family: var(--mono); font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+      .status.s2 { background: color-mix(in oklab, var(--good) 18%, var(--surface)); color: var(--good); }
+      .status.s4 { background: color-mix(in oklab, var(--warn) 20%, var(--surface)); color: var(--warn); }
+      .status.s5, .status.s0 { background: color-mix(in oklab, var(--crit) 18%, var(--surface)); color: var(--crit); }
+      .meta { color: var(--ink-faint); font-family: var(--mono); font-size: 11.5px; }
+
+      pre {
+        margin: 0; padding: 12px; border-radius: var(--r);
+        background: var(--sunk); border: 1px solid var(--line);
+        font-family: var(--mono); font-size: 12px; line-height: 1.55;
+        overflow: auto; max-height: 460px; white-space: pre-wrap; word-break: break-word;
+      }
+      .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+      .tabs button { border-radius: 999px; font-size: 11.5px; padding: 4px 10px; }
+      .tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fffdf7; }
+
+      .hint { font-size: 11.5px; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.6; }
+      .err { color: var(--crit); }
+      code { font-family: var(--mono); background: var(--sunk); padding: 1px 5px; border-radius: 4px; font-size: 0.92em; }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <div class="brand">Tokri <span>API console</span></div>
+
+      <label class="field">
+        base
+        <input type="text" id="baseUrl" spellcheck="false" />
+      </label>
+
+      <div class="tokens" id="tokens"></div>
+
+      <div class="grow"></div>
+      <span class="meta" id="generated"></span>
+    </header>
+
+    <main>
+      <nav>
+        <div class="search">
+          <input type="text" id="search" placeholder="filter — path, name or method" spellcheck="false" />
+        </div>
+        <div id="tree"></div>
+      </nav>
+
+      <section class="detail" id="detail">
+        <p class="empty">Loading the endpoint list…</p>
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        'use strict';
+
+        const $ = (id) => document.getElementById(id);
+        const el = (tag, attrs, ...kids) => {
+          const node = document.createElement(tag);
+          for (const [k, v] of Object.entries(attrs || {})) {
+            if (v === null || v === undefined || v === false) continue;
+            if (k === 'class') node.className = v;
+            else if (k === 'text') node.textContent = v;
+            else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+            else node.setAttribute(k, v === true ? '' : String(v));
+          }
+          for (const kid of kids.flat()) {
+            if (kid === null || kid === undefined || kid === false) continue;
+            node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+          }
+          return node;
+        };
+
+        /* ── state ──────────────────────────────────────────────────── */
+        // Tokens survive a reload: signing in five times because you
+        // refreshed the page is exactly the friction that makes a console
+        // go unused. They are scoped to this origin and this tool.
+        const STORE = 'tokri.console.v1';
+        const saved = (() => {
+          try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; }
+        })();
+
+        const state = {
+          spec: null,
+          baseUrl: saved.baseUrl || '',
+          tokens: saved.tokens || {},
+          current: null,
+          respTab: 'body',
+          lastResponse: null,
+        };
+
+        const persist = () => {
+          try {
+            localStorage.setItem(STORE, JSON.stringify({ baseUrl: state.baseUrl, tokens: state.tokens }));
+          } catch { /* private window; the console still works for this session */ }
+        };
+
+        /* ── load the generated description ─────────────────────────── */
+        fetch('api-console.json')
+          .then((r) => {
+            if (!r.ok) throw new Error('api-console.json responded ' + r.status);
+            return r.json();
+          })
+          .then(start)
+          .catch((cause) => {
+            $('detail').replaceChildren(
+              el('p', { class: 'empty err' },
+                'Could not load api-console.json — ' + cause.message),
+              el('p', { class: 'hint' },
+                'Generate it with: pnpm --filter @mandi/api docs:api'),
+            );
+          });
+
+        function start(spec) {
+          state.spec = spec;
+          if (!state.baseUrl) state.baseUrl = spec.baseUrl;
+          $('baseUrl').value = state.baseUrl;
+          $('baseUrl').addEventListener('change', (e) => {
+            state.baseUrl = e.target.value.replace(/\/+$/, '');
+            persist();
+          });
+          $('generated').textContent = spec.endpointCount + ' endpoints · generated ' + spec.generatedAt.slice(0, 16).replace('T', ' ');
+          $('search').addEventListener('input', renderTree);
+          renderTokens();
+          renderTree();
+        }
+
+        /* ── sign in ────────────────────────────────────────────────── */
+        function renderTokens() {
+          const box = $('tokens');
+          box.replaceChildren(
+            ...state.spec.logins.map((login) => {
+              const on = Boolean(state.tokens[login.tokenVar]);
+              return el('button', {
+                class: 'chip',
+                'data-on': String(on),
+                title: on ? 'Signed in — click to sign out' : 'Click to sign in as ' + login.label,
+                onclick: () => (on ? signOut(login) : signIn(login)),
+              }, el('span', { class: 'dot' }), login.label);
+            }),
+          );
+        }
+
+        function signOut(login) {
+          delete state.tokens[login.tokenVar];
+          persist();
+          renderTokens();
+          if (state.current) renderDetail(state.current);
+        }
+
+        /**
+         * Ask for the password.
+         *
+         * `api-console.json` deliberately carries no passwords: it is
+         * served from the web app's public folder, so anything in it is
+         * readable by anyone who can reach the site. Shipping the seeded
+         * credentials there published a working super admin password at a
+         * URL that needs no token.
+         *
+         * The password lives only in this tab, in memory. It is used once
+         * to get a token and never written to localStorage — only the
+         * token is, and tokens expire.
+         */
+        function askPassword(login) {
+          return new Promise((resolve) => {
+            const pass = el('input', { type: 'password', placeholder: 'password', autocomplete: 'current-password' });
+            const go = el('button', { class: 'primary', text: 'Sign in' });
+            const cancel = el('button', { text: 'Cancel' });
+            const panel = el('div', {
+              style:
+                'position:fixed;inset:0;display:grid;place-items:center;' +
+                'background:rgba(0,0,0,.35);z-index:50',
+            },
+              el('form', {
+                style:
+                  'background:var(--surface);border:1px solid var(--line-strong);' +
+                  'border-radius:10px;padding:18px;min-width:320px;display:flex;' +
+                  'flex-direction:column;gap:10px',
+                onsubmit: (e) => { e.preventDefault(); done(pass.value); },
+              },
+                el('strong', { text: 'Sign in as ' + login.label }),
+                el('p', { class: 'hint', style: 'margin:0' },
+                  login.identifier, ' — password is ',
+                  el('code', { text: 'SEED_' + login.label.toUpperCase().replace(' ', '') + '_PASSWORD' }),
+                  ' in apps/api/.env'),
+                pass,
+                el('div', { style: 'display:flex;gap:8px;justify-content:flex-end' }, cancel, go),
+              ),
+            );
+            const done = (value) => { panel.remove(); resolve(value || null); };
+            cancel.addEventListener('click', () => done(null));
+            panel.addEventListener('click', (e) => { if (e.target === panel) done(null); });
+            document.body.append(panel);
+            pass.focus();
+          });
+        }
+
+        async function signIn(login) {
+          const password = await askPassword(login);
+          if (!password) return;
+          try {
+            const res = await fetch(state.baseUrl + '/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ identifier: login.identifier, password }),
+            });
+            const body = await res.json();
+            if (!res.ok) {
+              // 429 is the usual one: login is throttled per IP per minute
+              // and five roles sits right at the limit.
+              alert('Sign in failed (' + res.status + ')\n\n' + (body.detail || JSON.stringify(body)));
+              return;
+            }
+            state.tokens[login.tokenVar] = body.accessToken;
+            persist();
+            renderTokens();
+            if (state.current) renderDetail(state.current);
+          } catch (cause) {
+            alert('Could not reach the API at ' + state.baseUrl + '\n\n' + cause.message);
+          }
+        }
+
+        /* ── the endpoint tree ──────────────────────────────────────── */
+        function renderTree() {
+          const term = $('search').value.trim().toLowerCase();
+          const tree = $('tree');
+          tree.replaceChildren();
+
+          for (const section of state.spec.sections) {
+            const groups = [];
+            for (const group of section.groups) {
+              const hits = group.endpoints.filter((e) =>
+                term === '' ||
+                e.path.toLowerCase().includes(term) ||
+                (e.summary || '').toLowerCase().includes(term) ||
+                e.method.toLowerCase() === term,
+              );
+              if (hits.length > 0) groups.push([group.name, hits]);
+            }
+            if (groups.length === 0) continue;
+
+            tree.append(el('div', { class: 'sec' }, section.title,
+              el('small', { text: section.note })));
+
+            for (const [name, hits] of groups) {
+              tree.append(
+                // Open by default. A sidebar of 40 collapsed group names
+                // hides the thing the reader came for; 175 rows in a
+                // scrollable column is what an API reference looks like.
+                el('details', { class: 'grp', open: true },
+                  el('summary', {}, name, ' ', el('span', { class: 'count', text: '(' + hits.length + ')' })),
+                  ...hits.map((endpoint) =>
+                    el('button', {
+                      class: 'ep',
+                      'aria-current': String(state.current === endpoint),
+                      onclick: () => { state.current = endpoint; state.lastResponse = null; renderTree(); renderDetail(endpoint); },
+                    },
+                      el('span', { class: 'verb ' + endpoint.method, text: endpoint.method }),
+                      el('span', { class: 'p', text: endpoint.path }),
+                    )),
+                ),
+              );
+            }
+          }
+
+          if (!tree.firstChild) {
+            tree.append(el('p', { class: 'hint', style: 'padding:12px' }, 'Nothing matches “' + term + '”.'));
+          }
+        }
+
+        /* ── the detail pane ────────────────────────────────────────── */
+        function renderDetail(endpoint) {
+          const pane = $('detail');
+          const tokenVar = endpoint.tokenVar;
+          const haveToken = tokenVar ? Boolean(state.tokens[tokenVar]) : true;
+
+          const pathInputs = new Map();
+          const queryInputs = new Map();
+
+          const badges = el('div', { class: 'badges' },
+            endpoint.public
+              ? el('span', { class: 'badge pub', text: 'public — no token' })
+              : endpoint.roles.length > 0
+                ? endpoint.roles.map((r) => el('span', { class: 'badge role', text: r.toLowerCase() }))
+                : el('span', { class: 'badge', text: 'any signed-in role' }),
+            !endpoint.public && !haveToken
+              ? el('span', { class: 'badge warn', text: 'not signed in as ' + (tokenVar || '').replace('Token', '') })
+              : null,
+          );
+
+          const parts = [
+            el('h1', { class: 'route' },
+              el('span', { class: 'verb ' + endpoint.method, text: endpoint.method }),
+              el('span', { text: endpoint.path }),
+            ),
+            endpoint.summary ? el('p', { class: 'summary', text: endpoint.summary }) : null,
+            endpoint.description ? el('p', { class: 'desc', text: endpoint.description }) : null,
+            badges,
+          ];
+
+          /* path parameters */
+          if (endpoint.pathParams.length > 0) {
+            parts.push(el('fieldset', {},
+              el('legend', { text: 'Path parameters' }),
+              el('table', {},
+                el('tbody', {},
+                  ...endpoint.pathParams.map((p) => {
+                    const input = el('input', { type: 'text', placeholder: p.name, spellcheck: 'false' });
+                    pathInputs.set(p.name, input);
+                    return el('tr', {},
+                      el('td', { class: 'k' }, p.name, ' ', el('span', { class: 'req', text: '*' })),
+                      el('td', {}, input),
+                      el('td', { class: 'd', text: p.description || '' }),
+                    );
+                  }),
+                ),
+              ),
+            ));
+          }
+
+          /* query parameters */
+          if (endpoint.query.length > 0) {
+            parts.push(el('fieldset', {},
+              el('legend', { text: 'Query' }),
+              el('table', {},
+                el('thead', {}, el('tr', {},
+                  el('th', { text: '' }), el('th', { text: 'name' }),
+                  el('th', { text: 'value' }), el('th', { text: 'type' }), el('th', { text: 'notes' }))),
+                el('tbody', {},
+                  ...endpoint.query.map((q) => {
+                    const on = el('input', { type: 'checkbox' });
+                    on.checked = Boolean(q.required);
+                    const value = el('input', { type: 'text', spellcheck: 'false' });
+                    value.value = q.example === null || q.example === undefined ? '' : String(q.example);
+                    queryInputs.set(q.name, { on, value });
+                    return el('tr', {},
+                      el('td', {}, on),
+                      el('td', { class: 'k' }, q.name, q.required ? el('span', { class: 'req', text: ' *' }) : ''),
+                      el('td', {}, value),
+                      el('td', { class: 't', text: q.type }),
+                      el('td', { class: 'd', text: q.description || '' }),
+                    );
+                  }),
+                ),
+              ),
+            ));
+          }
+
+          /* body */
+          let bodyBox = null;
+          if (endpoint.body) {
+            bodyBox = el('textarea', { spellcheck: 'false' });
+            bodyBox.value = JSON.stringify(endpoint.body.example, null, 2);
+            const fields = endpoint.body.fields || [];
+            parts.push(el('fieldset', {},
+              el('legend', { text: 'Request body — application/json' }),
+              fields.length > 0
+                ? el('table', {},
+                    el('thead', {}, el('tr', {},
+                      el('th', { text: 'field' }), el('th', { text: 'type' }),
+                      el('th', { text: 'req' }), el('th', { text: 'notes' }))),
+                    el('tbody', {}, ...fields.map((f) => el('tr', {},
+                      el('td', { class: 'k', text: f.name }),
+                      el('td', { class: 't', text: f.type }),
+                      el('td', { class: 't', text: f.required ? 'yes' : '' }),
+                      el('td', { class: 'd', text: f.description || '' }),
+                    ))),
+                  )
+                : null,
+              el('p', { class: 'hint' }, 'Prefilled from the schema. Edit freely — it is sent exactly as written.'),
+              bodyBox,
+            ));
+          }
+
+          /* actions */
+          const send = el('button', { class: 'primary', text: 'Send request' });
+          const curl = el('button', { text: 'Copy as cURL' });
+          const note = el('span', { class: 'hint' });
+          parts.push(el('div', { class: 'actions' }, send, curl, note));
+
+          const responseBox = el('div', { id: 'response' });
+          parts.push(responseBox);
+
+          pane.replaceChildren(...parts.filter(Boolean));
+
+          /* ── building the actual request ──────────────────────────── */
+          function build() {
+            let path = endpoint.path;
+            const missing = [];
+            for (const [name, input] of pathInputs) {
+              const value = input.value.trim();
+              if (value === '') missing.push(name);
+              path = path.replace('{' + name + '}', encodeURIComponent(value));
+            }
+            const search = new URLSearchParams();
+            for (const [name, { on, value }] of queryInputs) {
+              if (on.checked && value.value !== '') search.set(name, value.value);
+            }
+            const qs = search.toString();
+            const url = state.baseUrl + path + (qs ? '?' + qs : '');
+
+            const headers = {};
+            if (tokenVar && state.tokens[tokenVar]) {
+              headers.Authorization = 'Bearer ' + state.tokens[tokenVar];
+            }
+            let body;
+            if (bodyBox && bodyBox.value.trim() !== '') {
+              headers['Content-Type'] = 'application/json';
+              body = bodyBox.value;
+            }
+            return { url, headers, body, missing };
+          }
+
+          curl.addEventListener('click', () => {
+            const { url, headers, body } = build();
+            const lines = ["curl --location --request " + endpoint.method + " '" + url + "'"];
+            for (const [k, v] of Object.entries(headers)) {
+              lines.push("  --header '" + k + ': ' + (k === 'Authorization' ? 'Bearer <token>' : v) + "'");
+            }
+            if (body) lines.push("  --data-raw '" + body.replace(/'/g, "'\\''") + "'");
+            navigator.clipboard.writeText(lines.join(' \\\n')).then(
+              () => { note.textContent = 'cURL copied.'; note.className = 'hint'; },
+              () => { note.textContent = 'Clipboard refused — select the response instead.'; },
+            );
+          });
+
+          send.addEventListener('click', async () => {
+            const { url, headers, body, missing } = build();
+            if (missing.length > 0) {
+              note.textContent = 'Fill the path parameter' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ');
+              note.className = 'hint err';
+              return;
+            }
+            if (bodyBox && bodyBox.value.trim() !== '') {
+              try { JSON.parse(bodyBox.value); }
+              catch (cause) {
+                note.textContent = 'Body is not valid JSON — ' + cause.message;
+                note.className = 'hint err';
+                return;
+              }
+            }
+            note.textContent = '';
+            note.className = 'hint';
+            send.disabled = true;
+            send.textContent = 'Sending…';
+
+            const started = performance.now();
+            let result;
+            try {
+              const res = await fetch(url, { method: endpoint.method, headers, body });
+              const text = await res.text();
+              result = {
+                status: res.status,
+                statusText: res.statusText,
+                ms: Math.round(performance.now() - started),
+                bytes: new Blob([text]).size,
+                headers: [...res.headers.entries()],
+                text,
+              };
+            } catch (cause) {
+              result = {
+                status: 0,
+                statusText: 'request failed',
+                ms: Math.round(performance.now() - started),
+                bytes: 0,
+                headers: [],
+                text:
+                  String(cause) +
+                  '\n\nThe API did not answer. Either it is not running at ' + state.baseUrl +
+                  ', or this page is not on an origin its CORS allowlist accepts.' +
+                  '\nServe it from http://localhost:3000/api-console.html — opening the' +
+                  '\nfile directly sends Origin: null and every request is refused.',
+              };
+            }
+            send.disabled = false;
+            send.textContent = 'Send request';
+            state.lastResponse = result;
+            renderResponse(responseBox, result);
+          });
+
+          if (state.lastResponse) renderResponse(responseBox, state.lastResponse);
+        }
+
+        function renderResponse(box, result) {
+          const klass = 's' + String(result.status)[0];
+          const pretty = (() => {
+            try { return JSON.stringify(JSON.parse(result.text), null, 2); }
+            catch { return result.text || '(empty body)'; }
+          })();
+
+          const tab = (key, label) =>
+            el('button', {
+              'aria-pressed': String(state.respTab === key),
+              onclick: () => { state.respTab = key; renderResponse(box, result); },
+              text: label,
+            });
+
+          box.replaceChildren(
+            el('div', { class: 'resp-head' },
+              el('span', { class: 'status ' + klass, text: result.status === 0 ? 'ERR' : result.status }),
+              el('span', { class: 'meta', text: result.statusText }),
+              el('span', { class: 'meta', text: result.ms + ' ms' }),
+              el('span', { class: 'meta', text: result.bytes + ' B' }),
+            ),
+            el('div', { class: 'tabs' }, tab('body', 'Body'), tab('headers', 'Headers (' + result.headers.length + ')')),
+            el('pre', {
+              text: state.respTab === 'body'
+                ? pretty
+                : result.headers.map(([k, v]) => k + ': ' + v).join('\n') || '(none)',
+            }),
+          );
+          box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      })();
+    </script>
+  </body>
+</html>

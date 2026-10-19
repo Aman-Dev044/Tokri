@@ -376,7 +376,7 @@ export class SeedDemoService {
 
       const owner = await this.users.create({
         name: spec.ownerName,
-        email: `${slugify(spec.ownerName)}@demo.mandi.app`,
+        email: `${slugify(spec.ownerName)}@demo.example.com`,
         phone: spec.ownerPhone,
         passwordHash,
         role: Role.VENDOR,
@@ -573,7 +573,7 @@ export class SeedDemoService {
     const docs = DEMO_CUSTOMER_NAMES.map((name, index) => ({
       _id: new Types.ObjectId(),
       name,
-      email: `${slugify(name)}@demo.mandi.app`,
+      email: `${slugify(name)}@demo.example.com`,
       phone: `9820${String(200000 + index).padStart(6, '0')}`,
       passwordHash,
       role: Role.CUSTOMER,
@@ -650,7 +650,7 @@ export class SeedDemoService {
       await this.users.create({
         _id: userId,
         name,
-        email: `${slugify(name)}@demo.mandi.app`,
+        email: `${slugify(name)}@demo.example.com`,
         phone: `9830${String(300000 + index).padStart(6, '0')}`,
         passwordHash,
         role: Role.DELIVERY,

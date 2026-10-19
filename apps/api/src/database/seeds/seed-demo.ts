@@ -101,7 +101,7 @@ async function main(): Promise<void> {
     }
     logger.log(
       'Demo accounts use the password in SEED_DEMO_PASSWORD. ' +
-        'Emails are <name>@demo.mandi.app.',
+        'Emails are <name>@demo.example.com.',
     );
   } finally {
     // Always release the Mongoose connection — a dangling Atlas

@@ -348,7 +348,12 @@ function buildCollection(spec, roles, rows, publicCount, total) {
     void key;
   }
 
-  const signIn = SIGN_INS.map(([label, identifier, password, variable]) => ({
+  // No passwords in here. This collection is committed, and a repo that
+  // carefully gitignores .env has no business carrying the same passwords
+  // in a JSON file beside it. The requests reference Postman variables
+  // that ship EMPTY; fill them once from the SEED_* values and they live
+  // in your own workspace, not in git.
+  const signIn = SIGN_INS.map(([label, identifier, , variable]) => ({
     name: `Sign in as ${label}`,
     event: [
       {
@@ -372,11 +377,19 @@ function buildCollection(spec, roles, rows, publicCount, total) {
       url: { raw: '{{baseUrl}}/auth/login', host: ['{{baseUrl}}'], path: ['auth', 'login'] },
       body: {
         mode: 'raw',
-        raw: JSON.stringify({ identifier, password }, null, 2),
+        raw: JSON.stringify(
+          { identifier, password: `{{${variable.replace('Token', 'Password')}}}` },
+          null,
+          2,
+        ),
         options: { raw: { language: 'json' } },
       },
       description:
         `Signs in and **saves the token** into \`{{${variable}}}\`.\n\n` +
+        `Set \`{{${variable.replace('Token', 'Password')}}}\` first — it ships EMPTY on ` +
+        'purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, ' +
+        'which is gitignored; this collection is not, so it does not carry the ' +
+        'password.\n\n' +
         '`identifier` takes an email OR a 10-digit phone number.\n\n' +
         'Rate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — ' +
         'budget one login per role.',
@@ -416,6 +429,13 @@ function buildCollection(spec, roles, rows, publicCount, total) {
     },
     variable: [
       { key: 'baseUrl', value: BASE },
+      // Empty on purpose — fill from the SEED_*_PASSWORD values in
+      // apps/api/.env. See any "Sign in as …" request for why.
+      { key: 'superAdminPassword', value: '' },
+      { key: 'adminPassword', value: '' },
+      { key: 'vendorPassword', value: '' },
+      { key: 'customerPassword', value: '' },
+      { key: 'riderPassword', value: '' },
       { key: 'customerToken', value: '' },
       { key: 'vendorToken', value: '' },
       { key: 'riderToken', value: '' },
@@ -606,6 +626,115 @@ if (missing.length > 0) {
 const publicCount = rows.filter((r) => r.info.public).length;
 const total = rows.length;
 
+/**
+ * The third output: the data behind `apps/web/public/api-console.html`,
+ * an in-browser console for trying these endpoints.
+ *
+ * It is written into the WEB APP's public folder rather than `docs/` for a
+ * reason that is not cosmetic. The API's CORS allowlist comes from
+ * `CORS_ORIGINS` and contains `http://localhost:3000`; a page opened from
+ * the filesystem sends `Origin: null` and every request it makes is
+ * refused. Served from :3000 the console is already an allowed origin, so
+ * nothing about the API's security has to be relaxed to use it.
+ */
+function buildConsole(spec, rows) {
+  const schemas = spec.components?.schemas ?? {};
+  const sections = [];
+
+  for (const [key, title, note] of SECTIONS) {
+    const mine = rows.filter((r) => sectionFor(r.info) === key);
+    if (mine.length === 0) continue;
+
+    const groups = new Map();
+    for (const { verb, path, op, info } of mine) {
+      const group = groupFor(path);
+      if (!groups.has(group)) groups.set(group, []);
+
+      let bodySchema = op.requestBody?.content?.['application/json']?.schema ?? null;
+      let body = null;
+      if (bodySchema) {
+        const resolved = bodySchema.$ref
+          ? (schemas[bodySchema.$ref.split('/').pop()] ?? {})
+          : bodySchema;
+        const required = new Set(resolved.required ?? []);
+        body = {
+          example: exampleFor(bodySchema, schemas) ?? {},
+          fields: Object.entries(resolved.properties ?? {}).map(([name, sub]) => ({
+            name,
+            type: Array.isArray(sub.enum)
+              ? sub.enum.slice(0, 6).join(' | ')
+              : sub.$ref
+                ? sub.$ref.split('/').pop()
+                : (sub.type ?? 'object'),
+            required: required.has(name),
+            description: (sub.description ?? '').replace(/\s+/g, ' ').trim(),
+          })),
+        };
+      }
+
+      groups.get(group).push({
+        method: verb,
+        path,
+        summary: op.summary ?? '',
+        description: (op.description ?? '').replace(/\s+/g, ' ').trim(),
+        public: Boolean(info?.public),
+        roles: info?.roles ?? [],
+        tokenVar: TOKEN_VAR[key],
+        pathParams: (op.parameters ?? [])
+          .filter((p) => p.in === 'path')
+          .map((p) => ({ name: p.name, description: p.description ?? '' })),
+        query: (op.parameters ?? [])
+          .filter((p) => p.in === 'query')
+          .map((p) => ({
+            name: p.name,
+            type: Array.isArray(p.schema?.enum)
+              ? p.schema.enum.slice(0, 6).join(' | ')
+              : (p.schema?.type ?? 'string'),
+            required: p.required === true,
+            example: exampleFor(p.schema ?? {}, schemas) ?? '',
+            description: (p.description ?? '').replace(/\s+/g, ' ').trim(),
+          })),
+        responses: Object.keys(op.responses ?? {}).sort(),
+        body,
+      });
+    }
+
+    sections.push({
+      key,
+      title,
+      note,
+      groups: [...groups.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, endpoints]) => ({
+          name,
+          endpoints: endpoints.sort(
+            (a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method),
+          ),
+        })),
+    });
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    baseUrl: BASE,
+    endpointCount: rows.length,
+    // NO PASSWORDS. This file is written into `apps/web/public/`, which
+    // the web app serves to anyone who asks — `GET /api-console.json`.
+    // Embedding the seeded credentials published a working super admin
+    // password at a URL that needs no token, which defeats the whole
+    // point of keeping them in a gitignored .env.
+    //
+    // The addresses stay: an email is not a secret, and prefilling them is
+    // most of the convenience. The console asks for the password.
+    logins: SIGN_INS.map(([label, identifier, , tokenVar]) => ({
+      label,
+      identifier,
+      tokenVar,
+    })),
+    sections,
+  };
+}
+
 mkdirSync(DOCS, { recursive: true });
 writeFileSync(
   join(DOCS, 'tokri-api.postman_collection.json'),
@@ -613,12 +742,19 @@ writeFileSync(
 );
 writeFileSync(join(DOCS, 'API.md'), buildMarkdown(spec, rows, publicCount, total));
 
+const CONSOLE_DATA = join(ROOT, 'apps', 'web', 'public', 'api-console.json');
+writeFileSync(CONSOLE_DATA, `${JSON.stringify(buildConsole(spec, rows), null, 2)}\n`);
+
 const tally = {};
 for (const row of rows) {
   const name = SECTIONS.find((s) => s[0] === sectionFor(row.info))[1];
   tally[name] = (tally[name] ?? 0) + 1;
 }
-console.log(`\n${total} endpoints documented into ${relative(ROOT, DOCS)}/\n`);
+const rel = (p) => relative(ROOT, p).split(sep).join('/');
+console.log(`\n${total} endpoints documented\n`);
+console.log(`  ${rel(join(DOCS, 'API.md'))}`);
+console.log(`  ${rel(join(DOCS, 'tokri-api.postman_collection.json'))}`);
+console.log(`  ${rel(CONSOLE_DATA)}  ->  http://localhost:3000/api-console.html\n`);
 for (const [name, n] of Object.entries(tally)) console.log(`  ${name.padEnd(22)} ${n}`);
 console.log(`\n  ${String(publicCount).padStart(3)} reachable without a token\n`);
 void dirname;

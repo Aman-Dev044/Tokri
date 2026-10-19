@@ -10,6 +10,26 @@
       "value": "http://localhost:4000/api/v1"
     },
     {
+      "key": "superAdminPassword",
+      "value": ""
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "vendorPassword",
+      "value": ""
+    },
+    {
+      "key": "customerPassword",
+      "value": ""
+    },
+    {
+      "key": "riderPassword",
+      "value": ""
+    },
+    {
       "key": "customerToken",
       "value": ""
     },
@@ -73,14 +93,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identifier\": \"superadmin@tokri.app\",\n  \"password\": \"***REMOVED***\"\n}",
+              "raw": "{\n  \"identifier\": \"superadmin@tokri.app\",\n  \"password\": \"{{superAdminPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Signs in and **saves the token** into `{{superAdminToken}}`.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
+            "description": "Signs in and **saves the token** into `{{superAdminToken}}`.\n\nSet `{{superAdminPassword}}` first — it ships EMPTY on purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, which is gitignored; this collection is not, so it does not carry the password.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
           },
           "response": []
         },
@@ -122,14 +142,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identifier\": \"admin@tokri.app\",\n  \"password\": \"***REMOVED***\"\n}",
+              "raw": "{\n  \"identifier\": \"admin@tokri.app\",\n  \"password\": \"{{adminPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Signs in and **saves the token** into `{{adminToken}}`.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
+            "description": "Signs in and **saves the token** into `{{adminToken}}`.\n\nSet `{{adminPassword}}` first — it ships EMPTY on purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, which is gitignored; this collection is not, so it does not carry the password.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
           },
           "response": []
         },
@@ -171,14 +191,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identifier\": \"vendor@grocery.in\",\n  \"password\": \"***REMOVED***\"\n}",
+              "raw": "{\n  \"identifier\": \"vendor@grocery.in\",\n  \"password\": \"{{vendorPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Signs in and **saves the token** into `{{vendorToken}}`.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
+            "description": "Signs in and **saves the token** into `{{vendorToken}}`.\n\nSet `{{vendorPassword}}` first — it ships EMPTY on purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, which is gitignored; this collection is not, so it does not carry the password.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
           },
           "response": []
         },
@@ -220,14 +240,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identifier\": \"customer@grocery.in\",\n  \"password\": \"***REMOVED***\"\n}",
+              "raw": "{\n  \"identifier\": \"customer@grocery.in\",\n  \"password\": \"{{customerPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Signs in and **saves the token** into `{{customerToken}}`.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
+            "description": "Signs in and **saves the token** into `{{customerToken}}`.\n\nSet `{{customerPassword}}` first — it ships EMPTY on purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, which is gitignored; this collection is not, so it does not carry the password.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
           },
           "response": []
         },
@@ -269,14 +289,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"identifier\": \"delivery@grocery.in\",\n  \"password\": \"***REMOVED***\"\n}",
+              "raw": "{\n  \"identifier\": \"delivery@grocery.in\",\n  \"password\": \"{{riderPassword}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Signs in and **saves the token** into `{{riderToken}}`.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
+            "description": "Signs in and **saves the token** into `{{riderToken}}`.\n\nSet `{{riderPassword}}` first — it ships EMPTY on purpose. The value is the matching `SEED_*_PASSWORD` in `apps/api/.env`, which is gitignored; this collection is not, so it does not carry the password.\n\n`identifier` takes an email OR a 10-digit phone number.\n\nRate limited to `THROTTLE_AUTH_LIMIT` attempts per minute per IP — budget one login per role."
           },
           "response": []
         }
@@ -466,7 +486,7 @@
                 "description": "Sign in with email or phone\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"identifier\": \"admin@mandi.app\",\n  \"password\": \"***REMOVED***\"\n}",
+                  "raw": "{\n  \"identifier\": \"admin@example.com\",\n  \"password\": \"Str0ng!Passphrase\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -516,7 +536,7 @@
           "name": "health",
           "item": [
             {
-              "name": "GET /health/live",
+              "name": "Liveness probe",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -530,12 +550,12 @@
                     "live"
                   ]
                 },
-                "description": "**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
+                "description": "Liveness probe\n\nAnswers as long as the process is up. It touches nothing else on purpose: a liveness probe that checks the database restarts a healthy API every time the database hiccups.\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
               },
               "response": []
             },
             {
-              "name": "GET /health/ready",
+              "name": "Readiness probe",
               "request": {
                 "method": "GET",
                 "header": [],
@@ -549,7 +569,7 @@
                     "ready"
                   ]
                 },
-                "description": "**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
+                "description": "Readiness probe\n\nWhether this instance can actually serve traffic: MongoDB reachable, and the deployment a REPLICA SET rather than a standalone mongod. Transactions do not exist on standalone, and without them the checkout stock reservation cannot be atomic — so a standalone deployment is not ready even though it answers.\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
               },
               "response": []
             }
@@ -7365,7 +7385,7 @@
                 "description": "Update platform settings (SUPER_ADMIN only)\n\nMerge semantics: an omitted key keeps its current value. Each key is upserted individually so two admins editing different fields do not clobber one another. Every change is audited with a diff of only the keys that moved.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `200`, `403`",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"deliveryFeePaise\": 2900,\n  \"freeDeliveryThresholdPaise\": 49900,\n  \"defaultCommissionPct\": 12,\n  \"codMaxAmountPaise\": 200000,\n  \"serviceRadiusKm\": 5,\n  \"platformName\": \"Mandi\",\n  \"supportEmail\": \"support@mandi.app\",\n  \"supportPhone\": \"9876543210\",\n  \"maintenanceMode\": true,\n  \"slaMinutes\": 30,\n  \"stuckOrderGraceMinutes\": 10\n}",
+                  "raw": "{\n  \"deliveryFeePaise\": 2900,\n  \"freeDeliveryThresholdPaise\": 49900,\n  \"defaultCommissionPct\": 12,\n  \"codMaxAmountPaise\": 200000,\n  \"serviceRadiusKm\": 5,\n  \"platformName\": \"Mandi\",\n  \"supportEmail\": \"support@example.com\",\n  \"supportPhone\": \"9876543210\",\n  \"maintenanceMode\": true,\n  \"slaMinutes\": 30,\n  \"stuckOrderGraceMinutes\": 10\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7496,7 +7516,7 @@
                 "description": "Create an ADMIN\n\nThe role is fixed to ADMIN by the service and is not a field on the body. A SUPER_ADMIN can NEVER be created through the API — the only one is provisioned by the seed script from `.env`.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `201`, `409`",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Priya Nair\",\n  \"email\": \"priya@mandi.app\",\n  \"phone\": \"9876543210\",\n  \"password\": \"\"\n}",
+                  "raw": "{\n  \"name\": \"Priya Nair\",\n  \"email\": \"priya@example.com\",\n  \"phone\": \"9876543210\",\n  \"password\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7714,7 +7734,7 @@
                 "description": "Provision an account (SUPER_ADMIN only)\n\nRequires an `Idempotency-Key` header: a retried request replays the original response instead of creating a second account. `status` is derived from `role` and can never be supplied by the caller; SUPER_ADMIN cannot be created here at all.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `201`, `403`, `409`",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Priya Nair\",\n  \"email\": \"priya@mandi.app\",\n  \"phone\": \"9876543210\",\n  \"password\": \"\",\n  \"role\": \"admin\",\n  \"vendorId\": \"\"\n}",
+                  "raw": "{\n  \"name\": \"Priya Nair\",\n  \"email\": \"priya@example.com\",\n  \"phone\": \"9876543210\",\n  \"password\": \"\",\n  \"role\": \"admin\",\n  \"vendorId\": \"\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

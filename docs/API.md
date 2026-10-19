@@ -138,9 +138,17 @@ Verify the OTP and receive a short-lived registrationToken
 
 ### `GET /health/live`
 
+Liveness probe
+
+Answers as long as the process is up. It touches nothing else on purpose: a liveness probe that checks the database restarts a healthy API every time the database hiccups.
+
 **Responses** — `200`
 
 ### `GET /health/ready`
+
+Readiness probe
+
+Whether this instance can actually serve traffic: MongoDB reachable, and the deployment a REPLICA SET rather than a standalone mongod. Transactions do not exist on standalone, and without them the checkout stock reservation cannot be atomic — so a standalone deployment is not ready even though it answers.
 
 **Responses** — `200`
 

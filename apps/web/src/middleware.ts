@@ -112,5 +112,39 @@ export const config = {
     '/cart/:path*',
     '/checkout/:path*',
     '/orders/:path*',
+    '/addresses/:path*',
   ],
 };
+
+/**
+ * THE TWO LISTS ABOVE MUST AGREE, AND NOTHING MAKES THEM.
+ *
+ * `matcher` decides where this file RUNS. `PROTECTED_PREFIXES` decides what
+ * it does once it has run. A prefix present in the second but missing from
+ * the first is not a weaker rule — it is NO rule: the middleware is never
+ * invoked for that path and the entry sits there looking like protection.
+ *
+ * That is exactly what happened to `/addresses`. It was added to
+ * `PROTECTED_PREFIXES`, the change was reviewed and committed as "now
+ * protected", and it did nothing at all, because the matcher did not list
+ * it. A signed-out visitor still got a broken address book instead of the
+ * login page.
+ *
+ * Next requires `matcher` to be a statically analysable literal, so the two
+ * cannot be derived from one source. They can at least be checked: this
+ * throws at module load in development, which is the first page load after
+ * somebody edits one list and forgets the other. Production never evaluates
+ * it — a guard that can take the site down is worse than the drift.
+ */
+if (process.env.NODE_ENV !== 'production') {
+  const covered = new Set(config.matcher.map((entry) => entry.replace('/:path*', '')));
+  const orphans = PROTECTED_PREFIXES.filter(({ prefix }) => !covered.has(prefix));
+  if (orphans.length > 0) {
+    throw new Error(
+      `middleware.ts: ${orphans.map((o) => o.prefix).join(', ')} ` +
+        'is in PROTECTED_PREFIXES but not in `config.matcher`, so the ' +
+        'middleware never runs for it and the prefix is NOT protected. ' +
+        'Add it to the matcher.',
+    );
+  }
+}

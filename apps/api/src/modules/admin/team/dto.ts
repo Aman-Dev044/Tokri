@@ -39,7 +39,7 @@ export class CreateTeamMemberDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
-  @ApiProperty({ example: 'priya@mandi.app' })
+  @ApiProperty({ example: 'priya@example.com' })
   @IsEmail()
   @MaxLength(120)
   @Transform(({ value }) =>

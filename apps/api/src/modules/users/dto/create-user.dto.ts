@@ -36,7 +36,7 @@ export class CreateUserDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
-  @ApiPropertyOptional({ example: 'priya@mandi.app' })
+  @ApiPropertyOptional({ example: 'priya@example.com' })
   @IsOptional()
   @IsEmail()
   @MaxLength(120)
