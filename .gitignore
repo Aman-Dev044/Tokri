@@ -46,3 +46,13 @@ Thumbs.db
 
 # docker volumes
 docker/data/
+
+# Written by `pnpm --filter @mandi/api docs:api` in development only.
+# It carries the SEED_* passwords so the API console can sign in with
+# one click; it must never be committed or shipped.
+apps/web/public/api-console.local.json
+
+# Screenshots dropped into the repo root while working. They are scratch,
+# not project files — two of them were swept in by a `git add -A` and
+# had to be removed again.
+/image*.png

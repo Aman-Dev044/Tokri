@@ -255,6 +255,7 @@
       </label>
 
       <div class="tokens" id="tokens"></div>
+      <span class="meta err" id="flash" style="display:none"></span>
 
       <div class="grow"></div>
       <span class="meta" id="generated"></span>
@@ -319,6 +320,13 @@
           // into your own browser is not.
           secrets: saved.secrets || {},
           current: null,
+          hasLocalSecrets: false,
+          // From the gitignored dev file. Kept apart from `secrets`
+          // (which the user typed) so signing out forgets what YOU
+          // entered without un-learning what .env already says — or the
+          // chip would start asking again on a machine that has the
+          // credentials sitting right there.
+          devSecrets: {},
           respTab: 'body',
           reqTab: 'json',
           lastResponse: null,
@@ -338,10 +346,28 @@
         };
 
         /* ── load the generated description ─────────────────────────── */
-        fetch('api-console.json')
-          .then((r) => {
+        // Two files, and only one of them is allowed to exist in a
+        // deployed build. `api-console.local.json` is gitignored and
+        // written only in development; when it is there, a role chip
+        // signs you straight in. When it is not — which is what any real
+        // deployment gets — the console asks for the password instead.
+        Promise.all([
+          fetch('api-console.json').then((r) => {
             if (!r.ok) throw new Error('api-console.json responded ' + r.status);
             return r.json();
+          }),
+          fetch('api-console.local.json')
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null),
+        ])
+          .then(([spec, local]) => {
+            if (local && Array.isArray(local.logins)) {
+              for (const row of local.logins) {
+                if (row.password) state.devSecrets[row.tokenVar] = row.password;
+              }
+            }
+            state.hasLocalSecrets = Boolean(local);
+            return spec;
           })
           .then(start)
           .catch((cause) => {
@@ -375,14 +401,23 @@
               'Pick an endpoint on the left. ',
               spec.endpointCount + ' of them, grouped by the role allowed to call it.'),
             el('p', { class: 'empty', style: 'margin-top:14px' },
-              'Sign in with a chip at the top first — you are asked for the password ',
-              'once per role and it is remembered in this browser only. It is not in ',
-              el('code', { text: 'api-console.json' }),
-              ', which this site serves to anyone.'),
+              state.hasLocalSecrets
+                ? 'Click a role chip at the top — it signs in straight away, using the SEED_* passwords from apps/api/.env. They come from api-console.local.json, which is gitignored and written only in development.'
+                : 'Click a role chip at the top to sign in. You are asked for the password once per role and it is kept in this browser only — it is not in api-console.json, which this site serves to anyone.'),
           );
         }
 
         /* ── sign in ────────────────────────────────────────────────── */
+        /** A line under the chips. Non-blocking, and it clears itself. */
+        let flashTimer = null;
+        function flash(message) {
+          const bar = $('flash');
+          bar.textContent = message;
+          bar.style.display = message ? '' : 'none';
+          if (flashTimer) clearTimeout(flashTimer);
+          if (message) flashTimer = setTimeout(() => flash(''), 7000);
+        }
+
         function renderTokens() {
           const box = $('tokens');
           box.replaceChildren(
@@ -420,8 +455,9 @@
          * token is, and tokens expire.
          */
         function askPassword(login) {
-          // Already typed once on this browser — do not ask again.
-          const remembered = state.secrets[login.tokenVar];
+          // Already known — do not ask. Either you typed it once on this
+          // browser, or apps/api/.env told us through the dev-only file.
+          const remembered = state.secrets[login.tokenVar] ?? state.devSecrets[login.tokenVar];
           if (remembered) return Promise.resolve(remembered);
 
           return new Promise((resolve) => {
@@ -489,7 +525,16 @@
             if (!res.ok) {
               // 429 is the usual one: login is throttled per IP per minute
               // and five roles sits right at the limit.
-              alert('Sign in failed (' + res.status + ')\n\n' + (body.detail || JSON.stringify(body)));
+              // Reported inline, never with `alert()`. A modal dialog freezes
+              // the page until somebody dismisses it, which turns an expected
+              // rate limit into something that looks like a hang — and makes
+              // the console impossible to drive from a script, which is how
+              // it is tested.
+              flash(
+                res.status === 429
+                  ? 'Rate limited — login allows only a few attempts per minute per IP. Wait a moment.'
+                  : 'Sign in failed (' + res.status + ') — ' + (body.detail || 'see the API log'),
+              );
               return;
             }
             state.tokens[login.tokenVar] = body.accessToken;
@@ -497,7 +542,7 @@
             renderTokens();
             if (state.current) renderDetail(state.current);
           } catch (cause) {
-            alert('Could not reach the API at ' + state.baseUrl + '\n\n' + cause.message);
+            flash('Could not reach the API at ' + state.baseUrl + ' — ' + cause.message);
           }
         }
 

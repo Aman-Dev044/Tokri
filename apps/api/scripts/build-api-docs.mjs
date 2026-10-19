@@ -258,13 +258,71 @@ function exampleFor(schema, schemas, depth = 0) {
 
 /* ─────────────────────────── 4. the outputs ────────────────────────── */
 
-const SIGN_INS = [
-  ['Super Admin', 'superadmin@tokri.app', '***REMOVED***', 'superAdminToken'],
-  ['Admin', 'admin@tokri.app', '***REMOVED***', 'adminToken'],
-  ['Vendor', 'vendor@grocery.in', '***REMOVED***', 'vendorToken'],
-  ['Customer', 'customer@grocery.in', '***REMOVED***', 'customerToken'],
-  ['Rider', 'delivery@grocery.in', '***REMOVED***', 'riderToken'],
-];
+/**
+ * The seeded accounts, READ FROM `.env` — never written here.
+ *
+ * This script is committed. Carrying the five real passwords in it put
+ * them in git, which is precisely what `.env` being gitignored exists to
+ * prevent; removing them from the generated OUTPUT while leaving them in
+ * the generator was fixing the symptom one level down.
+ *
+ * `.env` is also the single source of truth the rest of this project
+ * already uses for these values, so reading them here means the console
+ * cannot drift from what `seed:roles` actually created.
+ */
+function readSeedAccounts() {
+  const envPath = join(ROOT, 'apps', 'api', '.env');
+  let text = '';
+  try {
+    text = readFileSync(envPath, 'utf8');
+  } catch {
+    return null;
+  }
+  const env = {};
+  // Split without a regex literal: an escape in this file has been
+  // mangled by the tooling that edits it more than once, and a broken
+  // regex here takes the whole generator down.
+  for (const line of text.split(String.fromCharCode(10))) {
+    const m = /^([A-Z0-9_]+)=([\s\S]*)$/.exec(line.trim());
+    if (m) env[m[1]] = m[2];
+  }
+  const rows = [
+    ['Super Admin', 'SUPERADMIN', 'superAdminToken'],
+    ['Admin', 'ADMIN', 'adminToken'],
+    ['Vendor', 'VENDOR', 'vendorToken'],
+    ['Customer', 'CUSTOMER', 'customerToken'],
+    ['Rider', 'DELIVERY', 'riderToken'],
+  ];
+  const out = [];
+  for (const [label, key, tokenVar] of rows) {
+    const identifier = env[`SEED_${key}_EMAIL`];
+    const password = env[`SEED_${key}_PASSWORD`];
+    if (!identifier || !password) return null;
+    out.push([label, identifier, password, tokenVar]);
+  }
+  return out;
+}
+
+const SEEDS = readSeedAccounts();
+if (SEEDS === null) {
+  console.error(
+    [
+      '',
+      'Could not read the SEED_* accounts from apps/api/.env.',
+      'The console needs them to sign in; `seed:roles` needs them to exist.',
+      '',
+    ].join(String.fromCharCode(10)),
+  );
+  process.exit(1);
+}
+
+/** Addresses only — safe for the committed collection. */
+const SIGN_INS = SEEDS.map(([label, identifier, , tokenVar]) => [
+  label,
+  identifier,
+  null,
+  tokenVar,
+]);
 
 function groupFor(path) {
   const parts = path.replace('/api/v1', '').split('/').filter((p) => p && !p.startsWith('{'));
@@ -745,6 +803,51 @@ writeFileSync(join(DOCS, 'API.md'), buildMarkdown(spec, rows, publicCount, total
 const CONSOLE_DATA = join(ROOT, 'apps', 'web', 'public', 'api-console.json');
 writeFileSync(CONSOLE_DATA, `${JSON.stringify(buildConsole(spec, rows), null, 2)}\n`);
 
+/**
+ * The credentials, in a SEPARATE file that is gitignored and dev-only.
+ *
+ * Clicking a role chip should sign you in, not open a password box. On a
+ * local machine, asking for a password that sits in `.env` next door is
+ * ceremony, not security.
+ *
+ * So the passwords go here rather than into `api-console.json`, and the
+ * difference between the two files is what happens to each:
+ *
+ *   api-console.json        committed, ships with any build, no secrets
+ *   api-console.local.json  gitignored, written only in development
+ *
+ * The console fetches this one and falls back to asking when it is
+ * absent — which is what a deployed build gets, because a gitignored file
+ * is not in the repository CI clones.
+ *
+ * It IS still served by the machine that generated it. On localhost that
+ * is the same exposure as the console itself; what it is not is a secret
+ * committed to git or baked into a production bundle.
+ */
+const CONSOLE_SECRETS = join(ROOT, 'apps', 'web', 'public', 'api-console.local.json');
+if (process.env.NODE_ENV === 'production') {
+  console.log('  (skipped api-console.local.json — NODE_ENV is production)');
+} else {
+  writeFileSync(
+    CONSOLE_SECRETS,
+    `${JSON.stringify(
+      {
+        warning:
+          'Local development only. Gitignored. Carries the SEED_* passwords from ' +
+          'apps/api/.env so the console can sign in with one click.',
+        logins: SEEDS.map(([label, identifier, password, tokenVar]) => ({
+          label,
+          identifier,
+          password,
+          tokenVar,
+        })),
+      },
+      null,
+      2,
+    )}\n`,
+  );
+}
+
 const tally = {};
 for (const row of rows) {
   const name = SECTIONS.find((s) => s[0] === sectionFor(row.info))[1];
@@ -755,6 +858,15 @@ console.log(`\n${total} endpoints documented\n`);
 console.log(`  ${rel(join(DOCS, 'API.md'))}`);
 console.log(`  ${rel(join(DOCS, 'tokri-api.postman_collection.json'))}`);
 console.log(`  ${rel(CONSOLE_DATA)}  ->  http://localhost:3000/api-console.html\n`);
+console.log(
+  [
+    '  ' + rel(CONSOLE_SECRETS) + '   (gitignored — lets the console sign in with one click)',
+    '',
+    '  If the console was already open, RESTART the web server: Next reads the',
+    '  public folder when it starts, so a newly written file 404s until it does.',
+    '',
+  ].join(String.fromCharCode(10)),
+);
 for (const [name, n] of Object.entries(tally)) console.log(`  ${name.padEnd(22)} ${n}`);
 console.log(`\n  ${String(publicCount).padStart(3)} reachable without a token\n`);
 void dirname;
