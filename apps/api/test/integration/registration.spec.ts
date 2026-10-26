@@ -19,6 +19,7 @@ import {
   RegistrationOtp,
   RegistrationOtpDocument,
 } from '../../src/modules/auth/schemas/registration-otp.schema';
+import { PasswordService } from '../../src/common/utils/password.service';
 import { TestContext, closeTestApp, createTestApp, nextIp } from '../utils/test-app';
 
 /** Long enough to satisfy every DTO's MinLength(8), never a common password. */
@@ -368,6 +369,60 @@ describe('Registration (integration)', () => {
       // Cannot log in while pending.
       const loginRes = await login(phone, password);
       expect(loginRes.status).toBe(401);
+    });
+
+    it('lets the owner log in once an admin approves the store, and not after a suspension', async () => {
+      // Regression: approving changed only the Vendor, leaving the owner's
+      // login PENDING — an approved shop whose owner could never sign in.
+      const phone = freshPhone();
+      const password = PASSWORD();
+      const applied = await request(server)
+        .post('/auth/apply/vendor')
+        .set('X-Forwarded-For', nextIp())
+        .send({
+          name: 'Ravi Kumar',
+          email: `vendor${phone}@test.invalid`,
+          phone,
+          password,
+          storeName: 'Kumar Kirana',
+          address: { line1: '4 Market Lane', city: 'Pune', state: 'Maharashtra', pincode: '411002' },
+          lat: 18.52,
+          lng: 73.85,
+        });
+      expect(applied.status).toBe(201);
+
+      const adminPassword = PASSWORD();
+      await users.create({
+        name: 'Approving Admin',
+        email: `admin${phone}@test.invalid`,
+        phone: `93${phone.slice(2)}`,
+        passwordHash: await ctx.app.get(PasswordService).hash(adminPassword),
+        role: Role.ADMIN,
+        status: UserStatus.ACTIVE,
+      });
+      const adminLogin = await login(`admin${phone}@test.invalid`, adminPassword);
+      expect(adminLogin.status).toBe(200);
+      const adminToken = adminLogin.body.accessToken as string;
+
+      const approved = await request(server)
+        .post(`/admin/ops/approvals/vendors/${applied.body.applicationId as string}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Forwarded-For', nextIp())
+        .send({ decision: 'approve' });
+      expect(approved.status).toBeLessThan(300);
+
+      expect((await users.findOne({ phone }).lean())?.status).toBe(UserStatus.ACTIVE);
+      expect((await login(phone, password)).status).toBe(200);
+
+      const suspended = await request(server)
+        .post(`/admin/ops/approvals/vendors/${applied.body.applicationId as string}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('X-Forwarded-For', nextIp())
+        .send({ decision: 'reject', reason: 'Store address could not be verified' });
+      expect(suspended.status).toBeLessThan(300);
+
+      expect((await users.findOne({ phone }).lean())?.status).toBe(UserStatus.SUSPENDED);
+      expect((await login(phone, password)).status).toBe(401);
     });
 
     it('does not let the applicant set their own commissionPct or status', async () => {

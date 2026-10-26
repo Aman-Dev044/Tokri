@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokri Platform Guide</title>
+<style>
+:root{
+  --bg:#f7f5ef; --paper:#ffffff; --ink:#1d2320; --muted:#5f6b65; --line:#e3dfd4; --soft:#f1eee6;
+  --brand:#2f7d32; --brand-ink:#ffffff; --brand-soft:#e6f2e3;
+  --c:#2563eb; --c-soft:#e5edfd;   /* customer */
+  --v:#c2620a; --v-soft:#fcecdc;   /* vendor   */
+  --r:#7c3aed; --r-soft:#efe6fd;   /* rider    */
+  --a:#0f766e; --a-soft:#dcf1ee;   /* admin    */
+  --s:#9f1239; --s-soft:#fbe3ea;   /* super    */
+  --x:#475569; --x-soft:#e8ecf1;   /* system   */
+  --warn:#92400e; --warn-soft:#fdf3dc;
+  --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 14px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121614; --paper:#1a1f1d; --ink:#e8ece9; --muted:#9aa6a0; --line:#2b322f; --soft:#212725;
+    --brand:#5cb860; --brand-ink:#0d130f; --brand-soft:#1f3322;
+    --c:#7aa5ff; --c-soft:#1c2740; --v:#f2a15a; --v-soft:#3a2716; --r:#b693ff; --r-soft:#2a1f42;
+    --a:#4fd1c0; --a-soft:#163330; --s:#ff7aa0; --s-soft:#3d1824; --x:#a8b5c6; --x-soft:#242b33;
+    --warn:#f5c56b; --warn-soft:#3a2f17; --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121614; --paper:#1a1f1d; --ink:#e8ece9; --muted:#9aa6a0; --line:#2b322f; --soft:#212725;
+  --brand:#5cb860; --brand-ink:#0d130f; --brand-soft:#1f3322;
+  --c:#7aa5ff; --c-soft:#1c2740; --v:#f2a15a; --v-soft:#3a2716; --r:#b693ff; --r-soft:#2a1f42;
+  --a:#4fd1c0; --a-soft:#163330; --s:#ff7aa0; --s-soft:#3d1824; --x:#a8b5c6; --x-soft:#242b33;
+  --warn:#f5c56b; --warn-soft:#3a2f17; --shadow:none;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+a{color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+
+/* header */
+header.top{background:var(--paper);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:14px;padding-top:18px;padding-bottom:14px;flex-wrap:wrap}
+.logo{width:42px;height:42px;border-radius:10px;background:var(--brand);color:var(--brand-ink);display:grid;place-items:center;font-weight:800;font-size:20px}
+.top h1{margin:0;font-size:22px;letter-spacing:-.01em}
+.top p{margin:0;color:var(--muted);font-size:14px}
+.top .grow{flex:1;min-width:200px}
+.theme-btn{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
+
+/* tabs */
+nav.tabs{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs .wrap::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:12px 14px;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--tc,var(--brand))}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--tc,var(--brand));flex:none}
+
+main{padding:22px 0 60px}
+.panel{display:none}
+.panel.on{display:block}
+
+/* role layout */
+.role-head{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--rc);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+.role-head h2{margin:0 0 4px;font-size:20px}
+.role-head p{margin:0;color:var(--muted)}
+.role-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;padding:3px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);color:var(--ink)}
+.pill b{font-weight:600}
+.layout{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+.menu{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:8px;position:sticky;top:58px;box-shadow:var(--shadow)}
+.menu h4{margin:6px 10px 6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mi{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;color:var(--ink);font:inherit;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer}
+.mi:hover{background:var(--soft)}
+.mi[aria-current="true"]{background:var(--rs);color:var(--ink);font-weight:600;box-shadow:inset 3px 0 0 var(--rc)}
+.mi .n{width:22px;height:22px;flex:none;border-radius:6px;background:var(--soft);display:grid;place-items:center;font-size:11px;color:var(--muted);font-weight:700}
+.mi[aria-current="true"] .n{background:var(--rc);color:#fff}
+.mi .tag{margin-left:auto;font-size:10px;font-weight:700;color:var(--s);background:var(--s-soft);border-radius:4px;padding:1px 5px}
+
+.detail{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow);min-width:0}
+.detail h3{margin:0;font-size:21px}
+.route{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
+.dh{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.box{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--bg)}
+.box h5,.sec{margin:0 0 6px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.box p{margin:0}
+.sec{margin:18px 0 10px}
+ul.clean{margin:0;padding-left:18px}
+ul.clean li{margin:3px 0}
+
+/* flowchart */
+.flow{display:flex;flex-direction:column;align-items:stretch;gap:0;max-width:640px}
+.step{display:flex;gap:12px;align-items:flex-start;background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--ac);border-radius:8px;padding:10px 12px}
+.step.decision{border-style:dashed;border-left-style:solid;background:var(--soft)}
+.step .who{flex:none;font-size:11px;font-weight:700;color:var(--ac);background:var(--as);border-radius:999px;padding:2px 9px;margin-top:1px;min-width:74px;text-align:center}
+.step .t{flex:1}
+.arrow{height:22px;display:flex;justify-content:flex-start;padding-left:44px}
+.arrow::before{content:"";width:2px;background:var(--line);height:100%;position:relative}
+.arrow::after{content:"";border:6px solid transparent;border-top-color:var(--muted);margin-left:-7px;margin-top:16px;height:0}
+.branch{font-size:13px;color:var(--muted);margin:2px 0 0 0}
+
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.lk{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:13.5px;cursor:pointer;display:flex;align-items:center;gap:7px;text-align:left}
+.lk:hover{border-color:var(--lc)}
+.lk .dot{background:var(--lc)}
+.note{background:var(--warn-soft);color:var(--ink);border:1px solid color-mix(in srgb,var(--warn) 30%,transparent);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:8px}
+.note b{color:var(--warn)}
+.tip{background:var(--brand-soft);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:8px}
+
+/* overview */
+.hero{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--shadow);margin-bottom:18px}
+.hero h2{margin:0 0 8px;font-size:26px;letter-spacing:-.01em}
+.hero p{margin:0;color:var(--muted);max-width:780px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0 4px}
+.rc{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--rc);border-radius:10px;padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.rc:hover{box-shadow:var(--shadow);border-color:var(--rc)}
+.rc h4{margin:0 0 4px;font-size:15px}
+.rc p{margin:0;font-size:13px;color:var(--muted)}
+.rc .go{display:block;margin-top:8px;font-size:12.5px;color:var(--rc);font-weight:600}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:18px}
+.card h3{margin:0 0 4px;font-size:18px}
+.card > p.sub{margin:0 0 14px;color:var(--muted)}
+
+/* journey (horizontal flow) */
+.journey{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:22px 26px;counter-reset:j}
+.j{position:relative;background:var(--bg);border:1px solid var(--line);border-top:4px solid var(--ac);border-radius:8px;padding:10px 12px;font-size:13.5px}
+.j::before{counter-increment:j;content:counter(j);position:absolute;top:-12px;left:10px;background:var(--ac);color:#fff;font-size:11px;font-weight:700;border-radius:999px;width:20px;height:20px;display:grid;place-items:center}
+.j::after{content:"→";position:absolute;right:-20px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:700}
+.j:last-child::after{content:none}
+.j b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ac);margin:4px 0 2px}
+
+/* status machine */
+.sm{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.st{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:600;padding:5px 9px;border-radius:6px;background:var(--soft);border:1px solid var(--line)}
+.st.ok{background:var(--brand-soft);border-color:var(--brand);color:var(--ink)}
+.st.bad{background:var(--s-soft);border-color:var(--s)}
+.sa{color:var(--muted);font-weight:700}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th,table.t td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tw{overflow-x:auto}
+
+/* money split */
+.split{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.mbox{border-radius:10px;padding:14px;border:1px solid var(--line);background:var(--bg)}
+.mbox h4{margin:0 0 6px;font-size:14px}
+.mbox .eq{font-family:ui-monospace,Consolas,monospace;font-size:12.5px;background:var(--paper);border:1px dashed var(--line);border-radius:6px;padding:8px;margin-top:6px}
+
+/* connection map (svg) */
+.map svg{width:100%;height:auto;display:block}
+.map text{fill:var(--ink);font:600 13px system-ui,sans-serif}
+.map .lbl{fill:var(--muted);font:500 11px system-ui,sans-serif}
+.map .edge{stroke:var(--muted);stroke-width:1.4;fill:none;opacity:.7}
+
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+.checklist li{margin:6px 0}
+footer{color:var(--muted);font-size:13px;text-align:center;padding:24px 16px 40px}
+
+@media (max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .layout > *{min-width:0}
+  .menu{position:relative;top:0;display:flex;overflow-x:auto;gap:4px;padding:6px}
+  .menu h4{display:none}
+  .mi{flex:none;width:auto;white-space:nowrap}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .split{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+}
+@media (max-width:520px){
+  .cards{grid-template-columns:1fr}
+  .detail{padding:16px}
+  .step{flex-direction:column;gap:6px}
+  .arrow{padding-left:20px}
+  .j::after{content:"↓";right:auto;left:50%;top:auto;bottom:-20px;transform:none}
+}
+@media print{
+  nav.tabs,.theme-btn,.menu{display:none}
+  .panel{display:block!important;page-break-after:always}
+  .layout{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="logo">T</div>
+    <div class="grow">
+      <h1>Tokri — Platform Guide</h1>
+      <p>Every role, every menu, and how one order travels through all of them.</p>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">Light / Dark</button>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap" role="tablist" id="tabs"></div>
+</nav>
+
+<main>
+  <div class="wrap">
+
+    <!-- ============================ OVERVIEW ============================ -->
+    <section class="panel" id="p-overview" role="tabpanel">
+      <div class="hero">
+        <h2>What is Tokri?</h2>
+        <p>Tokri is a quick-commerce grocery platform, in the style of Blinkit, built for many local stores at once. Nearby kirana, dairy and bakery stores list their products. Customers order from the store closest to them, and a rider delivers in about 20–30 minutes. The Tokri team watches everything from one console and pays each store its share every settlement cycle.</p>
+        <div class="cards" id="roleCards"></div>
+      </div>
+
+      <div class="card">
+        <h3>The life of one order</h3>
+        <p class="sub">This is the main flow of the whole platform. Every role touches it at some point. Colours show who does each step.</p>
+        <div class="legend" id="legend"></div>
+        <div class="journey">
+          <div class="j" style="--ac:var(--c)"><b>Customer</b>Picks a nearby store, fills the cart, checks out (COD or online).</div>
+          <div class="j" style="--ac:var(--x)"><b>System</b>Re-checks price and stock, reserves the stock, creates the order and a 4-digit delivery OTP.</div>
+          <div class="j" style="--ac:var(--v)"><b>Vendor</b>Gets the new order on the Orders board and accepts it (or rejects it with a reason).</div>
+          <div class="j" style="--ac:var(--v)"><b>Vendor</b>Packs the items, then marks the order "Ready for pickup".</div>
+          <div class="j" style="--ac:var(--x)"><b>System</b>Offers the job to the nearest free rider. Each offer lasts 45 seconds, and if it isn't taken the next rider gets it.</div>
+          <div class="j" style="--ac:var(--r)"><b>Rider</b>Accepts the job. A small pick fee is taken from the rider's wallet.</div>
+          <div class="j" style="--ac:var(--r)"><b>Rider</b>Picks up at the store, then starts "Out for delivery". The customer sees the rider live.</div>
+          <div class="j" style="--ac:var(--c)"><b>Customer</b>Tells the rider the 4-digit OTP at the door.</div>
+          <div class="j" style="--ac:var(--r)"><b>Rider</b>Types the OTP. The order is Delivered and any COD cash has been collected.</div>
+          <div class="j" style="--ac:var(--s)"><b>Super Admin</b>Generates the settlement and pays the store its share (sales − commission − refunds).</div>
+        </div>
+        <div class="tip"><b>Admin</b> watches the whole journey live on the <b>Live board</b>. They can step in at any point: assign a rider by hand in <b>Dispatch</b>, cancel an order, or open an <b>Issue</b>.</div>
+      </div>
+
+      <div class="card">
+        <h3>Order status — the official steps</h3>
+        <p class="sub">An order can only move along these arrows. Any other move is refused by the system.</p>
+        <div class="sm">
+          <span class="st">PLACED</span><span class="sa">→</span>
+          <span class="st">ACCEPTED</span><span class="sa">→</span>
+          <span class="st">PACKING</span><span class="sa">→</span>
+          <span class="st">READY_FOR_PICKUP</span><span class="sa">→</span>
+          <span class="st">ASSIGNED</span><span class="sa">→</span>
+          <span class="st">PICKED_UP</span><span class="sa">→</span>
+          <span class="st">OUT_FOR_DELIVERY</span><span class="sa">→</span>
+          <span class="st ok">DELIVERED</span>
+        </div>
+        <div class="tw" style="margin-top:14px">
+          <table class="t">
+            <tr><th>Side exit</th><th>When</th><th>Who</th></tr>
+            <tr><td><span class="st bad">REJECTED</span></td><td>Store says no to a new (PLACED) order. A reason is required.</td><td>Vendor</td></tr>
+            <tr><td><span class="st bad">CANCELLED</span></td><td>Free for the customer while PLACED. After that, only the store or the Tokri team can cancel (up to Ready for pickup).</td><td>Customer / Vendor / Admin</td></tr>
+            <tr><td><span class="st bad">DELIVERY_FAILED</span></td><td>Rider couldn't deliver (customer not reachable, wrong address…). A reason is required and a support case opens.</td><td>Rider</td></tr>
+            <tr><td><span class="st">ASSIGNED → READY_FOR_PICKUP</span></td><td>Rider went offline before pickup, or the team took the job back. The rider's pick fee is refunded and the job is offered again.</td><td>System / Admin / Vendor</td></tr>
+            <tr><td><span class="st">DELIVERY_FAILED → ASSIGNED / CANCELLED</span></td><td>Team sends it out again or cancels it.</td><td>Admin</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Who earns what</h3>
+        <p class="sub">All money is stored in paise, so there are no rounding errors. Every rupee movement is written to a ledger that cannot be edited.</p>
+        <div class="split">
+          <div class="mbox" style="border-top:4px solid var(--c)">
+            <h4>Customer pays</h4>
+            Items + GST + delivery fee − coupon.
+            <div class="eq">Delivery fee: ₹29<br>Free above ₹499<br>(both changeable in Settings)</div>
+          </div>
+          <div class="mbox" style="border-top:4px solid var(--v)">
+            <h4>Store receives</h4>
+            Its item sales minus Tokri's commission, minus refunds and minus its own store coupons.
+            <div class="eq">Net = Gross − Commission − Refunds<br>Default commission: 12%</div>
+          </div>
+          <div class="mbox" style="border-top:4px solid var(--s)">
+            <h4>Tokri keeps</h4>
+            The commission on every delivered order, plus the delivery fee. Platform-wide coupons are paid by Tokri.
+            <div class="eq">Commission % is set per store.<br>A change applies to new orders only.</div>
+          </div>
+        </div>
+        <div class="tip" style="margin-top:12px"><b>Riders:</b> each job pays <b>₹20 + ₹5 per km</b>, shown on the rider's earnings statement. To accept a job, the rider pays a small <b>pick fee (₹25–₹50)</b> from a prepaid wallet. The fee is refunded if the job is taken away. COD cash the rider collects is shown as owed to Tokri, not as income.</div>
+      </div>
+
+      <div class="card map">
+        <h3>How the roles connect</h3>
+        <p class="sub">Each arrow is something one role does that another role sees.</p>
+        <svg viewBox="0 0 900 380" role="img" aria-label="Diagram of how roles connect">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+          <!-- edges -->
+          <path class="edge" d="M190,85 C300,40 520,40 640,85" marker-end="url(#ah)"/>
+          <text class="lbl" x="415" y="42" text-anchor="middle">places order</text>
+          <path class="edge" d="M640,120 C520,170 300,170 190,120" marker-end="url(#ah)"/>
+          <text class="lbl" x="415" y="168" text-anchor="middle">status updates</text>
+          <path class="edge" d="M715,135 L715,250" marker-end="url(#ah)"/>
+          <text class="lbl" x="725" y="198">ready → job offer</text>
+          <path class="edge" d="M640,285 C450,330 300,250 190,140" marker-end="url(#ah)"/>
+          <text class="lbl" x="400" y="318" text-anchor="middle">live location + OTP delivery</text>
+          <path class="edge" d="M330,290 L630,110" marker-end="url(#ah)"/>
+          <text class="lbl" x="470" y="230" text-anchor="middle">approves store, pays settlement</text>
+          <path class="edge" d="M330,300 L630,280" marker-end="url(#ah)"/>
+          <text class="lbl" x="480" y="275" text-anchor="middle">approves rider, dispatches</text>
+          <path class="edge" d="M240,290 L150,140" marker-end="url(#ah)"/>
+          <text class="lbl" x="120" y="225">support, coupons</text>
+          <!-- nodes -->
+          <g><rect x="60" y="70" width="130" height="64" rx="10" fill="var(--c-soft)" stroke="var(--c)"/><text x="125" y="98" text-anchor="middle">Customer</text><text class="lbl" x="125" y="117" text-anchor="middle">shop · cart · track</text></g>
+          <g><rect x="640" y="70" width="150" height="64" rx="10" fill="var(--v-soft)" stroke="var(--v)"/><text x="715" y="98" text-anchor="middle">Vendor (store)</text><text class="lbl" x="715" y="117" text-anchor="middle">accept · pack · ready</text></g>
+          <g><rect x="640" y="252" width="150" height="64" rx="10" fill="var(--r-soft)" stroke="var(--r)"/><text x="715" y="280" text-anchor="middle">Rider</text><text class="lbl" x="715" y="299" text-anchor="middle">offer · pickup · deliver</text></g>
+          <g><rect x="190" y="262" width="150" height="64" rx="10" fill="var(--a-soft)" stroke="var(--a)"/><text x="265" y="285" text-anchor="middle">Admin / Super</text><text class="lbl" x="265" y="304" text-anchor="middle">approve · watch · pay</text></g>
+        </svg>
+      </div>
+
+      <div class="card">
+        <h3>What runs automatically</h3>
+        <p class="sub">These jobs run on their own inside the server, with no human needed.</p>
+        <div class="tw"><table class="t">
+          <tr><th>Job</th><th>How often</th><th>What it does</th></tr>
+          <tr><td>Rider assignment</td><td>every 5 s</td><td>Finds "Ready" orders with no rider and offers them to the nearest free rider within the store's delivery radius. Each offer lasts 45 s. After 3 misses it alerts the store and the admin team.</td></tr>
+          <tr><td>Rider heartbeat</td><td>every 30 s</td><td>The rider app checks in every 30 seconds. After about 65 seconds of silence the rider is marked offline, and a job not yet picked up is offered to someone else.</td></tr>
+          <tr><td>Unpaid order clean-up</td><td>every 1 min</td><td>An online order not paid within 15 minutes is cancelled and its stock goes back on the shelf.</td></tr>
+          <tr><td>Payment check</td><td>every 15 min</td><td>Safety net: re-checks any payment stuck as "pending" with the payment gateway.</td></tr>
+          <tr><td>Notifications</td><td>every 5 s</td><td>Sends queued emails, SMS and push notifications, and retries if a provider is down.</td></tr>
+        </table></div>
+        <div class="tip"><b>Live updates:</b> order status, new orders, job offers, rider location, wallet balance and KYC status all reach the screen instantly, with no refresh needed.</div>
+      </div>
+
+      <div class="card">
+        <h3>Login & access</h3>
+        <p class="sub">There's one login page for everyone. The system sends each person to their own panel based on their role.</p>
+        <div class="tw"><table class="t">
+          <tr><th>Role</th><th>Login (email or phone)</th><th>Lands on</th></tr>
+          <tr><td><span class="pill"><span class="dot" style="--tc:var(--s)"></span>Super Admin</span></td><td>superadmin@tokri.app</td><td>/admin</td></tr>
+          <tr><td><span class="pill"><span class="dot" style="--tc:var(--a)"></span>Admin</span></td><td>admin@tokri.app</td><td>/admin</td></tr>
+          <tr><td><span class="pill"><span class="dot" style="--tc:var(--v)"></span>Vendor</span></td><td>vendor@grocery.in</td><td>/vendor</td></tr>
+          <tr><td><span class="pill"><span class="dot" style="--tc:var(--c)"></span>Customer</span></td><td>customer@grocery.in</td><td>/shop</td></tr>
+          <tr><td><span class="pill"><span class="dot" style="--tc:var(--r)"></span>Rider</span></td><td>delivery@grocery.in</td><td>/delivery</td></tr>
+        </table></div>
+        <ul class="clean" style="margin-top:10px">
+          <li>Passwords are shared separately. They are never written in this document.</li>
+          <li>For safety, login is limited to 5 tries per minute. A session stays signed in for 7 days.</li>
+          <li><b>Customers</b> sign up themselves with a phone OTP. <b>Stores</b> and <b>riders</b> apply from the same sign-up page and can work once the Tokri team approves them.</li>
+          <li>Hiding a menu is not the security. Every request is checked on the server against the person's role.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Before go-live — services to connect</h3>
+        <p class="sub">The code for these is already built. Each one only needs the account keys to be added to the server.</p>
+        <ul class="clean checklist">
+          <li><b>Razorpay (online payments):</b> until connected, online checkout and rider wallet top-ups show "not available yet". Cash on delivery works today.</li>
+          <li><b>Google Maps billing:</b> until it's switched on, live tracking maps show a placeholder. Distance, ETA and payouts still work.</li>
+          <li><b>File storage (Amazon S3):</b> needed for product photos, KYC document photos and delivery photo proof.</li>
+          <li><b>SMS / Email / Push providers:</b> needed to send the customer sign-up OTP and notifications.</li>
+          <li><b>Domain + HTTPS:</b> recommended before real customers use it, for the browser padlock and for the phone camera and location to work reliably.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- role panels are generated below -->
+    <div id="rolePanels"></div>
+
+  </div>
+</main>
+
+<footer>Tokri · platform guide · menus and flows match the current build</footer>
+
+<script>
+/* ---------- who's who ---------- */
+const ACTORS = {
+  C:{name:'Customer',  c:'var(--c)', s:'var(--c-soft)'},
+  V:{name:'Vendor',    c:'var(--v)', s:'var(--v-soft)'},
+  R:{name:'Rider',     c:'var(--r)', s:'var(--r-soft)'},
+  A:{name:'Admin',     c:'var(--a)', s:'var(--a-soft)'},
+  S:{name:'Super Admin',c:'var(--s)', s:'var(--s-soft)'},
+  X:{name:'System',    c:'var(--x)', s:'var(--x-soft)'}
+};
+
+/* ---------- content ----------
+   Each menu: what (what is it), why (used for), flow [[actor,text,isDecision?]],
+   links [[roleKey, menuId, why]], notes (good to know), warn (needs a service) */
+const ROLES = {
+
+customer:{
+  label:'Customer', key:'C', home:'/shop',
+  intro:'The person who buys groceries. They use the shop website on a phone or laptop: browse nearby stores, fill a basket, pay, and watch the rider come to the door.',
+  login:'customer@grocery.in', groups:[['Shopping',['shop','aisle','stores','product','cart','checkout']],['My account',['orders','track','addresses','bell','signup']]],
+  menus:{
+    shop:{label:'Home (Shop)', route:'/shop',
+      what:'One grid of products from every approved, open store near the customer, with search and 8 colour-coded aisles (Fruits, Vegetables, Dairy…).',
+      why:'The front door. Customers find what they want quickly, and each product shows which store it comes from.',
+      flow:[['C','Opens the site. Browsing works even without logging in.'],['C','Shares location by GPS, or types a PIN code if GPS is blocked.'],['X','Shows only stores whose delivery radius covers that location, nearest first.'],['C','Searches or taps an aisle, then adds items to the basket.']],
+      links:[['vendor','products','Products shown here are the ones stores list in their Products menu'],['admin','catalog','The Tokri team can hide any product from the Catalog'],['superadmin','settings','The default delivery radius is set in Settings']]},
+    aisle:{label:'Aisles', route:'/aisle/[aisle]',
+      what:'A single aisle (e.g. Dairy & Eggs). If a basket is already open, it shows that store\'s shelf. Otherwise it shows the aisle across all stores.',
+      why:'Browse one category the way you would walk down a shop aisle.',
+      flow:[['C','Taps an aisle chip.'],['X','Filters products to that aisle (and to the open basket\'s store, if any).'],['C','Adds items with the + / − stepper.']],
+      links:[['admin','catalog','Aisles and categories are managed by the team in Catalog'],['vendor','products','Stores can also add their own private categories']]},
+    stores:{label:'Stores', route:'/stores',
+      what:'A list of nearby stores. Each storefront shows address, hours, delivery fee, free-delivery limit and its shelves.',
+      why:'For customers who prefer to shop from a particular store they trust.',
+      flow:[['C','Opens Stores and searches by store name or product.'],['C','Opens a storefront and shops from it directly.']],
+      links:[['vendor','settings','Address, hours and delivery radius come from Store settings'],['admin','vendors','Only stores approved by the team are listed']]},
+    product:{label:'Product page', route:'/product/[id]',
+      what:'Photos, price vs MRP, pack size (e.g. 500 g), description and an Add button.',
+      why:'Lets the customer check details before buying.',
+      flow:[['C','Opens a product from any grid.'],['C','Picks the quantity and taps Add.']],
+      links:[['vendor','products','Price, MRP, pack size and photos are set by the store'],['vendor','inventory','"Out of stock" comes from the store\'s Inventory']],
+      warn:'Product photos need file storage (S3). Until then products show a neat coloured placeholder.'},
+    cart:{label:'Cart', route:'/cart',
+      what:'The basket with live checks on every line: price changed, out of stock, reduced quantity, unavailable. Shows subtotal, delivery fee and total.',
+      why:'Makes sure the customer only checks out what the store can really supply.',
+      flow:[['X','Every line is re-checked against the store\'s current price and stock.'],['X','Out-of-stock or unavailable lines? Checkout is blocked until they are removed.',true],['C','Adjusts quantities, then taps Checkout.']],
+      notes:['One basket = one store. This keeps it to one pickup and one rider. If you add an item from another store, the current basket is parked (kept for 7 days), not deleted, and you can restore it later.'],
+      links:[['vendor','inventory','Stock levels used for these checks'],['superadmin','settings','Delivery fee and free-delivery limit']]},
+    checkout:{label:'Checkout', route:'/checkout',
+      what:'Pick an address, apply a coupon, choose a payment method and place the order.',
+      why:'Turns the basket into a real order for the store.',
+      flow:[['C','Chooses or adds a delivery address. A map pin is required, and the address must be inside the store\'s delivery radius.'],['C','Optionally enters a coupon code.'],['X','Checks the coupon: expired, wrong store, minimum not met or already used?',true],['C','Chooses Cash on Delivery or Online payment.'],['X','Re-prices everything on the server, reserves the stock and places the order.'],['C','Sees the confirmation with a 4-digit delivery OTP.']],
+      notes:['The delivery OTP is shown only once, on this confirmation screen, so the customer should note it down. The rider needs it to complete delivery.','A store can switch COD off or set a maximum COD order amount. The screen explains why when COD is not available.'],
+      warn:'Online payment (Razorpay) needs the Razorpay keys. Until then the option shows "not available yet". COD works.',
+      links:[['vendor','orders','The order appears instantly on the store\'s Orders board'],['admin','coupons','Coupons are created by the team'],['vendor','settings','The COD on/off switch and limit belong to each store']]},
+    orders:{label:'My orders', route:'/orders',
+      what:'A list of all the customer\'s orders: number, store, items, total, status and payment. Live orders have a Track button.',
+      why:'Order history, plus quick access to tracking.',
+      flow:[['C','Opens My orders from the profile menu.'],['C','Taps Track on a live order.'],['C','Can cancel free of charge while the order is still PLACED.'],['X','Once the store has accepted, cancelling needs the store\'s or the team\'s approval.',true]],
+      notes:['Cancelling a PLACED order puts the stock back on the shelf and frees the coupon.'],
+      links:[['vendor','orders','The store moves the order through its steps'],['admin','orders','The team sees every order and can cancel']]},
+    track:{label:'Live tracking', route:'/orders/[id]/track',
+      what:'A timeline of the order\'s steps, the ETA, store and drop details, and the rider\'s position with "last seen X seconds ago".',
+      why:'The customer always knows where the order is, so there\'s no need to call.',
+      flow:[['V','Store accepts → packs → ready. Each step appears on the timeline instantly.'],['R','Rider picks up and starts Out for delivery.'],['X','The rider\'s location is sent every 10 seconds and the ETA updates live.'],['C','Gives the 4-digit OTP to the rider. The order shows Delivered.']],
+      warn:'The map itself needs Google Maps billing switched on. The timeline, ETA and status work without it.',
+      links:[['rider','active','The rider\'s Active delivery screen sends the location'],['admin','board','The team watches the same order on the Live board']]},
+    addresses:{label:'Addresses', route:'/addresses',
+      what:'The saved address book: add, edit or delete. Line 1, city, 6-digit PIN, phone and a map pin are required.',
+      why:'Faster checkout, and the exact location for the rider.',
+      flow:[['C','Opens Addresses from the profile menu.'],['C','Adds an address and drops the map pin.'],['X','Saves it. It can be picked at Checkout.']],
+      links:[['customer','checkout','Used at Checkout'],['rider','active','The rider navigates to this pin']]},
+    bell:{label:'Notifications', route:'bell icon',
+      what:'The bell in the header: a list of messages with mark-as-read.',
+      why:'A place for updates about the account.',
+      flow:[['X','A notification is created and appears instantly.'],['C','Opens the bell and marks messages as read.']],
+      links:[['superadmin','settings','Support email and phone are shown to customers']]},
+    signup:{label:'Sign up / Login', route:'/signup · /login',
+      what:'Sign up with a phone OTP in 3 steps. Log in with email or phone plus password.',
+      why:'Creates the customer account.',
+      flow:[['C','Enters a phone number and requests an OTP.'],['C','Enters the OTP, then name and password.'],['X','The account is created and the customer is signed in.']],
+      warn:'Sending the OTP by SMS needs an SMS provider to be connected.',
+      links:[['admin','customers','New customers appear in the team\'s Customers list']]}
+  }
+},
+
+vendor:{
+  label:'Vendor', key:'V', home:'/vendor',
+  intro:'A local store owner (kirana, dairy, bakery…). They run their shop on Tokri: list products, keep stock right, accept and pack orders, and see what they will be paid.',
+  login:'vendor@grocery.in', groups:[['Start',['join']],['Daily work',['dashboard','orders','products','inventory','partners']],['Money & setup',['earnings','settings']]],
+  menus:{
+    join:{label:'How a store joins', route:'/signup → Sell',
+      what:'The "Sell" tab on the sign-up page: owner name, email, mobile, password, store name, full address and a map pin.',
+      why:'This is how new stores come onto Tokri.',
+      flow:[['V','Fills the Sell form and submits.'],['X','Creates the store as Pending. The commission % comes from platform Settings, not from the applicant.'],['A','Reviews the application in Approvals and approves or rejects it with a reason.',true],['V','Once approved, logs in and sets up products, stock and hours.']],
+      links:[['admin','approvals','Where the team approves the store'],['superadmin','settings','Default commission for new stores']]},
+    dashboard:{label:'Dashboard', route:'/vendor',
+      what:'Today at a glance: revenue (gross / commission / net), orders today, delivered, waiting to accept, low-stock count and rating. Also a "Needs you now" list and a 7-day chart.',
+      why:'The morning check, and the quickest way to see what needs action.',
+      flow:[['X','Checks for new orders every 15 seconds. A chime (if turned on) and a banner flag orders waiting to be accepted.'],['V','Taps an item in "Needs you now" to jump straight to the screen that fixes it.'],['V','Uses the Open / Closed switch in the top bar to stop or start taking orders.']],
+      notes:['Opening hours are for display. To stop orders, the store must switch to Closed.'],
+      links:[['vendor','orders','New orders'],['vendor','inventory','Low-stock items']]},
+    orders:{label:'Orders', route:'/vendor/orders',
+      what:'A board with 3 columns: New → Preparing → Ready. Cards turn amber, then red, as they wait too long. Finished orders sit in a history table below.',
+      why:'Where the store spends most of its day: accept, pack and hand over.',
+      flow:[['C','Customer places an order. It appears in New.'],['V','Accept (with an optional ETA) or Reject (reason required).',true],['V','Start packing.'],['V','Can untick items it cannot supply (short order). The customer is refunded for those items automatically.'],['V','Mark ready.'],['X','Offers the job to the nearest free rider, or the store assigns one of its own riders.'],['R','Rider picks up. The order leaves the board.']],
+      notes:['The order detail page shows items, price breakdown, payment, customer, rider and a full timeline of who did what and when.','A New card turns amber at 4 minutes and red at 8. Accepted orders turn amber at 18 minutes and red at 30.'],
+      links:[['customer','track','The customer sees each step live'],['rider','offers','"Ready" creates the rider offer'],['admin','board','The team watches the same order'],['admin','dispatch','The team can assign a rider by hand']]},
+    products:{label:'Products', route:'/vendor/products',
+      what:'The store\'s catalogue: name, brand, SKU, category, pack size, MRP, selling price, description, photos, and Listed / Hidden.',
+      why:'What the customer can buy from this store.',
+      flow:[['V','Taps Add product and fills the form. A live preview of the customer\'s card is shown beside it.'],['V','Sets the opening stock and the low-stock alert level.'],['X','The product goes live straight away. No approval is needed.'],['V','Edits the price or hides the product any time. Delete is blocked while an active order contains it.']],
+      warn:'Photo upload needs file storage (S3). Products save fine without a photo.',
+      links:[['customer','shop','Shown in the shop'],['vendor','inventory','Stock is managed in Inventory'],['admin','catalog','The team can deactivate a product']]},
+    inventory:{label:'Inventory', route:'/vendor/inventory',
+      what:'Stock, reserved and available units per product. Out-of-stock items are listed first, then low-stock ones.',
+      why:'Keeps the shop honest. Customers can\'t buy what isn\'t on the shelf.',
+      flow:[['V','Adds or removes a quantity (e.g. +25 restock, −2 damaged). It never types a new total.'],['V','Or runs a bulk stock-take. Either every line applies or none does.'],['X','Stock can never go below zero, and every change is logged with who and why.']],
+      notes:['When a customer checks out, stock is reserved immediately, so two people can\'t buy the last unit.'],
+      links:[['admin','stock','Low and out-of-stock items show up as team alerts'],['customer','cart','The cart checks this stock live']]},
+    partners:{label:'Delivery partners', route:'/vendor/partners',
+      what:'The store\'s own riders: status, vehicle, online/free state.',
+      why:'Stores with their own delivery boys can use them alongside Tokri\'s rider pool.',
+      flow:[['V','Adds a rider: name, phone, vehicle and a password (shown only once).'],['X','Creates a rider login that is active immediately.'],['V','Assigns a Ready order to one of its free riders, or lets the system choose.'],['V','Can suspend or re-activate a rider.']],
+      links:[['rider','dashboard','These riders use the same Rider app'],['admin','riders','The team sees them in Riders']]},
+    earnings:{label:'Earnings', route:'/vendor/earnings',
+      what:'Gross − commission − refunds = what you receive, for Today, 7 days or 30 days. Also top products, the ledger and the list of settlements.',
+      why:'Total transparency about what the store will be paid, and when.',
+      flow:[['X','Each delivered order adds a Sale line and a Commission line to the ledger.'],['S','The super admin generates the settlement for a period.'],['S','Marks it paid with the bank reference once the transfer is done.'],['V','Sees the settlement as Paid, with the reference number.']],
+      notes:['Only delivered orders count. The commission rate is fixed on each order when it is placed. The delivery fee belongs to Tokri, not the store.'],
+      links:[['superadmin','settlements','Where payouts are generated and marked paid'],['superadmin','vendors','Where commission % is set']]},
+    settings:{label:'Store settings', route:'/vendor/settings',
+      what:'Store name and description, address, map pin, delivery radius (km), opening hours per day, COD on/off and the maximum COD order value. Commission, approval status and rating are shown read-only.',
+      why:'Controls where and how the store delivers.',
+      flow:[['V','Edits the details. The page warns before closing with unsaved changes.'],['V','Saves. Delivery radius and COD rules apply to the next checkout immediately.']],
+      links:[['customer','stores','Shown on the storefront'],['customer','checkout','Radius and COD rules are checked here']]}
+  }
+},
+
+rider:{
+  label:'Rider', key:'R', home:'/delivery',
+  intro:'The delivery partner. They use the Rider app on their phone (it installs like an app): go online, take jobs, pick up, deliver with OTP, and track their wallet and earnings.',
+  login:'delivery@grocery.in', groups:[['Start',['join']],['On the road',['dashboard','offers','active']],['Account',['wallet','verify','earnings','history']]],
+  menus:{
+    join:{label:'How a rider joins', route:'/signup → Rider',
+      what:'The "Rider" tab on the sign-up page. A store can also add its own riders directly.',
+      why:'Brings riders into Tokri\'s shared delivery pool.',
+      flow:[['R','Applies from the Rider tab.'],['X','The account is created as Pending.'],['A','Approves or rejects it in Approvals.',true],['R','Logs in and completes KYC (Verify) before taking jobs.']],
+      links:[['admin','approvals','Where the team approves riders'],['vendor','partners','Stores can add their own riders']]},
+    dashboard:{label:'Dashboard', route:'/delivery',
+      what:'A big Online / Offline switch, today\'s deliveries and earnings, wallet balance, the current job and a "needs you now" strip (KYC, low wallet, active job).',
+      why:'Start and end the shift, and see anything that blocks work.',
+      flow:[['R','Taps the big card to go Online.'],['X','The app checks in every 30 s. After about 65 s of silence the rider is marked offline.'],['R','Cannot go offline while carrying an order.']],
+      links:[['admin','dispatch','Online riders appear in Dispatch'],['rider','offers','Jobs arrive only while Online']]},
+    offers:{label:'Offers', route:'/delivery/offers',
+      what:'A new job, full screen: payout in big type and a countdown. Review shows the items, pickup and drop, the payout and the pick fee.',
+      why:'This is how riders get work.',
+      flow:[['V','Store marks an order Ready.'],['X','Offers it to the nearest free rider. The offer lasts 45 seconds.'],['R','Decline (optional reason), or Review → Accept.',true],['X','Checks KYC is verified and the wallet can cover the pick fee (₹25–₹50).',true],['X','Takes the pick fee from the wallet, and the order becomes Assigned.']],
+      notes:['Payout = ₹20 + ₹5 per km, from pickup to drop.','If the rider declines or lets the offer expire, it goes to the next rider. After 3 tries the store and the team are alerted.'],
+      links:[['vendor','orders','Created when the store marks the order Ready'],['rider','wallet','The pick fee comes from the wallet'],['rider','verify','KYC must be verified to accept']]},
+    active:{label:'Active delivery', route:'/delivery/active/[id]',
+      what:'One step per screen: Go to store → Picked up → Out for delivery → Deliver. Shows addresses, customer contact, items, distance/ETA and an "Open in Google Maps" link.',
+      why:'Guides the rider through the job without mistakes.',
+      flow:[['R','Reaches the store and taps Picked up.'],['R','Taps Out for delivery. The location is shared every 10 s with the customer.'],['C','Gives the 4-digit OTP at the door.'],['R','Types the OTP and collects the COD cash if it\'s a COD order (the amount is shown big).'],['X','Order Delivered. After 5 wrong OTP tries the order locks and only the team can finish it.',true]],
+      notes:['"Can\'t deliver" needs a reason. It marks the order Delivery failed and opens a support case for the team.','If the network drops, the job stays on screen with an "offline" banner.'],
+      warn:'Optional photo proof needs file storage (S3). The OTP alone completes delivery.',
+      links:[['customer','track','The customer watches the rider live'],['admin','issues','Failed deliveries become issues']]},
+    wallet:{label:'Wallet', route:'/delivery/wallet',
+      what:'The balance, all transactions (fees in red, credits in green) and top-up buttons (₹100 / 200 / 500 / 1000).',
+      why:'Pick fees are paid from here, so a rider with no balance can\'t accept jobs.',
+      flow:[['R','Tops up the wallet.'],['X','Warns the rider when the balance is at or below ₹100.'],['X','Blocks Accept if the balance is less than the fee.',true]],
+      warn:'Online top-up needs Razorpay. Until then the Super Admin credits rider wallets by hand.',
+      links:[['rider','offers','Fee taken when accepting'],['superadmin','riders','Wallet credit by the team']]},
+    verify:{label:'Verify (KYC)', route:'/delivery/profile',
+      what:'Aadhaar, PAN and driving-licence numbers, the status (not started → submitted → verified / rejected) and a 24-hour review countdown.',
+      why:'Only verified riders can accept jobs. This keeps customers safe.',
+      flow:[['R','Enters the document numbers and submits.'],['A','The Tokri team reviews and verifies or rejects.',true],['R','Gets a live update and a notification. If rejected, can submit again.']],
+      warn:'Document photo upload needs file storage (S3). Number-only submission works.',
+      links:[['admin','riders','The team reviews rider KYC'],['rider','offers','KYC unlocks Accept']]},
+    earnings:{label:'Earnings', route:'/delivery/earnings',
+      what:'Today\'s figures, a 30-day statement and day-by-day bars. COD collected is shown separately as cash owed to Tokri.',
+      why:'The rider can see what they made.',
+      flow:[['X','Every delivered job adds ₹20 + ₹5/km to the statement.'],['R','Checks today and the last 30 days.']],
+      links:[['rider','history','Each job behind the number']]},
+    history:{label:'History', route:'/delivery/history',
+      what:'Delivered and failed jobs, newest first, grouped by day, with payout and COD.',
+      why:'Proof of work, and a way to settle any dispute.',
+      flow:[['R','Opens History to review past jobs.']],
+      links:[['admin','riders','The team sees the same history']]}
+  }
+},
+
+admin:{
+  label:'Admin', key:'A', home:'/admin',
+  intro:'The Tokri operations team. They keep the marketplace running minute by minute: approve stores and riders, watch live orders, fix stuck deliveries and handle complaints. Money and platform settings are left to the Super Admin.',
+  login:'admin@tokri.app',
+  groups:[['Right now',['dashboard','board','dispatch','approvals','issues','stock']],['Marketplace',['orders','vendors','customers','riders','catalog','coupons']],['Platform',['audit']]],
+  menus:{
+    dashboard:{label:'Dashboard', route:'/admin',
+      what:'An operations work queue that refreshes every 30 s: SLA breaches, and counts for unassigned orders, stuck orders, pending stores and riders, open issues, failed deliveries and low or out-of-stock items. Also live lanes, rider pulse and today\'s numbers.',
+      why:'Shows exactly what needs doing right now, in order of urgency.',
+      flow:[['X','Counts everything that is waiting.'],['A','Clicks a tile, which opens the screen that fixes it.']],
+      links:[['admin','dispatch','Unassigned orders'],['admin','approvals','Pending stores and riders'],['admin','issues','Open issues']]},
+    board:{label:'Live board', route:'/admin/board',
+      what:'Every live order in 5 lanes: New → Preparing → Ready → Assigned → In transit. Each card shows store, customer, rider, time and a promise timer (amber at 80% of the SLA, red past it).',
+      why:'One screen to watch the whole city.',
+      flow:[['X','Refreshes every 15 s.'],['A','Filters by store or order number, or by late orders only.'],['A','Clicks a card to see its full history.']],
+      links:[['vendor','orders','Store actions move the cards'],['rider','active','Rider actions move the cards'],['superadmin','settings','The SLA minutes are set in Settings']]},
+    dispatch:{label:'Dispatch', route:'/admin/dispatch',
+      what:'Left: Ready orders with no rider, longest wait first, each with the 5 nearest free riders. Right: the whole rider fleet (available / on a job / offline).',
+      why:'For when automatic assignment fails, or a human needs to override it.',
+      flow:[['A','Picks an order.'],['A','Picks a rider and gives an optional reason.'],['X','The order becomes Assigned and the rider is reserved. This is logged in the Audit log.'],['A','Can unassign (reason required) any time before pickup.']],
+      links:[['vendor','orders','Orders arrive here after "Ready"'],['rider','offers','The rider receives the job'],['admin','audit','Every assignment is logged']]},
+    approvals:{label:'Approvals', route:'/admin/approvals',
+      what:'Two queues: stores waiting (location, radius, commission, COD) and riders waiting (vehicle, contact). Clicking a row opens the full application.',
+      why:'Nobody sells or delivers on Tokri until the team lets them in.',
+      flow:[['V','A store or rider applies from Sign up.'],['A','Opens the application.'],['A','Approve, or Reject with a reason ("what would they have to fix?").',true],['X','Approved stores appear in the shop. Approved riders can log in (and must then finish KYC).']],
+      links:[['vendor','join','Store application'],['rider','join','Rider application'],['admin','vendors','Approved stores live here']]},
+    issues:{label:'Issues', route:'/admin/issues',
+      what:'The support queue: type (failed delivery, missing item, damaged, late, payment, refund…), priority, status, owner and age.',
+      why:'Every complaint is tracked until it is fixed. Nothing gets lost in WhatsApp.',
+      flow:[['A','Logs an issue (or one is created by a failed delivery), linked to the order, customer, store or rider.'],['A','Assigns it to a teammate and sets the priority.'],['A','Replies in the thread and changes the status as work goes on.'],['A','Resolves it. A written resolution is required.']],
+      links:[['rider','active','"Can\'t deliver" opens an issue'],['admin','orders','Linked order']]},
+    stock:{label:'Stock alerts', route:'/admin/stock',
+      what:'Low and out-of-stock products across all stores, by aisle and by store, with units sold in 30 days. Can be exported to CSV.',
+      why:'Spot stores that keep running out, so the team can call them before customers notice.',
+      flow:[['X','Builds the list from every store\'s inventory.'],['A','Opens the product, or calls the store. Restocking itself is the store\'s job.']],
+      links:[['vendor','inventory','Stores fix stock here'],['admin','catalog','Product details']]},
+    orders:{label:'Orders', route:'/admin/orders',
+      what:'Every order from every store, with filters. The detail page shows the full timeline (who, when, the gap between steps), items, payment and refunds.',
+      why:'Answer any customer or store question about an order.',
+      flow:[['A','Finds the order by number, store or customer.'],['A','Opens it to see the full timeline.'],['A','Cancels with a reason if needed (before pickup, or after a failed delivery).',true],['X','Online-paid orders are marked refunded in full and logged in the ledger.']],
+      links:[['customer','orders','The customer\'s view of the same order'],['admin','issues','Raise an issue for it']]},
+    vendors:{label:'Vendors', route:'/admin/vendors',
+      what:'All stores, with status (pending / approved / suspended) and commission %. The detail page shows the store owner contact details, lifetime sales and order count, hours, recent orders and catalogue.',
+      why:'Manage which stores are live.',
+      flow:[['A','Opens a store.'],['A','Suspend (reason required). The store closes immediately. Or Reinstate.',true],['S','Super Admin can change the commission %, which applies to new orders only.']],
+      links:[['vendor','dashboard','The store\'s own panel'],['superadmin','settlements','Store payouts']]},
+    customers:{label:'Customers', route:'/admin/customers',
+      what:'Every customer: phone, number of orders, total spend, last order and status. The detail page shows lifetime value and order history.',
+      why:'Support and fraud control.',
+      flow:[['A','Looks up a customer.'],['A','Suspends the account if needed. The customer is logged out on the next request.']],
+      links:[['customer','signup','Where customers come from'],['admin','orders','Their orders']]},
+    riders:{label:'Riders', route:'/admin/riders',
+      what:'The whole fleet: own-store or Tokri pool, vehicle, presence (online, free, on a run, offline), active order, completed jobs and last location ping. The detail page has performance, delivery history, wallet and the KYC panel.',
+      why:'Know how many riders are available and how each one performs.',
+      flow:[['A','Opens a rider to see the current job, performance and history.'],['A','Reviews KYC in the KYC panel on the rider page: Verify, or Reject with a reason.',true],['A','Suspends or reinstates. A suspended rider goes offline at once, and any job they hold must be re-assigned in Dispatch.']],
+      links:[['rider','dashboard','The rider\'s own app'],['admin','dispatch','Re-assign jobs'],['rider','verify','Rider KYC']]},
+    catalog:{label:'Catalog', route:'/admin/catalog',
+      what:'Products tab: all stores\' products with live stock, which can be activated or deactivated. Aisles & categories tab: the 8 aisles and their categories.',
+      why:'Keep the shop clean, with the right categories and no bad listings.',
+      flow:[['A','Creates or edits categories inside an aisle.'],['A','Deactivates a product that should not be sold.'],['X','A category that still has products can\'t be deleted, so it is deactivated instead.',true]],
+      links:[['vendor','products','Stores list products in these categories'],['customer','aisle','Aisles the customer browses']]},
+    coupons:{label:'Coupons', route:'/admin/coupons',
+      what:'Discount codes: flat or %, minimum order, maximum discount, total and per-user limits, valid dates, on/off.',
+      why:'Marketing: bring customers back and push sales.',
+      flow:[['A','Creates a code (4–24 characters) with its rules.'],['C','Customer applies it at checkout.'],['X','Checks the dates, minimum order and limits.',true],['X','Counts each redemption. A redeemed coupon can be switched off but not deleted.']],
+      notes:['A platform coupon is paid by Tokri. A store-specific coupon comes off that store\'s payout.'],
+      links:[['customer','checkout','Applied at checkout'],['superadmin','reports','Discounts in Reports']]},
+    audit:{label:'Audit log', route:'/admin/audit',
+      what:'Every change anyone made: who, their role, what changed (before → after), when, and from which IP.',
+      why:'Accountability. Any disputed change can be traced to a person.',
+      flow:[['X','Records every important action automatically: approvals, cancellations, commission, settings, dispatch, team, stock and more.'],['A','Filters by person, action or date and opens the before/after view.']],
+      notes:['Passwords and tokens are never stored in the log.'],
+      links:[['superadmin','settings','Settings changes'],['admin','dispatch','Dispatch actions']]}
+  }
+},
+
+superadmin:{
+  label:'Super Admin', key:'S', home:'/admin',
+  intro:'The owner of the platform. Sees everything the Admin sees, plus money and platform control: payments, store payouts, reports, the admin team and global settings.',
+  login:'superadmin@tokri.app',
+  groups:[['Right now',['dashboard','board','dispatch','approvals','issues','stock']],['Marketplace',['orders','vendors','customers','riders','catalog','coupons']],['Money',['payments','settlements','reports']],['Platform',['audit','team','settings']]],
+  menus:{
+    dashboard:{label:'Dashboard', route:'/admin',
+      what:'A business overview for 7, 30 or 90 days: GMV (total sales), orders, average order value, active stores, pending approvals, riders online, cancellation rate and COD share. Also a GMV trend, sales by aisle, top stores and top products.',
+      why:'How the business is doing, at a glance.',
+      flow:[['S','Picks the period.'],['X','Calculates everything from real orders.'],['S','Clicks through to the details.']],
+      links:[['superadmin','reports','Deeper numbers'],['admin','dashboard','Admin\'s operations view of the same data']]},
+    payments:{label:'Payments', route:'/admin/payments', superOnly:true,
+      what:'Every payment across every store: order, customer, method (Online / COD), amount, status and gateway reference. Tiles show total collected, success rate, COD outstanding and refunded.',
+      why:'Track every rupee that comes in, and every refund.',
+      flow:[['C','Customer pays (online, or COD at the door).'],['X','The payment is recorded against the order.'],['S','Filters by method, status or date to check collections and refunds.']],
+      warn:'Online payments and gateway refunds need Razorpay to be connected. COD payments are tracked today.',
+      links:[['customer','checkout','Where payments start'],['admin','orders','The order behind each payment']]},
+    settlements:{label:'Settlements', route:'/admin/settlements', superOnly:true,
+      what:'Store payouts: store, period, gross − commission − refunds = net payable, and the status (pending, processing, paid, failed). A row is flagged if the maths doesn\'t add up.',
+      why:'How stores get paid. This is the money promise Tokri makes to each store.',
+      flow:[['S','Taps Generate and picks the period (e.g. last Monday to Sunday).'],['X','Takes the delivered orders, creates one settlement per store and attaches the ledger lines. Running it twice for the same period is safely skipped.'],['S','Sends the bank transfer outside the system.'],['S','Marks the settlement paid with the bank / UTR reference.'],['V','The store sees it as Paid in Earnings.']],
+      notes:['The system does not move money by itself. It records what was paid.'],
+      links:[['vendor','earnings','The store\'s view'],['admin','audit','Every payout is logged']]},
+    reports:{label:'Reports', route:'/admin/reports', superOnly:true,
+      what:'Sales, store performance, product performance, delivery performance and tax summary, for a chosen period and grouping, with a chart, a table and CSV export.',
+      why:'Business decisions, accounts and tax filing.',
+      flow:[['S','Chooses a report, a date range and a grouping (day / week / month, store, aisle…).'],['X','Builds it from real orders.'],['S','Exports to CSV for the accountant.']],
+      links:[['superadmin','dashboard','Summary view'],['superadmin','settlements','Payouts']]},
+    team:{label:'Team', route:'/admin/team', superOnly:true,
+      what:'Admin accounts: name, phone, role, status, added and last seen.',
+      why:'Control who can run operations.',
+      flow:[['S','Adds an admin: name, work email, phone and a password (12+ characters, or tap "Generate a strong one").'],['S','Shares the password with the new admin. It is shown only once and can never be seen again.'],['S','Suspends or reinstates. Suspending logs the person out everywhere.'],['X','New accounts are always Admin. A new Super Admin can never be created from the screen.']],
+      notes:['Nobody can change their own account here.'],
+      links:[['admin','audit','Team changes are logged']]},
+    settings:{label:'Settings', route:'/admin/settings', superOnly:true,
+      what:'Platform rules: delivery fee (₹29), free-delivery limit (₹499), default commission (12%), service radius (5 km), delivery promise (SLA, 30 min), stuck-order grace time (10 min), platform name, support email and phone.',
+      why:'Change how the business works without touching code.',
+      flow:[['S','Edits a value.'],['X','Money-related changes ask for confirmation.'],['X','Saves the change and logs the before/after in the Audit log.'],['C','The new fee or radius applies at the next checkout.']],
+      notes:['The rider pick fee range (₹25–₹50) and the low-wallet warning (₹100) are server settings. Ask the developer to change them.'],
+      links:[['customer','cart','Delivery fee and free-delivery limit'],['vendor','join','Default commission for new stores'],['admin','board','SLA promise timer']]}
+  }
+}
+};
+
+/* Super admin shares every admin screen, plus the extras above. */
+for (const [id, m] of Object.entries(ROLES.admin.menus)) {
+  if (!ROLES.superadmin.menus[id]) ROLES.superadmin.menus[id] = m;
+}
+ROLES.superadmin.menus.vendors = Object.assign({}, ROLES.admin.menus.vendors, {
+  flow: ROLES.admin.menus.vendors.flow,
+  notes: ['Only the Super Admin can change a store\'s commission %. The Admin sees it read-only.']
+});
+ROLES.superadmin.menus.riders = Object.assign({}, ROLES.admin.menus.riders, {
+  notes: ['Super Admin can credit a rider\'s wallet (amount + note, logged). This is the way to fund wallets until Razorpay top-ups are live.']
+});
+
+const COLORS = {customer:'--c', vendor:'--v', rider:'--r', admin:'--a', superadmin:'--s'};
+const ORDER = ['customer','vendor','rider','admin','superadmin'];
+
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+
+/* ---------- tabs ---------- */
+const tabs = document.getElementById('tabs');
+const allTabs = [['overview','Overview','--brand'], ...ORDER.map(k => [k, ROLES[k].label, COLORS[k]])];
+for (const [k, label, col] of allTabs) {
+  const b = el(`<button class="tab" role="tab" data-tab="${k}" style="--tc:var(${col})"><span class="dot"></span>${esc(label)}</button>`);
+  b.onclick = () => go(k);
+  tabs.appendChild(b);
+}
+
+/* ---------- overview extras ---------- */
+const cards = document.getElementById('roleCards');
+for (const k of ORDER) {
+  const r = ROLES[k];
+  const c = el(`<button class="rc" type="button" style="--rc:var(${COLORS[k]})"><h4>${esc(r.label)}</h4><p>${esc(r.intro.split('. ')[0])}.</p><span class="go">${Object.keys(r.menus).length} menus →</span></button>`);
+  c.onclick = () => go(k);
+  cards.appendChild(c);
+}
+const legend = document.getElementById('legend');
+for (const a of Object.values(ACTORS)) legend.appendChild(el(`<span><i style="background:${a.c}"></i>${a.name}</span>`));
+
+/* ---------- role panels ---------- */
+const host = document.getElementById('rolePanels');
+for (const k of ORDER) {
+  const r = ROLES[k];
+  const p = el(`<section class="panel" id="p-${k}" role="tabpanel" style="--rc:var(${COLORS[k]});--rs:var(${COLORS[k]}-soft)"></section>`);
+  p.appendChild(el(`<div class="role-head"><h2>${esc(r.label)}</h2><p>${esc(r.intro)}</p>
+    <div class="role-meta"><span class="pill">Login: <b>${esc(r.login)}</b></span><span class="pill">Opens at <b>${esc(r.home)}</b></span><span class="pill"><b>${Object.keys(r.menus).length}</b> menus after login</span></div></div>`));
+  const lay = el(`<div class="layout"><aside class="menu" aria-label="${esc(r.label)} menu"></aside><article class="detail" aria-live="polite"></article></div>`);
+  const menu = lay.querySelector('.menu');
+  let n = 0;
+  for (const [g, ids] of r.groups) {
+    menu.appendChild(el(`<h4>${esc(g)}</h4>`));
+    for (const id of ids) {
+      const m = r.menus[id]; n++;
+      const b = el(`<button class="mi" type="button" data-id="${id}"><span class="n">${n}</span>${esc(m.label)}${m.superOnly ? '<span class="tag">SUPER</span>' : ''}</button>`);
+      b.onclick = () => go(k, id);
+      menu.appendChild(b);
+    }
+  }
+  p.appendChild(lay);
+  host.appendChild(p);
+}
+
+function renderDetail(k, id) {
+  const r = ROLES[k], m = r.menus[id];
+  const d = document.querySelector(`#p-${k} .detail`);
+  let h = `<div class="dh"><h3>${esc(m.label)}</h3><span class="route">${esc(m.route)}</span>${m.superOnly ? '<span class="pill" style="color:var(--s)">Super Admin only</span>' : ''}</div>
+    <div class="grid2"><div class="box"><h5>What is it?</h5><p>${esc(m.what)}</p></div><div class="box"><h5>Used for</h5><p>${esc(m.why)}</p></div></div>
+    <div class="sec">Flow — step by step</div><div class="flow">`;
+  m.flow.forEach(([a, t, dec], i) => {
+    const A = ACTORS[a];
+    if (i) h += `<div class="arrow" aria-hidden="true"></div>`;
+    h += `<div class="step${dec ? ' decision' : ''}" style="--ac:${A.c};--as:${A.s}"><span class="who">${A.name}</span><span class="t">${dec ? '◆ ' : ''}${esc(t)}</span></div>`;
+  });
+  h += `</div>`;
+  if (m.notes && m.notes.length) h += `<div class="sec">Good to know</div><ul class="clean">${m.notes.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  if (m.warn) h += `<div class="note"><b>Needs a service:</b> ${esc(m.warn)}</div>`;
+  if (m.links && m.links.length) {
+    h += `<div class="sec">Connected to</div><div class="links">`;
+    for (const [rk, mid, why] of m.links) {
+      const tm = ROLES[rk] && ROLES[rk].menus[mid];
+      if (!tm) continue;
+      h += `<button class="lk" type="button" data-r="${rk}" data-m="${mid}" style="--lc:var(${COLORS[rk]})"><span class="dot"></span><span><b>${esc(ROLES[rk].label)} › ${esc(tm.label)}</b><br><span style="color:var(--muted)">${esc(why)}</span></span></button>`;
+    }
+    h += `</div>`;
+  }
+  d.innerHTML = h;
+  d.querySelectorAll('.lk').forEach(b => b.onclick = () => go(b.dataset.r, b.dataset.m, true));
+  document.querySelectorAll(`#p-${k} .mi`).forEach(b => b.setAttribute('aria-current', b.dataset.id === id ? 'true' : 'false'));
+}
+
+/* ---------- routing (#role/menu) ---------- */
+const current = {};
+function go(k, id, scroll) {
+  if (k !== 'overview') {
+    id = id || current[k] || ROLES[k].groups[0][1][0];
+    current[k] = id;
+    renderDetail(k, id);
+  }
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === k ? 'true' : 'false'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + k));
+  // On a phone the tabs and the menu are sideways strips: keep the chosen item in view.
+  keepInView(tabs, tabs.querySelector('[aria-selected="true"]'));
+  if (k !== 'overview') { const strip = document.querySelector(`#p-${k} .menu`); keepInView(strip, strip.querySelector('[aria-current="true"]')); }
+  const hash = '#' + k + (k !== 'overview' ? '/' + id : '');
+  if (location.hash !== hash) history.replaceState(null, '', hash);
+  if (scroll) window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function keepInView(strip, item) {
+  if (!item || strip.scrollWidth <= strip.clientWidth) return;
+  strip.scrollLeft += item.getBoundingClientRect().left - strip.getBoundingClientRect().left - 16;
+}
+function fromHash() {
+  const [k, id] = location.hash.slice(1).split('/');
+  if (ROLES[k]) go(k, ROLES[k].menus[id] ? id : undefined); else go('overview');
+}
+window.addEventListener('hashchange', fromHash);
+fromHash();
+
+/* ---------- theme ---------- */
+document.getElementById('themeBtn').onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+};
+</script>
+</body>
+</html>

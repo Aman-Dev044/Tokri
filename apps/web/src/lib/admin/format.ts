@@ -179,7 +179,14 @@ export function formatDate(
  * caller controls when it is allowed to be non-deterministic — <RelativeTime/>
  * passes `null` until after mount for exactly that reason.
  */
-export function formatRelative(value: string | Date, now: number): string {
+export function formatRelative(
+  value: string | Date | null | undefined,
+  now: number,
+): string {
+  // Same rule as `formatDate`: a missing date is an em dash, never a throw.
+  // `/admin/riders` went down to its error boundary because a "last seen"
+  // the API never sent reached `.getTime()` here as `undefined`.
+  if (value === null || value === undefined) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return '—';
 

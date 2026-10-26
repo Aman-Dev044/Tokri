@@ -24,6 +24,7 @@ import { Paginated } from '../../../common/dto/paginated';
 import { AuditInterceptor } from '../../../common/interceptors/audit.interceptor';
 import {
   AdminDeliveryPartnersService,
+  PartnerDetail,
   PartnerRow,
 } from './delivery-partners.service';
 import { ListPartnersQueryDto, UpdatePartnerStatusDto } from './dto';
@@ -49,9 +50,17 @@ export class AdminDeliveryPartnersController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'One delivery partner' })
+  @ApiOperation({
+    summary: 'One delivery partner, with performance, run and KYC detail',
+    description:
+      'The list row plus: delivered / failed counts, average run time ' +
+      'and offer acceptance (from `delivery_assignments`), the order ' +
+      'currently held, the last 20 finished runs, the KYC record with ' +
+      'every identifier MASKED, and the wallet balance. Nothing here is ' +
+      'estimated: a metric with no data is null, never zero.',
+  })
   @ApiNotFoundResponse({ description: 'Missing or malformed id.' })
-  findOne(@Param('id') id: string): Promise<PartnerRow> {
+  findOne(@Param('id') id: string): Promise<PartnerDetail> {
     return this.partners.findById(id);
   }
 
@@ -67,7 +76,7 @@ export class AdminDeliveryPartnersController {
     @Param('id') id: string,
     @Body() dto: UpdatePartnerStatusDto,
     @CurrentUser() actor: JwtUser,
-  ): Promise<PartnerRow> {
+  ): Promise<PartnerDetail> {
     return this.partners.updateStatus(id, dto, actor);
   }
 }

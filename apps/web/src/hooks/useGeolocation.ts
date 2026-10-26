@@ -158,6 +158,22 @@ export function useGeolocation(): UseGeolocation {
       return;
     }
 
+    // Browsers only hand out a position on a secure origin (https, or
+    // localhost). On plain http they answer PERMISSION_DENIED without ever
+    // asking, which used to read as "Location is blocked for this site" — true
+    // but useless, because no setting the customer can change will unblock
+    // it. Say what is actually going on instead.
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setState((prev) => ({
+        ...prev,
+        status: 'unsupported',
+        error:
+          'Sharing your location needs a secure (https) connection, which this site does not have yet. Enter a PIN code instead — it works just as well.',
+        ready: true,
+      }));
+      return;
+    }
+
     setState((prev) => ({ ...prev, status: 'locating', error: null }));
 
     navigator.geolocation.getCurrentPosition(

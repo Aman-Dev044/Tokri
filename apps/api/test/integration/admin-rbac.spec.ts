@@ -351,6 +351,11 @@ describe('Admin RBAC (integration)', () => {
         // gateway to reconcile it against — money out of nowhere, so it
         // sits with settlements rather than with day-to-day operations.
         'post /admin/riders/:id/wallet/credit',
+        // Every customer's spend, the button that sends money back out,
+        // and the platform's GMV / commission / tax in one export.
+        'get /admin/payments',
+        'post /admin/payments/:id/refund',
+        'get /admin/reports',
       ]),
     );
   });

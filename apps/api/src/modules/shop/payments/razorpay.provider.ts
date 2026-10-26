@@ -8,6 +8,8 @@ import {
   PaymentProvider,
   ProviderOrder,
   ProviderOrderStatus,
+  ProviderRefund,
+  RefundPaymentInput,
   VerifySignatureInput,
 } from './payment-provider';
 import { problem } from '../common/problem';
@@ -38,6 +40,13 @@ interface RazorpayPaymentEntity {
 
 interface RazorpayPaymentsForOrderResponse {
   items?: RazorpayPaymentEntity[];
+}
+
+interface RazorpayRefundEntity {
+  id: string;
+  payment_id: string;
+  amount: number;
+  status: string; // 'pending' | 'processed' | 'failed'
 }
 
 /**
@@ -204,6 +213,45 @@ export class RazorpayProvider implements PaymentProvider {
     // No attempt yet, or one still authorized/in-progress: neither paid
     // nor conclusively failed.
     return { state: 'pending', providerPaymentId: null };
+  }
+
+  // ── Refunds ──────────────────────────────────────────────────────────
+
+  /**
+   * `POST /payments/:id/refund` — a normal-speed refund of `amount` paise.
+   *
+   * Razorpay answers `pending` or `processed` once it has accepted the
+   * refund, and a non-2xx (which `request` turns into a 503) when it has
+   * not. A `failed` status in a 2xx body is treated as a refusal too: the
+   * caller records the refund only when this resolves, so resolving on a
+   * refund the gateway has already declared failed would write money
+   * back to the customer that never moved.
+   */
+  async refundPayment(input: RefundPaymentInput): Promise<ProviderRefund> {
+    if (!this.isConfigured()) throw this.notConfigured();
+
+    const keyId = this.config.getOrThrow<string>('RAZORPAY_KEY_ID');
+    const keySecret = this.config.getOrThrow<string>('RAZORPAY_KEY_SECRET');
+
+    const body = await this.request<RazorpayRefundEntity>(
+      `/payments/${encodeURIComponent(input.providerPaymentId)}/refund`,
+      keyId,
+      keySecret,
+      {
+        // INTEGER PAISE, passed through exactly as received.
+        amount: input.amount,
+        notes: input.notes ?? {},
+      },
+    );
+
+    if (body.status === 'failed') {
+      this.logger.error(
+        `Razorpay refund ${body.id} on ${input.providerPaymentId} came back failed`,
+      );
+      throw this.gatewayUnavailable();
+    }
+
+    return { providerRefundId: body.id, status: body.status };
   }
 
   // ── Internals ─────────────────────────────────────────────────────────

@@ -52,9 +52,9 @@ function sortValue(row: CustomerRow, key: string): string | number | null {
     case 'name':
       return row.name;
     case 'orders':
-      return row.ordersCount;
+      return row.orderCount;
     case 'spend':
-      return row.totalSpendPaise;
+      return row.totalSpend;
     case 'lastOrder':
       return row.lastOrderAt === null ? null : Date.parse(row.lastOrderAt);
     case 'status':
@@ -101,7 +101,7 @@ export function CustomersView() {
   const filtered = useMemo(() => {
     const matched = rows.filter(
       (row) =>
-        matchesSearch([row.name, row.phone, row.email ?? undefined, row.city], debouncedQ) &&
+        matchesSearch([row.name, row.phone, row.email ?? undefined], debouncedQ) &&
         (filters.status === '' || row.status === filters.status),
     );
     return sortRows(matched, sort, sortValue);
@@ -112,8 +112,8 @@ export function CustomersView() {
   const kpis = useMemo(() => {
     const active = rows.filter((r) => r.status === 'active').length;
     const suspended = rows.filter((r) => r.status === 'suspended').length;
-    const withOrders = rows.filter((r) => r.ordersCount > 0);
-    const lifetime = withOrders.reduce((sum, r) => sum + r.totalSpendPaise, 0);
+    const withOrders = rows.filter((r) => r.orderCount > 0);
+    const lifetime = withOrders.reduce((sum, r) => sum + r.totalSpend, 0);
     return {
       total: rows.length,
       active,
@@ -203,7 +203,7 @@ export function CustomersView() {
             render: (row: CustomerRow) => (
               <span className={styles.twoLine}>
                 <span className={styles.strong}>{row.name}</span>
-                <span className={styles.subtle}>{row.email ?? `${row.city} · no email`}</span>
+                <span className={styles.subtle}>{row.email ?? 'no email'}</span>
               </span>
             ),
           },
@@ -220,7 +220,7 @@ export function CustomersView() {
             width: '6rem',
             sortable: true,
             render: (row: CustomerRow) => (
-              <span className={styles.num}>{formatCount(row.ordersCount)}</span>
+              <span className={styles.num}>{formatCount(row.orderCount)}</span>
             ),
           },
           {
@@ -229,7 +229,7 @@ export function CustomersView() {
             align: 'right',
             width: '9rem',
             sortable: true,
-            render: (row: CustomerRow) => <Money value={row.totalSpendPaise} />,
+            render: (row: CustomerRow) => <Money value={row.totalSpend} />,
           },
           {
             key: 'lastOrder',

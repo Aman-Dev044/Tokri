@@ -65,8 +65,10 @@ export default function AdminVendorsPage() {
 
   const [values, setValues] = useState<FilterValues>(EMPTY);
   const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<SortState>({ key: 'gmvPaise', dir: 'desc' });
+  const [sort, setSort] = useState<SortState>({ key: 'gmv', dir: 'desc' });
   const [pending, setPending] = useState<PendingAction | null>(null);
+  // Required by `UpdateVendorStatusDto` when suspending; unused for approval.
+  const [reason, setReason] = useState('');
 
   // The input stays instant; only the value that reaches the API waits.
   const q = useDebounced(values.q ?? '', 300);
@@ -79,7 +81,7 @@ export default function AdminVendorsPage() {
     sort: toSortParam(sort, VENDOR_SORT),
   });
 
-  const statusMutation = useAdminMutation<{ status: VendorStatus }, VendorListRow>(
+  const statusMutation = useAdminMutation<{ status: VendorStatus; reason?: string }, VendorListRow>(
     '/admin/vendors/:id/status',
     'PATCH',
   );
@@ -96,8 +98,10 @@ export default function AdminVendorsPage() {
         render: (row) => (
           <Link className="adm-table__link" href={`/admin/vendors/${row.id}`}>
             {row.storeName}
+            {/* The list row carries no owner — that join is the detail
+                page's. City and pincode are what an operator scans for. */}
             <span className="adm-table__sub">
-              {row.ownerName} · {row.city}
+              {row.address.city} · {row.address.pincode}
             </span>
           </Link>
         ),
@@ -124,18 +128,18 @@ export default function AdminVendorsPage() {
         render: (row) => <span className="adm-num">{formatPct(row.commissionPct)}</span>,
       },
       {
-        key: 'orders',
+        key: 'orderCount',
         header: 'Orders',
         align: 'right',
         sortable: true,
-        render: (row) => <span className="adm-num">{formatCount(row.orders)}</span>,
+        render: (row) => <span className="adm-num">{formatCount(row.orderCount)}</span>,
       },
       {
-        key: 'gmvPaise',
+        key: 'gmv',
         header: 'GMV',
         align: 'right',
         sortable: true,
-        render: (row) => <Money value={row.gmvPaise} />,
+        render: (row) => <Money value={row.gmv} />,
       },
       {
         key: 'rating',
@@ -143,7 +147,9 @@ export default function AdminVendorsPage() {
         align: 'right',
         sortable: true,
         render: (row) =>
-          row.orders === 0 ? (
+          // 0 is the schema default, not a score: an unrated store reads as
+          // a dash, never "0.0".
+          row.rating === 0 ? (
             <span style={{ color: 'var(--adm-dim)' }}>—</span>
           ) : (
             <span className="adm-num">{row.rating.toFixed(1)}</span>
@@ -154,7 +160,12 @@ export default function AdminVendorsPage() {
         header: 'Joined',
         align: 'right',
         sortable: true,
-        render: (row) => <RelativeTime value={row.createdAt} live={false} />,
+        render: (row) =>
+          row.createdAt ? (
+            <RelativeTime value={row.createdAt} live={false} />
+          ) : (
+            <span style={{ color: 'var(--adm-dim)' }}>—</span>
+          ),
       },
       {
         key: 'actions',
@@ -198,14 +209,21 @@ export default function AdminVendorsPage() {
     setPage(1);
   };
 
+  const closeDialog = () => {
+    setPending(null);
+    setReason('');
+  };
+
   const confirmAction = async () => {
     if (!pending) return;
     await statusMutation.mutate(
-      { status: pending.next },
+      pending.next === 'suspended'
+        ? { status: pending.next, reason: reason.trim() }
+        : { status: pending.next },
       {
         params: { id: pending.vendor.id },
         invalidate: ['/admin/vendors', '/admin/analytics'],
-        onSuccess: () => setPending(null),
+        onSuccess: closeDialog,
       },
     );
   };
@@ -263,19 +281,34 @@ export default function AdminVendorsPage() {
         destructive={pending?.next === 'suspended'}
         confirmLabel={pending?.next === 'approved' ? 'Approve' : 'Suspend'}
         loading={statusMutation.loading}
-        onCancel={() => setPending(null)}
+        // The API 400s a suspension with no reason; this only says so first.
+        confirmDisabled={pending?.next === 'suspended' && reason.trim().length < 3}
+        onCancel={closeDialog}
         onConfirm={() => void confirmAction()}
         body={
           pending?.next === 'approved' ? (
             <>
               <strong>{pending.vendor.storeName}</strong> becomes visible to customers in{' '}
-              {pending.vendor.city} and can start accepting orders immediately.
+              {pending.vendor.address.city} and can start accepting orders immediately.
             </>
           ) : (
             <>
-              <strong>{pending?.vendor.storeName}</strong> disappears from search and can no longer
-              accept orders. Orders already in flight are <em>not</em> cancelled — they still have to
-              be fulfilled or refunded.
+              <p>
+                <strong>{pending?.vendor.storeName}</strong> disappears from search and can no
+                longer accept orders. Orders already in flight are <em>not</em> cancelled — they
+                still have to be fulfilled or refunded.
+              </p>
+              <label className="adm-field">
+                <span className="adm-field__label">Reason</span>
+                <input
+                  className="adm-input"
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  maxLength={500}
+                  placeholder="Stored on the vendor and in the audit log"
+                  disabled={statusMutation.loading}
+                />
+              </label>
             </>
           )
         }

@@ -1,13 +1,13 @@
 /**
  * SAMPLE DATA — not real, never presented as real.
  *
- * ── A NOTE ON THE ENDPOINT ──────────────────────────────────────────────────
- * `/admin/payments` is NOT in the enumerated admin endpoint list (plan §6.2);
- * the payment record lives inside `Order.payment`. This page therefore calls
- * `/admin/payments` as the natural read-model name and will very likely fall
- * back to this fixture until the API grows one. When it does, the shape below
- * is a flattened `Order.payment` joined onto the order, which is what a
- * transactions view needs.
+ * ── THE ENDPOINT ────────────────────────────────────────────────────────────
+ * `GET /admin/payments` (SUPER_ADMIN only) — there is no payments collection;
+ * each row is an order's `Order.payment` flattened onto the order, paged
+ * server-side in the usual `{ data, meta }` envelope. `id` is the order id,
+ * which is what `POST /admin/payments/:id/refund` takes. The interface below
+ * is that endpoint's row, key for key; this fixture stands in for it only when
+ * it cannot be reached.
  *
  * Money is INTEGER PAISE.
  */
@@ -17,18 +17,23 @@ import type { PaymentStatus } from '@/lib/admin/types';
 export type PaymentMethod = 'online' | 'cod';
 
 export interface PaymentRow {
+  /** The order id. */
   id: string;
   orderId: string;
   orderNo: string;
-  customerName: string;
-  vendorName: string;
+  /** null when the account no longer exists — the API never makes one up. */
+  customerName: string | null;
+  vendorName: string | null;
   method: PaymentMethod;
   status: PaymentStatus;
+  /** `pricing.grandTotal` — the order's current total. */
   amountPaise: number;
   refundedPaise: number;
-  provider: string;
+  /** `'razorpay'` online, `'cod'` for cash; null if never recorded. */
+  provider: string | null;
   /** `providerPaymentId` — null for COD, which has no gateway leg at all. */
   gatewayRef: string | null;
+  /** `placedAt` — when the payment was initiated at checkout. */
   at: string;
 }
 

@@ -10,16 +10,22 @@
  * meant to. The API's RolesGuard is the enforcement (plan §4.2).
  *
  * ── SYSTEM ACCOUNTS ARE IMMUTABLE ───────────────────────────────────────────
- * Two accounts are created by migration: one owns the audit trail, one runs the
- * settlement jobs. Suspending either breaks the platform in ways that are hard
- * to diagnose from the symptom, so they render with their actions removed and a
+ * The seed script provisions the bootstrap accounts from `.env` and flags them
+ * `isSystemAccount`. They are the break-glass identities, and the API refuses
+ * to suspend or delete them, so they render with their actions removed and a
  * plain explanation — not with a button that fails.
+ *
+ * ── THE ROW IS THE API'S `TeamMemberRow` ────────────────────────────────────
+ * Access level comes from `role` ('admin' | 'super_admin') via
+ * `parseAdminRole`, and `status` can be null for an account written outside
+ * the app. Both used to be read as fixture fields that the API never sent,
+ * and one hand-made account with no status took the whole page down.
  */
 
 import { useMemo, useState } from 'react';
 import { useAdminMutation, useAdminQuery } from '@/hooks';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { ADMIN_LEVEL_LABEL, adminLevelOf } from '@/lib/admin/session';
+import { ADMIN_LEVEL_LABEL, adminLevelOf, parseAdminRole } from '@/lib/admin/session';
 import type { AdminLevel, Paginated, TeamMember } from '@/lib/admin/types';
 import {
   AdminPage,
@@ -68,27 +74,43 @@ export default function AdminTeamPage() {
         render: (row) => (
           <span style={{ minWidth: 0 }}>
             <strong>{row.name}</strong>
-            <span className="adm-table__sub">{row.email}</span>
+            {row.email ? <span className="adm-table__sub">{row.email}</span> : null}
           </span>
         ),
       },
       {
-        key: 'level',
+        key: 'role',
         header: 'Access',
-        render: (row) => (
-          <span className="adm-rolepill" data-level={row.level}>
-            {ADMIN_LEVEL_LABEL[row.level]}
-          </span>
-        ),
+        render: (row) => {
+          const rowLevel = parseAdminRole(row.role);
+          return rowLevel ? (
+            <span className="adm-rolepill" data-level={rowLevel}>
+              {ADMIN_LEVEL_LABEL[rowLevel]}
+            </span>
+          ) : (
+            <span style={{ color: 'var(--adm-dim)' }}>{row.role}</span>
+          );
+        },
       },
       {
         key: 'status',
         header: 'Status',
         render: (row) => (
           <span className="adm-row">
-            <StatusPill status={row.status} kind="user" />
-            {row.isSystem ? (
-              <span className="adm-pill" data-tone="neutral" title="Created by a migration">
+            {row.status ? (
+              <StatusPill status={row.status} kind="user" />
+            ) : (
+              <span
+                className="adm-pill"
+                data-tone="warn"
+                title="The stored account has no status. Sign-in refuses anything that is not active."
+              >
+                <span className="adm-pill__glyph" aria-hidden="true" />
+                no status
+              </span>
+            )}
+            {row.isSystemAccount ? (
+              <span className="adm-pill" data-tone="neutral" title="Provisioned by the seed script">
                 <span className="adm-pill__glyph" aria-hidden="true" />
                 system
               </span>
@@ -96,7 +118,12 @@ export default function AdminTeamPage() {
           </span>
         ),
       },
-      { key: 'phone', header: 'Phone', numeric: true },
+      {
+        key: 'phone',
+        header: 'Phone',
+        numeric: true,
+        render: (row) => row.phone || <span style={{ color: 'var(--adm-dim)' }}>—</span>,
+      },
       {
         key: 'lastLoginAt',
         header: 'Last seen',
@@ -112,18 +139,23 @@ export default function AdminTeamPage() {
         key: 'createdAt',
         header: 'Added',
         align: 'right',
-        render: (row) => <RelativeTime value={row.createdAt} live={false} />,
+        render: (row) =>
+          row.createdAt ? (
+            <RelativeTime value={row.createdAt} live={false} />
+          ) : (
+            <span style={{ color: 'var(--adm-dim)' }}>—</span>
+          ),
       },
       {
         key: 'actions',
         header: '',
         align: 'right',
         render: (row) =>
-          row.isSystem ? (
+          row.isSystemAccount ? (
             <span
               className="adm-row"
               style={{ justifyContent: 'flex-end', color: 'var(--adm-dim)' }}
-              title="System accounts are created by a migration and cannot be edited here."
+              title="System accounts are provisioned by the seed script and cannot be edited here."
             >
               <IconLock style={{ width: 14, height: 14 }} />
               immutable
@@ -140,7 +172,11 @@ export default function AdminTeamPage() {
                   })
                 }
               >
-                {row.status === 'active' ? 'Suspend' : 'Reinstate'}
+                {row.status === 'active'
+                  ? 'Suspend'
+                  : row.status === 'suspended'
+                    ? 'Reinstate'
+                    : 'Activate'}
               </button>
               <button
                 type="button"
@@ -244,7 +280,7 @@ export default function AdminTeamPage() {
     >
       <Toolbar>
         <span style={{ color: 'var(--adm-dim)' }}>
-          {rows.length} accounts · {rows.filter((row) => row.isSystem).length} of them system
+          {rows.length} accounts · {rows.filter((row) => row.isSystemAccount).length} of them system
         </span>
         <Toolbar.Spacer />
         {statusMutation.error || deleteMutation.error ? (
@@ -296,51 +332,90 @@ export default function AdminTeamPage() {
 /* Create                                                              */
 /* ================================================================== */
 
+/** `CreateTeamMemberDto` — the body, all of it. */
 interface CreateBody {
   name: string;
   email: string;
   phone: string;
-  level: AdminLevel;
+  password: string;
+}
+
+const EMPTY_CREATE: CreateBody = { name: '', email: '', phone: '', password: '' };
+
+/** `CreateTeamMemberDto.password` — 12 to 128 characters, length over composition. */
+const MIN_PASSWORD = 12;
+const MAX_PASSWORD = 128;
+
+/**
+ * Twenty characters from an alphabet with the look-alikes (0/O, 1/l/I) taken
+ * out, because this password is read aloud or retyped from a chat message at
+ * least once. `crypto.getRandomValues` with rejection sampling, so no
+ * character is likelier than another — `Math.random()` is not a source of
+ * secrets.
+ */
+const PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789-_.!@#';
+function generatePassword(length = 20): string {
+  const limit = 256 - (256 % PASSWORD_ALPHABET.length);
+  const out: string[] = [];
+  const bytes = new Uint8Array(length * 2);
+  while (out.length < length) {
+    crypto.getRandomValues(bytes);
+    for (const byte of bytes) {
+      if (byte < limit && out.length < length) {
+        out.push(PASSWORD_ALPHABET.charAt(byte % PASSWORD_ALPHABET.length));
+      }
+    }
+  }
+  return out.join('');
 }
 
 /**
- * Creating an admin, with no password field anywhere.
+ * Creating an admin, with their first password set here.
  *
- * The API issues an invitation; the new admin sets their own credential through
- * the normal flow. An admin console that lets one person type another person's
- * password is an admin console where one person knows another person's
- * password, and the audit log stops meaning anything.
+ * There is no invitation flow behind this form — the platform has no email
+ * provider — so the account is created complete, the same way a store adds
+ * its own rider in the vendor panel: the super admin chooses (or generates) a
+ * first password and hands it over themselves. It is sent once, stored as an
+ * argon2id hash, and no endpoint returns it, so the drawer says plainly that
+ * this is the only time anybody sees it. The audit entry records who created
+ * the account and never the password.
+ *
+ * The new account is always an ADMIN. `POST /admin/team` takes no role at
+ * all and the API refuses to mint a SUPER_ADMIN by any route, so this form no
+ * longer offers the choice — a `level` field in the body was itself a 400.
  */
 function CreateAdminDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [form, setForm] = useState<CreateBody>({
-    name: '',
-    email: '',
-    phone: '',
-    level: 'ADMIN',
-  });
+  const [form, setForm] = useState<CreateBody>(EMPTY_CREATE);
 
   const mutation = useAdminMutation<CreateBody, TeamMember>('/admin/team', 'POST');
 
-  const valid = form.name.trim().length > 1 && /.+@.+\..+/.test(form.email);
+  const phoneOk = /^\d{10}$/.test(form.phone.trim());
+  const passwordOk = form.password.length >= MIN_PASSWORD && form.password.length <= MAX_PASSWORD;
+  const valid =
+    form.name.trim().length > 1 && /.+@.+\..+/.test(form.email) && phoneOk && passwordOk;
   const fieldErrors = mutation.error?.fieldErrors ?? {};
+
+  const close = () => {
+    // The password must not survive a closed drawer for the next person to
+    // find on this screen.
+    setForm(EMPTY_CREATE);
+    onClose();
+  };
 
   const submit = () => {
     if (!valid) return;
-    void mutation.mutate(form, {
-      invalidate: ['/admin/team'],
-      onSuccess: () => {
-        setForm({ name: '', email: '', phone: '', level: 'ADMIN' });
-        onClose();
-      },
-    });
+    void mutation.mutate(
+      { ...form, name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() },
+      { invalidate: ['/admin/team'], onSuccess: close },
+    );
   };
 
   return (
     <DetailDrawer
       open={open}
-      onClose={onClose}
+      onClose={close}
       title="Add an admin"
-      subtitle="They receive an invitation and set their own password. No password is set here."
+      subtitle="Creates the account now, with a first password you hand to them yourself."
       actions={
         <>
           <button
@@ -349,9 +424,9 @@ function CreateAdminDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             onClick={submit}
             disabled={!valid || mutation.loading}
           >
-            {mutation.loading ? 'Sending…' : 'Send the invitation'}
+            {mutation.loading ? 'Creating…' : 'Create the admin'}
           </button>
-          <button type="button" className="adm-btn" onClick={onClose} disabled={mutation.loading}>
+          <button type="button" className="adm-btn" onClick={close} disabled={mutation.loading}>
             Cancel
           </button>
         </>
@@ -361,6 +436,7 @@ function CreateAdminDrawer({ open, onClose }: { open: boolean; onClose: () => vo
         <Field
           label="Full name"
           value={form.name}
+          maxLength={80}
           error={fieldErrors.name}
           onChange={(value) => setForm((f) => ({ ...f, name: value }))}
         />
@@ -368,36 +444,66 @@ function CreateAdminDrawer({ open, onClose }: { open: boolean; onClose: () => vo
           label="Work email"
           type="email"
           value={form.email}
+          maxLength={120}
           error={fieldErrors.email}
+          hint="They sign in with this email, or with the phone below."
           onChange={(value) => setForm((f) => ({ ...f, email: value }))}
         />
         <Field
           label="Phone"
           type="tel"
           value={form.phone}
-          error={fieldErrors.phone}
+          maxLength={10}
+          error={
+            fieldErrors.phone ??
+            (form.phone !== '' && !phoneOk ? 'Ten digits, no spaces and no country code.' : undefined)
+          }
           onChange={(value) => setForm((f) => ({ ...f, phone: value }))}
         />
 
+        <Field
+          label="First password"
+          value={form.password}
+          maxLength={MAX_PASSWORD}
+          autoComplete="off"
+          error={
+            fieldErrors.password ??
+            (form.password !== '' && form.password.length < MIN_PASSWORD
+              ? `Too short — ${MIN_PASSWORD} characters minimum.`
+              : undefined)
+          }
+          hint={`At least ${MIN_PASSWORD} characters. Length is what matters, not symbols.`}
+          onChange={(value) => setForm((f) => ({ ...f, password: value }))}
+          trailing={
+            <button
+              type="button"
+              className="adm-btn adm-btn--sm"
+              onClick={() => setForm((f) => ({ ...f, password: generatePassword() }))}
+            >
+              Generate a strong one
+            </button>
+          }
+        />
+
+        <div className="adm-notice" role="note">
+          <IconLock style={{ width: 16, height: 16, flex: '0 0 auto' }} />
+          <span>
+            Share this password with the new admin <strong>once</strong>, directly, and never
+            again. It is stored only as a hash: after you press Create there is no screen,
+            anywhere, that can show it to you. If it is lost, delete the account and create it
+            again.
+          </span>
+        </div>
+
         <div className="adm-field">
           <span className="adm-field__label">Access level</span>
-          <div className="adm-segmented" style={{ alignSelf: 'flex-start' }}>
-            {(['ADMIN', 'SUPER_ADMIN'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                className="adm-segmented__btn"
-                aria-pressed={form.level === option}
-                onClick={() => setForm((f) => ({ ...f, level: option }))}
-              >
-                {ADMIN_LEVEL_LABEL[option]}
-              </button>
-            ))}
-          </div>
+          <span className="adm-rolepill" data-level="ADMIN" style={{ alignSelf: 'flex-start' }}>
+            {ADMIN_LEVEL_LABEL.ADMIN}
+          </span>
           <p className="adm-section__desc" style={{ maxWidth: '46ch' }}>
-            {form.level === 'SUPER_ADMIN'
-              ? 'Super admins can manage the team, run settlements, change platform settings and edit vendor commission. Grant it deliberately.'
-              : 'Admins can operate orders, vendors, catalogue and support. They cannot touch money settings or the team.'}
+            Every account created here is an admin: they can operate orders, vendors, catalogue
+            and support, but cannot touch money settings or the team. Super admin is never granted
+            through the console — the API refuses it.
           </p>
         </div>
 
@@ -415,28 +521,58 @@ function Field({
   onChange,
   type = 'text',
   error,
+  hint,
+  maxLength,
+  autoComplete,
+  trailing,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   error?: string;
+  hint?: string;
+  maxLength?: number;
+  autoComplete?: string;
+  /** a control that sits beside the input — the password generator */
+  trailing?: React.ReactNode;
 }) {
   const id = `field-${label.replace(/\s+/g, '-').toLowerCase()}`;
+  const describedBy = [error ? `${id}-error` : null, hint ? `${id}-hint` : null]
+    .filter(Boolean)
+    .join(' ');
+  const input = (
+    <input
+      id={id}
+      className="adm-input"
+      type={type}
+      value={value}
+      maxLength={maxLength}
+      autoComplete={autoComplete}
+      onChange={(event) => onChange(event.target.value)}
+      aria-invalid={error ? true : undefined}
+      aria-describedby={describedBy || undefined}
+      style={trailing ? { flex: '1 1 auto', minWidth: 0 } : undefined}
+    />
+  );
   return (
     <div className="adm-field">
       <label className="adm-field__label" htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        className="adm-input"
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-      />
+      {trailing ? (
+        <div className="adm-row">
+          {input}
+          {trailing}
+        </div>
+      ) : (
+        input
+      )}
+      {hint ? (
+        <span id={`${id}-hint`} className="adm-section__desc">
+          {hint}
+        </span>
+      ) : null}
       {error ? (
         <span id={`${id}-error`} style={{ color: 'var(--crit-ink)', fontSize: 'var(--adm-fs-sm)' }}>
           {error}

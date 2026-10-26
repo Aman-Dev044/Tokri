@@ -1,7 +1,20 @@
 'use client';
 
 /**
- * One vendor: who they are, where they are, what they sell, what they are owed.
+ * One vendor: who they are, where they are, what they sell, what they have sold.
+ *
+ * ── THREE ENDPOINTS, EACH READ IN ITS OWN SHAPE ─────────────────────────────
+ *   GET /admin/vendors/:id           -> VendorDetail   (the row + `owner`)
+ *   GET /admin/vendors/:id/orders    -> Paginated<VendorOrderRow>
+ *   GET /admin/vendors/:id/products  -> Paginated<VendorProductRow>
+ *
+ * This page was first written against one fixture that bundled all three —
+ * plus an `earnings` block with commission, refunds and net payable that no
+ * endpoint computes. Against the live API `vendor.earnings.grossPaise` threw
+ * on the first render. What the vendor row actually measures is lifetime GMV
+ * and order count, so that is what the top of the page shows; what a vendor
+ * is OWED comes from the ledger, and the ledger's screen is Settlements. A
+ * "net payable" tile here would have been a number nobody computed.
  *
  * ── THE COMMISSION EDITOR IS SUPER-ADMIN ONLY ───────────────────────────────
  * Commission is the platform's revenue share and it is copied onto every order
@@ -21,7 +34,12 @@ import { useAdminMutation, useAdminQuery } from '@/hooks';
 import { formatCount, formatDate, formatPct } from '@/lib/admin/format';
 import { adminLevelOf } from '@/lib/admin/session';
 import { useAuth } from '@/components/auth/AuthProvider';
-import type { VendorDetail, VendorProductRow } from '@/lib/admin/types';
+import type {
+  Paginated,
+  VendorDetail,
+  VendorOrderRow,
+  VendorProductRow,
+} from '@/lib/admin/types';
 import {
   AdminPage,
   AdminSection,
@@ -36,6 +54,20 @@ import {
   StatusPill,
   type Column,
 } from '@/components/admin';
+
+/** `openingHours[].day` is `Date#getDay()`: 0 is Sunday. */
+const DAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+] as const;
+
+const RECENT_ORDERS = 6;
+const PRODUCTS_PER_PAGE = 20;
 
 export default function AdminVendorDetailPage() {
   const params = useParams<{ id: string }>();
@@ -55,8 +87,25 @@ export default function AdminVendorDetailPage() {
   });
   const vendor = query.data;
 
+  // Newest first is the service's default order, so no `sort` is sent.
+  const orders = useAdminQuery<Paginated<VendorOrderRow>>(
+    `/admin/vendors/${id}/orders`,
+    { limit: RECENT_ORDERS },
+    { enabled: id !== '' },
+  );
+
+  const [productPage, setProductPage] = useState(1);
+  const products = useAdminQuery<Paginated<VendorProductRow>>(
+    `/admin/vendors/${id}/products`,
+    { page: productPage, limit: PRODUCTS_PER_PAGE },
+    { enabled: id !== '' },
+  );
+
   const [suspendOpen, setSuspendOpen] = useState(false);
-  const statusMutation = useAdminMutation<{ status: string }, VendorDetail>(
+  // `UpdateVendorStatusDto` REQUIRES a reason to suspend (3-500 characters).
+  // The vendor will ask why, and support will ask who.
+  const [suspendReason, setSuspendReason] = useState('');
+  const statusMutation = useAdminMutation<{ status: string; reason?: string }, VendorDetail>(
     '/admin/vendors/:id/status',
     'PATCH',
   );
@@ -68,7 +117,7 @@ export default function AdminVendorDetailPage() {
         header: 'Product',
         render: (row) => (
           <span className="adm-row">
-            <AisleDot aisleKey={row.aisleKey} />
+            {row.aisleKey ? <AisleDot aisleKey={row.aisleKey} /> : null}
             <span style={{ minWidth: 0 }}>
               {row.name}
               <span className="adm-table__sub">{row.sku}</span>
@@ -77,16 +126,16 @@ export default function AdminVendorDetailPage() {
         ),
       },
       {
-        key: 'pricePaise',
+        key: 'price',
         header: 'Price',
         align: 'right',
-        render: (row) => <Money value={row.pricePaise} />,
+        render: (row) => <Money value={row.price} />,
       },
       {
-        key: 'mrpPaise',
+        key: 'mrp',
         header: 'MRP',
         align: 'right',
-        render: (row) => <Money value={row.mrpPaise} />,
+        render: (row) => <Money value={row.mrp} />,
       },
       {
         key: 'stock',
@@ -99,12 +148,12 @@ export default function AdminVendorDetailPage() {
               color:
                 row.stock === 0
                   ? 'var(--crit-ink)'
-                  : row.stock <= row.lowStockThreshold
+                  : row.isLowStock
                     ? 'var(--warn-ink)'
                     : undefined,
             }}
             title={
-              row.stock <= row.lowStockThreshold
+              row.isLowStock
                 ? `At or below the low-stock threshold of ${row.lowStockThreshold}`
                 : undefined
             }
@@ -151,16 +200,33 @@ export default function AdminVendorDetailPage() {
     );
   }
 
+  const isFixture = query.isFixture || orders.isFixture || products.isFixture;
+  const orderRows = orders.data?.data ?? [];
+  const closeSuspend = () => {
+    setSuspendOpen(false);
+    setSuspendReason('');
+  };
+
   return (
     <AdminPage
       title={vendor?.storeName ?? 'Loading…'}
       description={
         vendor
-          ? `${vendor.ownerName} · ${vendor.address.city} · joined ${formatDate(vendor.createdAt, 'long')}`
+          ? [
+              vendor.owner?.name ?? 'Owner account missing',
+              vendor.address.city,
+              vendor.createdAt ? `joined ${formatDate(vendor.createdAt, 'long')}` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')
           : 'Fetching the vendor record.'
       }
-      isFixture={query.isFixture}
-      fixturePaths={query.isFixture ? [`/admin/vendors/${id}`] : undefined}
+      isFixture={isFixture}
+      fixturePaths={
+        isFixture
+          ? [`/admin/vendors/${id}`, `/admin/vendors/${id}/orders`, `/admin/vendors/${id}/products`]
+          : undefined
+      }
       breadcrumbs={[
         { label: 'Vendors', href: '/admin/vendors' },
         { label: vendor?.storeName ?? id },
@@ -181,6 +247,7 @@ export default function AdminVendorDetailPage() {
               <button
                 type="button"
                 className="adm-btn adm-btn--sm"
+                disabled={statusMutation.loading}
                 onClick={() =>
                   void statusMutation.mutate(
                     { status: 'approved' },
@@ -195,24 +262,23 @@ export default function AdminVendorDetailPage() {
         ) : null
       }
     >
-      {/* ---- earnings ---- */}
-      <AdminSection title="Earnings" description="Lifetime, from the ledger.">
+      {/* ---- sales ---- */}
+      <AdminSection
+        title="Sales"
+        description="Lifetime, excluding cancelled and rejected orders."
+        actions={
+          <Link className="adm-btn adm-btn--sm" href="/admin/settlements">
+            Settlements
+          </Link>
+        }
+      >
         <div className="adm-kpirow">
-          <Tile label="Gross sales" value={vendor?.earnings.grossPaise} index={0} />
-          <Tile label="Platform commission" value={vendor?.earnings.commissionPaise} index={1} />
-          <Tile label="Refunds" value={vendor?.earnings.refundsPaise} index={2} />
-          <Tile label="Net payable" value={vendor?.earnings.netPayablePaise} index={3} strong />
+          <Tile label="Gross merchandise value" value={vendor?.gmv} kind="money" index={0} strong />
+          <Tile label="Orders" value={vendor?.orderCount} kind="count" index={1} />
         </div>
         <p className="adm-section__desc" style={{ marginTop: 'var(--s-2)' }}>
-          Net payable is gross minus commission minus refunds. The delivery fee is platform revenue
-          and never enters this figure (plan §1, decision 5).{' '}
-          {vendor?.earnings.lastSettledAt ? (
-            <>
-              Last settled <RelativeTime value={vendor.earnings.lastSettledAt} live={false} />.
-            </>
-          ) : (
-            'Never settled.'
-          )}
+          GMV is what customers paid, delivery fee included. What this vendor is owed after
+          commission and refunds is worked out from the ledger, period by period, on Settlements.
         </p>
       </AdminSection>
 
@@ -222,31 +288,54 @@ export default function AdminVendorDetailPage() {
           <div className="adm-panel adm-panel--pad">
             {vendor ? (
               <>
-                <p style={{ marginBottom: 'var(--s-3)' }}>{vendor.description}</p>
+                {vendor.description ? (
+                  <p style={{ marginBottom: 'var(--s-3)' }}>{vendor.description}</p>
+                ) : null}
                 <dl className="adm-dl">
                   <dt>Slug</dt>
                   <dd className="adm-num">{vendor.slug}</dd>
                   <dt>Owner</dt>
-                  <dd>{vendor.ownerName}</dd>
+                  <dd>
+                    {vendor.owner ? (
+                      <>
+                        {vendor.owner.name}
+                        {vendor.owner.email ? (
+                          <span className="adm-table__sub">{vendor.owner.email}</span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--adm-dim)' }}>
+                        No account found for this store&apos;s owner
+                      </span>
+                    )}
+                  </dd>
                   <dt>Phone</dt>
-                  <dd className="adm-num">{vendor.phone}</dd>
+                  <dd className="adm-num">{vendor.owner?.phone ?? '—'}</dd>
                   <dt>Address</dt>
                   <dd>
-                    {vendor.address.line1}, {vendor.address.city}, {vendor.address.state}{' '}
+                    {[vendor.address.line1, vendor.address.line2, vendor.address.city, vendor.address.state]
+                      .filter(Boolean)
+                      .join(', ')}{' '}
                     <span className="adm-num">{vendor.address.pincode}</span>
                   </dd>
                   <dt>Coordinates</dt>
                   <dd className="adm-row">
-                    <IconPin style={{ width: 14, height: 14, color: 'var(--adm-dim)' }} />
-                    {/* Stored GeoJSON order is [lng, lat]; printed lat,lng because
-                        that is what every map tool expects pasted in. */}
-                    <span className="adm-num">
-                      {vendor.location.coordinates[1].toFixed(5)},{' '}
-                      {vendor.location.coordinates[0].toFixed(5)}
-                    </span>
-                    <span className="adm-table__sub" style={{ display: 'inline' }}>
-                      lat, lng
-                    </span>
+                    {vendor.location ? (
+                      <>
+                        <IconPin style={{ width: 14, height: 14, color: 'var(--adm-dim)' }} />
+                        {/* Printed lat,lng because that is what every map tool
+                            expects pasted in. The API names the two fields, so
+                            there is no array order to get backwards. */}
+                        <span className="adm-num">
+                          {vendor.location.lat.toFixed(5)}, {vendor.location.lng.toFixed(5)}
+                        </span>
+                        <span className="adm-table__sub" style={{ display: 'inline' }}>
+                          lat, lng
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ color: 'var(--adm-dim)' }}>Not set</span>
+                    )}
                   </dd>
                   <dt>Radius</dt>
                   <dd className="adm-num">{vendor.serviceRadiusKm} km</dd>
@@ -254,12 +343,20 @@ export default function AdminVendorDetailPage() {
                   <dd>
                     {vendor.codEnabled ? (
                       <>
-                        Enabled, capped at <Money value={vendor.codMaxAmountPaise} />
+                        Enabled, capped at <Money value={vendor.codMaxAmount} />
                       </>
                     ) : (
                       'Disabled'
                     )}
                   </dd>
+                  <dt>Shutter</dt>
+                  <dd>{vendor.isOpen ? 'Open for orders' : 'Closed'}</dd>
+                  {vendor.statusReason ? (
+                    <>
+                      <dt>Status note</dt>
+                      <dd>{vendor.statusReason}</dd>
+                    </>
+                  ) : null}
                 </dl>
               </>
             ) : (
@@ -273,16 +370,23 @@ export default function AdminVendorDetailPage() {
           <AdminSection title="Opening hours">
             <div className="adm-panel adm-panel--pad">
               {vendor ? (
-                <dl className="adm-dl">
-                  {vendor.openingHours.map((slot) => (
-                    <span key={slot.day} style={{ display: 'contents' }}>
-                      <dt>{slot.day}</dt>
-                      <dd className="adm-num">
-                        {slot.open} – {slot.close}
-                      </dd>
-                    </span>
-                  ))}
-                </dl>
+                vendor.openingHours.length > 0 ? (
+                  <dl className="adm-dl">
+                    {vendor.openingHours.map((slot, i) => (
+                      <span key={`${slot.day}-${i}`} style={{ display: 'contents' }}>
+                        <dt>{DAY_NAMES[slot.day] ?? `Day ${slot.day}`}</dt>
+                        <dd className="adm-num">
+                          {slot.open} – {slot.close}
+                        </dd>
+                      </span>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="adm-section__desc">
+                    The owner has not set opening hours. The store takes orders whenever its shutter
+                    is open.
+                  </p>
+                )
               ) : (
                 <SkeletonLines count={7} />
               )}
@@ -330,7 +434,7 @@ export default function AdminVendorDetailPage() {
       >
         <div className="adm-panel">
           <div className="adm-feed">
-            {(vendor?.recentOrders ?? []).map((order, i) => (
+            {orderRows.map((order, i) => (
               <Link
                 key={order.id}
                 href={`/admin/orders/${order.id}`}
@@ -340,16 +444,20 @@ export default function AdminVendorDetailPage() {
                 <span style={{ minWidth: 0 }}>
                   <span className="adm-feed__no">{order.orderNo}</span>
                   <span className="adm-feed__meta">
-                    {order.customerName} · <RelativeTime value={order.placedAt} live={false} />
+                    {order.customerName ?? 'Customer account removed'} ·{' '}
+                    <RelativeTime value={order.placedAt} live={false} />
                   </span>
                 </span>
                 <span className="adm-row" style={{ justifyContent: 'flex-end' }}>
                   <StatusPill status={order.status} kind="order" />
-                  <Money value={order.totalPaise} />
+                  <Money value={order.pricing.grandTotal} />
                 </span>
               </Link>
             ))}
-            {vendor && vendor.recentOrders.length === 0 ? (
+            {orders.loading && !orders.hasLoadedOnce ? <SkeletonLines count={3} /> : null}
+            {orders.error ? (
+              <EmptyState title="Orders could not be loaded" body={orders.error.friendlyMessage} />
+            ) : orders.data && orderRows.length === 0 ? (
               <EmptyState title="No orders yet" body="This vendor has not taken an order." />
             ) : null}
           </div>
@@ -357,14 +465,31 @@ export default function AdminVendorDetailPage() {
       </AdminSection>
 
       {/* ---- products ---- */}
-      <AdminSection title="Catalogue" description="What this vendor currently lists.">
-        <DataTable
-          columns={productColumns}
-          rows={vendor?.products ?? []}
-          loading={query.loading && !vendor}
-          rowKey={(row) => row.id}
-          skeletonRows={6}
-        />
+      <AdminSection
+        title="Catalogue"
+        description={
+          products.data
+            ? `${formatCount(products.data.meta.total)} products, listed or not.`
+            : 'What this vendor currently lists.'
+        }
+      >
+        {products.error ? (
+          <div className="adm-panel">
+            <EmptyState title="Catalogue could not be loaded" body={products.error.friendlyMessage} />
+          </div>
+        ) : (
+          <DataTable
+            columns={productColumns}
+            rows={products.data?.data ?? []}
+            loading={products.loading && !products.hasLoadedOnce}
+            rowKey={(row) => row.id}
+            skeletonRows={6}
+            page={products.data?.meta.page ?? productPage}
+            pageCount={products.data?.meta.pages ?? 1}
+            total={products.data?.meta.total}
+            onPageChange={setProductPage}
+          />
+        )}
       </AdminSection>
 
       <ConfirmDialog
@@ -373,21 +498,43 @@ export default function AdminVendorDetailPage() {
         title="Suspend this vendor?"
         confirmLabel="Suspend"
         loading={statusMutation.loading}
-        onCancel={() => setSuspendOpen(false)}
+        // The API refuses a suspension without a reason; this only saves the
+        // operator from finding that out through a 400.
+        confirmDisabled={suspendReason.trim().length < 3}
+        onCancel={closeSuspend}
         onConfirm={() =>
           void statusMutation.mutate(
-            { status: 'suspended' },
+            { status: 'suspended', reason: suspendReason.trim() },
             {
               params: { id },
               invalidate: ['/admin/vendors'],
-              onSuccess: () => setSuspendOpen(false),
+              onSuccess: closeSuspend,
             },
           )
         }
         body={
           <>
-            <strong>{vendor?.storeName}</strong> disappears from search and can take no new orders.
-            Orders already in flight still have to be fulfilled or refunded.
+            <p>
+              <strong>{vendor?.storeName}</strong> disappears from search and can take no new
+              orders. Orders already in flight still have to be fulfilled or refunded.
+            </p>
+            <label className="adm-field">
+              <span className="adm-field__label">Reason</span>
+              <input
+                className="adm-input"
+                value={suspendReason}
+                onChange={(event) => setSuspendReason(event.target.value)}
+                maxLength={500}
+                placeholder="Repeated short-picked orders, expired licence…"
+                disabled={statusMutation.loading}
+              />
+            </label>
+            <p className="adm-section__desc">
+              Stored on the vendor and in the audit log. The owner will ask why.
+            </p>
+            {statusMutation.error ? (
+              <p style={{ color: 'var(--crit-ink)' }}>{statusMutation.error.friendlyMessage}</p>
+            ) : null}
           </>
         }
       />
@@ -400,11 +547,14 @@ export default function AdminVendorDetailPage() {
 function Tile({
   label,
   value,
+  kind,
   index,
   strong = false,
 }: {
   label: string;
   value: number | undefined;
+  /** money is INTEGER PAISE and goes through <Money>; a count does not */
+  kind: 'money' | 'count';
   index: number;
   strong?: boolean;
 }) {
@@ -414,8 +564,10 @@ function Tile({
       <p className="adm-tile__value" style={{ fontSize: strong ? '1.4rem' : '1.15rem' }}>
         {value === undefined ? (
           <span className="adm-skel adm-skel--line" style={{ display: 'block', width: '70%' }} />
-        ) : (
+        ) : kind === 'money' ? (
           <Money value={value} />
+        ) : (
+          <span className="adm-num">{formatCount(value)}</span>
         )}
       </p>
     </article>

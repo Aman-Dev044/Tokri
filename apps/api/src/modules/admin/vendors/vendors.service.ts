@@ -14,6 +14,8 @@ import {
 import { FAILED_STATUSES } from '../../../common/constants/order-status.enum';
 import { JwtUser } from '../../../common/decorators/current-user.decorator';
 import { Paginated, paginate } from '../../../common/dto/paginated';
+import { UserStatus } from '../../../common/constants/roles.enum';
+import { UsersService } from '../../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { escapeRegex } from '../common/dto';
 import {
@@ -55,11 +57,39 @@ export interface VendorRow {
   createdAt: string | null;
 }
 
+/**
+ * `GET /admin/vendors/:id` — the row, plus who to call.
+ *
+ * A vendor document carries no contact details of its own: the name and
+ * phone an operator dials belong to the owner's User account. The list
+ * leaves them out (a join per row for a column nobody sorts on); the
+ * detail view is where "who runs this shop" is the question.
+ *
+ * `owner` is null when the account behind `ownerId` no longer exists —
+ * reported as missing, not papered over with the store's name.
+ */
+export interface VendorDetailRow extends VendorRow {
+  owner: VendorOwnerView | null;
+}
+
+export interface VendorOwnerView {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
 type VendorRecord = Vendor & {
   _id: Types.ObjectId;
   createdAt?: Date;
   gmv?: number;
   orderCount?: number;
+};
+
+const USER_STATUS_FOR: Readonly<Record<VendorStatus, UserStatus>> = {
+  [VendorStatus.APPROVED]: UserStatus.ACTIVE,
+  [VendorStatus.PENDING]: UserStatus.PENDING,
+  [VendorStatus.SUSPENDED]: UserStatus.SUSPENDED,
 };
 
 @Injectable()
@@ -77,6 +107,7 @@ export class AdminVendorsService {
 
   constructor(
     @InjectModel(Vendor.name) private readonly vendors: Model<VendorDocument>,
+    private readonly usersService: UsersService,
     private readonly audit: AuditService,
   ) {}
 
@@ -158,11 +189,15 @@ export class AdminVendorsService {
     return paginate(rows.map(toRow), total, page, limit);
   }
 
-  async findById(id: string): Promise<VendorRow> {
+  async findById(id: string): Promise<VendorDetailRow> {
     const vendor = await this.mustFindLean(id);
 
     const [stats] = await this.vendors
-      .aggregate<{ gmv: number; orderCount: number }>([
+      .aggregate<{
+        gmv: number;
+        orderCount: number;
+        owner: (Omit<VendorOwnerView, 'id'> & { _id: Types.ObjectId }) | null;
+      }>([
         { $match: { _id: vendor._id } },
         {
           $lookup: {
@@ -188,16 +223,43 @@ export class AdminVendorsService {
         },
         { $unwind: { path: '$stats', preserveNullAndEmptyArrays: true } },
         {
+          // `select: false` on the User schema is a QUERY feature that a
+          // $lookup does not honour, so the owner is projected down to
+          // the three contact fields INSIDE the sub-pipeline. A hash
+          // never enters this document, rather than being stripped later.
+          $lookup: {
+            from: 'users',
+            let: { ownerId: '$ownerId' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$_id', '$$ownerId'] } } },
+              { $project: { _id: 1, name: 1, email: 1, phone: 1 } },
+            ],
+            as: 'owner',
+          },
+        },
+        {
           $project: {
             _id: 0,
             gmv: { $ifNull: ['$stats.gmv', 0] },
             orderCount: { $ifNull: ['$stats.orderCount', 0] },
+            owner: { $ifNull: [{ $arrayElemAt: ['$owner', 0] }, null] },
           },
         },
       ])
       .exec();
 
-    return toRow({ ...vendor, ...stats });
+    const owner = stats?.owner ?? null;
+    return {
+      ...toRow({ ...vendor, gmv: stats?.gmv, orderCount: stats?.orderCount }),
+      owner: owner
+        ? {
+            id: owner._id.toString(),
+            name: owner.name,
+            email: owner.email ?? null,
+            phone: owner.phone || null,
+          }
+        : null,
+    };
   }
 
   // ────────────────────────────────────────────────────────────────────
@@ -236,6 +298,19 @@ export class AdminVendorsService {
     if (dto.status !== VendorStatus.APPROVED) vendor.isOpen = false;
 
     await vendor.save();
+
+    // The owner's LOGIN follows the store. A vendor applies with both the
+    // account and the store PENDING, and login refuses anything that is not
+    // ACTIVE, so approving only the store left an approved shop whose owner
+    // could never sign in. Suspending goes through UsersService for the
+    // same reason it does for riders: that clears the refresh-token family.
+    if (vendor.ownerId) {
+      await this.usersService.updateStatus(
+        vendor.ownerId.toString(),
+        { status: USER_STATUS_FOR[dto.status], reason: dto.reason },
+        actor,
+      );
+    }
 
     await this.audit.record({
       action: 'vendor.status.update',

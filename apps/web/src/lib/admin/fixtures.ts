@@ -42,6 +42,7 @@ import type {
   TeamMember,
   VendorDetail,
   VendorListRow,
+  VendorOrderRow,
   VendorProductRow,
 } from './types';
 import type { AisleKey } from '@mandi/design-system';
@@ -360,6 +361,18 @@ function buildTopProducts(): AnalyticsTopProduct[] {
   }));
 }
 
+/*
+ * The vendor fixtures mirror the ENDPOINTS, field for field:
+ *
+ *   GET /admin/vendors               -> Paginated<VendorRow>
+ *   GET /admin/vendors/:id           -> VendorRow + { owner }
+ *   GET /admin/vendors/:id/orders    -> Paginated<OrderRow>
+ *   GET /admin/vendors/:id/products  -> Paginated<ProductRow>
+ *
+ * They used to be one screen-shaped bundle with an `earnings` block and
+ * `ownerName` on the list row. Neither exists on the API, so the screen ran
+ * on the fixture and crashed on the first real vendor.
+ */
 function buildVendors(): VendorListRow[] {
   const rng = seeded(53);
   return Array.from({ length: 24 }, (_, i) => {
@@ -367,19 +380,47 @@ function buildVendors(): VendorListRow[] {
     const suffix = i >= STORE_NAMES.length ? ` ${Math.floor(i / STORE_NAMES.length) + 1}` : '';
     const status: VendorListRow['status'] =
       i % 9 === 0 ? 'pending' : i % 13 === 0 ? 'suspended' : 'approved';
+    const city = pick(rng, CITIES);
     return {
       id: `ven-${i + 1}`,
+      ownerId: `usr-ven-${i + 1}`,
       storeName: `${storeName}${suffix}`,
       slug: `${storeName.toLowerCase().replace(/[^a-z]+/g, '-')}${suffix.trim() && `-${suffix.trim()}`}`,
-      ownerName: OWNERS[i % OWNERS.length] ?? 'Owner',
-      phone: `+91 9${String(800000000 + i * 137731).slice(0, 9)}`,
-      city: pick(rng, CITIES),
-      status,
-      isOpen: status === 'approved' && rng() > 0.25,
+      description: null,
+      logoUrl: null,
+      bannerUrl: null,
+      address: {
+        line1: `${12 + i}, 4th Cross, ${city} East`,
+        line2: null,
+        city,
+        state:
+          city === 'Mumbai' || city === 'Pune' || city === 'Nashik' ? 'Maharashtra' : 'Karnataka',
+        pincode: String(560000 + ((i + 1) * 7) % 900),
+      },
+      location: {
+        lat: Math.round((12.9 + rng() * 0.3) * 1e6) / 1e6,
+        lng: Math.round((77.5 + rng() * 0.35) * 1e6) / 1e6,
+      },
+      serviceRadiusKm: 5,
       commissionPct: Math.round((8 + rng() * 9) * 10) / 10,
-      orders: status === 'pending' ? 0 : Math.round(80 + rng() * 780),
-      gmvPaise: status === 'pending' ? 0 : Math.round((90_000 + rng() * 3_000_000) / 100) * 100,
-      rating: Math.round((3.6 + rng() * 1.3) * 10) / 10,
+      codEnabled: rng() > 0.2,
+      codMaxAmount: 200_000,
+      isOpen: status === 'approved' && rng() > 0.25,
+      // 0 = Sunday. Mon-Sat long hours, a short Sunday — and the odd store
+      // with none set, which is the live default.
+      openingHours:
+        i % 4 === 3
+          ? []
+          : [1, 2, 3, 4, 5, 6, 0].map((day) => ({
+              day,
+              open: day === 0 ? '08:00' : '07:00',
+              close: day === 0 ? '13:00' : '22:00',
+            })),
+      status,
+      rating: 0,
+      statusReason: status === 'suspended' ? 'Repeated short-picked orders' : null,
+      gmv: status === 'pending' ? 0 : Math.round((90_000 + rng() * 3_000_000) / 100) * 100,
+      orderCount: status === 'pending' ? 0 : Math.round(80 + rng() * 780),
       createdAt: ago(Math.round(rng() * 420) * DAY),
     };
   });
@@ -387,86 +428,109 @@ function buildVendors(): VendorListRow[] {
 
 const VENDORS = buildVendors();
 
-function buildVendorProducts(seed: number): VendorProductRow[] {
-  const rng = seeded(seed);
-  return PRODUCTS.slice(0, 10).map((p, i) => {
-    const stock = Math.round(rng() * 90);
-    return {
-      id: `prd-${seed}-${i}`,
-      name: p.name,
-      aisleKey: p.aisleKey,
-      sku: `SKU-${String(seed * 100 + i).padStart(6, '0')}`,
-      pricePaise: p.pricePaise,
-      mrpPaise: Math.round(p.pricePaise * 1.18),
-      stock,
-      lowStockThreshold: 12,
-      isActive: rng() > 0.12,
-    };
-  });
-}
-
 function buildVendorDetail(id: string): VendorDetail {
   const base = VENDORS.find((v) => v.id === id) ?? VENDORS[0];
   if (!base) throw new Error('fixtures: no vendors');
   const numeric = Number.parseInt(id.replace(/\D+/g, ''), 10) || 1;
-  const rng = seeded(numeric * 17);
-
-  const gross = base.gmvPaise;
-  const commission = Math.round((gross * base.commissionPct) / 100);
-  const refunds = Math.round(gross * 0.017);
+  const owner = OWNERS[(numeric - 1) % OWNERS.length] ?? 'Owner';
 
   return {
     ...base,
-    description:
-      'Family-run provision store, three generations on the same corner. Stocks a full staples range, daily vegetables from the local mandi, and a small cold case.',
-    address: {
-      line1: `${12 + (numeric % 60)}, 4th Cross, ${base.city} East`,
-      city: base.city,
-      state: base.city === 'Mumbai' || base.city === 'Pune' || base.city === 'Nashik'
-        ? 'Maharashtra'
-        : 'Karnataka',
-      pincode: String(560000 + (numeric * 7) % 900),
+    owner: {
+      id: base.ownerId,
+      name: owner,
+      email: `${owner.toLowerCase().replace(/[^a-z]+/g, '.')}@example.invalid`,
+      phone: `9${String(800000000 + numeric * 137731).slice(0, 9)}`,
     },
-    location: {
-      coordinates: [
-        Math.round((77.5 + rng() * 0.35) * 1e6) / 1e6,
-        Math.round((12.9 + rng() * 0.3) * 1e6) / 1e6,
-      ],
-    },
-    serviceRadiusKm: 5,
-    codEnabled: rng() > 0.2,
-    codMaxAmountPaise: 200_000,
-    openingHours: [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday',
-    ].map((day) => ({
-      day,
-      open: day === 'Sunday' ? '08:00' : '07:00',
-      close: day === 'Sunday' ? '13:00' : '22:00',
-    })),
-    earnings: {
-      grossPaise: gross,
-      commissionPaise: commission,
-      refundsPaise: refunds,
-      netPayablePaise: gross - commission - refunds,
-      lastSettledAt: base.status === 'approved' ? ago(3 * DAY) : null,
-    },
-    recentOrders: Array.from({ length: 6 }, (_, i) => ({
+  };
+}
+
+/** `GET /admin/vendors/:id/orders` — the admin `OrderRow`, newest first. */
+function buildVendorOrders(id: string): VendorOrderRow[] {
+  const base = VENDORS.find((v) => v.id === id) ?? VENDORS[0];
+  if (!base) throw new Error('fixtures: no vendors');
+  if (base.orderCount === 0) return [];
+  const numeric = Number.parseInt(id.replace(/\D+/g, ''), 10) || 1;
+  const rng = seeded(numeric * 17);
+
+  return Array.from({ length: 6 }, (_, i) => {
+    const status = pick(rng, ORDER_STATUSES);
+    const method: 'online' | 'cod' = rng() > 0.55 ? 'cod' : 'online';
+    const itemsSubtotal = Math.round((240 + rng() * 2200) * 100);
+    const deliveryFee = itemsSubtotal >= 49_900 ? 0 : 2_500;
+    const grandTotal = itemsSubtotal + deliveryFee;
+    const commissionAmount = Math.round((itemsSubtotal * base.commissionPct) / 100);
+    return {
       id: `ord-${id}-${i}`,
       orderNo: `MND-20260924-${String(1720 + numeric * 3 + i).padStart(4, '0')}`,
-      vendorName: base.storeName,
+      status,
+      customerId: `usr-cus-${numeric}-${i}`,
       customerName: pick(rng, CUSTOMERS),
-      status: pick(rng, ORDER_STATUSES),
-      totalPaise: Math.round((260 + rng() * 2200) * 100),
+      vendorId: base.id,
+      vendorName: base.storeName,
+      itemCount: 2 + Math.floor(rng() * 12),
+      pricing: {
+        itemsSubtotal,
+        discount: 0,
+        deliveryFee,
+        taxes: 0,
+        grandTotal,
+        commissionPct: base.commissionPct,
+        commissionAmount,
+        vendorPayout: itemsSubtotal - commissionAmount,
+      },
+      payment: {
+        method,
+        status:
+          status === 'DELIVERED'
+            ? 'paid'
+            : status === 'CANCELLED' || status === 'REJECTED'
+              ? 'refunded'
+              : method === 'cod'
+                ? 'pending'
+                : 'authorized',
+      },
+      deliveryPartnerId: null,
       placedAt: ago(i * 3 * HOUR + HOUR),
-    })),
-    products: buildVendorProducts(numeric),
-  };
+      deliveredAt: status === 'DELIVERED' ? ago(i * 3 * HOUR + 20 * MINUTE) : null,
+    };
+  });
+}
+
+/** `GET /admin/vendors/:id/products` — the admin catalogue `ProductRow`. */
+function buildVendorProducts(id: string): VendorProductRow[] {
+  const base = VENDORS.find((v) => v.id === id) ?? VENDORS[0];
+  if (!base) throw new Error('fixtures: no vendors');
+  const numeric = Number.parseInt(id.replace(/\D+/g, ''), 10) || 1;
+  const rng = seeded(numeric);
+
+  return PRODUCTS.slice(0, 10).map((p, i) => {
+    const stock = Math.round(rng() * 90);
+    const mrp = Math.round(p.pricePaise * 1.18);
+    return {
+      id: `prd-${numeric}-${i}`,
+      vendorId: base.id,
+      vendorName: base.storeName,
+      categoryId: `cat-${p.aisleKey}`,
+      categoryName: null,
+      aisleKey: p.aisleKey,
+      name: p.name,
+      slug: p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      brand: null,
+      image: null,
+      unit: 'piece',
+      unitValue: 1,
+      sku: `SKU-${String(numeric * 100 + i).padStart(6, '0')}`,
+      mrp,
+      price: p.pricePaise,
+      discountPct: Math.round(((mrp - p.pricePaise) / mrp) * 100),
+      isActive: rng() > 0.12,
+      stock,
+      lowStockThreshold: 12,
+      isLowStock: stock <= 12,
+      createdAt: ago((30 + i) * DAY),
+    };
+  });
 }
 
 function buildOrders(): OrderListRow[] {
@@ -481,7 +545,7 @@ function buildOrders(): OrderListRow[] {
       vendorId: vendor?.id ?? 'ven-1',
       vendorName: vendor?.storeName ?? 'Mandi Store',
       customerName: pick(rng, CUSTOMERS),
-      city: vendor?.city ?? 'Bengaluru',
+      city: vendor?.address.city ?? 'Bengaluru',
       status,
       paymentMethod: method,
       paymentStatus:
@@ -655,23 +719,23 @@ function buildTeam(): TeamMember[] {
   return [
     {
       id: 'adm-system',
-      name: 'Mandi System',
-      email: 'system@mandi.internal',
-      phone: '—',
-      level: 'SUPER_ADMIN',
+      name: 'Mandi Super Admin',
+      email: 'superadmin@example.invalid',
+      phone: '9000000001',
+      role: 'super_admin',
       status: 'active',
-      isSystem: true,
+      isSystemAccount: true,
       lastLoginAt: null,
       createdAt: ago(720 * DAY),
     },
     {
       id: 'adm-jobs',
-      name: 'Settlement Worker',
-      email: 'jobs@mandi.internal',
-      phone: '—',
-      level: 'ADMIN',
+      name: 'Mandi Admin',
+      email: 'admin@example.invalid',
+      phone: '9000000002',
+      role: 'admin',
       status: 'active',
-      isSystem: true,
+      isSystemAccount: true,
       lastLoginAt: ago(20 * MINUTE),
       createdAt: ago(720 * DAY),
     },
@@ -679,10 +743,11 @@ function buildTeam(): TeamMember[] {
       id: 'adm-1',
       name: 'Priya Nair',
       email: 'priya.nair@mandi.app',
-      phone: '+91 98450 11234',
-      level: 'SUPER_ADMIN',
+      phone: '9845011234',
+      // The seeded account is the only super admin; the API cannot mint one.
+      role: 'admin',
       status: 'active',
-      isSystem: false,
+      isSystemAccount: false,
       lastLoginAt: ago(35 * MINUTE),
       createdAt: ago(410 * DAY),
     },
@@ -690,10 +755,10 @@ function buildTeam(): TeamMember[] {
       id: 'adm-2',
       name: 'Vikram Shetty',
       email: 'vikram.shetty@mandi.app',
-      phone: '+91 99001 44872',
-      level: 'ADMIN',
+      phone: '9900144872',
+      role: 'admin',
       status: 'active',
-      isSystem: false,
+      isSystemAccount: false,
       lastLoginAt: ago(3 * HOUR),
       createdAt: ago(290 * DAY),
     },
@@ -701,10 +766,10 @@ function buildTeam(): TeamMember[] {
       id: 'adm-3',
       name: 'Meera Joshi',
       email: 'meera.joshi@mandi.app',
-      phone: '+91 97400 20991',
-      level: 'ADMIN',
+      phone: '9740020991',
+      role: 'admin',
       status: 'active',
-      isSystem: false,
+      isSystemAccount: false,
       lastLoginAt: ago(2 * DAY),
       createdAt: ago(150 * DAY),
     },
@@ -712,10 +777,10 @@ function buildTeam(): TeamMember[] {
       id: 'adm-4',
       name: 'Harpreet Singh',
       email: 'harpreet.singh@mandi.app',
-      phone: '+91 98110 77351',
-      level: 'ADMIN',
+      phone: '9811077351',
+      role: 'admin',
       status: 'suspended',
-      isSystem: false,
+      isSystemAccount: false,
       lastLoginAt: ago(46 * DAY),
       createdAt: ago(320 * DAY),
     },
@@ -854,8 +919,13 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
     const status = String(params.status ?? '').trim();
     let rows = VENDORS;
     if (q) {
+      // The API's own match set: store name, slug, city, pincode.
       rows = rows.filter(
-        (v) => matches(v.storeName, q) || matches(v.ownerName, q) || matches(v.city, q),
+        (v) =>
+          matches(v.storeName, q) ||
+          matches(v.slug, q) ||
+          matches(v.address.city, q) ||
+          matches(v.address.pincode, q),
       );
     }
     if (status && status !== 'all') rows = rows.filter((v) => v.status === status);
@@ -864,6 +934,12 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
 
   const vendorDetail = /^\/admin\/vendors\/([^/]+)$/.exec(clean);
   if (vendorDetail?.[1]) return buildVendorDetail(vendorDetail[1]);
+
+  const vendorOrders = /^\/admin\/vendors\/([^/]+)\/orders$/.exec(clean);
+  if (vendorOrders?.[1]) return paginate(buildVendorOrders(vendorOrders[1]), params);
+
+  const vendorProducts = /^\/admin\/vendors\/([^/]+)\/products$/.exec(clean);
+  if (vendorProducts?.[1]) return paginate(buildVendorProducts(vendorProducts[1]), params);
 
   /* ---- orders ---- */
   if (clean === '/admin/orders') {

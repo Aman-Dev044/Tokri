@@ -140,7 +140,14 @@ const dateFormatters: Record<DateStyle, Intl.DateTimeFormat> = {
 };
 
 /** ISO string (or Date) -> a pinned en-IN / IST string. */
-export function formatDate(value: string | Date, style: DateStyle = 'short'): string {
+export function formatDate(
+  value: string | Date | null | undefined,
+  style: DateStyle = 'short',
+): string {
+  // Nullish is handled before `new Date()`: a field the API did not send
+  // arrives as `undefined`, and `undefined.getTime()` takes the whole page
+  // down to an error boundary. A missing date is an em dash, like a bad one.
+  if (value === null || value === undefined) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return '—';
   return dateFormatters[style].format(date);
@@ -155,7 +162,11 @@ const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
  * this is allowed to be non-deterministic — `<RelativeTime/>` withholds it
  * until after mount for exactly that reason.
  */
-export function formatRelative(value: string | Date, now: number): string {
+export function formatRelative(
+  value: string | Date | null | undefined,
+  now: number,
+): string {
+  if (value === null || value === undefined) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return '—';
 

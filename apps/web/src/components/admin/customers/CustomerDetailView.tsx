@@ -57,7 +57,7 @@ export function CustomerDetailView({ customerId }: { customerId: string }) {
   return (
     <AdminPage
       title={value.name}
-      description={`${value.city} · customer since ${formatDate(value.createdAt, 'long')}`}
+      description={`Customer since ${formatDate(value.createdAt, 'long')}`}
       breadcrumbs={[
         { label: 'Admin', href: '/admin' },
         { label: 'Customers', href: '/admin/customers' },

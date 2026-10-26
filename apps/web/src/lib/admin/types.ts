@@ -156,58 +156,137 @@ export interface TopProductRow {
 
 export type VendorStatus = 'pending' | 'approved' | 'suspended';
 
+/**
+ * One row of `GET /admin/vendors` — `VendorRow` in
+ * `apps/api/src/modules/admin/vendors/vendors.service.ts`, field for field.
+ *
+ * This used to be the shape a fixture was written in: `ownerName`, `phone`,
+ * `city`, `orders`, `gmvPaise`, a `[lng, lat]` array and an `earnings` block
+ * the API has never sent. The detail page read `earnings.grossPaise` off
+ * `undefined` and fell to the error boundary on the first live vendor. The
+ * names below are the API's names; money keeps the API's spelling too and is
+ * INTEGER PAISE all the same.
+ */
 export interface VendorListRow {
   id: string;
+  ownerId: string;
   storeName: string;
   slug: string;
-  ownerName: string;
-  phone: string;
-  city: string;
-  status: VendorStatus;
-  isOpen: boolean;
+  description: string | null;
+  logoUrl: string | null;
+  bannerUrl: string | null;
+  address: {
+    line1: string;
+    line2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+  };
+  /** Named fields, never the GeoJSON pair, so nothing can read it transposed. */
+  location: { lat: number; lng: number } | null;
+  serviceRadiusKm: number;
+  /** percent, applied to FUTURE orders */
   commissionPct: number;
-  orders: number;
-  gmvPaise: number;
+  codEnabled: boolean;
+  /** INTEGER PAISE */
+  codMaxAmount: number;
+  isOpen: boolean;
+  /** Empty until the owner sets hours; see VendorHours. */
+  openingHours: VendorHours[];
+  status: VendorStatus;
+  /** 0-5; 0 until anything has written a rating */
   rating: number;
-  createdAt: string;
+  statusReason: string | null;
+  /** INTEGER PAISE — lifetime, excluding cancelled and rejected orders */
+  gmv: number;
+  orderCount: number;
+  createdAt: string | null;
 }
 
 export interface VendorHours {
-  day: string;
+  /** 0 = Sunday … 6 = Saturday, matching `Date#getDay()` */
+  day: number;
+  /** 24-hour `HH:mm` */
   open: string;
   close: string;
 }
 
+/**
+ * `GET /admin/vendors/:id` — the list row plus the owning account's contact
+ * details, which live on the User and not on the store. `null` when that
+ * account no longer exists.
+ *
+ * There is no earnings block, no order list and no catalogue on this
+ * response. Orders and products are their own paginated routes
+ * (`VendorOrderRow`, `VendorProductRow`); money owed lives on Settlements.
+ */
 export interface VendorDetail extends VendorListRow {
-  description: string;
-  address: { line1: string; city: string; state: string; pincode: string };
-  /** [lng, lat] — GeoJSON order, same as the DB (plan §5.1) */
-  location: { coordinates: [number, number] };
-  serviceRadiusKm: number;
-  codEnabled: boolean;
-  codMaxAmountPaise: number;
-  openingHours: VendorHours[];
-  earnings: {
-    grossPaise: number;
-    commissionPaise: number;
-    refundsPaise: number;
-    netPayablePaise: number;
-    lastSettledAt: string | null;
-  };
-  recentOrders: RecentOrder[];
-  products: VendorProductRow[];
+  owner: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
 }
 
+/**
+ * One row of `GET /admin/vendors/:id/orders` — the admin `OrderRow`
+ * (`apps/api/src/modules/admin/orders/orders.service.ts`). Money is INTEGER
+ * PAISE under the API's own names.
+ */
+export interface VendorOrderRow {
+  id: string;
+  orderNo: string;
+  status: OrderStatus;
+  customerId: string;
+  customerName: string | null;
+  vendorId: string;
+  vendorName: string | null;
+  itemCount: number;
+  pricing: {
+    itemsSubtotal: number;
+    discount: number;
+    deliveryFee: number;
+    taxes: number;
+    grandTotal: number;
+    commissionPct: number;
+    commissionAmount: number;
+    vendorPayout: number;
+  };
+  payment: { method: 'online' | 'cod'; status: PaymentStatus };
+  deliveryPartnerId: string | null;
+  placedAt: string;
+  deliveredAt: string | null;
+}
+
+/**
+ * One row of `GET /admin/vendors/:id/products` — the admin catalogue
+ * `ProductRow` (`apps/api/src/modules/admin/catalog/catalog.service.ts`).
+ * `stock` is the joined inventory value; `mrp` and `price` are INTEGER PAISE.
+ */
 export interface VendorProductRow {
   id: string;
+  vendorId: string;
+  vendorName: string | null;
+  categoryId: string;
+  categoryName: string | null;
+  /** null when the product's category is gone */
+  aisleKey: AisleKey | null;
   name: string;
-  aisleKey: AisleKey;
+  slug: string;
+  brand: string | null;
+  image: string | null;
+  unit: 'kg' | 'g' | 'l' | 'ml' | 'piece' | 'pack';
+  unitValue: number;
   sku: string;
-  pricePaise: number;
-  mrpPaise: number;
+  mrp: number;
+  price: number;
+  discountPct: number;
+  isActive: boolean;
   stock: number;
   lowStockThreshold: number;
-  isActive: boolean;
+  isLowStock: boolean;
+  createdAt: string | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -316,20 +395,33 @@ export interface OrderDetail extends OrderListRow {
 /* Team                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One row of `GET /admin/team` — `TeamMemberRow` in
+ * `apps/api/src/modules/admin/team/team.service.ts`, field for field.
+ *
+ * The screen was written against `level` / `isSystem` and a status that was
+ * always present; the API sends `role` in its own lowercase spelling (read it
+ * with `parseAdminRole`), `isSystemAccount`, and `status: null` for an account
+ * written outside the app with no status at all. `humanise(undefined)` on that
+ * one row is what took the whole Team page down.
+ */
 export interface TeamMember {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
+  /** '' on an account created without one */
   phone: string;
-  level: AdminLevel;
-  status: 'active' | 'suspended';
+  /** 'admin' | 'super_admin' — the API's Role enum value */
+  role: string;
+  /** null when the stored account carries no status; it cannot sign in */
+  status: 'active' | 'pending' | 'suspended' | null;
   /**
-   * A system account is created by a migration, owns the audit trail and the
-   * scheduled jobs, and cannot be edited or deleted from the UI at all.
+   * A system account is provisioned by the seed script and cannot be edited
+   * or deleted from the UI at all — the API refuses it too.
    */
-  isSystem: boolean;
+  isSystemAccount: boolean;
   lastLoginAt: string | null;
-  createdAt: string;
+  createdAt: string | null;
 }
 
 /* ------------------------------------------------------------------ */

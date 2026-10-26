@@ -182,6 +182,7 @@ function noopProvider(overrides: Partial<PaymentProvider> = {}): PaymentProvider
     verifyWebhookSignature: () => false,
     fetchOrderStatus: (): Promise<ProviderOrderStatus> =>
       Promise.resolve({ state: 'pending', providerPaymentId: null }),
+    refundPayment: () => Promise.reject(new Error('not used in this test')),
     ...overrides,
   };
 }

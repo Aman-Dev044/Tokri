@@ -25,7 +25,11 @@ import {
 } from '../../../common/decorators/current-user.decorator';
 import { Paginated } from '../../../common/dto/paginated';
 import { AuditInterceptor } from '../../../common/interceptors/audit.interceptor';
-import { AdminVendorsService, VendorRow } from './vendors.service';
+import {
+  AdminVendorsService,
+  VendorDetailRow,
+  VendorRow,
+} from './vendors.service';
 import {
   ListVendorsQueryDto,
   UpdateVendorCommissionDto,
@@ -62,9 +66,15 @@ export class AdminVendorsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'One vendor' })
+  @ApiOperation({
+    summary: 'One vendor',
+    description:
+      'The list row plus `owner` ({ id, name, email, phone } of the ' +
+      'owning account, or null if that account is gone). Orders and ' +
+      'products are their own paginated routes below.',
+  })
   @ApiNotFoundResponse({ description: 'Missing or malformed id.' })
-  findOne(@Param('id') id: string): Promise<VendorRow> {
+  findOne(@Param('id') id: string): Promise<VendorDetailRow> {
     return this.vendors.findById(id);
   }
 

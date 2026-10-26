@@ -50,8 +50,11 @@ export function Money({ value, dimZero = true, className }: MoneyProps) {
 /* ================================================================== */
 
 export interface RelativeTimeProps {
-  /** ISO 8601 string */
-  value: string;
+  /**
+   * ISO 8601 string. Nullish renders an em dash: plenty of real timestamps
+   * are legitimately absent ("never pinged", "not picked up yet").
+   */
+  value: string | null | undefined;
   /** stop ticking — for a long table where 40 live timers buy nothing */
   live?: boolean;
   className?: string;
@@ -85,7 +88,11 @@ export function RelativeTime({ value, live = true, className }: RelativeTimeProp
   const absolute = formatDate(value, 'full');
 
   return (
-    <time className={['adm-time', className].filter(Boolean).join(' ')} dateTime={value} title={absolute}>
+    <time
+      className={['adm-time', className].filter(Boolean).join(' ')}
+      dateTime={value ?? undefined}
+      title={absolute}
+    >
       {now === null ? formatDate(value, 'short') : formatRelative(value, now)}
     </time>
   );
@@ -176,7 +183,7 @@ export const AISLE_SERIES_COLOR: Record<AisleKey, string> = {
 /* ================================================================== */
 
 export type PillTone = 'good' | 'warn' | 'crit' | 'neutral' | 'info';
-export type StatusKind = 'order' | 'vendor' | 'user' | 'payment' | 'settlement';
+export type StatusKind = 'order' | 'vendor' | 'user' | 'payment' | 'settlement' | 'kyc';
 
 /**
  * Status -> semantic tone, per domain.
@@ -223,6 +230,13 @@ const TONES: Record<StatusKind, Record<string, PillTone>> = {
     processing: 'info',
     pending: 'neutral',
     failed: 'crit',
+  },
+  // A rider's identity check. SUBMITTED is a queue someone has to clear.
+  kyc: {
+    verified: 'good',
+    submitted: 'warn',
+    rejected: 'crit',
+    not_started: 'neutral',
   },
 };
 

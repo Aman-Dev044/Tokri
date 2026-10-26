@@ -4,284 +4,301 @@
  * Stands in only when `/admin/delivery-partners` cannot be reached; the page
  * shows an amber banner for as long as these are on screen.
  *
- * Mirrors the `DeliveryPartner` collection (plan §5.1) joined onto its `User`:
- * `isOnline` / `isAvailable` come from the partner doc, `status` from the user.
- * Money is INTEGER PAISE.
+ * ── THESE MIRROR THE ENDPOINT, NOT THE SCREEN ───────────────────────────────
+ * `RiderRow` is `PartnerRow` and `RiderDetail` is `PartnerDetail`, field for
+ * field (apps/api/src/modules/admin/delivery-partners/delivery-partners.service.ts).
+ * The first version of this file was written for the screen instead — a
+ * `city`, a `lastSeenAt`, an on-time rate — and the screen it described
+ * crashed on the first real payload, because none of those exist. If the
+ * screen wants a field, the API grows it first and this file follows.
+ *
+ * Nullable here means nullable there: a rider who has never pinged has no
+ * `locationAt`, and one who has never answered an offer has no acceptance
+ * rate. Money is INTEGER PAISE.
  */
 
 import type { OrderStatus } from '@/lib/admin/types';
 
-export type VehicleType = 'cycle' | 'scooter' | 'bike' | 'ev_scooter' | 'van';
+/** The API's `VehicleType` enum, verbatim. */
+export type VehicleType = 'bicycle' | 'scooter' | 'motorcycle' | 'ev_scooter';
 export type RiderStatus = 'active' | 'suspended' | 'pending';
+export type KycStatus = 'not_started' | 'submitted' | 'verified' | 'rejected';
 
+/** `GET /admin/delivery-partners` — one row. */
 export interface RiderRow {
   id: string;
-  name: string;
-  phone: string;
-  vehicleType: VehicleType;
+  userId: string;
+  name: string | null;
+  phone: string | null;
+  email: string | null;
   /** null ⇒ platform pool rather than a single vendor's fleet */
   vendorId: string | null;
   vendorName: string | null;
+  vehicleType: VehicleType;
   isOnline: boolean;
   isAvailable: boolean;
+  status: RiderStatus;
+  statusReason: string | null;
+  completedCount: number;
+  /** 0–5; 0 means "not rated yet" */
+  rating: number;
   activeOrderId: string | null;
   activeOrderNo: string | null;
-  completedCount: number;
-  /** 0–5, one decimal */
-  rating: number;
-  status: RiderStatus;
-  city: string;
-  lastSeenAt: string;
+  location: { lat: number; lng: number } | null;
+  /** the last location ping — the screen's "last seen" */
+  locationAt: string | null;
+  createdAt: string | null;
 }
 
 export interface RiderDeliveryRow {
   id: string;
   orderNo: string;
-  vendorName: string;
+  vendorId: string;
+  vendorName: string | null;
   status: OrderStatus;
-  distanceKm: number;
-  minutes: number;
-  earnedPaise: number;
-  deliveredAt: string;
+  pickedUpAt: string | null;
+  /** deliveredAt, or when the failure was recorded */
+  endedAt: string | null;
+  /** pickedUpAt → deliveredAt; null for a failed run */
+  runMinutes: number | null;
 }
 
+export interface RiderKycDocument {
+  kind: 'aadhaar' | 'pan' | 'driving_licence' | 'selfie';
+  url: string;
+  uploadedAt: string;
+}
+
+/** The rider surface's own KYC view, plus `breached`. Numbers are MASKED. */
+export interface RiderKyc {
+  status: KycStatus;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+  rejectedReason: string | null;
+  slaDueAt: string | null;
+  /** clamped at 0 — read `breached` for "already missed" */
+  slaRemainingMs: number | null;
+  slaHours: number;
+  aadhaarNumberMasked: string | null;
+  panNumberMasked: string | null;
+  drivingLicenceNumberMasked: string | null;
+  documents: RiderKycDocument[];
+  canResubmit: boolean;
+  breached: boolean;
+}
+
+/** `GET /admin/delivery-partners/:id`. */
 export interface RiderDetail extends RiderRow {
-  joinedAt: string;
   performance: {
-    onTimePct: number;
-    avgMinutes: number;
-    acceptRatePct: number;
+    deliveredCount: number;
     failedCount: number;
-    earningsPaise: number;
-    /** trailing weekly completed count, oldest first */
-    spark: number[];
+    avgRunMinutes: number | null;
+    offers: { accepted: number; rejected: number; expired: number };
+    acceptRatePct: number | null;
+    /** delivered per week, last 8 weeks, oldest first */
+    weeklyDelivered: number[];
   };
   currentAssignment: {
-    orderNo: string;
     orderId: string;
+    orderNo: string;
     status: OrderStatus;
-    customerName: string;
-    pickup: string;
+    customerName: string | null;
+    pickup: string | null;
     dropCity: string;
     dropPincode: string;
-    assignedAt: string;
-    etaMinutes: number;
+    assignedAt: string | null;
   } | null;
   deliveries: RiderDeliveryRow[];
+  kyc: RiderKyc;
+  walletBalancePaise: number;
 }
 
 export const VEHICLE_LABEL: Readonly<Record<VehicleType, string>> = {
-  cycle: 'Cycle',
+  bicycle: 'Bicycle',
   scooter: 'Scooter',
-  bike: 'Motorcycle',
+  motorcycle: 'Motorcycle',
   ev_scooter: 'EV scooter',
-  van: 'Van',
 };
+
+/**
+ * A vehicle the API added after this map was written still gets a label —
+ * humanised from the enum — rather than an empty cell.
+ */
+export function vehicleLabel(type: string): string {
+  const known = (VEHICLE_LABEL as Readonly<Record<string, string>>)[type];
+  if (known !== undefined) return known;
+  const spaced = type.replace(/[_-]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
 
 export const RIDERS_FIXTURE: readonly RiderRow[] = [
   {
     id: 'rdr_01',
+    userId: 'usr_r01',
     name: 'Suresh Kumar',
-    phone: '+91 99860 21174',
-    vehicleType: 'ev_scooter',
+    phone: '9986021174',
+    email: null,
     vendorId: 'ven_02',
     vendorName: 'Nandini Fresh, HSR',
+    vehicleType: 'ev_scooter',
     isOnline: true,
     isAvailable: false,
-    activeOrderId: 'ord_9101',
-    activeOrderNo: 'MND-20260924-0517',
+    status: 'active',
+    statusReason: null,
     completedCount: 1_284,
     rating: 4.9,
-    status: 'active',
-    city: 'Bengaluru',
-    lastSeenAt: '2026-09-24T11:58:00+05:30',
+    activeOrderId: 'ord_9101',
+    activeOrderNo: 'MND-20260924-0517',
+    location: { lat: 12.9121, lng: 77.6387 },
+    locationAt: '2026-09-24T11:58:00+05:30',
+    createdAt: '2025-05-12T10:00:00+05:30',
   },
   {
     id: 'rdr_02',
+    userId: 'usr_r02',
     name: 'Mohammed Arif',
-    phone: '+91 98451 33902',
-    vehicleType: 'bike',
+    phone: '9845133902',
+    email: 'arif@example.invalid',
     vendorId: null,
     vendorName: null,
+    vehicleType: 'motorcycle',
     isOnline: true,
     isAvailable: true,
-    activeOrderId: null,
-    activeOrderNo: null,
+    status: 'active',
+    statusReason: null,
     completedCount: 872,
     rating: 4.7,
-    status: 'active',
-    city: 'Bengaluru',
-    lastSeenAt: '2026-09-24T11:59:00+05:30',
+    activeOrderId: null,
+    activeOrderNo: null,
+    location: { lat: 12.9352, lng: 77.6245 },
+    locationAt: '2026-09-24T11:59:00+05:30',
+    createdAt: '2025-07-03T09:30:00+05:30',
   },
   {
     id: 'rdr_03',
+    userId: 'usr_r03',
     name: 'Pravin Jadhav',
-    phone: '+91 98221 60418',
-    vehicleType: 'scooter',
+    phone: '9822160418',
+    email: null,
     vendorId: 'ven_07',
     vendorName: 'Sahyadri Kirana',
+    vehicleType: 'scooter',
     isOnline: false,
     isAvailable: false,
-    activeOrderId: null,
-    activeOrderNo: null,
+    status: 'active',
+    statusReason: null,
     completedCount: 2_041,
     rating: 4.8,
-    status: 'active',
-    city: 'Pune',
-    lastSeenAt: '2026-09-24T02:14:00+05:30',
+    activeOrderId: null,
+    activeOrderNo: null,
+    location: { lat: 18.5204, lng: 73.8567 },
+    locationAt: '2026-09-24T02:14:00+05:30',
+    createdAt: '2025-02-20T11:15:00+05:30',
   },
   {
     id: 'rdr_04',
+    userId: 'usr_r04',
     name: 'Ramesh Yadav',
-    phone: '+91 99306 17720',
-    vehicleType: 'bike',
+    phone: '9930617720',
+    email: null,
     vendorId: null,
     vendorName: null,
+    vehicleType: 'motorcycle',
     isOnline: true,
     isAvailable: false,
-    activeOrderId: 'ord_9098',
-    activeOrderNo: 'MND-20260924-0503',
+    status: 'active',
+    statusReason: null,
     completedCount: 613,
     rating: 4.4,
-    status: 'active',
-    city: 'Mumbai',
-    lastSeenAt: '2026-09-24T11:57:00+05:30',
+    activeOrderId: 'ord_9098',
+    activeOrderNo: 'MND-20260924-0503',
+    location: { lat: 19.076, lng: 72.8777 },
+    locationAt: '2026-09-24T11:57:00+05:30',
+    createdAt: '2025-09-01T14:00:00+05:30',
   },
   {
     id: 'rdr_05',
+    userId: 'usr_r05',
     name: 'Bikash Das',
-    phone: '+91 98311 90255',
-    vehicleType: 'cycle',
+    phone: '9831190255',
+    email: null,
     vendorId: 'ven_11',
     vendorName: 'Park Street Provisions',
+    vehicleType: 'bicycle',
     isOnline: true,
     isAvailable: true,
-    activeOrderId: null,
-    activeOrderNo: null,
+    status: 'active',
+    statusReason: null,
     completedCount: 164,
     rating: 4.2,
-    status: 'active',
-    city: 'Kolkata',
-    lastSeenAt: '2026-09-24T11:54:00+05:30',
+    activeOrderId: null,
+    activeOrderNo: null,
+    location: { lat: 22.5726, lng: 88.3639 },
+    locationAt: '2026-09-24T11:54:00+05:30',
+    createdAt: '2026-03-18T08:45:00+05:30',
   },
   {
     id: 'rdr_06',
+    userId: 'usr_r06',
     name: 'Ganesh Pillai',
-    phone: '+91 98471 28806',
-    vehicleType: 'scooter',
+    phone: '9847128806',
+    email: null,
     vendorId: 'ven_05',
     vendorName: 'Marine Drive Mart',
+    vehicleType: 'scooter',
     isOnline: false,
     isAvailable: false,
-    activeOrderId: null,
-    activeOrderNo: null,
+    status: 'suspended',
+    statusReason: 'Repeated cash-on-delivery shortfalls',
     completedCount: 47,
     rating: 3.6,
-    status: 'suspended',
-    city: 'Kochi',
-    lastSeenAt: '2026-08-30T19:41:00+05:30',
+    activeOrderId: null,
+    activeOrderNo: null,
+    location: null,
+    locationAt: null,
+    createdAt: '2026-06-02T10:20:00+05:30',
   },
   {
     id: 'rdr_07',
-    name: 'Harpreet Singh',
-    phone: '+91 98720 55193',
-    vehicleType: 'van',
+    userId: 'usr_r07',
+    name: 'Dinesh Solanki',
+    phone: '9925170334',
+    email: null,
     vendorId: null,
     vendorName: null,
-    isOnline: true,
-    isAvailable: true,
+    vehicleType: 'motorcycle',
+    isOnline: false,
+    isAvailable: false,
+    status: 'pending',
+    statusReason: null,
+    completedCount: 0,
+    rating: 0,
     activeOrderId: null,
     activeOrderNo: null,
-    completedCount: 398,
-    rating: 4.6,
-    status: 'active',
-    city: 'Chandigarh',
-    lastSeenAt: '2026-09-24T11:52:00+05:30',
+    location: null,
+    locationAt: null,
+    createdAt: '2026-09-23T17:08:00+05:30',
   },
   {
     id: 'rdr_08',
+    userId: 'usr_r08',
     name: 'Venkatesh Rao',
-    phone: '+91 90001 44820',
-    vehicleType: 'ev_scooter',
+    phone: '9000144820',
+    email: null,
     vendorId: 'ven_09',
     vendorName: 'Jubilee Daily Needs',
+    vehicleType: 'ev_scooter',
     isOnline: true,
     isAvailable: false,
-    activeOrderId: 'ord_9094',
-    activeOrderNo: 'MND-20260924-0488',
+    status: 'active',
+    statusReason: null,
     completedCount: 1_507,
     rating: 4.9,
-    status: 'active',
-    city: 'Hyderabad',
-    lastSeenAt: '2026-09-24T11:59:00+05:30',
-  },
-  {
-    id: 'rdr_09',
-    name: 'Dinesh Solanki',
-    phone: '+91 99251 70334',
-    vehicleType: 'bike',
-    vendorId: null,
-    vendorName: null,
-    isOnline: false,
-    isAvailable: false,
-    activeOrderId: null,
-    activeOrderNo: null,
-    completedCount: 0,
-    rating: 0,
-    status: 'pending',
-    city: 'Ahmedabad',
-    lastSeenAt: '2026-09-23T17:08:00+05:30',
-  },
-  {
-    id: 'rdr_10',
-    name: 'Selvam Murugan',
-    phone: '+91 94441 30672',
-    vehicleType: 'scooter',
-    vendorId: 'ven_13',
-    vendorName: 'T. Nagar Grocers',
-    isOnline: true,
-    isAvailable: true,
-    activeOrderId: null,
-    activeOrderNo: null,
-    completedCount: 921,
-    rating: 4.5,
-    status: 'active',
-    city: 'Chennai',
-    lastSeenAt: '2026-09-24T11:56:00+05:30',
-  },
-  {
-    id: 'rdr_11',
-    name: 'Anil Rawat',
-    phone: '+91 97112 04487',
-    vehicleType: 'bike',
-    vendorId: null,
-    vendorName: null,
-    isOnline: false,
-    isAvailable: false,
-    activeOrderId: null,
-    activeOrderNo: null,
-    completedCount: 742,
-    rating: 4.1,
-    status: 'active',
-    city: 'Delhi',
-    lastSeenAt: '2026-09-24T06:22:00+05:30',
-  },
-  {
-    id: 'rdr_12',
-    name: 'Kiran Bhosale',
-    phone: '+91 98223 11908',
-    vehicleType: 'ev_scooter',
-    vendorId: 'ven_07',
-    vendorName: 'Sahyadri Kirana',
-    isOnline: true,
-    isAvailable: false,
-    activeOrderId: 'ord_9088',
-    activeOrderNo: 'MND-20260924-0461',
-    completedCount: 355,
-    rating: 4.3,
-    status: 'active',
-    city: 'Pune',
-    lastSeenAt: '2026-09-24T11:58:00+05:30',
+    activeOrderId: 'ord_9094',
+    activeOrderNo: 'MND-20260924-0488',
+    location: { lat: 17.4326, lng: 78.4071 },
+    locationAt: '2026-09-24T11:59:00+05:30',
+    createdAt: '2025-04-11T12:00:00+05:30',
   },
 ];
 
@@ -289,89 +306,123 @@ const DELIVERIES: readonly RiderDeliveryRow[] = [
   {
     id: 'dlv_01',
     orderNo: 'MND-20260924-0498',
+    vendorId: 'ven_02',
     vendorName: 'Nandini Fresh, HSR',
     status: 'DELIVERED',
-    distanceKm: 2.8,
-    minutes: 19,
-    earnedPaise: 4_600,
-    deliveredAt: '2026-09-24T10:41:00+05:30',
+    pickedUpAt: '2026-09-24T10:22:00+05:30',
+    endedAt: '2026-09-24T10:41:00+05:30',
+    runMinutes: 19,
   },
   {
     id: 'dlv_02',
     orderNo: 'MND-20260924-0455',
+    vendorId: 'ven_03',
     vendorName: 'Iyengar Bakery, Koramangala',
     status: 'DELIVERED',
-    distanceKm: 1.4,
-    minutes: 12,
-    earnedPaise: 3_200,
-    deliveredAt: '2026-09-24T09:58:00+05:30',
+    pickedUpAt: '2026-09-24T09:46:00+05:30',
+    endedAt: '2026-09-24T09:58:00+05:30',
+    runMinutes: 12,
   },
   {
     id: 'dlv_03',
     orderNo: 'MND-20260923-0619',
+    vendorId: 'ven_02',
     vendorName: 'Nandini Fresh, HSR',
     status: 'DELIVERY_FAILED',
-    distanceKm: 4.1,
-    minutes: 34,
-    earnedPaise: 2_000,
-    deliveredAt: '2026-09-23T20:12:00+05:30',
+    pickedUpAt: '2026-09-23T19:38:00+05:30',
+    endedAt: '2026-09-23T20:12:00+05:30',
+    runMinutes: null,
   },
   {
     id: 'dlv_04',
     orderNo: 'MND-20260923-0570',
+    vendorId: 'ven_04',
     vendorName: 'Green Basket Organics',
     status: 'DELIVERED',
-    distanceKm: 3.3,
-    minutes: 22,
-    earnedPaise: 5_100,
-    deliveredAt: '2026-09-23T18:04:00+05:30',
-  },
-  {
-    id: 'dlv_05',
-    orderNo: 'MND-20260923-0512',
-    vendorName: 'Sri Ganesh Stores',
-    status: 'DELIVERED',
-    distanceKm: 2.1,
-    minutes: 16,
-    earnedPaise: 3_900,
-    deliveredAt: '2026-09-23T16:27:00+05:30',
+    pickedUpAt: '2026-09-23T17:42:00+05:30',
+    endedAt: '2026-09-23T18:04:00+05:30',
+    runMinutes: 22,
   },
 ];
 
+function kycFixture(row: RiderRow): RiderKyc {
+  // A pending account has sent its documents and is waiting on a human;
+  // everyone else in the sample was verified long ago.
+  const waiting = row.status === 'pending';
+  return {
+    status: waiting ? 'submitted' : 'verified',
+    submittedAt: waiting ? '2026-09-23T17:20:00+05:30' : '2025-05-12T10:30:00+05:30',
+    verifiedAt: waiting ? null : '2025-05-12T16:05:00+05:30',
+    rejectedReason: null,
+    slaDueAt: waiting ? '2026-09-24T17:20:00+05:30' : null,
+    slaRemainingMs: waiting ? 19_200_000 : null,
+    slaHours: 24,
+    aadhaarNumberMasked: 'XXXX XXXX 4821',
+    panNumberMasked: 'XXXXXX907K',
+    drivingLicenceNumberMasked: 'XXXXXXXXXXX3310',
+    documents: [
+      {
+        kind: 'aadhaar',
+        url: 'https://example.invalid/kyc/aadhaar.jpg',
+        uploadedAt: '2026-09-23T17:12:00+05:30',
+      },
+      {
+        kind: 'driving_licence',
+        url: 'https://example.invalid/kyc/licence.jpg',
+        uploadedAt: '2026-09-23T17:15:00+05:30',
+      },
+    ],
+    canResubmit: waiting,
+    breached: false,
+  };
+}
+
+const UNKNOWN_RIDER: RiderRow = {
+  id: 'rdr_unknown',
+  userId: 'usr_unknown',
+  name: null,
+  phone: null,
+  email: null,
+  vendorId: null,
+  vendorName: null,
+  vehicleType: 'motorcycle',
+  isOnline: false,
+  isAvailable: false,
+  status: 'pending',
+  statusReason: null,
+  completedCount: 0,
+  rating: 0,
+  activeOrderId: null,
+  activeOrderNo: null,
+  location: null,
+  locationAt: null,
+  createdAt: null,
+};
+
 export function riderDetailFixture(id: string): RiderDetail {
-  const base =
-    RIDERS_FIXTURE.find((r) => r.id === id) ??
-    RIDERS_FIXTURE[0] ??
-    ({
-      id,
-      name: 'Unknown',
-      phone: '',
-      vehicleType: 'bike',
-      vendorId: null,
-      vendorName: null,
-      isOnline: false,
-      isAvailable: false,
-      activeOrderId: null,
-      activeOrderNo: null,
-      completedCount: 0,
-      rating: 0,
-      status: 'pending',
-      city: '',
-      lastSeenAt: '2026-09-24T00:00:00+05:30',
-    } satisfies RiderRow);
+  const base = RIDERS_FIXTURE.find((r) => r.id === id) ?? RIDERS_FIXTURE[0] ?? UNKNOWN_RIDER;
+  const fresh = base.completedCount === 0;
 
   return {
     ...base,
     id,
-    joinedAt: '2025-05-12T10:00:00+05:30',
-    performance: {
-      onTimePct: 94.2,
-      avgMinutes: 21,
-      acceptRatePct: 88.5,
-      failedCount: 7,
-      earningsPaise: 3_84_600,
-      spark: [38, 44, 41, 52, 49, 58, 55, 61],
-    },
+    performance: fresh
+      ? {
+          deliveredCount: 0,
+          failedCount: 0,
+          avgRunMinutes: null,
+          offers: { accepted: 0, rejected: 0, expired: 0 },
+          acceptRatePct: null,
+          weeklyDelivered: [0, 0, 0, 0, 0, 0, 0, 0],
+        }
+      : {
+          deliveredCount: base.completedCount,
+          failedCount: 7,
+          avgRunMinutes: 21,
+          offers: { accepted: 412, rejected: 38, expired: 16 },
+          acceptRatePct: 88.4,
+          weeklyDelivered: [38, 44, 41, 52, 49, 58, 55, 61],
+        },
     currentAssignment:
       base.activeOrderId === null || base.activeOrderNo === null
         ? null
@@ -380,12 +431,13 @@ export function riderDetailFixture(id: string): RiderDetail {
             orderNo: base.activeOrderNo,
             status: 'OUT_FOR_DELIVERY',
             customerName: 'Ananya Iyer',
-            pickup: base.vendorName ?? 'Platform pool pickup',
-            dropCity: base.city,
+            pickup: base.vendorName,
+            dropCity: 'Bengaluru',
             dropPincode: '560102',
             assignedAt: '2026-09-24T11:31:00+05:30',
-            etaMinutes: 8,
           },
-    deliveries: [...DELIVERIES],
+    deliveries: fresh ? [] : [...DELIVERIES],
+    kyc: kycFixture(base),
+    walletBalancePaise: fresh ? 0 : 18_500,
   };
 }

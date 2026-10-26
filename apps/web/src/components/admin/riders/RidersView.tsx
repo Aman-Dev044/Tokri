@@ -11,8 +11,9 @@ import {
   RelativeTime,
   StatusPill,
 } from '@/components/admin';
-import { useDebounced } from '@/hooks';
+import { useAdminQuery, useDebounced } from '@/hooks';
 import { formatCount, formatPct } from '@/lib/admin/format';
+import { RIDER_SORT, toSortParam } from '@/lib/admin/sort';
 
 import { SampleBanner } from '../_shared-pages/SampleBanner';
 import styles from '../_shared-pages/pages.module.css';
@@ -23,10 +24,12 @@ import {
   paginate,
   sortRows,
   useSourcedList,
+  type ListEnvelope,
+  type QueryParams,
   type SortState,
 } from '../_shared-pages/useSourced';
 import { Presence } from './Presence';
-import { RIDERS_FIXTURE, VEHICLE_LABEL, type RiderRow } from './fixtures';
+import { RIDERS_FIXTURE, vehicleLabel, type RiderRow } from './fixtures';
 
 const ENDPOINT = '/admin/delivery-partners';
 const LIMIT = 10;
@@ -61,6 +64,32 @@ interface Filters {
 
 const EMPTY_FILTERS: Filters = { q: '', presence: '', fleet: '', status: '' };
 
+/**
+ * "Presence" is one control on screen and two booleans on the API. Sending
+ * `presence=` verbatim was a 400 under `forbidNonWhitelisted` — and a 400
+ * is an error, not sample data, so every filtered view failed outright.
+ */
+const PRESENCE_PARAMS: Readonly<Record<string, { isOnline?: string; isAvailable?: string }>> = {
+  online: { isOnline: 'true' },
+  available: { isOnline: 'true', isAvailable: 'true' },
+  busy: { isOnline: 'true', isAvailable: 'false' },
+  offline: { isOnline: 'false' },
+};
+
+/*
+ * The fleet-wide counts behind the KPI row. The table is one server page, so
+ * counting its rows would report "3 online" for page 2 of a 40-rider fleet.
+ * `limit=1` and the envelope's `meta.total` is the count, for one row's cost.
+ */
+const ONLINE_COUNT: QueryParams = { isOnline: 'true', limit: '1' };
+const FREE_COUNT: QueryParams = { isOnline: 'true', isAvailable: 'true', limit: '1' };
+
+function useFleetCount(params: QueryParams): number | null {
+  const { data } = useAdminQuery<ListEnvelope<RiderRow>>(ENDPOINT, params);
+  const total = data?.meta?.total;
+  return typeof total === 'number' ? total : null;
+}
+
 function matchesPresence(row: RiderRow, presence: string): boolean {
   switch (presence) {
     case 'online':
@@ -81,7 +110,7 @@ function sortValue(row: RiderRow, key: string): string | number | null {
     case 'name':
       return row.name;
     case 'vehicle':
-      return VEHICLE_LABEL[row.vehicleType];
+      return vehicleLabel(row.vehicleType);
     case 'vendor':
       return row.vendorName ?? '';
     case 'completed':
@@ -107,24 +136,33 @@ export function RidersView() {
     () =>
       cleanParams({
         q: debouncedQ,
-        presence: filters.presence,
+        ...PRESENCE_PARAMS[filters.presence],
         fleet: filters.fleet,
         status: filters.status,
         page,
         limit: LIMIT,
+        sort: toSortParam(sort, RIDER_SORT),
       }),
-    [debouncedQ, filters.presence, filters.fleet, filters.status, page],
+    [debouncedQ, filters.presence, filters.fleet, filters.status, page, sort],
   );
 
-  const { rows, loading, isSample, refetch } = useSourcedList<RiderRow>(
+  const { rows, meta, loading, isSample, refetch } = useSourcedList<RiderRow>(
     ENDPOINT,
     params,
     RIDERS_FIXTURE,
   );
 
+  const onlineCount = useFleetCount(ONLINE_COUNT);
+  const freeCount = useFleetCount(FREE_COUNT);
+
   const filtered = useMemo(() => {
     const matched = rows.filter((row) => {
-      if (!matchesSearch([row.name, row.phone, row.vendorName ?? undefined, row.city], debouncedQ)) {
+      if (
+        !matchesSearch(
+          [row.name ?? undefined, row.phone ?? undefined, row.vendorName ?? undefined],
+          debouncedQ,
+        )
+      ) {
         return false;
       }
       if (!matchesPresence(row, filters.presence)) return false;
@@ -136,24 +174,29 @@ export function RidersView() {
     return sortRows(matched, sort, sortValue);
   }, [rows, debouncedQ, filters.presence, filters.fleet, filters.status, sort]);
 
-  const visible = useMemo(() => paginate(filtered, page, LIMIT), [filtered, page]);
+  // Live, the server has already paged: `rows` IS page N, and slicing it
+  // again for page 2 would show an empty table. Only the fixture path pages
+  // on the client.
+  const visible = useMemo(
+    () => (isSample ? paginate(filtered, page, LIMIT) : filtered),
+    [isSample, filtered, page],
+  );
+  const pages = isSample ? pageCount(filtered.length, LIMIT) : Math.max(1, meta.pages);
 
   const kpis = useMemo(() => {
-    const online = rows.filter((r) => r.isOnline);
-    const free = online.filter((r) => r.isAvailable);
-    const onRun = online.length - free.length;
-    const rated = rows.filter((r) => r.rating > 0);
+    const online = isSample ? rows.filter((r) => r.isOnline).length : onlineCount;
+    const free = isSample ? rows.filter((r) => r.isOnline && r.isAvailable).length : freeCount;
+    if (online === null || free === null) return null;
+    const onRun = online - free;
     return {
-      online: online.length,
-      free: free.length,
+      online,
+      free,
       onRun,
-      utilisationPct: online.length === 0 ? 0 : (onRun / online.length) * 100,
-      avgRating:
-        rated.length === 0
-          ? 0
-          : Math.round((rated.reduce((s, r) => s + r.rating, 0) / rated.length) * 10) / 10,
+      utilisationPct: online === 0 ? 0 : (onRun / online) * 100,
     };
-  }, [rows]);
+  }, [isSample, rows, onlineCount, freeCount]);
+
+  const kpiLoading = loading || kpis === null;
 
   return (
     <AdminPage
@@ -171,32 +214,32 @@ export function RidersView() {
           index={0}
           isFixture={isSample}
           label="Online now"
-          value={kpis.online}
-          tone={kpis.online === 0 ? 'crit' : 'good'}
-          loading={loading}
+          value={kpis?.online ?? 0}
+          tone={kpis?.online === 0 ? 'crit' : 'good'}
+          loading={kpiLoading}
         />
         <KpiTile
           index={1}
           isFixture={isSample}
           label="Free to accept"
-          value={kpis.free}
-          loading={loading}
+          value={kpis?.free ?? 0}
+          loading={kpiLoading}
         />
         <KpiTile
           index={2}
           isFixture={isSample}
           label="On a run"
-          value={kpis.onRun}
-          loading={loading}
+          value={kpis?.onRun ?? 0}
+          loading={kpiLoading}
         />
         <KpiTile
           index={3}
           isFixture={isSample}
           label="Fleet utilisation"
-          value={Math.round(kpis.utilisationPct)}
+          value={Math.round(kpis?.utilisationPct ?? 0)}
           unit="%"
-          deltaLabel={`${formatPct(kpis.utilisationPct)} of riders online are mid-delivery`}
-          loading={loading}
+          deltaLabel={`${formatPct(kpis?.utilisationPct ?? 0)} of riders online are mid-delivery`}
+          loading={kpiLoading}
         />
       </div>
 
@@ -230,7 +273,7 @@ export function RidersView() {
         empty="No rider matches those filters."
         onRowClick={(row: RiderRow) => router.push(`/admin/riders/${row.id}`)}
         page={page}
-        pageCount={pageCount(filtered.length, LIMIT)}
+        pageCount={pages}
         onPageChange={setPage}
         sort={sort}
         onSortChange={setSort}
@@ -241,8 +284,12 @@ export function RidersView() {
             sortable: true,
             render: (row: RiderRow) => (
               <span className={styles.twoLine}>
-                <span className={styles.strong}>{row.name}</span>
-                <span className={`${styles.subtle} ${styles.mono}`}>{row.phone}</span>
+                {row.name === null ? (
+                  <span className={styles.nullish}>name not set</span>
+                ) : (
+                  <span className={styles.strong}>{row.name}</span>
+                )}
+                <span className={`${styles.subtle} ${styles.mono}`}>{row.phone ?? '—'}</span>
               </span>
             ),
           },
@@ -259,7 +306,7 @@ export function RidersView() {
             header: 'Vehicle',
             width: '8rem',
             sortable: true,
-            render: (row: RiderRow) => VEHICLE_LABEL[row.vehicleType],
+            render: (row: RiderRow) => vehicleLabel(row.vehicleType),
           },
           {
             key: 'vendor',
@@ -277,8 +324,14 @@ export function RidersView() {
             header: 'Active order',
             width: '11rem',
             render: (row: RiderRow) =>
-              row.activeOrderNo === null ? (
+              row.activeOrderId === null ? (
                 <span className={styles.muted}>—</span>
+              ) : (row.activeOrderNo ?? null) === null ? (
+                // Holding an order id that no longer resolves to an order —
+                // worth seeing, so it is not rendered as "no order".
+                <span className={styles.warn} title={row.activeOrderId}>
+                  unresolved order
+                </span>
               ) : (
                 <span className={styles.mono}>{row.activeOrderNo}</span>
               ),
@@ -319,10 +372,17 @@ export function RidersView() {
             render: (row: RiderRow) => <StatusPill status={row.status} kind="user" />,
           },
           {
-            key: 'lastSeenAt',
-            header: 'Last seen',
+            // The API's `locationAt`: the last GPS ping, which is the only
+            // "last seen" the platform actually records.
+            key: 'locationAt',
+            header: 'Last ping',
             width: '9rem',
-            render: (row: RiderRow) => <RelativeTime value={row.lastSeenAt} />,
+            render: (row: RiderRow) =>
+              row.locationAt === null ? (
+                <span className={styles.nullish}>never</span>
+              ) : (
+                <RelativeTime value={row.locationAt} />
+              ),
           },
         ]}
       />

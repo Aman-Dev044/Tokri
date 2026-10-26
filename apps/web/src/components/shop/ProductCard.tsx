@@ -30,6 +30,7 @@ import { useRef } from 'react';
 import { Depth, formatPaise, Tilt3D, type AisleKey } from '@mandi/design-system';
 import { useBasket, type BasketStore } from './BasketProvider';
 import { QuantityStepper } from './QuantityStepper';
+import { formatPackSize } from '@/lib/shop/format';
 import type { Product } from '@/lib/shop/types';
 
 /* ───────────────────────────────── media ───────────────────────────────── */
@@ -155,7 +156,9 @@ export function ProductCard({ product, store, aisleKey, priority = false }: Prod
           <Link href={`/product/${encodeURIComponent(product.id)}`}>{product.name}</Link>
         </h3>
         <p className="shop-card__unit">
-          {product.unit}
+          {/* The pack size ("500 g"), not the bare unit — the product page
+              already does this; the card was still printing just "g". */}
+          {formatPackSize(product.unit, product.unitValue)}
           {product.brand !== null ? <span className="shop-card__brand"> · {product.brand}</span> : null}
         </p>
 

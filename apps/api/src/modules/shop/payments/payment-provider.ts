@@ -45,6 +45,21 @@ export interface ProviderOrderStatus {
   providerPaymentId: string | null;
 }
 
+export interface RefundPaymentInput {
+  /** The captured payment's id — `Order.payment.providerPaymentId`. */
+  providerPaymentId: string;
+  /** INTEGER PAISE. Never more than what is left un-refunded. */
+  amount: number;
+  notes?: Record<string, string>;
+}
+
+/** The gateway's acknowledgement that it has ACCEPTED a refund. */
+export interface ProviderRefund {
+  providerRefundId: string;
+  /** The gateway's own word for it — `pending` and `processed` both mean accepted. */
+  status: string;
+}
+
 export interface PaymentProvider {
   readonly name: string;
 
@@ -95,6 +110,16 @@ export interface PaymentProvider {
    * checkout must never wait on a gateway round trip it doesn't need.
    */
   fetchOrderStatus(providerOrderId: string): Promise<ProviderOrderStatus>;
+
+  /**
+   * Asks the gateway to return `amount` of a captured payment.
+   *
+   * Resolves only once the gateway has ACCEPTED the refund; anything else
+   * — no keys, a timeout, a refusal — throws, and the caller must treat
+   * that as "no money moved". A refund is never recorded on the strength
+   * of having asked.
+   */
+  refundPayment(input: RefundPaymentInput): Promise<ProviderRefund>;
 }
 
 /** DI token. An interface has no runtime identity to inject by. */

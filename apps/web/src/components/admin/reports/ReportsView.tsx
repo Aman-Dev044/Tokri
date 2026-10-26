@@ -15,7 +15,7 @@ import {
 } from '@/components/admin';
 import { formatCount, formatDate, formatPct } from '@/lib/admin/format';
 
-import { aisleColor } from '../_shared-pages/aisles';
+import { aisleColor, aisleLabel } from '../_shared-pages/aisles';
 import { csvFilename, downloadCsv, toCsv, type CsvColumn } from '../_shared-pages/csv';
 import { SampleBanner } from '../_shared-pages/SampleBanner';
 import styles from '../_shared-pages/pages.module.css';
@@ -32,16 +32,43 @@ import {
 
 const ENDPOINT = '/admin/reports';
 
-function asNumber(value: string | number | undefined): number {
+type Cell = string | number | null | undefined;
+
+function asNumber(value: Cell): number {
   return typeof value === 'number' ? value : Number(value ?? 0) || 0;
 }
 
-function asText(value: string | number | undefined): string {
-  return value === undefined ? '' : String(value);
+function asText(value: Cell): string {
+  return value === undefined || value === null ? '' : String(value);
+}
+
+/**
+ * The endpoint sends `null` for a value it cannot measure — an average over
+ * zero deliveries. A chart has no honest way to draw that point (plotting it
+ * as 0 draws a dip that never happened), so such a row is left off the chart
+ * and stays in the table, where it reads as a dash.
+ */
+function toChartRows(
+  rows: readonly ReportRow[],
+  seriesKeys: readonly string[],
+): Record<string, string | number>[] {
+  return rows
+    .filter((row) => seriesKeys.every((key) => row[key] !== null))
+    .map((row) => {
+      const out: Record<string, string | number> = {};
+      for (const [key, value] of Object.entries(row)) {
+        if (value !== null) out[key] = value;
+      }
+      return out;
+    });
 }
 
 /** How a raw cell is drawn. Money always goes through <Money/>. */
-function renderCell(kind: CellKind, raw: string | number | undefined) {
+function renderCell(kind: CellKind, raw: Cell) {
+  // Not measured is not zero.
+  if (raw === null || raw === undefined) {
+    return <span className={styles.muted}>—</span>;
+  }
   switch (kind) {
     case 'money':
       return <Money value={asNumber(raw)} />;
@@ -80,29 +107,52 @@ export function ReportsView() {
     }
   }, [def, grouping]);
 
+  // The grouping state lags one render behind a report switch (the effect
+  // above corrects it). Sending the stale value would ask the API for, say,
+  // vendor performance "by day" — a 400, and a flash of the sample banner —
+  // so the request always carries a grouping the selected report supports.
+  const effectiveGrouping = def.groupings.some((g) => g.value === grouping)
+    ? grouping
+    : (def.groupings[0]?.value ?? '');
+
   const params = useMemo(
-    () => cleanParams({ report, grouping, from, to }),
-    [report, grouping, from, to],
+    () => cleanParams({ report, grouping: effectiveGrouping, from, to }),
+    [report, effectiveGrouping, from, to],
   );
 
   const fixture = REPORT_ROWS[report];
-  const { rows, loading, isSample, refetch } = useSourcedList<ReportRow>(
+  const { rows: sourced, loading, isSample, refetch } = useSourcedList<ReportRow>(
     ENDPOINT,
     params,
     fixture,
   );
 
-  /** Chart data: the rows as they are, plus an explicit colour per aisle row. */
-  const chartData = useMemo(
+  /**
+   * The one reshaping between the endpoint and the screen: aisle rows arrive
+   * as an `aisleKey` and are named here, from the design system that also
+   * owns their hue. Live rows and fixture rows both pass through it.
+   */
+  const rows = useMemo<ReportRow[]>(
     () =>
       def.byAisle
-        ? rows.map((row) => ({
-            ...row,
-            color: aisleColor(asText(row['aisleKey'])),
-          }))
-        : rows,
-    [rows, def.byAisle],
+        ? sourced.map((row) => ({ ...row, aisle: aisleLabel(asText(row['aisleKey'])) }))
+        : sourced,
+    [sourced, def.byAisle],
   );
+
+  /** Chart data: plottable rows only, plus an explicit colour per aisle row. */
+  const chartData = useMemo(() => {
+    const plottable = toChartRows(
+      rows,
+      def.series.map((s) => s.key),
+    );
+    return def.byAisle
+      ? plottable.map((row) => ({
+          ...row,
+          color: aisleColor(asText(row['aisleKey'])),
+        }))
+      : plottable;
+  }, [rows, def.series, def.byAisle]);
 
   const donutData = useMemo(
     () =>
@@ -235,7 +285,7 @@ export function ReportsView() {
             <select
               id="rep-group"
               className={styles.select}
-              value={grouping}
+              value={effectiveGrouping}
               onChange={(event) => setGrouping(event.target.value)}
             >
               {def.groupings.map((group) => (
@@ -320,7 +370,7 @@ export function ReportsView() {
 
       <AdminSection title="Rows">
         <DataTable
-          rowKey={(row: ReportRow) => asText(row[def.xKey])}
+          rowKey={(row: ReportRow) => asText(row[def.rowKey ?? def.xKey])}
           rows={rows}
           loading={loading}
           empty="No data in that window."

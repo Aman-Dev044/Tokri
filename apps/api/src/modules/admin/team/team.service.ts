@@ -26,7 +26,13 @@ export interface TeamMemberRow {
   email: string | null;
   phone: string;
   role: Role;
-  status: UserStatus;
+  /**
+   * null when the document has no status at all. The schema defaults it,
+   * but a row written outside Mongoose (a hand-made account in Atlas) has
+   * none, and login refuses anything that is not ACTIVE — so "unknown" is
+   * the truthful answer and "active" would be a guess.
+   */
+  status: UserStatus | null;
   isSystemAccount: boolean;
   lastLoginAt: string | null;
   createdAt: string | null;
@@ -198,8 +204,10 @@ function toRow(user: TeamRecord): TeamMemberRow {
     email: user.email ?? null,
     phone: user.phone,
     role: user.role,
-    status: user.status,
-    isSystemAccount: user.isSystemAccount,
+    status: user.status ?? null,
+    // Only the seed script sets this, and always explicitly to true; an
+    // absent flag is the schema default, false.
+    isSystemAccount: user.isSystemAccount === true,
     lastLoginAt: user.lastLoginAt
       ? new Date(user.lastLoginAt).toISOString()
       : null,

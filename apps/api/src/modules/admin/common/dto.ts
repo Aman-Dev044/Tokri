@@ -47,6 +47,24 @@ export class AdminListQueryDto extends PaginationQueryDto {
   to?: string;
 }
 
+/** `YYYY-MM-DD` and nothing else — a calendar day, not an instant. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The inclusive upper bound for a `?to=` value.
+ *
+ * The console's date pickers send a bare `2026-09-24`, which `new Date()`
+ * reads as 00:00:00.000 UTC on that day. Used as-is in a `$lte`, "up to
+ * the 24th" would silently exclude everything that happened ON the 24th.
+ * A date-only value is therefore widened to the last millisecond of that
+ * UTC day; a full timestamp is taken exactly as given.
+ */
+export function inclusiveTo(value: string): Date {
+  const date = new Date(value);
+  if (DATE_ONLY.test(value)) date.setUTCHours(23, 59, 59, 999);
+  return date;
+}
+
 /**
  * Escapes regex metacharacters so a search term is matched literally.
  * Without it, `q=.*` returns the whole collection and `q=(a+)+$` is a

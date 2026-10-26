@@ -110,11 +110,18 @@ export function PaymentsView() {
     [debouncedQ, filters.method, filters.status, filters.range, filters.rangeTo, page],
   );
 
-  const { rows, loading, isSample, refetch } = useSourcedList<PaymentRow>(
+  const { rows, meta, loading, isSample, refetch } = useSourcedList<PaymentRow>(
     ENDPOINT,
     params,
     PAYMENTS_FIXTURE,
   );
+
+  /**
+   * Live rows arrive already filtered and already ONE page of `meta.total`;
+   * slicing them again here would show page 2 as empty, and counting them
+   * would cap the pager at one page. Only the fixture is paged client-side.
+   */
+  const pageScoped = !isSample && meta.pages > 1;
 
   const refund = useAdminMutation<{ amountPaise: number; reason: string }, PaymentRow>(
     refunding === null ? ENDPOINT : `${ENDPOINT}/${refunding.id}/refund`,
@@ -125,7 +132,12 @@ export function PaymentsView() {
     const matched = rows.filter((row) => {
       if (
         !matchesSearch(
-          [row.orderNo, row.customerName, row.vendorName, row.gatewayRef ?? undefined],
+          [
+            row.orderNo,
+            row.customerName ?? undefined,
+            row.vendorName ?? undefined,
+            row.gatewayRef ?? undefined,
+          ],
           debouncedQ,
         )
       ) {
@@ -139,7 +151,11 @@ export function PaymentsView() {
     return sortRows(matched, sort, sortValue);
   }, [rows, debouncedQ, filters.method, filters.status, filters.range, filters.rangeTo, sort]);
 
-  const visible = useMemo(() => paginate(filtered, page, LIMIT), [filtered, page]);
+  const visible = useMemo(
+    () => (isSample ? paginate(filtered, page, LIMIT) : filtered),
+    [isSample, filtered, page],
+  );
+  const pages = isSample ? pageCount(filtered.length, LIMIT) : Math.max(1, meta.pages);
 
   const totals = useMemo(() => {
     let collected = 0;
@@ -209,6 +225,7 @@ export function PaymentsView() {
           value={totals.collected}
           unit="paise"
           tone="good"
+          deltaLabel={pageScoped ? 'this page only' : undefined}
           loading={loading}
         />
         <KpiTile
@@ -218,7 +235,7 @@ export function PaymentsView() {
           value={totals.codOutstanding}
           unit="paise"
           tone={totals.codOutstanding > 0 ? 'warn' : 'neutral'}
-          deltaLabel="cash not yet handed in"
+          deltaLabel={`cash not yet handed in${pageScoped ? ' · this page only' : ''}`}
           loading={loading}
         />
         <KpiTile
@@ -228,6 +245,7 @@ export function PaymentsView() {
           value={totals.refunded}
           unit="paise"
           tone={totals.refunded > 0 ? 'warn' : 'neutral'}
+          deltaLabel={pageScoped ? 'this page only' : undefined}
           loading={loading}
         />
         <KpiTile
@@ -237,7 +255,9 @@ export function PaymentsView() {
           value={Math.round(totals.successPct)}
           unit="%"
           tone={totals.successPct >= 95 ? 'good' : 'warn'}
-          deltaLabel={`${formatPct(totals.successPct)} of settled attempts`}
+          deltaLabel={`${formatPct(totals.successPct)} of settled attempts${
+            pageScoped ? ' on this page' : ''
+          }`}
           loading={loading}
         />
       </div>
@@ -274,7 +294,7 @@ export function PaymentsView() {
             loading={loading}
             empty="No transaction matches those filters."
             page={page}
-            pageCount={pageCount(filtered.length, LIMIT)}
+            pageCount={pages}
             onPageChange={setPage}
             sort={sort}
             onSortChange={setSort}
@@ -286,7 +306,7 @@ export function PaymentsView() {
                 render: (row: PaymentRow) => (
                   <span className={styles.twoLine}>
                     <span className={styles.mono}>{row.orderNo}</span>
-                    <span className={styles.subtle}>{row.vendorName}</span>
+                    <span className={styles.subtle}>{row.vendorName ?? '—'}</span>
                   </span>
                 ),
               },
@@ -295,7 +315,7 @@ export function PaymentsView() {
                 header: 'Customer',
                 sortable: true,
                 render: (row: PaymentRow) => (
-                  <span className={styles.truncate}>{row.customerName}</span>
+                  <span className={styles.truncate}>{row.customerName ?? '—'}</span>
                 ),
               },
               {
@@ -421,7 +441,7 @@ export function PaymentsView() {
             ? ''
             : `This refunds the full remaining ${formatPaise(maxRefundPaise)} on ${
                 refunding.orderNo
-              } to ${refunding.customerName}. ${
+              } to ${refunding.customerName ?? 'the customer'}. ${
                 refunding.method === 'cod'
                   ? 'This order was paid in cash — the refund is recorded against the vendor ledger and must be settled out of band.'
                   : `Razorpay will be asked to reverse ${refunding.gatewayRef ?? 'the capture'}. Gateway refunds are not instant and cannot be cancelled once accepted.`

@@ -37,6 +37,10 @@ import {
   RiderWallet,
   RiderWalletSchema,
 } from '../../database/schemas/rider-wallet.schema';
+import {
+  DeliveryAssignment,
+  DeliveryAssignmentSchema,
+} from '../../database/schemas/delivery-assignment.schema';
 
 import { UsersModule } from '../users/users.module';
 import { IdempotencyModule } from '../../common/idempotency.module';
@@ -66,6 +70,12 @@ import { AdminSettingsController } from './settings/settings.controller';
 import { AdminSettingsService } from './settings/settings.service';
 import { AdminRidersController } from './riders/riders.controller';
 import { AdminRidersService } from './riders/riders.service';
+import { AdminPaymentsController } from './payments/payments.controller';
+import { AdminPaymentsService } from './payments/payments.service';
+import { AdminReportsController } from './reports/reports.controller';
+import { AdminReportsService } from './reports/reports.service';
+import { PAYMENT_PROVIDER } from '../shop/payments/payment-provider';
+import { RazorpayProvider } from '../shop/payments/razorpay.provider';
 
 import { AdminOpsController } from './ops/ops.controller';
 import { AdminOpsApprovalsController } from './ops/ops-approvals.controller';
@@ -88,13 +98,18 @@ import { OpsCardsService } from './ops/ops-cards.service';
  * declares `@Roles(Role.ADMIN)` — the LOWEST role permitted — and
  * `RolesGuard` lets SUPER_ADMIN through that implicitly.
  *
- * Four things are SUPER_ADMIN-only, and each is either irreversible or
- * a privilege grant:
+ * These are SUPER_ADMIN-only, and each is irreversible, a privilege
+ * grant, or the platform's whole money picture:
  *   PATCH /admin/vendors/:id/commission   money policy
  *   POST  /admin/settlements/generate     creates payable rows
  *   POST  /admin/settlements/:id/pay      moves money
  *   /admin/team/*                         creates and revokes staff
  *   PUT   /admin/settings                 platform-wide pricing
+ *   /admin/payments, /admin/payments/:id/refund
+ *                                         every customer's spend, and
+ *                                         money sent back out
+ *   GET   /admin/reports                  the commercial picture: GMV,
+ *                                         commission and tax per store
  *
  * Role inheritance runs upward only, so ADMIN does not satisfy any of
  * them. A compromised ADMIN session can run the platform day to day but
@@ -118,6 +133,8 @@ import { OpsCardsService } from './ops/ops-cards.service';
       { name: Issue.name, schema: IssueSchema },
       { name: InventoryLog.name, schema: InventoryLogSchema },
       { name: RiderWallet.name, schema: RiderWalletSchema },
+      // Read-only here: the rider detail's offer acceptance rate.
+      { name: DeliveryAssignment.name, schema: DeliveryAssignmentSchema },
     ]),
 
     // Reused, not reimplemented: UsersService owns the account invariants
@@ -157,6 +174,8 @@ import { OpsCardsService } from './ops/ops-cards.service';
     AdminTeamController,
     AdminSettingsController,
     AdminRidersController,
+    AdminPaymentsController,
+    AdminReportsController,
 
     // ── The ADMIN operations console (§ ops) ──────────────────────────
     //  Read-heavy, action-oriented, live. Every route is
@@ -181,6 +200,8 @@ import { OpsCardsService } from './ops/ops-cards.service';
     AdminTeamService,
     AdminSettingsService,
     AdminRidersService,
+    AdminPaymentsService,
+    AdminReportsService,
 
     OpsCardsService,
     AdminOpsService,
@@ -188,6 +209,13 @@ import { OpsCardsService } from './ops/ops-cards.service';
     AdminOpsDispatchService,
     AdminOpsIssuesService,
     AdminOpsStockService,
+
+    // The payment port, bound locally for the refund route — the same
+    // reason `DeliveryModule` binds its own: `ShopModule` cannot be
+    // imported here without closing a cycle, and `RazorpayProvider` is
+    // stateless (it reads `ConfigService` per call), so a second
+    // instance is a second object, not a second source of truth.
+    { provide: PAYMENT_PROVIDER, useClass: RazorpayProvider },
   ],
 })
 export class AdminModule {}

@@ -1,20 +1,34 @@
 /**
  * SAMPLE DATA — not real, never presented as real.
  *
- * ── A NOTE ON THE ENDPOINT ──────────────────────────────────────────────────
- * `/admin/reports` is not in the enumerated admin endpoint list (plan §6.2) —
- * only `/vendor/reports/sales` is. The builder calls `/admin/reports` with the
- * report key and window as query params, which is the read-model this page
- * needs; until the API grows one it will render these fixtures behind the
- * amber banner.
+ * ── THE ENDPOINT ────────────────────────────────────────────────────────────
+ * `GET /admin/reports?report=&grouping=&from=&to=` (SUPER_ADMIN only) answers
+ * `{ data: ReportRow[], meta }`, unpaged, with rows SPARSE — a day with no
+ * orders has no row. These fixtures stand in for it only when it cannot be
+ * reached, and they speak its shape, not the screen's: product rows carry
+ * `aisleKey` and no display name (the page names the aisle), vendor rows carry
+ * `vendorId`.
+ *
+ * ── COLUMNS THAT DO NOT EXIST, AND WHY ─────────────────────────────────────
+ * Each was removed because the platform stores nothing it could be computed
+ * from, and a plausible number on a report is read as fact:
+ *   vendor Rating        `Vendor.rating` is never written — every store reads 0
+ *   Riders online        only the CURRENT online flag is stored; pings expire
+ *   CGST / SGST          the split depends on the customer's state, which an
+ *                        order address does not store
+ * Likewise the groupings "vendors by city", "delivery by city", "products by
+ * category" and "tax by state": each would have put a city, a category or a
+ * state into a column headed Vendor, Date, Aisle or GST slab.
  *
  * Money is INTEGER PAISE. Percentages are 0–100 numbers, not fractions.
+ * `null` means "not measurable for this row" (an average over zero
+ * deliveries) and is drawn as a dash, never as 0.
  */
 
 import { AISLES } from '@mandi/design-system';
 
 /** A report row. Values are raw — formatting is the table's job, not the data's. */
-export type ReportRow = Record<string, string | number>;
+export type ReportRow = Record<string, string | number | null>;
 
 export type ReportKey =
   | 'sales'
@@ -44,6 +58,8 @@ export interface ReportDef {
   chart: 'line' | 'bar' | 'donut';
   /** the column the chart plots along its x axis */
   xKey: string;
+  /** a unique key per row, when `xKey` can repeat (two stores, one name) */
+  rowKey?: string;
   series: ReportSeries[];
   columns: ReportColumn[];
   groupings: { label: string; value: string }[];
@@ -59,7 +75,8 @@ export const REPORTS: readonly ReportDef[] = [
   {
     key: 'sales',
     label: 'Sales',
-    description: 'Gross merchandise value and order count over the window.',
+    description:
+      'Orders and gross merchandise value (order totals, cancelled and rejected orders excluded), by UTC day, week or month.',
     chart: 'line',
     xKey: 'date',
     series: [
@@ -83,9 +100,11 @@ export const REPORTS: readonly ReportDef[] = [
   {
     key: 'vendor_performance',
     label: 'Vendor performance',
-    description: 'How much each store sold, and what the platform earned from it.',
+    description:
+      'How much each store sold, the commission on it, and the share of its orders that were cancelled or rejected.',
     chart: 'bar',
     xKey: 'vendor',
+    rowKey: 'vendorId',
     series: [{ key: 'gmvPaise', label: 'GMV' }],
     columns: [
       { key: 'vendor', header: 'Vendor', kind: 'text' },
@@ -94,17 +113,13 @@ export const REPORTS: readonly ReportDef[] = [
       { key: 'gmvPaise', header: 'GMV', kind: 'money' },
       { key: 'commissionPaise', header: 'Commission', kind: 'money' },
       { key: 'cancelPct', header: 'Cancelled', kind: 'pct' },
-      { key: 'rating', header: 'Rating', kind: 'number' },
     ],
-    groupings: [
-      { label: 'By vendor', value: 'vendor' },
-      { label: 'By city', value: 'city' },
-    ],
+    groupings: [{ label: 'By vendor', value: 'vendor' }],
   },
   {
     key: 'product_performance',
     label: 'Product performance',
-    description: 'Units sold and revenue, grouped by aisle.',
+    description: 'Units sold and line revenue from fulfilled lines, grouped by aisle.',
     chart: 'donut',
     xKey: 'aisle',
     series: [{ key: 'gmvPaise', label: 'GMV' }],
@@ -116,15 +131,13 @@ export const REPORTS: readonly ReportDef[] = [
       { key: 'gmvPaise', header: 'GMV', kind: 'money' },
       { key: 'sharePct', header: 'Share of GMV', kind: 'pct' },
     ],
-    groupings: [
-      { label: 'By aisle', value: 'aisle' },
-      { label: 'By category', value: 'category' },
-    ],
+    groupings: [{ label: 'By aisle', value: 'aisle' }],
   },
   {
     key: 'delivery_performance',
     label: 'Delivery performance',
-    description: 'Time to deliver, on-time rate and failures.',
+    description:
+      'Placed-to-delivered minutes, the on-time rate against the platform SLA, and failed delivery attempts, by UTC day.',
     chart: 'line',
     xKey: 'date',
     series: [
@@ -137,17 +150,14 @@ export const REPORTS: readonly ReportDef[] = [
       { key: 'avgMinutes', header: 'Avg minutes', kind: 'number' },
       { key: 'onTimePct', header: 'On time', kind: 'pct' },
       { key: 'failed', header: 'Failed', kind: 'number' },
-      { key: 'ridersOnline', header: 'Riders online', kind: 'number' },
     ],
-    groupings: [
-      { label: 'By day', value: 'day' },
-      { label: 'By city', value: 'city' },
-    ],
+    groupings: [{ label: 'By day', value: 'day' }],
   },
   {
     key: 'tax_summary',
     label: 'Tax summary',
-    description: 'Taxable value and GST collected, by rate slab.',
+    description:
+      'Taxable value and GST on delivered orders, by the rate each order was actually charged.',
     chart: 'bar',
     xKey: 'slab',
     series: [{ key: 'taxPaise', label: 'Tax collected' }],
@@ -155,14 +165,9 @@ export const REPORTS: readonly ReportDef[] = [
       { key: 'slab', header: 'GST slab', kind: 'text' },
       { key: 'orders', header: 'Orders', kind: 'number' },
       { key: 'taxablePaise', header: 'Taxable value', kind: 'money' },
-      { key: 'cgstPaise', header: 'CGST', kind: 'money' },
-      { key: 'sgstPaise', header: 'SGST', kind: 'money' },
       { key: 'taxPaise', header: 'Total tax', kind: 'money' },
     ],
-    groupings: [
-      { label: 'By slab', value: 'slab' },
-      { label: 'By state', value: 'state' },
-    ],
+    groupings: [{ label: 'By slab', value: 'slab' }],
   },
 ];
 
@@ -189,15 +194,19 @@ const SALES_ROWS: readonly ReportRow[] = [
 ];
 
 const VENDOR_ROWS: readonly ReportRow[] = [
-  { vendor: 'Nandini Fresh, HSR', city: 'Bengaluru', orders: 3_218, gmvPaise: 3_74_11_200, commissionPaise: 56_11_680, cancelPct: 2.1, rating: 4.8 },
-  { vendor: 'Jubilee Daily Needs', city: 'Hyderabad', orders: 2_486, gmvPaise: 2_81_44_900, commissionPaise: 39_40_286, cancelPct: 3.4, rating: 4.6 },
-  { vendor: 'Sahyadri Kirana', city: 'Pune', orders: 2_047, gmvPaise: 2_18_36_500, commissionPaise: 26_20_380, cancelPct: 1.8, rating: 4.7 },
-  { vendor: 'T. Nagar Grocers', city: 'Chennai', orders: 1_512, gmvPaise: 1_64_82_100, commissionPaise: 21_42_673, cancelPct: 4.2, rating: 4.3 },
-  { vendor: 'Park Street Provisions', city: 'Kolkata', orders: 964, gmvPaise: 98_74_300, commissionPaise: 13_82_402, cancelPct: 5.7, rating: 4.1 },
-  { vendor: 'Marine Drive Mart', city: 'Kochi', orders: 703, gmvPaise: 71_21_650, commissionPaise: 10_68_247, cancelPct: 6.9, rating: 3.9 },
+  { vendorId: 'v_01', vendor: 'Nandini Fresh, HSR', city: 'Bengaluru', orders: 3_218, gmvPaise: 3_74_11_200, commissionPaise: 56_11_680, cancelPct: 2.1 },
+  { vendorId: 'v_02', vendor: 'Jubilee Daily Needs', city: 'Hyderabad', orders: 2_486, gmvPaise: 2_81_44_900, commissionPaise: 39_40_286, cancelPct: 3.4 },
+  { vendorId: 'v_03', vendor: 'Sahyadri Kirana', city: 'Pune', orders: 2_047, gmvPaise: 2_18_36_500, commissionPaise: 26_20_380, cancelPct: 1.8 },
+  { vendorId: 'v_04', vendor: 'T. Nagar Grocers', city: 'Chennai', orders: 1_512, gmvPaise: 1_64_82_100, commissionPaise: 21_42_673, cancelPct: 4.2 },
+  { vendorId: 'v_05', vendor: 'Park Street Provisions', city: 'Kolkata', orders: 964, gmvPaise: 98_74_300, commissionPaise: 13_82_402, cancelPct: 5.7 },
+  { vendorId: 'v_06', vendor: 'Marine Drive Mart', city: 'Kochi', orders: 703, gmvPaise: 71_21_650, commissionPaise: 10_68_247, cancelPct: 6.9 },
 ];
 
-/** Aisle rows are derived so the eight keys and labels can never drift. */
+/**
+ * Aisle rows are derived so the keys can never drift. Like the endpoint, they
+ * carry `aisleKey` only — the page puts the name on — and omit an aisle with
+ * no sales rather than listing it at zero.
+ */
 const AISLE_GMV: readonly number[] = [
   1_84_21_000, 2_41_66_500, 1_52_30_400, 68_44_200, 96_18_700, 1_12_73_900, 2_08_55_100, 47_91_300,
 ];
@@ -206,34 +215,36 @@ const AISLE_PRODUCTS: readonly number[] = [115, 170, 85, 57, 117, 155, 265, 64];
 
 const PRODUCT_ROWS: readonly ReportRow[] = (() => {
   const total = AISLE_GMV.reduce((sum, n) => sum + n, 0);
-  return AISLES.map((aisle, index) => {
+  return AISLES.flatMap((aisle, index) => {
     const gmv = AISLE_GMV[index] ?? 0;
-    return {
-      aisleKey: aisle.key,
-      aisle: aisle.name,
-      products: AISLE_PRODUCTS[index] ?? 0,
-      units: AISLE_UNITS[index] ?? 0,
-      gmvPaise: gmv,
-      sharePct: total === 0 ? 0 : Math.round((gmv / total) * 1000) / 10,
-    };
+    if (gmv === 0) return [];
+    return [
+      {
+        aisleKey: aisle.key,
+        products: AISLE_PRODUCTS[index] ?? 0,
+        units: AISLE_UNITS[index] ?? 0,
+        gmvPaise: gmv,
+        sharePct: total === 0 ? 0 : Math.round((gmv / total) * 1000) / 10,
+      },
+    ];
   });
 })();
 
 const DELIVERY_ROWS: readonly ReportRow[] = [
-  { date: '2026-09-18', deliveries: 1_241, avgMinutes: 22, onTimePct: 93.4, failed: 18, ridersOnline: 214 },
-  { date: '2026-09-19', deliveries: 1_318, avgMinutes: 21, onTimePct: 94.1, failed: 14, ridersOnline: 228 },
-  { date: '2026-09-20', deliveries: 1_654, avgMinutes: 26, onTimePct: 88.7, failed: 41, ridersOnline: 241 },
-  { date: '2026-09-21', deliveries: 1_602, avgMinutes: 25, onTimePct: 90.2, failed: 33, ridersOnline: 238 },
-  { date: '2026-09-22', deliveries: 1_158, avgMinutes: 20, onTimePct: 95.8, failed: 9, ridersOnline: 205 },
-  { date: '2026-09-23', deliveries: 1_277, avgMinutes: 21, onTimePct: 94.6, failed: 12, ridersOnline: 219 },
-  { date: '2026-09-24', deliveries: 812, avgMinutes: 19, onTimePct: 96.3, failed: 5, ridersOnline: 198 },
+  { date: '2026-09-18', deliveries: 1_241, avgMinutes: 22, onTimePct: 93.4, failed: 18 },
+  { date: '2026-09-19', deliveries: 1_318, avgMinutes: 21, onTimePct: 94.1, failed: 14 },
+  { date: '2026-09-20', deliveries: 1_654, avgMinutes: 26, onTimePct: 88.7, failed: 41 },
+  { date: '2026-09-21', deliveries: 1_602, avgMinutes: 25, onTimePct: 90.2, failed: 33 },
+  { date: '2026-09-22', deliveries: 1_158, avgMinutes: 20, onTimePct: 95.8, failed: 9 },
+  { date: '2026-09-23', deliveries: 1_277, avgMinutes: 21, onTimePct: 94.6, failed: 12 },
+  { date: '2026-09-24', deliveries: 812, avgMinutes: 19, onTimePct: 96.3, failed: 5 },
 ];
 
 const TAX_ROWS: readonly ReportRow[] = [
-  { slab: '0% (exempt — fresh produce)', orders: 6_418, taxablePaise: 4_82_14_600, cgstPaise: 0, sgstPaise: 0, taxPaise: 0 },
-  { slab: '5%', orders: 4_112, taxablePaise: 2_16_40_800, cgstPaise: 5_41_020, sgstPaise: 5_41_020, taxPaise: 10_82_040 },
-  { slab: '12%', orders: 1_874, taxablePaise: 96_22_300, cgstPaise: 5_77_338, sgstPaise: 5_77_338, taxPaise: 11_54_676 },
-  { slab: '18%', orders: 1_205, taxablePaise: 71_08_900, cgstPaise: 6_39_801, sgstPaise: 6_39_801, taxPaise: 12_79_602 },
+  { slab: '0%', orders: 6_418, taxablePaise: 4_82_14_600, taxPaise: 0 },
+  { slab: '5%', orders: 4_112, taxablePaise: 2_16_40_800, taxPaise: 10_82_040 },
+  { slab: '12%', orders: 1_874, taxablePaise: 96_22_300, taxPaise: 11_54_676 },
+  { slab: '18%', orders: 1_205, taxablePaise: 71_08_900, taxPaise: 12_79_602 },
 ];
 
 export const REPORT_ROWS: Readonly<Record<ReportKey, readonly ReportRow[]>> = {

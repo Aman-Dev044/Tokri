@@ -1361,8 +1361,14 @@
   transform: translateY(-2px) scale(1.04);
   box-shadow: var(--glow-sm);
 }
+/* No transform while pressed. Inside the tilting card a pressed-state
+   transform moves the button onto its own 3D layer, behind the card body:
+   the press lands on the button, the release lands on `.shop-card__foot`,
+   and the browser never fires `click`, so Add silently did nothing.
+   Brightness gives the same "pressed" feedback without moving anything. */
 .shop-card__add:active {
-  transform: scale(0.9);
+  transform: none;
+  filter: brightness(0.9);
 }
 .shop-card__disabled {
   font-size: var(--t-xs);

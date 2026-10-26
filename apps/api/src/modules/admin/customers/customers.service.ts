@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, PipelineStage, Types } from 'mongoose';
 
 import { User, UserDocument } from '../../../database/schemas/user.schema';
+import { Order, OrderDocument } from '../../../database/schemas/order.schema';
 import {
   Address,
   AddressDocument,
@@ -45,7 +46,34 @@ export interface CustomerDetail extends CustomerRow {
     phone: string;
     isDefault: boolean;
   }[];
+  /** The most recent orders, newest first, every status included. */
+  orders: {
+    id: string;
+    orderNo: string;
+    vendorName: string | null;
+    status: string;
+    /** Units across all lines, not the number of lines. */
+    itemCount: number;
+    totalPaise: number;
+    placedAt: string | null;
+  }[];
+  lifetime: {
+    /** Same population as `orderCount`: everything but cancelled/rejected. */
+    ordersCount: number;
+    grossPaise: number;
+    avgOrderPaise: number;
+    /** Every refund ever recorded against this customer's orders. */
+    refundedPaise: number;
+    /** Cancelled + rejected. */
+    cancelledCount: number;
+    firstOrderAt: string | null;
+    /** Spend per calendar month (UTC) for the last six, oldest first. */
+    spark: number[];
+  };
 }
+
+const RECENT_ORDERS = 20;
+const SPARK_MONTHS = 6;
 
 interface CustomerAggregateRow {
   _id: Types.ObjectId;
@@ -75,6 +103,7 @@ export class AdminCustomersService {
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
     @InjectModel(Address.name)
     private readonly addresses: Model<AddressDocument>,
+    @InjectModel(Order.name) private readonly orders: Model<OrderDocument>,
     private readonly usersService: UsersService,
     private readonly audit: AuditService,
   ) {}
@@ -249,8 +278,15 @@ export class AdminCustomersService {
       >()
       .exec();
 
+    const [lifetime, orders] = await Promise.all([
+      this.lifetimeFor(row._id),
+      this.recentOrdersFor(row._id),
+    ]);
+
     return {
       ...toRow(row),
+      orders,
+      lifetime,
       addresses: addresses.map((address) => ({
         id: address._id.toString(),
         label: address.label,
@@ -262,6 +298,145 @@ export class AdminCustomersService {
         isDefault: address.isDefault,
       })),
     };
+  }
+
+  /**
+   * Lifetime figures for the detail page, every one of them counted from
+   * the customer's orders — the screen used to read these off a fixture,
+   * and a live customer took the whole page down.
+   */
+  private async lifetimeFor(
+    customerId: Types.ObjectId,
+  ): Promise<CustomerDetail['lifetime']> {
+    const now = new Date();
+    const sparkFrom = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (SPARK_MONTHS - 1), 1),
+    );
+
+    const [facet] = await this.orders
+      .aggregate<{
+        kept: { count: number; gross: number; first: Date | null }[];
+        cancelled: { count: number }[];
+        refunded: { total: number }[];
+        months: { _id: { y: number; m: number }; spend: number }[];
+      }>([
+        { $match: { customerId } },
+        {
+          $facet: {
+            kept: [
+              { $match: { status: { $nin: FAILED_STATUSES } } },
+              {
+                $group: {
+                  _id: null,
+                  count: { $sum: 1 },
+                  gross: { $sum: '$pricing.grandTotal' },
+                  first: { $min: '$placedAt' },
+                },
+              },
+            ],
+            cancelled: [
+              { $match: { status: { $in: FAILED_STATUSES } } },
+              { $count: 'count' },
+            ],
+            refunded: [
+              {
+                $group: {
+                  _id: null,
+                  total: { $sum: { $ifNull: ['$payment.refundedAmount', 0] } },
+                },
+              },
+            ],
+            months: [
+              {
+                $match: {
+                  status: { $nin: FAILED_STATUSES },
+                  placedAt: { $gte: sparkFrom },
+                },
+              },
+              {
+                $group: {
+                  _id: { y: { $year: '$placedAt' }, m: { $month: '$placedAt' } },
+                  spend: { $sum: '$pricing.grandTotal' },
+                },
+              },
+            ],
+          },
+        },
+      ])
+      .exec();
+
+    const kept = facet?.kept[0];
+    const ordersCount = kept?.count ?? 0;
+    const grossPaise = kept?.gross ?? 0;
+
+    const byMonth = new Map(
+      (facet?.months ?? []).map((m) => [`${m._id.y}-${m._id.m}`, m.spend]),
+    );
+    const spark = Array.from({ length: SPARK_MONTHS }, (_, i) => {
+      const d = new Date(
+        Date.UTC(sparkFrom.getUTCFullYear(), sparkFrom.getUTCMonth() + i, 1),
+      );
+      return byMonth.get(`${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`) ?? 0;
+    });
+
+    return {
+      ordersCount,
+      grossPaise,
+      avgOrderPaise: ordersCount === 0 ? 0 : Math.round(grossPaise / ordersCount),
+      refundedPaise: facet?.refunded[0]?.total ?? 0,
+      cancelledCount: facet?.cancelled[0]?.count ?? 0,
+      firstOrderAt: kept?.first ? new Date(kept.first).toISOString() : null,
+      spark,
+    };
+  }
+
+  private async recentOrdersFor(
+    customerId: Types.ObjectId,
+  ): Promise<CustomerDetail['orders']> {
+    const rows = await this.orders
+      .aggregate<{
+        _id: Types.ObjectId;
+        orderNo: string;
+        status: string;
+        placedAt?: Date | null;
+        totalPaise?: number;
+        itemCount?: number;
+        vendorName?: string | null;
+      }>([
+        { $match: { customerId } },
+        { $sort: { placedAt: -1 } },
+        { $limit: RECENT_ORDERS },
+        {
+          $lookup: {
+            from: 'vendors',
+            localField: 'vendorId',
+            foreignField: '_id',
+            pipeline: [{ $project: { storeName: 1 } }],
+            as: 'vendor',
+          },
+        },
+        {
+          $project: {
+            orderNo: 1,
+            status: 1,
+            placedAt: 1,
+            totalPaise: '$pricing.grandTotal',
+            itemCount: { $sum: '$items.qty' },
+            vendorName: { $arrayElemAt: ['$vendor.storeName', 0] },
+          },
+        },
+      ])
+      .exec();
+
+    return rows.map((order) => ({
+      id: order._id.toString(),
+      orderNo: order.orderNo,
+      vendorName: order.vendorName ?? null,
+      status: order.status,
+      itemCount: order.itemCount ?? 0,
+      totalPaise: order.totalPaise ?? 0,
+      placedAt: order.placedAt ? new Date(order.placedAt).toISOString() : null,
+    }));
   }
 
   /**

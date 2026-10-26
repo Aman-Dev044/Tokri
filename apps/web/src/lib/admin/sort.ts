@@ -68,8 +68,8 @@ export const VENDOR_SORT: SortFieldMap = {
   storeName: 'storeName',
   status: 'status',
   commissionPct: 'commissionPct',
-  orders: 'orderCount',
-  gmvPaise: 'gmv',
+  orderCount: 'orderCount',
+  gmv: 'gmv',
   rating: 'rating',
   createdAt: 'createdAt',
   actions: null,
@@ -101,4 +101,15 @@ export const ISSUE_SORT: SortFieldMap = {
   urgency: 'priority',
   subject: null,
   assignee: null,
+};
+
+/** `/admin/delivery-partners` — allowlist: completedCount createdAt rating status */
+export const RIDER_SORT: SortFieldMap = {
+  completed: 'completedCount',
+  rating: 'rating',
+  status: 'status',
+  // Joined or derived after the fact — the client orders the page.
+  name: null,
+  vehicle: null,
+  vendor: null,
 };

@@ -99,6 +99,11 @@ const IDLE_STATE: TrackingState = {
 function messageFor(code: number): string {
   switch (code) {
     case 1:
+      // On plain http the browser refuses without asking, and no setting
+      // the rider can change will fix it — only serving the app over https.
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        return 'Live location needs a secure (https) connection, which this site does not have yet. Tell your manager — the customer cannot see you until it is fixed.';
+      }
       return 'Location permission is off. Turn it on in your browser settings — the customer cannot see you without it.';
     case 2:
       return 'No GPS signal right now.';
