@@ -44,13 +44,44 @@ const ROOT = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]
 const COLLECTION = join(ROOT, 'docs', 'tokri-api.postman_collection.json');
 const BASE = process.env.DOCS_API_URL ?? 'http://localhost:4000/api/v1';
 
-const CREDS = {
-  superAdminToken: ['superadmin@tokri.app', '***REMOVED***'],
-  adminToken: ['admin@tokri.app', '***REMOVED***'],
-  vendorToken: ['vendor@grocery.in', '***REMOVED***'],
-  customerToken: ['customer@grocery.in', '***REMOVED***'],
-  riderToken: ['delivery@grocery.in', '***REMOVED***'],
-};
+/**
+ * The seeded accounts, READ FROM `.env` — never written here, for the same
+ * reason as in `build-api-docs.mjs`: this script is committed, `.env` is not.
+ */
+function readSeedAccounts() {
+  let text = '';
+  try {
+    text = readFileSync(join(ROOT, 'apps', 'api', '.env'), 'utf8');
+  } catch {
+    return null;
+  }
+  const env = {};
+  for (const line of text.split(String.fromCharCode(10))) {
+    const m = /^([A-Z0-9_]+)=([\s\S]*)$/.exec(line.trim());
+    if (m) env[m[1]] = m[2];
+  }
+  const rows = [
+    ['superAdminToken', 'SUPERADMIN'],
+    ['adminToken', 'ADMIN'],
+    ['vendorToken', 'VENDOR'],
+    ['customerToken', 'CUSTOMER'],
+    ['riderToken', 'DELIVERY'],
+  ];
+  const out = {};
+  for (const [variable, key] of rows) {
+    const identifier = env[`SEED_${key}_EMAIL`];
+    const password = env[`SEED_${key}_PASSWORD`];
+    if (!identifier || !password) return null;
+    out[variable] = [identifier, password];
+  }
+  return out;
+}
+
+const CREDS = readSeedAccounts();
+if (CREDS === null) {
+  console.error('Could not read the SEED_* accounts from apps/api/.env.');
+  process.exit(1);
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
