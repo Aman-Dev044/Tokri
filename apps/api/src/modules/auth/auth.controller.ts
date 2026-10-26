@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
 import { authThrottle } from '../../config/throttle';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { isIP } from 'node:net';
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegistrationService } from './registration.service';
@@ -61,7 +62,9 @@ export class AuthController {
       // a rejected cookie looks exactly like a failed login. Omitting the
       // attribute yields a host-only cookie, which is both stricter and
       // what every browser handles the same way.
-      ...(domain === 'localhost' ? {} : { domain }),
+      // The same holds for a bare IP: some browsers reject a Domain
+      // attribute naming an IP, and host-only is what an IP needs anyway.
+      ...(domain === 'localhost' || isIP(domain) ? {} : { domain }),
       path: '/',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });

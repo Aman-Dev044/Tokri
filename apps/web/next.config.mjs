@@ -25,6 +25,7 @@ const contentSecurityPolicy = (isDev) => {
   }
 
   const origin = (value) => new URL(value).origin;
+  const siteIsHttps = (process.env.NEXT_PUBLIC_SITE_URL ?? '').startsWith('https://');
   const apiOrigin = origin(apiUrl);
   const socketOrigin = origin(socketUrl);
   const wsOrigin = socketOrigin.replace(/^http/, 'ws');
@@ -54,7 +55,10 @@ const contentSecurityPolicy = (isDev) => {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    'upgrade-insecure-requests',
+    // Only behind TLS. Over plain http (a bare server IP) this rewrites
+    // every /_next asset and API call to https, which nothing answers,
+    // and the page loads with no JS or CSS.
+    ...(siteIsHttps ? ['upgrade-insecure-requests'] : []),
   ].join('; ');
 };
 
