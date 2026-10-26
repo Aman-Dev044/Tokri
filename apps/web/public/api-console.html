@@ -11,17 +11,18 @@
        A CONSOLE FOR THE API, SERVED BY THE WEB APP
       ════════════════════════════════════════════════════════════════════
 
-      Open it at http://localhost:3000/api-console.html
+      Open it at <web app>/api-console.html — on the server that is
+      http://49.13.70.253:9989/api-console.html.
 
       ── Why it lives in the web app's public folder ─────────────────────
       Because of CORS, and that is not an implementation detail. The API's
-      allowlist comes from CORS_ORIGINS in .env and contains exactly
-      http://localhost:3000 and http://127.0.0.1:3000. Opened from the
-      filesystem this page would send `Origin: null` and every request
-      would be refused — a console that cannot call the API.
+      allowlist comes from CORS_ORIGINS in .env, which names the web app's
+      own origin. Opened from the filesystem this page would send
+      `Origin: null` and every request would be refused — a console that
+      cannot call the API.
 
-      Served from :3000 it is already an allowed origin, so nothing about
-      the API's security has to be loosened to use it.
+      Served by the web app it is already an allowed origin, so nothing
+      about the API's security has to be loosened to use it.
 
       ── Why everything is inline ────────────────────────────────────────
       No CDN, no build step, no dependency to go stale. The page works with
@@ -175,6 +176,28 @@
       details.grp > summary:hover { background: var(--sunk); }
       details.grp > summary .count { color: var(--ink-faint); font-weight: 400; }
 
+      /* one closed menu per role; its groups are closed sub-menus */
+      details.role { border-bottom: 1px solid var(--line); }
+      details.role > summary {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 12px; cursor: pointer; list-style: none;
+        font-size: 13px; font-weight: 700; color: var(--ink);
+      }
+      details.role > summary::-webkit-details-marker { display: none; }
+      details.role > summary::before { content: "\25B8"; color: var(--ink-faint); font-size: 11px; }
+      details.role[open] > summary::before { content: "\25BE"; }
+      details.role > summary:hover { background: var(--sunk); }
+      details.role > summary .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--line-strong); }
+      details.role > summary .dot[data-on="true"] { background: var(--good); }
+      details.role > summary .who { margin-left: auto; font-size: 10.5px; font-weight: 400; color: var(--ink-faint); }
+      details.role .role-note { margin: 0; padding: 0 12px 8px 30px; font-size: 11px; color: var(--ink-faint); line-height: 1.5; }
+      details.role details.grp { border-top: 1px dashed var(--line); }
+      details.role details.grp > summary { padding-left: 24px; }
+      details.role details.grp > summary::before { content: "\25B8  "; color: var(--ink-faint); font-size: 10px; }
+      details.role details.grp[open] > summary::before { content: "\25BE  "; }
+      details.role .ep { padding-left: 34px; }
+      .shared { padding: 8px 12px 4px 24px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); border-top: 1px solid var(--line); }
+
       .ep {
         display: flex; align-items: baseline; gap: 7px; width: 100%;
         padding: 6px 12px 6px 18px; border: 0; border-radius: 0;
@@ -311,6 +334,12 @@
         const state = {
           spec: null,
           baseUrl: saved.baseUrl || '',
+          // The base URL the saved one was derived from. When the generated
+          // default moves (localhost:4000 → the live server), a stale saved
+          // value is dropped instead of silently pointing at a dead host.
+          specBase: saved.specBase || '',
+          // Which role / group menus are open. Everything starts closed.
+          open: new Set(Array.isArray(saved.open) ? saved.open : []),
           tokens: saved.tokens || {},
           // Asked once per role, then kept HERE — in this browser's
           // localStorage, which is not git and not something the web app
@@ -320,6 +349,7 @@
           // into your own browser is not.
           secrets: saved.secrets || {},
           current: null,
+          currentKey: null,
           hasLocalSecrets: false,
           // From the gitignored dev file. Kept apart from `secrets`
           // (which the user typed) so signing out forgets what YOU
@@ -338,6 +368,8 @@
               STORE,
               JSON.stringify({
                 baseUrl: state.baseUrl,
+                specBase: state.specBase,
+                open: [...state.open],
                 tokens: state.tokens,
                 secrets: state.secrets,
               }),
@@ -381,7 +413,11 @@
 
         function start(spec) {
           state.spec = spec;
-          if (!state.baseUrl) state.baseUrl = spec.baseUrl;
+          if (!state.baseUrl || state.specBase !== spec.baseUrl) {
+            state.baseUrl = spec.baseUrl;
+            state.specBase = spec.baseUrl;
+            persist();
+          }
           $('baseUrl').value = state.baseUrl;
           $('baseUrl').addEventListener('change', (e) => {
             state.baseUrl = e.target.value.replace(/\/+$/, '');
@@ -398,12 +434,12 @@
           // loading one, so it should say what to do next.
           $('detail').replaceChildren(
             el('p', { class: 'empty' },
-              'Pick an endpoint on the left. ',
-              spec.endpointCount + ' of them, grouped by the role allowed to call it.'),
+              'Open a role on the left — Super Admin, Admin, Vendor, Rider, Customer — and pick an API. ',
+              spec.endpointCount + ' of them, each role starting with its sign-in APIs.'),
             el('p', { class: 'empty', style: 'margin-top:14px' },
               state.hasLocalSecrets
                 ? 'Click a role chip at the top — it signs in straight away, using the SEED_* passwords from apps/api/.env. They come from api-console.local.json, which is gitignored and written only in development.'
-                : 'Click a role chip at the top to sign in. You are asked for the password once per role and it is kept in this browser only — it is not in api-console.json, which this site serves to anyone.'),
+                : 'Opening a role on the left (or clicking its chip at the top) asks for that role\'s password once. It is kept in this browser only — it is not in api-console.json, which this site serves to anyone.'),
           );
         }
 
@@ -438,6 +474,7 @@
           delete state.secrets[login.tokenVar];
           persist();
           renderTokens();
+          renderTree();
           if (state.current) renderDetail(state.current);
         }
 
@@ -472,8 +509,12 @@
             });
             const remember = el('input', { type: 'checkbox' });
             remember.checked = true;
-            const go = el('button', { class: 'primary', text: 'Sign in' });
-            const cancel = el('button', { text: 'Cancel' });
+            // Explicit types. Both used to default to "submit", and Enter in
+            // the password box submits through the FIRST one in the form —
+            // Cancel — so typing a password and pressing Enter silently
+            // closed the dialog without signing in.
+            const go = el('button', { class: 'primary', type: 'submit', text: 'Sign in' });
+            const cancel = el('button', { type: 'button', text: 'Cancel' });
             const panel = el('div', {
               style:
                 'position:fixed;inset:0;display:grid;place-items:center;' +
@@ -488,9 +529,7 @@
               },
                 el('strong', { text: 'Sign in as ' + login.label }),
                 el('p', { class: 'hint', style: 'margin:0' },
-                  login.identifier, ' — password is ',
-                  el('code', { text: 'SEED_' + login.label.toUpperCase().replace(' ', '') + '_PASSWORD' }),
-                  ' in apps/api/.env'),
+                  'Account: ', el('code', { text: login.identifier })),
                 pass,
                 el('label', { class: 'hint', style: 'display:flex;gap:7px;align-items:center;margin:0' },
                   remember, 'Remember on this browser — then you are never asked again'),
@@ -540,6 +579,7 @@
             state.tokens[login.tokenVar] = body.accessToken;
             persist();
             renderTokens();
+            renderTree();
             if (state.current) renderDetail(state.current);
           } catch (cause) {
             flash('Could not reach the API at ' + state.baseUrl + ' — ' + cause.message);
@@ -547,46 +587,187 @@
         }
 
         /* ── the endpoint tree ──────────────────────────────────────── */
+        // One closed menu per role, in the order someone would walk the
+        // platform: Super Admin, Admin, Vendor, Rider, Customer, then the
+        // signed-out routes. Each starts with the sign-in APIs for THAT
+        // role, then its groups in the order the job is actually done.
+        // An API listed under a role is sent with that role's token, so
+        // Super Admin can drive every Admin route under its own login.
+        const ROLE_MENUS = [
+          { key: 'SUPER_ADMIN', label: 'Super Admin', tokenVar: 'superAdminToken', sections: ['SUPER_ADMIN'],
+            shared: ['ADMIN'], signup: [],
+            order: ['team', 'settings', 'vendors', 'users', 'riders', 'settlements', 'payments', 'reports'],
+            note: 'Owner of the platform: team, settings, commission, payouts, payments, reports — plus every Admin API.' },
+          { key: 'ADMIN', label: 'Admin', tokenVar: 'adminToken', sections: ['ADMIN'], signup: [],
+            order: ['analytics', 'ops', 'vendors', 'delivery-partners', 'riders', 'customers', 'users', 'orders',
+              'categories', 'products', 'coupons', 'settlements', 'ledger', 'settings', 'audit-logs'],
+            note: 'Day-to-day operations: approvals, dispatch, issues, orders, catalogue, coupons.' },
+          { key: 'VENDOR', label: 'Vendor', tokenVar: 'vendorToken', sections: ['VENDOR'],
+            signup: ['/auth/apply/vendor'],
+            order: ['profile', 'store', 'categories', 'products', 'inventory', 'dashboard', 'orders',
+              'delivery-partners', 'earnings', 'settlements', 'reports'],
+            note: 'A store: apply, set up the shop, list products, keep stock, run orders, see earnings.' },
+          { key: 'DELIVERY', label: 'Rider', tokenVar: 'riderToken', sections: ['DELIVERY'],
+            signup: ['/auth/apply/rider'],
+            order: ['me', 'profile', 'availability', 'offers', 'orders', 'location', 'wallet', 'earnings', 'history'],
+            note: 'Delivery partner: apply, KYC, go online, take offers, deliver, wallet and earnings.' },
+          { key: 'CUSTOMER', label: 'Customer', tokenVar: 'customerToken', sections: ['CUSTOMER'],
+            browse: ['stores', 'products', 'pincodes'],
+            signup: ['/auth/register/request-otp', '/auth/register/verify-otp', '/auth/register'],
+            order: ['browse', 'addresses', 'cart', 'checkout', 'payments', 'orders'],
+            note: 'Shopper: sign up with OTP, browse stores, fill the cart, check out, track orders.' },
+          { key: 'PUBLIC', label: 'Public (no login)', tokenVar: null, sections: ['PUBLIC'],
+            order: ['health', 'webhooks'],
+            note: 'Everything reachable without a token that is not already listed under a role.' },
+        ];
+
+        const titleCase = (name) => name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+        const GROUP_LABEL = { ops: 'Operations', 'audit-logs': 'Audit log', me: 'My profile',
+          'delivery-partners': 'Delivery partners', browse: 'Browse (no login needed)' };
+
+        // Step by step inside a group: list → create → read one →
+        // change → delete.
+        const stepRank = (e) => {
+          const hasParam = e.path.includes('{');
+          if (e.method === 'GET' && !hasParam) return 0;
+          if (e.method === 'POST' && !hasParam) return 1;
+          if (e.method === 'GET') return 2;
+          if (e.method === 'POST') return 3;
+          if (e.method === 'PUT' || e.method === 'PATCH') return 4;
+          return 5;
+        };
+        const stepSort = (list) => list
+          .map((e, i) => [e, i])
+          .sort((x, y) => stepRank(x[0]) - stepRank(y[0]) || x[1] - y[1])
+          .map(([e]) => e);
+
+        const sectionGroups = (key) => {
+          const sec = state.spec.sections.find((s) => s.key === key);
+          return sec ? sec.groups : [];
+        };
+        const findEndpoint = (sectionKey, method, path) => {
+          for (const g of sectionGroups(sectionKey)) {
+            const hit = g.endpoints.find((e) => e.method === method && e.path === path);
+            if (hit) return hit;
+          }
+          return null;
+        };
+        const loginFor = (tokenVar) => state.spec.logins.find((l) => l.tokenVar === tokenVar) || null;
+        const byOrder = (order) => (x, y) => {
+          const ix = order.indexOf(x), iy = order.indexOf(y);
+          return (ix < 0 ? 999 : ix) - (iy < 0 ? 999 : iy) || x.localeCompare(y);
+        };
+
+        /** One role's menu: its own numbered groups, then any it shares. */
+        function buildRoleGroups(menu) {
+          const groups = [];
+          const entry = (ep) => ({ key: menu.key + ' ' + ep.method + ' ' + ep.path, ep, tokenVar: menu.tokenVar, role: menu });
+
+          if (menu.tokenVar) {
+            const auth = [findEndpoint('PUBLIC', 'POST', '/auth/login')];
+            for (const path of menu.signup || []) auth.push(findEndpoint('PUBLIC', 'POST', path));
+            auth.push(findEndpoint('ANY', 'GET', '/auth/me'), findEndpoint('ANY', 'POST', '/auth/logout'));
+            groups.push({ id: 'auth', label: 'Auth — sign in', entries: auth.filter(Boolean).map(entry) });
+          }
+
+          const own = new Map();
+          for (const key of menu.sections) {
+            for (const g of sectionGroups(key)) own.set(g.name, (own.get(g.name) || []).concat(g.endpoints));
+          }
+          if (menu.browse) {
+            own.set('browse', menu.browse.flatMap((name) =>
+              (sectionGroups('PUBLIC').find((g) => g.name === name) || { endpoints: [] }).endpoints));
+          }
+          if (menu.key === 'PUBLIC') {
+            // Only what no role menu already shows.
+            own.delete('auth');
+            for (const m of ROLE_MENUS) for (const name of m.browse || []) own.delete(name);
+          }
+          for (const name of [...own.keys()].sort(byOrder(menu.order))) {
+            groups.push({ id: name, label: GROUP_LABEL[name] || titleCase(name), entries: stepSort(own.get(name)).map(entry) });
+          }
+
+          if (menu.tokenVar) {
+            const notes = sectionGroups('ANY').find((g) => g.name === 'notifications');
+            if (notes) groups.push({ id: 'notifications', label: 'Notifications', entries: stepSort(notes.endpoints).map(entry) });
+          }
+
+          const shared = [];
+          for (const key of menu.shared || []) {
+            const order = (ROLE_MENUS.find((m) => m.key === key) || { order: [] }).order;
+            const sorted = [...sectionGroups(key)].sort((x, y) => byOrder(order)(x.name, y.name));
+            for (const g of sorted) {
+              shared.push({ id: 'shared:' + g.name, label: GROUP_LABEL[g.name] || titleCase(g.name), entries: stepSort(g.endpoints).map(entry) });
+            }
+          }
+          return { groups, shared };
+        }
+
+        function toggleOpen(id, open) {
+          if (open) state.open.add(id); else state.open.delete(id);
+          persist();
+        }
+
         function renderTree() {
           const term = $('search').value.trim().toLowerCase();
+          const searching = term !== '';
+          const match = (e) =>
+            !searching ||
+            e.path.toLowerCase().includes(term) ||
+            (e.summary || '').toLowerCase().includes(term) ||
+            e.method.toLowerCase() === term;
           const tree = $('tree');
           tree.replaceChildren();
 
-          for (const section of state.spec.sections) {
-            const groups = [];
-            for (const group of section.groups) {
-              const hits = group.endpoints.filter((e) =>
-                term === '' ||
-                e.path.toLowerCase().includes(term) ||
-                (e.summary || '').toLowerCase().includes(term) ||
-                e.method.toLowerCase() === term,
+          for (const menu of ROLE_MENUS) {
+            const { groups, shared } = buildRoleGroups(menu);
+            const groupNode = (g, step) => {
+              const hits = g.entries.filter((x) => match(x.ep));
+              if (hits.length === 0) return null;
+              const gid = menu.key + '/' + g.id;
+              const node = el('details', { class: 'grp', open: searching || state.open.has(gid) },
+                el('summary', {}, (step ? step + '. ' : '') + g.label, ' ', el('span', { class: 'count', text: '(' + hits.length + ')' })),
+                ...hits.map((x) =>
+                  el('button', {
+                    class: 'ep',
+                    'aria-current': String(state.currentKey === x.key),
+                    title: x.ep.summary || '',
+                    onclick: () => { state.current = x; state.currentKey = x.key; state.lastResponse = null; renderTree(); renderDetail(x); },
+                  },
+                    el('span', { class: 'verb ' + x.ep.method, text: x.ep.method }),
+                    el('span', { class: 'p', text: x.ep.path }),
+                  )),
               );
-              if (hits.length > 0) groups.push([group.name, hits]);
-            }
-            if (groups.length === 0) continue;
+              node.addEventListener('toggle', () => { if (!searching) toggleOpen(gid, node.open); });
+              return node;
+            };
 
-            tree.append(el('div', { class: 'sec' }, section.title,
-              el('small', { text: section.note })));
+            const own = groups.map((g, i) => groupNode(g, i + 1)).filter(Boolean);
+            const also = shared.map((g) => groupNode(g, null)).filter(Boolean);
+            if (own.length === 0 && also.length === 0) continue;
 
-            for (const [name, hits] of groups) {
-              tree.append(
-                // Open by default. A sidebar of 40 collapsed group names
-                // hides the thing the reader came for; 175 rows in a
-                // scrollable column is what an API reference looks like.
-                el('details', { class: 'grp', open: true },
-                  el('summary', {}, name, ' ', el('span', { class: 'count', text: '(' + hits.length + ')' })),
-                  ...hits.map((endpoint) =>
-                    el('button', {
-                      class: 'ep',
-                      'aria-current': String(state.current === endpoint),
-                      onclick: () => { state.current = endpoint; state.lastResponse = null; renderTree(); renderDetail(endpoint); },
-                    },
-                      el('span', { class: 'verb ' + endpoint.method, text: endpoint.method }),
-                      el('span', { class: 'p', text: endpoint.path }),
-                    )),
-                ),
-              );
-            }
+            const login = menu.tokenVar ? loginFor(menu.tokenVar) : null;
+            const signedIn = Boolean(menu.tokenVar && state.tokens[menu.tokenVar]);
+            const summary = el('summary', {},
+              el('span', { class: 'dot', 'data-on': String(signedIn) }),
+              menu.label,
+              el('span', { class: 'who', text: login ? (signedIn ? 'signed in' : login.identifier) : 'no token' }),
+            );
+            const roleNode = el('details', { class: 'role', open: searching || state.open.has(menu.key) },
+              summary,
+              el('p', { class: 'role-note', text: menu.note }),
+              ...own,
+              also.length > 0 ? el('div', { class: 'shared', text: 'Also allowed — every Admin API' }) : null,
+              ...also,
+            );
+            // Opening a role you are not signed in as asks for its
+            // password — the same as its chip at the top.
+            summary.addEventListener('click', () => {
+              const opening = !roleNode.open;
+              if (opening && login && !state.tokens[login.tokenVar]) signIn(login);
+            });
+            roleNode.addEventListener('toggle', () => { if (!searching) toggleOpen(menu.key, roleNode.open); });
+            tree.append(roleNode);
           }
 
           if (!tree.firstChild) {
@@ -595,10 +776,13 @@
         }
 
         /* ── the detail pane ────────────────────────────────────────── */
-        function renderDetail(endpoint) {
+        function renderDetail(entry) {
           const pane = $('detail');
-          const tokenVar = endpoint.tokenVar;
+          const endpoint = entry.ep;
+          // Public routes need no token even when listed under a role.
+          const tokenVar = endpoint.public ? null : entry.tokenVar;
           const haveToken = tokenVar ? Boolean(state.tokens[tokenVar]) : true;
+          const roleLabel = entry.role ? entry.role.label : '';
 
           const pathInputs = new Map();
           const queryInputs = new Map();
@@ -609,8 +793,11 @@
               : endpoint.roles.length > 0
                 ? endpoint.roles.map((r) => el('span', { class: 'badge role', text: r.toLowerCase() }))
                 : el('span', { class: 'badge', text: 'any signed-in role' }),
+            tokenVar && haveToken
+              ? el('span', { class: 'badge pub', text: 'sends the ' + roleLabel + ' token' })
+              : null,
             !endpoint.public && !haveToken
-              ? el('span', { class: 'badge warn', text: 'not signed in as ' + (tokenVar || '').replace('Token', '') })
+              ? el('span', { class: 'badge warn', text: 'not signed in as ' + roleLabel + ' — open the role on the left or click its chip' })
               : null,
           );
 
@@ -676,7 +863,11 @@
           let bodyBox = null;
           if (endpoint.body) {
             bodyBox = el('textarea', { spellcheck: 'false' });
-            bodyBox.value = JSON.stringify(endpoint.body.example, null, 2);
+            const login = entry.role && entry.role.tokenVar ? loginFor(entry.role.tokenVar) : null;
+            const example = endpoint.path === '/auth/login' && login
+              ? { identifier: login.identifier, password: '' }
+              : endpoint.body.example;
+            bodyBox.value = JSON.stringify(example, null, 2);
             const fields = endpoint.body.fields || [];
             parts.push(el('fieldset', {},
               el('legend', { text: 'Request body — application/json' }),
@@ -865,12 +1056,27 @@
                   String(cause) +
                   '\n\nThe API did not answer. Either it is not running at ' + state.baseUrl +
                   ', or this page is not on an origin its CORS allowlist accepts.' +
-                  '\nServe it from http://localhost:3000/api-console.html — opening the' +
+                  '\nOpen it through the web app (…:9989/api-console.html) — opening the' +
                   '\nfile directly sends Origin: null and every request is refused.',
               };
             }
             send.disabled = false;
             send.textContent = 'Send request';
+            if (result.status === 200 && endpoint.path === '/auth/login' && entry.role && entry.role.tokenVar) {
+              try {
+                const token = JSON.parse(result.text).accessToken;
+                if (token) { state.tokens[entry.role.tokenVar] = token; persist(); renderTokens(); renderTree(); }
+              } catch { /* not JSON — leave the tokens alone */ }
+            }
+            if (result.status === 401 && headers.Authorization) {
+              // Access tokens last 15 minutes. Forget the dead one so the
+              // role shows signed-out and asks again on the next click.
+              delete state.tokens[tokenVar];
+              persist();
+              renderTokens();
+              renderTree();
+              flash('The ' + roleLabel + ' session expired — open the role or click its chip to sign in again.');
+            }
             state.lastResponse = result;
             renderResponse(responseBox, result);
           });
