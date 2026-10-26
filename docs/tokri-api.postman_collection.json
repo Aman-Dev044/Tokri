@@ -1,13 +1,13 @@
 {
   "info": {
     "name": "Tokri API",
-    "description": "# Tokri API\n\nMulti-vendor grocery delivery. Every endpoint the service exposes, grouped\nby **who is allowed to call it**.\n\n## Start here\n\nOpen **00 · Sign in** and run the login for the role you want. Each one\nsaves its token into a collection variable, so the folders below work\nimmediately afterwards — no copying JWTs by hand.\n\n## How authorisation works\n\nThe API is **deny by default**. A global guard chain runs on every request:\n\n```\nThrottlerGuard -> JwtAuthGuard -> RolesGuard -> VendorScopeGuard -> ResourceOwnerGuard\n```\n\nA route is only reachable without a token if it is explicitly marked\n`@Public()`, and there are 17 of those out of 175.\n\n`VendorScopeGuard` is worth calling out: a vendor cannot reach another\nvendor's data by changing an id in the URL. The scope comes from the token,\nnever from the request.\n\n## Conventions\n\n* **Money is always INTEGER PAISE.** ₹429 is `42900`.\n* **Lists paginate** with `?page=&limit=` and answer\n  `{ data, meta: { page, limit, total, pages } }`.\n* **Errors are RFC 7807** problem documents, with a machine-readable\n  `errors.code` where one exists.\n* **Validation is strict.** An unknown query parameter or body field is a\n  `400`, never a silent ignore.\n",
+    "description": "# Tokri API\n\nMulti-vendor grocery delivery. Every endpoint the service exposes, grouped\nby **who is allowed to call it**.\n\n## Start here\n\nOpen **00 · Sign in** and run the login for the role you want. Each one\nsaves its token into a collection variable, so the folders below work\nimmediately afterwards — no copying JWTs by hand.\n\n## How authorisation works\n\nThe API is **deny by default**. A global guard chain runs on every request:\n\n```\nThrottlerGuard -> JwtAuthGuard -> RolesGuard -> VendorScopeGuard -> ResourceOwnerGuard\n```\n\nA route is only reachable without a token if it is explicitly marked\n`@Public()`, and there are 17 of those out of 178.\n\n`VendorScopeGuard` is worth calling out: a vendor cannot reach another\nvendor's data by changing an id in the URL. The scope comes from the token,\nnever from the request.\n\n## Conventions\n\n* **Money is always INTEGER PAISE.** ₹429 is `42900`.\n* **Lists paginate** with `?page=&limit=` and answer\n  `{ data, meta: { page, limit, total, pages } }`.\n* **Errors are RFC 7807** problem documents, with a machine-readable\n  `errors.code` where one exists.\n* **Validation is strict.** An unknown query parameter or body field is a\n  `400`, never a silent ignore.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:4000/api/v1"
+      "value": "http://49.13.70.253:9988/api/v1"
     },
     {
       "key": "superAdminPassword",
@@ -5312,6 +5312,12 @@
                       "value": "",
                       "description": "Riders belonging to one vendor.",
                       "disabled": true
+                    },
+                    {
+                      "key": "fleet",
+                      "value": "vendor",
+                      "description": "`vendor` — riders attached to any store; `pool` — the shared platform pool (`vendorId: null`).",
+                      "disabled": true
                     }
                   ]
                 },
@@ -5320,7 +5326,7 @@
               "response": []
             },
             {
-              "name": "One delivery partner",
+              "name": "One delivery partner, with performance, run and KYC detail",
               "request": {
                 "method": "GET",
                 "header": [
@@ -5347,7 +5353,7 @@
                     }
                   ]
                 },
-                "description": "One delivery partner\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
+                "description": "One delivery partner, with performance, run and KYC detail\n\nThe list row plus: delivered / failed counts, average run time and offer acceptance (from `delivery_assignments`), the order currently held, the last 20 finished runs, the KYC record with every identifier MASKED, and the wallet balance. Nothing here is estimated: a metric with no data is null, never zero.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
               },
               "response": []
             },
@@ -7223,7 +7229,7 @@
                     }
                   ]
                 },
-                "description": "One vendor\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
+                "description": "One vendor\n\nThe list row plus `owner` ({ id, name, email, phone } of the owning account, or null if that account is gone). Orders and products are their own paginated routes below.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
               },
               "response": []
             },
@@ -7303,6 +7309,186 @@
       "name": "06 · Super Admin",
       "description": "Token with role `super_admin` only.",
       "item": [
+        {
+          "name": "payments",
+          "item": [
+            {
+              "name": "Payment list (paginated, SUPER_ADMIN only)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "payments"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt",
+                      "description": "Field name, optionally prefixed with `-` for descending.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "q",
+                      "value": "",
+                      "description": "Free-text search term.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "",
+                      "description": "Inclusive start, ISO-8601.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "",
+                      "description": "Inclusive end, ISO-8601.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "method",
+                      "value": "online",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "description": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Payment list (paginated, SUPER_ADMIN only)\n\nOne row per order: `Order.payment` flattened onto it. Filters: q (order no, gateway ref, customer or store name), method, status, and from/to on `placedAt` (a bare YYYY-MM-DD `to` includes that whole UTC day). All money is INTEGER PAISE.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `200`, `403`"
+              },
+              "response": []
+            },
+            {
+              "name": "Refund a collected payment (SUPER_ADMIN only)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payments/{id}/refund",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "payments",
+                    "{id}",
+                    "refund"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Refund a collected payment (SUPER_ADMIN only)\n\n`:id` is the order id. Online: the gateway must accept the refund first — 503 `PAYMENT_PROVIDER_NOT_CONFIGURED` while Razorpay has no keys, and nothing is written. COD: recorded against the vendor ledger; the cash goes back out of band. Returns the updated row.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `200`, `403`, `409`, `503`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amountPaise\": 12500,\n  \"reason\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "reports",
+          "item": [
+            {
+              "name": "Run one report over a window (SUPER_ADMIN only)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{superAdminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/reports",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "reports"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-08-25T00:00:00.000Z",
+                      "description": "Inclusive start, ISO-8601. Defaults to 30 days ago.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-09-24T23:59:59.999Z",
+                      "description": "Inclusive end, ISO-8601. Defaults to now.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "report",
+                      "value": "sales",
+                      "description": "",
+                      "disabled": false
+                    },
+                    {
+                      "key": "grouping",
+                      "value": "day",
+                      "description": "Must be one the chosen report supports; defaults to its first. sales: day|week|month · vendor_performance: vendor · product_performance: aisle · delivery_performance: day · tax_summary: slab.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Run one report over a window (SUPER_ADMIN only)\n\n`report` picks the read model; `grouping` must be one it supports. Rows are sparse (no row for an empty bucket) and answer in the usual `{ data, meta }` envelope, unpaged. Money is INTEGER PAISE, percentages are 0–100, and `null` means \"not measurable for this row\" — never zero. Buckets are UTC days.\n\nRow keys — sales: date, orders, gmvPaise, aovPaise, discountPaise, commissionPaise · vendor_performance: vendorId, vendor, city, orders, gmvPaise, commissionPaise, cancelPct · product_performance: aisleKey, products, units, gmvPaise, sharePct · delivery_performance: date, deliveries, avgMinutes, onTimePct, failed · tax_summary: slab, orders, taxablePaise, taxPaise.\n\n**Auth** — bearer token, role must be `super_admin`.\n\n**Responses** — `200`, `403`"
+              },
+              "response": []
+            }
+          ]
+        },
         {
           "name": "riders",
           "item": [

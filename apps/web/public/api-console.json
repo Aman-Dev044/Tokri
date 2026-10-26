@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-19T09:56:43.541Z",
-  "baseUrl": "http://localhost:4000/api/v1",
-  "endpointCount": 175,
+  "generatedAt": "2026-10-26T06:45:42.602Z",
+  "baseUrl": "http://49.13.70.253:9988/api/v1",
+  "endpointCount": 178,
   "logins": [
     {
       "label": "Super Admin",
@@ -5329,6 +5329,13 @@
                   "required": false,
                   "example": "",
                   "description": "Riders belonging to one vendor."
+                },
+                {
+                  "name": "fleet",
+                  "type": "vendor | pool",
+                  "required": false,
+                  "example": "vendor",
+                  "description": "`vendor` — riders attached to any store; `pool` — the shared platform pool (`vendorId: null`)."
                 }
               ],
               "responses": [
@@ -5339,8 +5346,8 @@
             {
               "method": "GET",
               "path": "/admin/delivery-partners/{id}",
-              "summary": "One delivery partner",
-              "description": "",
+              "summary": "One delivery partner, with performance, run and KYC detail",
+              "description": "The list row plus: delivered / failed counts, average run time and offer acceptance (from `delivery_assignments`), the order currently held, the last 20 finished runs, the KYC record with every identifier MASKED, and the wallet balance. Nothing here is estimated: a metric with no data is null, never zero.",
               "public": false,
               "roles": [
                 "ADMIN"
@@ -6923,7 +6930,7 @@
               "method": "GET",
               "path": "/admin/vendors/{id}",
               "summary": "One vendor",
-              "description": "",
+              "description": "The list row plus `owner` ({ id, name, email, phone } of the owning account, or null if that account is gone). Orders and products are their own paginated routes below.",
               "public": false,
               "roles": [
                 "ADMIN"
@@ -7192,6 +7199,182 @@
       "title": "Super Admin",
       "note": "Token with role `super_admin` only.",
       "groups": [
+        {
+          "name": "payments",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/admin/payments",
+              "summary": "Payment list (paginated, SUPER_ADMIN only)",
+              "description": "One row per order: `Order.payment` flattened onto it. Filters: q (order no, gateway ref, customer or store name), method, status, and from/to on `placedAt` (a bare YYYY-MM-DD `to` includes that whole UTC day). All money is INTEGER PAISE.",
+              "public": false,
+              "roles": [
+                "SUPER_ADMIN"
+              ],
+              "tokenVar": "superAdminToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": false,
+                  "example": 1,
+                  "description": ""
+                },
+                {
+                  "name": "limit",
+                  "type": "number",
+                  "required": false,
+                  "example": 20,
+                  "description": ""
+                },
+                {
+                  "name": "sort",
+                  "type": "string",
+                  "required": false,
+                  "example": "-createdAt",
+                  "description": "Field name, optionally prefixed with `-` for descending."
+                },
+                {
+                  "name": "q",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Free-text search term."
+                },
+                {
+                  "name": "from",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive start, ISO-8601."
+                },
+                {
+                  "name": "to",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive end, ISO-8601."
+                },
+                {
+                  "name": "method",
+                  "type": "online | cod",
+                  "required": false,
+                  "example": "online",
+                  "description": ""
+                },
+                {
+                  "name": "status",
+                  "type": "pending | authorized | paid | failed | refunded | partially_refunded",
+                  "required": false,
+                  "example": "pending",
+                  "description": ""
+                }
+              ],
+              "responses": [
+                "200",
+                "403"
+              ],
+              "body": null
+            },
+            {
+              "method": "POST",
+              "path": "/admin/payments/{id}/refund",
+              "summary": "Refund a collected payment (SUPER_ADMIN only)",
+              "description": "`:id` is the order id. Online: the gateway must accept the refund first — 503 `PAYMENT_PROVIDER_NOT_CONFIGURED` while Razorpay has no keys, and nothing is written. COD: recorded against the vendor ledger; the cash goes back out of band. Returns the updated row.",
+              "public": false,
+              "roles": [
+                "SUPER_ADMIN"
+              ],
+              "tokenVar": "superAdminToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "responses": [
+                "200",
+                "403",
+                "409",
+                "503"
+              ],
+              "body": {
+                "example": {
+                  "amountPaise": 12500,
+                  "reason": ""
+                },
+                "fields": [
+                  {
+                    "name": "amountPaise",
+                    "type": "number",
+                    "required": true,
+                    "description": "INTEGER PAISE to return. At most the order total minus what has already been refunded."
+                  },
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true,
+                    "description": "Why. Recorded on the ledger row and in the audit log."
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "reports",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/admin/reports",
+              "summary": "Run one report over a window (SUPER_ADMIN only)",
+              "description": "`report` picks the read model; `grouping` must be one it supports. Rows are sparse (no row for an empty bucket) and answer in the usual `{ data, meta }` envelope, unpaged. Money is INTEGER PAISE, percentages are 0–100, and `null` means \"not measurable for this row\" — never zero. Buckets are UTC days. Row keys — sales: date, orders, gmvPaise, aovPaise, discountPaise, commissionPaise · vendor_performance: vendorId, vendor, city, orders, gmvPaise, commissionPaise, cancelPct · product_performance: aisleKey, products, units, gmvPaise, sharePct · delivery_performance: date, deliveries, avgMinutes, onTimePct, failed · tax_summary: slab, orders, taxablePaise, taxPaise.",
+              "public": false,
+              "roles": [
+                "SUPER_ADMIN"
+              ],
+              "tokenVar": "superAdminToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "from",
+                  "type": "string",
+                  "required": false,
+                  "example": "2026-08-25T00:00:00.000Z",
+                  "description": "Inclusive start, ISO-8601. Defaults to 30 days ago."
+                },
+                {
+                  "name": "to",
+                  "type": "string",
+                  "required": false,
+                  "example": "2026-09-24T23:59:59.999Z",
+                  "description": "Inclusive end, ISO-8601. Defaults to now."
+                },
+                {
+                  "name": "report",
+                  "type": "sales | vendor_performance | product_performance | delivery_performance | tax_summary",
+                  "required": true,
+                  "example": "sales",
+                  "description": ""
+                },
+                {
+                  "name": "grouping",
+                  "type": "day | week | month | vendor | aisle | slab",
+                  "required": false,
+                  "example": "day",
+                  "description": "Must be one the chosen report supports; defaults to its first. sales: day|week|month · vendor_performance: vendor · product_performance: aisle · delivery_performance: day · tax_summary: slab."
+                }
+              ],
+              "responses": [
+                "200",
+                "403"
+              ],
+              "body": null
+            }
+          ]
+        },
         {
           "name": "riders",
           "endpoints": [

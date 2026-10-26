@@ -40,6 +40,11 @@ const ROOT = new URL('../../..', import.meta.url).pathname.replace(/^\/([A-Za-z]
 const SRC = join(ROOT, 'apps', 'api', 'src');
 const DOCS = join(ROOT, 'docs');
 const BASE = process.env.DOCS_API_URL ?? 'http://localhost:4000/api/v1';
+// Where the generated console and Postman collection point by default. Kept
+// separate from BASE: the spec has to be read from a non-production API
+// (Swagger is off in production), usually a local one, while the people using
+// the console want the deployed server. Falls back to BASE when unset.
+const PUBLIC_BASE = process.env.DOCS_PUBLIC_API_URL ?? BASE;
 
 const VERBS = ['get', 'post', 'put', 'patch', 'delete'];
 
@@ -486,7 +491,7 @@ function buildCollection(spec, roles, rows, publicCount, total) {
       schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
     },
     variable: [
-      { key: 'baseUrl', value: BASE },
+      { key: 'baseUrl', value: PUBLIC_BASE },
       // Empty on purpose — fill from the SEED_*_PASSWORD values in
       // apps/api/.env. See any "Sign in as …" request for why.
       { key: 'superAdminPassword', value: '' },
@@ -774,7 +779,7 @@ function buildConsole(spec, rows) {
 
   return {
     generatedAt: new Date().toISOString(),
-    baseUrl: BASE,
+    baseUrl: PUBLIC_BASE,
     endpointCount: rows.length,
     // NO PASSWORDS. This file is written into `apps/web/public/`, which
     // the web app serves to anyone who asks — `GET /api-console.json`.
