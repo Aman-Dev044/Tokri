@@ -8,6 +8,10 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import { Paginated } from '../../../common/dto/paginated';
 import { VendorScope } from '../common/vendor-scope.decorator';
@@ -40,10 +44,11 @@ import {
 @ApiBearerAuth()
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @Controller('vendor')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 export class VendorEarningsController {
   constructor(private readonly earnings: VendorEarningsService) {}
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('earnings')
   @ApiOperation({
     summary: 'Earnings summary for a window',
@@ -60,6 +65,7 @@ export class VendorEarningsController {
     return this.earnings.summary(scope, query);
   }
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('earnings/ledger')
   @ApiOperation({
     summary: 'Ledger entries (paginated)',
@@ -74,6 +80,7 @@ export class VendorEarningsController {
     return this.earnings.ledgerPage(scope, query);
   }
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('settlements')
   @ApiOperation({
     summary: 'Own settlements (paginated)',
@@ -88,6 +95,7 @@ export class VendorEarningsController {
     return this.earnings.settlementsPage(scope, query);
   }
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('settlements/:id')
   @ApiOperation({
     summary: 'One of the store’s own settlements',
@@ -103,6 +111,7 @@ export class VendorEarningsController {
     return this.earnings.findSettlement(scope, id);
   }
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('reports/sales')
   @ApiOperation({
     summary: 'Sales grouped by day, week or month',
@@ -117,6 +126,7 @@ export class VendorEarningsController {
     return this.earnings.salesReport(scope, query);
   }
 
+  @RequirePermission(Permission.EARNINGS_VIEW)
   @Get('reports/top-products')
   @ApiOperation({
     summary: 'Best sellers by revenue',

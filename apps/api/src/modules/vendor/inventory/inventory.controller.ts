@@ -18,6 +18,10 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import {
   CurrentUser,
@@ -44,11 +48,12 @@ import {
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @ApiNotFoundResponse({ description: 'No such inventory row in this store.' })
 @Controller('vendor/inventory')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 @UseInterceptors(AuditInterceptor)
 export class VendorInventoryController {
   constructor(private readonly inventory: VendorInventoryService) {}
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get()
   @ApiOperation({
     summary: 'Stock board (paginated)',
@@ -64,6 +69,7 @@ export class VendorInventoryController {
     return this.inventory.list(scope, query);
   }
 
+  @RequirePermission(Permission.INVENTORY_ADJUST)
   @Post('bulk')
   @ApiOperation({
     summary: 'Adjust many products in ONE transaction',
@@ -80,6 +86,7 @@ export class VendorInventoryController {
     return this.inventory.bulkAdjust(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get(':productId')
   @ApiOperation({ summary: 'One product’s stock row' })
   findOne(
@@ -89,6 +96,7 @@ export class VendorInventoryController {
     return this.inventory.findOne(scope, productId);
   }
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get(':productId/logs')
   @ApiOperation({
     summary: 'The per-product movement trail (paginated)',
@@ -105,6 +113,7 @@ export class VendorInventoryController {
     return this.inventory.logs(scope, productId, query);
   }
 
+  @RequirePermission(Permission.INVENTORY_ADJUST)
   @Patch(':productId')
   @ApiOperation({
     summary: 'Adjust stock by a signed delta',

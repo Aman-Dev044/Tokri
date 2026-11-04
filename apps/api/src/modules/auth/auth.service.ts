@@ -9,7 +9,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { randomUUID, createHash } from 'node:crypto';
 import { User, UserDocument } from '../../database/schemas/user.schema';
-import { UserStatus } from '../../common/constants/roles.enum';
+import { Role, UserStatus } from '../../common/constants/roles.enum';
+import { Vendor, VendorDocument, VendorStatus } from '../../database/schemas/vendor.schema';
 import { PasswordService } from '../../common/utils/password.service';
 import { LoginDto } from './dto/login.dto';
 
@@ -24,6 +25,7 @@ export class AuthService {
 
   constructor(
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
+    @InjectModel(Vendor.name) private readonly vendors: Model<VendorDocument>,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly passwords: PasswordService,
@@ -58,6 +60,17 @@ export class AuthService {
 
     if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException(`Account is ${user.status}`);
+    }
+
+    // The same rule JwtStrategy applies per request, refused up front so a
+    // store's staff are not handed a session that fails on its first call.
+    if (user.role === Role.STAFF) {
+      const store = user.vendorId
+        ? await this.vendors.findById(user.vendorId).select('status').lean()
+        : null;
+      if (!store || store.status !== VendorStatus.APPROVED) {
+        throw new UnauthorizedException('This store is not active');
+      }
     }
 
     const tokens = await this.issueTokens(user);

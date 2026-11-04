@@ -9,6 +9,10 @@ export enum InventoryReason {
   ORDER_RELEASE = 'order_release',
   ORDER_COMMIT = 'order_commit',
   MANUAL = 'manual',
+  /** A walk-in sale billed at the store counter (`/vendor/pos/sales`). */
+  POS_SALE = 'pos_sale',
+  /** A counter sale voided — its lines go back on the shelf. */
+  POS_VOID = 'pos_void',
 }
 
 /** Append-only audit trail for every stock movement. */
@@ -27,7 +31,7 @@ export class InventoryLog {
   @Prop({ type: String, enum: InventoryReason, required: true })
   reason: InventoryReason;
 
-  /** Order id, settlement id, or whatever caused the movement. */
+  /** Order id, POS sale id, or whatever caused the movement. */
   @Prop({ type: Types.ObjectId, default: null })
   refId?: Types.ObjectId | null;
 

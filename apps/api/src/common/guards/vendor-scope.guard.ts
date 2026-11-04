@@ -49,7 +49,12 @@ export class VendorScopeGuard implements CanActivate {
 
     // A VENDOR is meaningless without a tenant: every one of their routes
     // filters on it, so a token without one is broken and must be rejected.
-    if (user.role === Role.VENDOR) {
+    //
+    // STAFF is scoped exactly the same way, and from the same place: the
+    // `vendorId` on their OWN user record, re-read by JwtStrategy on every
+    // request. A staff member of store A therefore cannot name store B
+    // anywhere — there is no input that reaches this value.
+    if (user.role === Role.VENDOR || user.role === Role.STAFF) {
       if (!user.vendorId) {
         throw new ForbiddenException('Token carries no vendor scope');
       }

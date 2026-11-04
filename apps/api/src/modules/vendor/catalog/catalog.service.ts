@@ -76,6 +76,8 @@ export interface ProductRow {
   unit: ProductUnit;
   unitValue: number;
   sku: string;
+  /** The pack's scannable code, or `null`. Unique per store when set. */
+  barcode: string | null;
   /** INTEGER PAISE. */
   mrp: number;
   /** INTEGER PAISE. */
@@ -107,6 +109,7 @@ interface ProductAggregateRow {
   unit: ProductUnit;
   unitValue: number;
   sku: string;
+  barcode?: string | null;
   mrp: number;
   price: number;
   discountPct: number;
@@ -361,6 +364,8 @@ export class VendorCatalogService {
         { name: { $regex: needle, $options: 'i' } },
         { brand: { $regex: needle, $options: 'i' } },
         { sku: { $regex: needle, $options: 'i' } },
+        // Exact, not a regex: a scanner types the whole code or nothing.
+        { barcode: query.q },
       ];
     }
 
@@ -525,6 +530,7 @@ export class VendorCatalogService {
               unit: dto.unit,
               unitValue: dto.unitValue,
               sku: dto.sku,
+              barcode: dto.barcode ?? null,
               mrp: dto.mrp,
               price: dto.price,
               discountPct:
@@ -576,7 +582,9 @@ export class VendorCatalogService {
     } catch (error) {
       if (isDuplicateKeyError(error)) {
         throw new ConflictException(
-          `SKU "${dto.sku}" is already used by another product in this store`,
+          duplicateField(error) === 'barcode'
+            ? `Barcode "${dto.barcode}" is already on another product in this store`
+            : `SKU "${dto.sku}" is already used by another product in this store`,
         );
       }
       throw error;
@@ -629,6 +637,7 @@ export class VendorCatalogService {
     if (dto.description !== undefined) product.description = dto.description;
     if (dto.images !== undefined) product.images = dto.images;
     if (dto.brand !== undefined) product.brand = dto.brand;
+    if (dto.barcode !== undefined) product.barcode = dto.barcode || null;
     if (dto.unit !== undefined) product.unit = dto.unit;
     if (dto.unitValue !== undefined) product.unitValue = dto.unitValue;
     if (dto.mrp !== undefined) product.mrp = dto.mrp;
@@ -647,7 +656,16 @@ export class VendorCatalogService {
       .trim()
       .toLowerCase();
 
-    await product.save();
+    try {
+      await product.save();
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw new ConflictException(
+          `Barcode "${product.barcode}" is already on another product in this store`,
+        );
+      }
+      throw error;
+    }
 
     await this.audit.record({
       action: 'vendor.product.update',
@@ -829,6 +847,13 @@ function toCategoryRow(row: CategoryRecord, productCount = 0): CategoryRow {
   };
 }
 
+/** Which unique index a duplicate-key error tripped, by its key pattern. */
+function duplicateField(error: unknown): string | null {
+  const pattern = (error as { keyPattern?: Record<string, unknown> }).keyPattern;
+  if (!pattern) return null;
+  return Object.keys(pattern).find((key) => key !== 'vendorId') ?? null;
+}
+
 function toProductRow(row: ProductAggregateRow): ProductRow {
   const stock = row.stock ?? 0;
   const threshold = row.lowStockThreshold ?? 0;
@@ -847,6 +872,7 @@ function toProductRow(row: ProductAggregateRow): ProductRow {
     unit: row.unit,
     unitValue: row.unitValue,
     sku: row.sku,
+    barcode: row.barcode ?? null,
     mrp: row.mrp,
     price: row.price,
     discountPct: row.discountPct,

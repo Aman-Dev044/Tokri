@@ -25,8 +25,14 @@
  * │ NEVER move an authorisation decision into this file.                      │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
+ * ── PERMISSIONS ARE UX HERE TOO ─────────────────────────────────────────────
+ * The rail, the shortcuts and the screen gate below draw only what
+ * `/vendor/me` says the signed-in person may do. A staff member who types a
+ * hidden URL gets a polite card here — and a 403 from the API on every call
+ * the screen would have made, which is the part that actually matters.
+ *
  * ── KEYBOARD-FIRST (plan §2.4) ──────────────────────────────────────────────
- * Single-letter jumps: d, o, p, i, r, e, s. No modifier, because a shop owner
+ * Single-letter jumps: d, o, b, p, i, r, e, t, s. No modifier, because a shop owner
  * with one hand on a crate is not pressing Ctrl+Shift+anything. Suppressed
  * while a field has focus, so typing "spinach" into the product search does not
  * navigate seven times.
@@ -39,12 +45,13 @@ import { useTheme } from '@mandi/design-system';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { APP_NAME } from '@/config/brand';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
-import { VENDOR_NAV, isActiveHref, type VendorNavIcon } from '@/lib/vendor/nav';
+import { isActiveHref, navFor, navItemFor, type VendorNavIcon } from '@/lib/vendor/nav';
 import { primeAudio } from '@/lib/vendor/alert';
 import { useVendorSession } from '@/lib/vendor/session';
 import type { VendorProfile, VendorStoreStatus } from '@/lib/vendor/types';
 import {
   IconAlert,
+  IconBilling,
   IconChevronLeft,
   IconClose,
   IconDashboard,
@@ -59,6 +66,7 @@ import {
   IconSignOut,
   IconSoundOff,
   IconSoundOn,
+  IconStaff,
   IconStock,
   IconSun,
   IconUser,
@@ -75,6 +83,8 @@ const NAV_ICON: Record<VendorNavIcon, (props: { className?: string }) => ReactNo
   inventory: IconStock,
   partners: IconRiders,
   earnings: IconEarnings,
+  billing: IconBilling,
+  staff: IconStaff,
   settings: IconSettings,
 };
 
@@ -84,6 +94,23 @@ export function VendorShell({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const [collapsed, setCollapsed] = useState(false);
+
+  // What this person may open. Recomputed when the session settles.
+  const allowedNav = useMemo(() => navFor(session.can), [session.can]);
+  const currentItem = navItemFor(pathname);
+  const screenAllowed = currentItem === null || session.can(currentItem.permission);
+  const panelReady = session.status === 'ready' || session.status === 'anonymous';
+
+  /* ---- land somewhere useful ----------------------------------------
+   * A biller has no orders.view, so the dashboard is not theirs. Rather
+   * than greet them with "not allowed" on the page login sent them to,
+   * the home route forwards to the first screen they CAN use. */
+  useEffect(() => {
+    if (!panelReady || screenAllowed) return;
+    if (pathname !== '/vendor' && pathname !== '/vendor/') return;
+    const first = allowedNav[0];
+    if (first) router.replace(first.href);
+  }, [panelReady, screenAllowed, pathname, allowedNav, router]);
 
   /* ---- rail collapse, persisted ----------------------------------- */
   useEffect(() => {
@@ -124,7 +151,7 @@ export function VendorShell({ children }: { children: ReactNode }) {
         }
       }
 
-      const item = VENDOR_NAV.find((candidate) => candidate.key === event.key.toLowerCase());
+      const item = allowedNav.find((candidate) => candidate.key === event.key.toLowerCase());
       if (!item) return;
       event.preventDefault();
       router.push(item.href);
@@ -132,7 +159,7 @@ export function VendorShell({ children }: { children: ReactNode }) {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router]);
+  }, [router, allowedNav]);
 
   /* ---- gates ------------------------------------------------------- */
 
@@ -191,7 +218,31 @@ export function VendorShell({ children }: { children: ReactNode }) {
           apiRole={session.apiRole}
         />
         <main className="ven-content" id="main">
-          {children}
+          {screenAllowed ? (
+            children
+          ) : (
+            <div className="ven-gate__card ven-gate__card--inline">
+              <p className="ven-gate__title">
+                <IconLock style={{ width: 20, height: 20, verticalAlign: '-3px', marginRight: 8 }} />
+                Not part of your role
+              </p>
+              <p className="ven-gate__body">
+                {currentItem?.label ?? 'This screen'} needs the{' '}
+                <code>{currentItem?.permission}</code> permission, which your account does not
+                have. Ask the store owner or a manager if you need it.
+              </p>
+              {allowedNav[0] ? (
+                <Link
+                  className="ven-btn"
+                  data-variant="primary"
+                  data-size="md"
+                  href={allowedNav[0].href}
+                >
+                  Go to {allowedNav[0].label}
+                </Link>
+              ) : null}
+            </div>
+          )}
         </main>
       </div>
     </div>
@@ -212,8 +263,14 @@ function VendorRail({
   onToggle: () => void;
 }) {
   const { pendingCount } = useVendorAlerts();
-  const profile = useVendorQuery<VendorProfile>('/vendor/profile');
-  const storeName = profile.data?.storeName ?? 'Your store';
+  const session = useVendorSession();
+  const items = useMemo(() => navFor(session.can), [session.can]);
+  // `/vendor/me` carries the store name for everyone; the profile (which
+  // needs store.manage) is only the offline preview's source.
+  const profile = useVendorQuery<VendorProfile>('/vendor/profile', undefined, {
+    enabled: session.storeName === null && session.can('store.manage'),
+  });
+  const storeName = session.storeName ?? profile.data?.storeName ?? 'Your store';
 
   return (
     <nav className="ven-rail" aria-label="Store sections">
@@ -228,11 +285,13 @@ function VendorRail({
         </svg>
         <span className="ven-rail__store">
           <span className="ven-rail__name">{storeName}</span>
-          <span className="ven-rail__role">Store panel</span>
+          <span className="ven-rail__role">
+            {session.roleLabel ? `Store panel · ${session.roleLabel}` : 'Store panel'}
+          </span>
         </span>
       </Link>
 
-      {VENDOR_NAV.map((item) => {
+      {items.map((item) => {
         const Icon = NAV_ICON[item.icon];
         const active = isActiveHref(pathname, item.href);
         const badge = item.href === '/vendor/orders' && pendingCount > 0 ? pendingCount : null;
@@ -286,10 +345,27 @@ function VendorTopBar({
   contact: string;
   apiRole: string | null;
 }) {
+  const session = useVendorSession();
+
   return (
     <header className="ven-top">
-      <StoreOpenToggle />
+      {session.can('store.manage') ? (
+        <StoreOpenToggle />
+      ) : session.storeOpen !== null ? (
+        // Staff without store.manage see the shutter state, not the switch.
+        <span className="ven-openstate" data-open={session.storeOpen ? 'true' : 'false'}>
+          <span className="ven-openstate__dot" aria-hidden="true" />
+          <span className="ven-openstate__word">{session.storeOpen ? 'Open' : 'Closed'}</span>
+        </span>
+      ) : null}
       <span className="ven-top__spacer" />
+      {session.roleLabel ? (
+        <span className="ven-top__who" title={contact || undefined}>
+          <span className="ven-top__whoname">{name}</span>
+          <Pill tone={session.isOwner ? 'good' : 'info'}>{session.roleLabel}</Pill>
+          {session.shiftLabel ? <span className="ven-dim">{session.shiftLabel}</span> : null}
+        </span>
+      ) : null}
       {preview ? (
         <Pill tone="warn" title="No session — the API is not reachable">
           Preview
@@ -528,6 +604,7 @@ function UserMenu({
 }) {
   const { logout } = useAuth();
   const router = useRouter();
+  const canManageStore = useVendorSession().can('store.manage');
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -577,16 +654,18 @@ function UserMenu({
             <strong>{name || 'No session'}</strong>
             <p className="ven-usermenu__contact">{contact || 'Not signed in'}</p>
             <div style={{ marginTop: 'var(--s-1)' }}>
-              <Pill tone={apiRole === 'vendor' ? 'good' : 'warn'}>
+              <Pill tone={apiRole === 'vendor' || apiRole === 'staff' ? 'good' : 'warn'}>
                 {(apiRole ?? 'no role').toUpperCase()}
               </Pill>
             </div>
           </div>
 
-          <Link className="ven-usermenu__item" href="/vendor/settings" role="menuitem">
-            <IconSettings />
-            Store settings
-          </Link>
+          {canManageStore ? (
+            <Link className="ven-usermenu__item" href="/vendor/settings" role="menuitem">
+              <IconSettings />
+              Store settings
+            </Link>
+          ) : null}
           <Link className="ven-usermenu__item" href="/" role="menuitem">
             <IconExternal />
             Open the storefront

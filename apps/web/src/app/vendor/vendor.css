@@ -2734,3 +2734,565 @@
     width: 100vw !important;
   }
 }
+
+/* ==================================================================== */
+/* Staff — who is signed in, the staff screen                            */
+/* ==================================================================== */
+
+.ven-top__who {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  font-size: var(--t-sm);
+}
+
+.ven-top__whoname {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 18ch;
+}
+
+@media (max-width: 720px) {
+  .ven-top__whoname { display: none; }
+}
+
+.ven-gate__card--inline {
+  margin: var(--s-6) auto;
+}
+
+.ven-mono {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+}
+
+.ven-permchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  max-width: 420px;
+}
+
+.ven-permchip {
+  padding: 1px var(--s-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--ink-soft);
+  font-size: var(--t-2xs);
+  white-space: nowrap;
+}
+
+.ven-handover {
+  display: grid;
+  gap: var(--s-2);
+  margin-bottom: var(--s-4);
+  padding: var(--s-4);
+  border: 1px solid var(--hairline-bright);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--r-md);
+  background: var(--accent-wash);
+}
+
+.ven-handover__title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ven-handover__creds {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--s-1) var(--s-3);
+  margin: 0;
+}
+
+.ven-handover__creds dt { color: var(--ink-faint); font-size: var(--t-sm); }
+.ven-handover__creds dd { margin: 0; font-size: var(--t-md); user-select: all; }
+
+.ven-fieldset {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ven-rolepick,
+.ven-permgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--s-2);
+}
+
+.ven-rolepick__opt,
+.ven-permgrid__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.ven-rolepick__opt > span,
+.ven-permgrid__item > span {
+  display: grid;
+  gap: 2px;
+}
+
+.ven-rolepick__opt:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.ven-rolepick__opt[data-disabled='true'],
+.ven-permgrid__item[data-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* ==================================================================== */
+/* Billing — the counter                                                 */
+/* ==================================================================== */
+
+.ven-pos {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(280px, 0.8fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .ven-pos { grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr); }
+  .ven-pos__find { grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px) {
+  .ven-pos { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ven-pos__find,
+.ven-pos__cart,
+.ven-pos__pay {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--rim);
+  min-width: 0;
+}
+
+.ven-pos__pay {
+  position: sticky;
+  top: var(--s-4);
+}
+
+.ven-pos__searchrow {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.ven-pos__search {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: var(--s-2);
+  border: 1px solid var(--hairline-bright);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  color: var(--ink-faint);
+}
+
+.ven-pos__search .ven-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--t-md);
+}
+
+.ven-pos__notice {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+  font-size: var(--t-sm);
+}
+
+.ven-pos__results {
+  display: grid;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.ven-pos__none { padding: var(--s-2); }
+
+.ven-pos__result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+}
+
+.ven-pos__result:hover,
+.ven-pos__result:focus-visible { border-color: var(--accent); background: var(--accent-wash); }
+.ven-pos__result[data-out='true'] { opacity: 0.6; }
+
+.ven-pos__resultname,
+.ven-pos__linename {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ven-pos__resultname strong,
+.ven-pos__linename strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ven-pos__resultprice {
+  display: grid;
+  justify-items: end;
+  font-size: var(--t-sm);
+}
+
+.ven-pos__stock {
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.ven-pos__stock[data-low='true'] { color: var(--warn-ink); }
+
+.ven-pos__carthead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+
+.ven-pos__carthead .ven-section__title { margin: 0; flex: 1 1 auto; }
+
+.ven-pos__lines {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ven-pos__line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--s-2);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.ven-pos__line[data-short='true'] {
+  border-bottom-color: var(--crit);
+}
+
+@media (max-width: 520px) {
+  .ven-pos__line { grid-template-columns: minmax(0, 1fr) auto; }
+}
+
+.ven-pos__stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ven-pos__qty {
+  width: 4.5ch;
+  text-align: center;
+}
+
+.ven-pos__linetotal { text-align: right; min-width: 9ch; }
+
+.ven-pos__totals {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--s-1) var(--s-3);
+  margin: 0;
+}
+
+.ven-pos__totals dt { color: var(--ink-soft); }
+.ven-pos__totals dd { margin: 0; text-align: right; }
+
+.ven-pos__grand {
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--hairline-bright);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+}
+
+.ven-pos__totals dt.ven-pos__grand { color: var(--ink); }
+
+.ven-pos__modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.ven-pos__mode {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline-bright);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ven-pos__mode[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.ven-pos__change {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+}
+
+.ven-pos__charge {
+  width: 100%;
+  justify-content: center;
+}
+
+.ven-pos__camera {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--s-4);
+  background: var(--void);
+}
+
+.ven-pos__camerabox {
+  display: grid;
+  gap: var(--s-3);
+  justify-items: center;
+  width: min(520px, 100%);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--lift-2);
+}
+
+.ven-pos__video {
+  width: 100%;
+  border-radius: var(--r-md);
+  background: var(--ground);
+}
+
+.ven-pos__today {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.ven-pos__todaycell {
+  display: grid;
+  gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.ven-pos__todaycell strong {
+  font-family: var(--display);
+  font-size: var(--t-lg);
+}
+
+/* ==================================================================== */
+/* Billing — the invoice, on screen and on paper                         */
+/* ==================================================================== */
+
+.ven-invoice {
+  display: grid;
+  gap: var(--s-4);
+  max-width: 820px;
+  padding: var(--s-5);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--rim);
+}
+
+.ven-invoice[data-voided='true'] { border-color: var(--crit); }
+
+.ven-invoice__head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+.ven-invoice__store {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+}
+
+.ven-invoice__addr {
+  margin: var(--s-1) 0 0;
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+}
+
+.ven-invoice__meta,
+.ven-invoice__totals {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: 2px var(--s-3);
+  margin: 0;
+  font-size: var(--t-sm);
+}
+
+.ven-invoice__meta dt,
+.ven-invoice__totals dt { color: var(--ink-faint); }
+.ven-invoice__meta dd,
+.ven-invoice__totals dd { margin: 0; }
+
+.ven-invoice__totals {
+  justify-self: end;
+  min-width: 260px;
+}
+
+.ven-invoice__totals dd { text-align: right; }
+
+.ven-invoice__grand {
+  padding-top: var(--s-1);
+  border-top: 1px solid var(--hairline-bright);
+  color: var(--ink);
+  font-size: var(--t-md);
+  font-weight: 800;
+}
+
+.ven-invoice__totals dt.ven-invoice__grand { color: var(--ink); }
+
+.ven-invoice__void {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--crit-wash);
+  color: var(--crit-ink);
+}
+
+.ven-invoice__items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-sm);
+}
+
+.ven-invoice__items th {
+  padding: var(--s-1) var(--s-2);
+  border-bottom: 1px solid var(--hairline-bright);
+  color: var(--ink-faint);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.ven-invoice__items td {
+  padding: var(--s-2);
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+}
+
+.ven-invoice__items .ven-num { text-align: right; white-space: nowrap; }
+
+.ven-invoice__sub {
+  display: block;
+  color: var(--ink-faint);
+  font-size: var(--t-2xs);
+}
+
+.ven-invoice__foot {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: var(--t-sm);
+  text-align: center;
+}
+
+@media (max-width: 560px) {
+  .ven-invoice { padding: var(--s-3); }
+  .ven-invoice__items th:nth-child(3),
+  .ven-invoice__items td:nth-child(3) { display: none; }
+}
+
+/*
+  Print / Save as PDF. Everything that is the PANEL goes; only the invoice
+  stays, flat on the page. Colours still come from tokens, and shadows are
+  dropped because a printer turns them into grey smudges.
+*/
+@media print {
+  .ven-rail,
+  .ven-top,
+  .ven-crumbs,
+  .ven-page__actions,
+  .ven-noprint,
+  .ven-alert {
+    display: none !important;
+  }
+
+  .ven-shell,
+  .ven-main,
+  .ven-content,
+  .ven-page {
+    display: block !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--surface) !important;
+  }
+
+  .ven-page__head { margin-bottom: var(--s-2); }
+
+  .ven-invoice {
+    max-width: none;
+    border: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .ven-invoice__items tr { break-inside: avoid; }
+}

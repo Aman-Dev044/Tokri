@@ -35,6 +35,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { isAisleKey } from '@mandi/design-system';
 import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import { ImageUploadError, formatBytes, uploadProductImage } from '@/lib/vendor/image';
 import type {
   Paged,
@@ -82,6 +83,7 @@ function toCreateBody(draft: ProductDraft): ProductCreate {
     // `unitValue` is @IsInt() — a fractional pack size is a 400.
     unitValue: Math.max(1, Math.round(draft.unitValue)),
     sku: draft.sku.trim(),
+    barcode: draft.barcode.trim() || undefined,
     mrp: draft.mrp,
     price: draft.price,
     isActive: draft.isActive,
@@ -91,7 +93,8 @@ function toCreateBody(draft: ProductDraft): ProductCreate {
 /** The same, minus the fields `UpdateProductDto` refuses. */
 function toUpdateBody(draft: ProductDraft): ProductUpdate {
   const { sku: _sku, ...rest } = toCreateBody(draft);
-  return rest;
+  // On an update a blank barcode means "remove it", which the API spells null.
+  return { ...rest, barcode: draft.barcode.trim() || null };
 }
 
 const UNITS: readonly ProductUnit[] = ['kg', 'g', 'l', 'ml', 'piece', 'pack'];
@@ -101,6 +104,7 @@ const EMPTY_DRAFT: ProductDraft = {
   name: '',
   description: '',
   sku: '',
+  barcode: '',
   brand: '',
   categoryId: '',
   images: [],
@@ -150,6 +154,7 @@ export function ProductsView() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [draft, setDraft] = useState<ProductDraft>(EMPTY_DRAFT);
   const [deleting, setDeleting] = useState<VendorProduct | null>(null);
+  const canManage = useVendorSession().can('products.manage');
 
   const create = useVendorMutation<ProductCreate, VendorProduct>('/vendor/products', 'POST');
   // PATCH, not PUT: there is no PUT route for a product.
@@ -173,6 +178,7 @@ export function ProductsView() {
       name: product.name,
       description: product.description ?? '',
       sku: product.sku,
+      barcode: product.barcode ?? '',
       brand: product.brand ?? '',
       categoryId: product.categoryId,
       images: [...product.images],
@@ -288,10 +294,12 @@ export function ProductsView() {
       isFixture={fixturePaths.length > 0}
       fixturePaths={fixturePaths}
       actions={
-        <Btn variant="primary" onClick={openCreate}>
-          <IconPlus />
-          Add product
-        </Btn>
+        canManage ? (
+          <Btn variant="primary" onClick={openCreate}>
+            <IconPlus />
+            Add product
+          </Btn>
+        ) : null
       }
     >
       {products.error && products.data === null ? (
@@ -364,7 +372,9 @@ export function ProductsView() {
         rows={products.data?.data ?? []}
         loading={products.loading && !products.hasLoadedOnce}
         rowKey={(row) => row.id}
-        onRowClick={openEdit}
+        // Read-only for anyone without products.manage — the API would 403
+        // the save anyway; this just does not offer it.
+        onRowClick={canManage ? openEdit : undefined}
         page={meta?.page}
         pageCount={meta?.pages}
         total={meta?.total}
@@ -375,9 +385,11 @@ export function ProductsView() {
             body="Clear the filters, or add the first product in this shop."
             icon={<IconInbox />}
             action={
-              <Btn variant="primary" onClick={openCreate}>
-                Add product
-              </Btn>
+              canManage ? (
+                <Btn variant="primary" onClick={openCreate}>
+                  Add product
+                </Btn>
+              ) : undefined
             }
           />
         }
@@ -532,6 +544,28 @@ function ProductForm({
             )}
           </Field>
         </div>
+
+        <Field
+          label="Barcode"
+          hint="Optional. Scan the pack with the cursor here, or type the digits under the bars. Unique in this shop."
+        >
+          {(id) => (
+            <input
+              id={id}
+              className="ven-input"
+              value={draft.barcode}
+              onChange={(event) => set('barcode', event.target.value.trim())}
+              // A scanner ends with Enter; inside a form that would submit.
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.preventDefault();
+              }}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={48}
+              placeholder="8901063010277"
+            />
+          )}
+        </Field>
 
         <Field label="Category" hint="Sets which aisle — and which colour — the product lives in.">
           {(id) => (

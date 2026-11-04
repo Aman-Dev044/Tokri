@@ -19,6 +19,10 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import {
   CurrentUser,
@@ -55,11 +59,12 @@ import {
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @ApiNotFoundResponse({ description: 'No such order in this store.' })
 @Controller('vendor/orders')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 @UseInterceptors(AuditInterceptor)
 export class VendorOrdersController {
   constructor(private readonly orders: VendorOrdersService) {}
 
+  @RequirePermission(Permission.ORDERS_VIEW)
   @Get()
   @ApiOperation({
     summary: 'Order list (paginated)',
@@ -74,6 +79,7 @@ export class VendorOrdersController {
     return this.orders.list(scope, query);
   }
 
+  @RequirePermission(Permission.ORDERS_VIEW)
   @Get(':id')
   @ApiOperation({
     summary: 'Full order detail',
@@ -88,6 +94,7 @@ export class VendorOrdersController {
     return this.orders.findOne(scope, id);
   }
 
+  @RequirePermission(Permission.ORDERS_UPDATE)
   @Patch(':id/accept')
   @ApiOperation({
     summary: 'Accept a PLACED order',
@@ -105,6 +112,7 @@ export class VendorOrdersController {
     return this.orders.accept(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.ORDERS_UPDATE)
   @Patch(':id/reject')
   @ApiOperation({
     summary: 'Decline an order',
@@ -123,6 +131,7 @@ export class VendorOrdersController {
     return this.orders.reject(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.ORDERS_UPDATE)
   @Patch(':id/status')
   @ApiOperation({
     summary: 'Drive the order forward',
@@ -143,6 +152,7 @@ export class VendorOrdersController {
     return this.orders.changeStatus(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.ORDERS_UPDATE)
   @Patch(':id/items')
   @ApiOperation({
     summary: 'Partial fulfilment — drop lines and auto-refund',
@@ -167,6 +177,7 @@ export class VendorOrdersController {
     return this.orders.updateFulfilment(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.ORDERS_UPDATE)
   @Post(':id/assign')
   @ApiOperation({
     summary: 'Assign one of the store’s own riders',

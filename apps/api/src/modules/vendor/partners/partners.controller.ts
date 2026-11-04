@@ -21,6 +21,11 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequireAnyPermission,
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import {
   CurrentUser,
@@ -49,11 +54,12 @@ import {
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @ApiNotFoundResponse({ description: 'No such rider in this store.' })
 @Controller('vendor/delivery-partners')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 @UseInterceptors(AuditInterceptor)
 export class VendorPartnersController {
   constructor(private readonly partners: VendorPartnersService) {}
 
+  @RequireAnyPermission(Permission.RIDERS_MANAGE, Permission.ORDERS_UPDATE)
   @Get()
   @ApiOperation({
     summary: 'Rider list (paginated)',
@@ -68,6 +74,7 @@ export class VendorPartnersController {
     return this.partners.list(scope, query);
   }
 
+  @RequirePermission(Permission.RIDERS_MANAGE)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -87,6 +94,7 @@ export class VendorPartnersController {
     return this.partners.create(scope, dto, actor);
   }
 
+  @RequireAnyPermission(Permission.RIDERS_MANAGE, Permission.ORDERS_UPDATE)
   @Get(':id')
   @ApiOperation({ summary: 'One rider' })
   findOne(
@@ -96,6 +104,7 @@ export class VendorPartnersController {
     return this.partners.findOne(scope, id);
   }
 
+  @RequirePermission(Permission.RIDERS_MANAGE)
   @Patch(':id')
   @ApiOperation({ summary: 'Update a rider’s name, email or vehicle' })
   update(
@@ -107,6 +116,7 @@ export class VendorPartnersController {
     return this.partners.update(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.RIDERS_MANAGE)
   @Patch(':id/status')
   @ApiOperation({
     summary: 'Activate, hold or suspend a rider',
@@ -125,6 +135,7 @@ export class VendorPartnersController {
     return this.partners.setStatus(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.RIDERS_MANAGE)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({

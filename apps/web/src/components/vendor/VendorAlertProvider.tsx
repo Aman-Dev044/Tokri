@@ -105,7 +105,9 @@ export function VendorAlertProvider({
   enabled?: boolean;
 }) {
   const session = useVendorSession();
-  const isEnabled = enabled ?? session.status === 'ready';
+  // A biller has no orders.view: polling the board would 403 every tick.
+  const isEnabled =
+    enabled ?? (session.status === 'ready' && session.can('orders.view'));
   // `status` is a single enum value — exactly what this poll needs. `sort` is
   // checked against the service's own allowlist, and `placedAt` is on it.
   const query = useVendorQuery<Paged<VendorOrder>>(

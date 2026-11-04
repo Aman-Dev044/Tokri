@@ -29,9 +29,16 @@ import {
   SettlementSchema,
 } from '../../database/schemas/settlement.schema';
 import { User, UserSchema } from '../../database/schemas/user.schema';
+import {
+  InvoiceCounter,
+  InvoiceCounterSchema,
+  PosSale,
+  PosSaleSchema,
+} from '../../database/schemas/pos-sale.schema';
 
 import { PasswordService } from '../../common/utils/password.service';
 import { AdminAuditModule } from '../admin/audit/audit.module';
+import { IdempotencyModule } from '../../common/idempotency.module';
 
 import { VendorStoreController } from './store/store.controller';
 import { VendorStoreService } from './store/store.service';
@@ -46,6 +53,13 @@ import { VendorPartnersController } from './partners/partners.controller';
 import { VendorPartnersService } from './partners/partners.service';
 import { VendorEarningsController } from './earnings/earnings.controller';
 import { VendorEarningsService } from './earnings/earnings.service';
+import {
+  VendorMeController,
+  VendorStaffController,
+} from './staff/staff.controller';
+import { VendorStaffService } from './staff/staff.service';
+import { VendorPosController } from './pos/pos.controller';
+import { VendorPosService } from './pos/pos.service';
 
 /**
  * ════════════════════════════════════════════════════════════════════════
@@ -58,7 +72,13 @@ import { VendorEarningsService } from './earnings/earnings.service';
  * ── Authorisation, in one place ─────────────────────────────────────────
  * Nothing here carries `@Public()`, so the global `JwtAuthGuard` already
  * demands a valid access token on every route, and every controller
- * declares `@Roles(Role.VENDOR)`.
+ * declares `@Roles(Role.VENDOR, Role.STAFF)` — the store's owner and its
+ * employees. Every ROUTE then names the store permission it needs with
+ * `@RequirePermission(...)`; `PermissionsGuard` checks it against the
+ * permissions `JwtStrategy` read from the database on this request. The
+ * owner holds all of them; staff hold what their profile grants.
+ * `test/integration/store-staff.spec.ts` fails the build for any
+ * `/vendor/*` route without a rule.
  *
  * Note what that does NOT admit: role inheritance in `RolesGuard` runs
  * upward only (SUPER_ADMIN satisfies ADMIN), and no rule makes a platform
@@ -92,7 +112,13 @@ import { VendorEarningsService } from './earnings/earnings.service';
       { name: LedgerEntry.name, schema: LedgerEntrySchema },
       { name: Settlement.name, schema: SettlementSchema },
       { name: User.name, schema: UserSchema },
+      { name: PosSale.name, schema: PosSaleSchema },
+      { name: InvoiceCounter.name, schema: InvoiceCounterSchema },
     ]),
+
+    // Counter sales REQUIRE an Idempotency-Key: a double-tapped Charge
+    // button must not sell the basket twice.
+    IdempotencyModule,
 
     // Supplies AuditService + AuditContext + AuditInterceptor. Nest
     // caches module instances, so importing it here reuses the single
@@ -108,6 +134,9 @@ import { VendorEarningsService } from './earnings/earnings.service';
     VendorOrdersController,
     VendorPartnersController,
     VendorEarningsController,
+    VendorMeController,
+    VendorStaffController,
+    VendorPosController,
   ],
 
   providers: [
@@ -118,6 +147,8 @@ import { VendorEarningsService } from './earnings/earnings.service';
     VendorOrdersService,
     VendorPartnersService,
     VendorEarningsService,
+    VendorStaffService,
+    VendorPosService,
     // Rider onboarding hashes a password with argon2id + the environment
     // pepper. Reused, never reimplemented.
     PasswordService,

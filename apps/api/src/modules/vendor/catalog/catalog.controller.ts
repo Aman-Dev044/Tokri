@@ -22,6 +22,10 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import {
   CurrentUser,
@@ -58,7 +62,7 @@ import {
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @ApiNotFoundResponse({ description: 'No such resource in this store.' })
 @Controller('vendor')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 @UseInterceptors(AuditInterceptor)
 export class VendorCatalogController {
   constructor(
@@ -68,6 +72,7 @@ export class VendorCatalogController {
 
   // ── Categories ──────────────────────────────────────────────────────
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get('categories')
   @ApiOperation({
     summary: 'Own categories plus the platform taxonomy',
@@ -80,6 +85,7 @@ export class VendorCatalogController {
     return this.catalog.listCategories(scope);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Post('categories')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a category (always private to the store)' })
@@ -92,6 +98,7 @@ export class VendorCatalogController {
     return this.catalog.createCategory(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Patch('categories/:id')
   @ApiOperation({ summary: 'Update one of the store’s own categories' })
   updateCategory(
@@ -103,6 +110,7 @@ export class VendorCatalogController {
     return this.catalog.updateCategory(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Delete('categories/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -120,6 +128,7 @@ export class VendorCatalogController {
 
   // ── Products ────────────────────────────────────────────────────────
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get('products')
   @ApiOperation({
     summary: 'Product list (paginated)',
@@ -135,6 +144,7 @@ export class VendorCatalogController {
     return this.catalog.listProducts(scope, query);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Post('products')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
@@ -152,6 +162,7 @@ export class VendorCatalogController {
     return this.catalog.createProduct(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_VIEW)
   @Get('products/:id')
   @ApiOperation({ summary: 'One product, with live stock' })
   findProduct(
@@ -161,6 +172,7 @@ export class VendorCatalogController {
     return this.catalog.findProduct(scope, id);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Patch('products/:id')
   @ApiOperation({ summary: 'Update a product' })
   updateProduct(
@@ -172,6 +184,7 @@ export class VendorCatalogController {
     return this.catalog.updateProduct(scope, id, dto, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Delete('products/:id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -190,6 +203,7 @@ export class VendorCatalogController {
     return this.catalog.deleteProduct(scope, id, actor);
   }
 
+  @RequirePermission(Permission.PRODUCTS_MANAGE)
   @Post('products/:id/images')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({

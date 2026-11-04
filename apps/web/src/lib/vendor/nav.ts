@@ -1,3 +1,5 @@
+import type { StorePermission } from './types';
+
 /**
  * The vendor sidebar, in order of how often a shop owner touches it.
  *
@@ -13,6 +15,8 @@ export type VendorNavIcon =
   | 'inventory'
   | 'partners'
   | 'earnings'
+  | 'billing'
+  | 'staff'
   | 'settings';
 
 export interface VendorNavItem {
@@ -23,6 +27,11 @@ export interface VendorNavItem {
   key: string;
   /** one line of what the screen is for — used by the ⌘K palette and titles */
   hint: string;
+  /**
+   * The permission the screen's main read needs. Items the signed-in person
+   * lacks are not drawn. UX only: the API guard is the real check.
+   */
+  permission: StorePermission;
 }
 
 export const VENDOR_NAV: readonly VendorNavItem[] = [
@@ -32,6 +41,7 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'dashboard',
     key: 'd',
     hint: 'Today at a glance — orders, revenue, what needs you now',
+    permission: 'orders.view',
   },
   {
     href: '/vendor/orders',
@@ -39,6 +49,15 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'orders',
     key: 'o',
     hint: 'The board: new, preparing, ready for pickup',
+    permission: 'orders.view',
+  },
+  {
+    href: '/vendor/pos',
+    label: 'Billing',
+    icon: 'billing',
+    key: 'b',
+    hint: 'The counter: scan, charge, print the invoice',
+    permission: 'billing.view',
   },
   {
     href: '/vendor/products',
@@ -46,6 +65,7 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'products',
     key: 'p',
     hint: 'Your catalogue — prices, photos, what is listed',
+    permission: 'products.view',
   },
   {
     href: '/vendor/inventory',
@@ -53,6 +73,7 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'inventory',
     key: 'i',
     hint: 'Stock on hand, adjustments and their history',
+    permission: 'products.view',
   },
   {
     href: '/vendor/partners',
@@ -60,6 +81,7 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'partners',
     key: 'r',
     hint: 'Your own riders and who is free right now',
+    permission: 'riders.manage',
   },
   {
     href: '/vendor/earnings',
@@ -67,6 +89,15 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'earnings',
     key: 'e',
     hint: 'Gross, commission, net — and when it lands',
+    permission: 'earnings.view',
+  },
+  {
+    href: '/vendor/staff',
+    label: 'Staff',
+    icon: 'staff',
+    key: 't',
+    hint: 'Who works here and what each of them can do',
+    permission: 'staff.manage',
   },
   {
     href: '/vendor/settings',
@@ -74,6 +105,7 @@ export const VENDOR_NAV: readonly VendorNavItem[] = [
     icon: 'settings',
     key: 's',
     hint: 'Profile, address, hours, cash on delivery',
+    permission: 'store.manage',
   },
 ];
 
@@ -93,4 +125,9 @@ export function navItemFor(pathname: string): VendorNavItem | null {
   // Dashboard.
   const sorted = [...VENDOR_NAV].sort((a, b) => b.href.length - a.href.length);
   return sorted.find((item) => isActiveHref(pathname, item.href)) ?? null;
+}
+
+/** The items this person may see, in rail order. */
+export function navFor(can: (permission: StorePermission) => boolean): VendorNavItem[] {
+  return VENDOR_NAV.filter((item) => can(item.permission));
 }

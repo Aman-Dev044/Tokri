@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-26T06:45:42.602Z",
+  "generatedAt": "2026-11-04T08:55:14.075Z",
   "baseUrl": "http://49.13.70.253:9988/api/v1",
-  "endpointCount": 178,
+  "endpointCount": 192,
   "logins": [
     {
       "label": "Super Admin",
@@ -48,6 +48,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201"
               ],
@@ -91,7 +92,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -103,6 +105,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201"
               ],
@@ -173,7 +176,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -185,6 +189,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -207,7 +212,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -219,10 +225,12 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -234,6 +242,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201"
               ],
@@ -270,7 +279,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -282,6 +292,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -297,7 +308,8 @@
                     "description": "10-digit phone number"
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -309,6 +321,7 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -338,7 +351,8 @@
                     "description": "6-digit code"
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -355,10 +369,12 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -370,10 +386,12 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -395,10 +413,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -472,10 +492,12 @@
                   "description": "Indian PIN code, consulted only when lat/lng are absent. Same static table as GET /stores; an unlisted PIN is a 400 carrying the serviceable list, not a silently unfiltered page."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -492,11 +514,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -570,10 +594,12 @@
                   "description": "Indian PIN code, used only when lat/lng are absent. Resolved through a small static table of serviceable cities — an unknown PIN is a 400, not a silently empty list."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -590,10 +616,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -653,10 +681,12 @@
                   "description": "Full-text term, matched against the `searchText` text index."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -673,11 +703,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -694,11 +726,19 @@
               "tokenVar": null,
               "pathParams": [],
               "query": [],
+              "headers": [
+                {
+                  "name": "x-razorpay-signature",
+                  "required": true,
+                  "description": ""
+                }
+              ],
               "responses": [
                 "200",
                 "401"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         }
@@ -724,10 +764,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -741,6 +783,7 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201"
               ],
@@ -812,7 +855,8 @@
                     "description": "Make this the default. The previous default is demoted."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -831,10 +875,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -853,11 +899,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -876,6 +924,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -947,7 +996,8 @@
                     "description": "Make this the default. The previous default is demoted."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -966,10 +1016,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -991,10 +1043,12 @@
                   "description": "Which store's cart to read. Omitted, the ACTIVE cart is returned."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1008,6 +1062,7 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "409"
@@ -1038,7 +1093,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -1057,10 +1113,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -1079,6 +1137,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
@@ -1095,7 +1154,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1109,6 +1169,7 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "409"
@@ -1125,7 +1186,8 @@
                     "description": "The vendor whose cart the client believes is active."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -1144,6 +1206,13 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [
+                {
+                  "name": "Idempotency-Key",
+                  "required": true,
+                  "description": "REQUIRED. 8–128 chars of [A-Za-z0-9._:-] — a UUID is ideal. A retry with the same key replays the first response instead of placing a second order."
+                }
+              ],
               "responses": [
                 "201",
                 "400",
@@ -1183,7 +1252,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1197,6 +1267,7 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -1233,7 +1304,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -1274,10 +1346,12 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -1296,11 +1370,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1319,6 +1395,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "409"
@@ -1335,7 +1412,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -1354,10 +1432,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -1381,6 +1461,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "401",
@@ -1412,7 +1493,8 @@
                     "description": "HMAC-SHA256 signature from the checkout sheet."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         }
@@ -1433,17 +1515,20 @@
               "description": "Not paginated — the tree is small and the UI renders it whole. Rows with `isGlobal: true` are the shared eight-aisle taxonomy: readable by every vendor, writable by none.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1452,11 +1537,13 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -1510,7 +1597,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -1519,7 +1607,8 @@
               "description": "Refused with 409 while products or children point at it.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1529,13 +1618,15 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "403",
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -1544,7 +1635,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1554,6 +1646,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -1606,7 +1699,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -1620,16 +1714,19 @@
               "description": "Orders by status, revenue, the pending-accept count, low and out of stock counts, the store rating and a 7-day sparkline.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -1643,7 +1740,8 @@
               "description": "Filters: `status`, `vehicleType`, `isOnline`, `isAvailable`, and `q` over name and phone.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -1719,12 +1817,14 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -1733,11 +1833,13 @@
               "description": "Creates the DELIVERY `User` and the `DeliveryPartner` record in ONE transaction. The password is hashed with argon2id + the environment pepper and is never echoed back or written to the audit trail.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -1784,7 +1886,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -1793,7 +1896,8 @@
               "description": "Deletes the partner record and its login account in one transaction. Refused with 409 once any order references them — deleting would orphan delivery history; suspend instead.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1803,13 +1907,15 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "403",
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -1818,7 +1924,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1828,12 +1935,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -1842,7 +1951,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1852,6 +1962,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -1883,7 +1994,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -1892,7 +2004,8 @@
               "description": "The login account moves with the record, in one transaction, and a suspension revokes the refresh-token family. Refused with 409 while the rider is carrying an order.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -1902,6 +2015,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -1927,7 +2041,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -1941,7 +2056,8 @@
               "description": "Gross, commission, refunds, net, order count and the payout still pending. Counted on DELIVERED orders only — an order still being packed is not income. Commission is the per-order SNAPSHOT, never the vendor’s current rate.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -1961,11 +2077,13 @@
                   "description": "Inclusive end, ISO-8601. Defaults to now."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -1974,7 +2092,8 @@
               "description": "`amount` is SIGNED INTEGER PAISE from the vendor’s point of view: sale positive, commission / refund / payout negative.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -2029,11 +2148,13 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -2047,7 +2168,8 @@
               "description": "Ordered worst-first: out of stock, then deepest under threshold. Filters: `lowStock`, `outOfStock`, `categoryId`, `q` over name/sku/brand.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -2116,12 +2238,14 @@
                   "description": "Filter to one category."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -2130,7 +2254,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2140,12 +2265,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2154,7 +2281,8 @@
               "description": "Stock is ADJUSTED, never SET — an `InventoryLog` row is written in the SAME transaction, so the log always reconstructs the current quantity. A decrement past zero is a 409: the `$gte` guard lives in the query filter, so check and write are atomic.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2164,6 +2292,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -2203,7 +2332,8 @@
                     "description": "Optionally move the low-stock threshold in the same call."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -2212,7 +2342,8 @@
               "description": "Every adjustment already writes an `InventoryLog` row in the same transaction as the stock change; this reads it back, newest first.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2244,12 +2375,14 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -2258,11 +2391,13 @@
               "description": "A stock-take. All lines land or none do — a partially applied batch leaves the vendor unable to tell which lines took effect.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -2301,7 +2436,34 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
+            }
+          ]
+        },
+        {
+          "name": "me",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/vendor/me",
+              "summary": "Who is signed in to this store, and what they may do",
+              "description": "Permissions are resolved from the database on this request — the same answer the guard used. The owner holds every permission.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
             }
           ]
         },
@@ -2315,7 +2477,8 @@
               "description": "Filters: `status`, `from`/`to` over `placedAt`, and `q` over order number, delivery phone and item names.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -2370,12 +2533,14 @@
                   "description": "Exact status. Omit for every status."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -2384,7 +2549,8 @@
               "description": "Items, pricing, delivery address, status history, customer and rider. The delivery OTP hash is never serialised.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2394,12 +2560,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2408,7 +2576,8 @@
               "description": "`etaMinutes` is the promised prep time; it is recorded on the status-history row for the `order.accepted` event.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2418,6 +2587,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -2436,7 +2606,8 @@
                     "description": "Promised preparation time in minutes. Recorded on the status history entry and echoed back for the `order.accepted` event."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -2445,7 +2616,8 @@
               "description": "Order status, `deliveryPartnerId`, the rider’s `activeOrderId` and their availability all move in ONE transaction. A busy or suspended rider is a 409; another store’s rider is a 404.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2455,6 +2627,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -2473,7 +2646,8 @@
                     "description": "A delivery partner belonging to this store."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2482,7 +2656,8 @@
               "description": "Locked decision #9. Send EVERY line’s desired state. Totals are recomputed server-side (discount and tax scale pro-rata, the delivery fee does not, and the commission percentage is the checkout snapshot) and the refund difference is written as a LedgerEntry in the same transaction. Allowed only while the order is ACCEPTED or PACKING.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2492,6 +2667,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -2523,7 +2699,8 @@
                     "description": "Why lines were dropped."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2532,7 +2709,8 @@
               "description": "`reason` is REQUIRED. A rejection with no reason gives support nothing to say and the customer nothing to act on.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2542,6 +2720,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -2561,7 +2740,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2570,7 +2750,8 @@
               "description": "PACKING, READY_FOR_PICKUP and CANCELLED (reason required). REJECTED and ASSIGNED have their own endpoints because they carry payload the state machine cannot express.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2580,6 +2761,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -2605,7 +2787,268 @@
                     "description": "Required when moving to CANCELLED."
                   }
                 ]
-              }
+              },
+              "addedAt": null
+            }
+          ]
+        },
+        {
+          "name": "pos",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/vendor/pos/products",
+              "summary": "Find a product at the counter",
+              "description": "Name, brand, SKU prefix or the EXACT barcode, active products of this store only. `barcodeMatch` is set when `q` is a barcode, so a scanner hit can go straight into the cart.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "q",
+                  "type": "string",
+                  "required": true,
+                  "example": "8901063010277",
+                  "description": "Name, SKU or the exact barcode. A scanner types the code plus Enter."
+                }
+              ],
+              "headers": [],
+              "responses": [
+                "200",
+                "403"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/vendor/pos/sales",
+              "summary": "Counter sales (paginated), with today’s totals by payment mode",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": false,
+                  "example": 1,
+                  "description": ""
+                },
+                {
+                  "name": "limit",
+                  "type": "number",
+                  "required": false,
+                  "example": 20,
+                  "description": ""
+                },
+                {
+                  "name": "sort",
+                  "type": "string",
+                  "required": false,
+                  "example": "-createdAt",
+                  "description": "Field name, optionally prefixed with `-` for descending."
+                },
+                {
+                  "name": "q",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Free-text search term."
+                },
+                {
+                  "name": "from",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive start, ISO-8601."
+                },
+                {
+                  "name": "to",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive end, ISO-8601."
+                },
+                {
+                  "name": "status",
+                  "type": "completed | voided",
+                  "required": false,
+                  "example": "completed",
+                  "description": ""
+                },
+                {
+                  "name": "paymentMode",
+                  "type": "cash | upi | card",
+                  "required": false,
+                  "example": "cash",
+                  "description": ""
+                }
+              ],
+              "headers": [],
+              "responses": [
+                "200",
+                "403"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "POST",
+              "path": "/vendor/pos/sales",
+              "summary": "Ring up a walk-in sale",
+              "description": "The body names products and quantities only. Prices, GST (the online checkout’s rate and arithmetic), the discount cap, the total and the change are all computed here. Stock is decremented in one transaction with a sequential invoice number. No commission and no ledger entry: this is the store’s own revenue.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [
+                {
+                  "name": "Idempotency-Key",
+                  "required": true,
+                  "description": ""
+                }
+              ],
+              "responses": [
+                "201",
+                "400",
+                "403",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "items": [
+                    {
+                      "productId": "",
+                      "qty": 0
+                    }
+                  ],
+                  "paymentMode": "cash",
+                  "cashTenderedPaise": 0,
+                  "customerPhone": "9876543210",
+                  "customerName": "",
+                  "discountPaise": 0
+                },
+                "fields": [
+                  {
+                    "name": "items",
+                    "type": "array",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "paymentMode",
+                    "type": "cash | upi | card",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "cashTenderedPaise",
+                    "type": "number",
+                    "required": false,
+                    "description": "INTEGER PAISE. Required for cash; must cover the total."
+                  },
+                  {
+                    "name": "customerPhone",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "customerName",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "discountPaise",
+                    "type": "number",
+                    "required": false,
+                    "description": "INTEGER PAISE off the subtotal. Capped at the subtotal."
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/vendor/pos/sales/{id}",
+              "summary": "One invoice",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "POST",
+              "path": "/vendor/pos/sales/{id}/void",
+              "summary": "Void a completed sale and restock its lines",
+              "description": "A reason is required. Only a completed sale can be voided — once.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "reason": "Customer returned the basket unopened"
+                },
+                "fields": [
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
             }
           ]
         },
@@ -2619,7 +3062,8 @@
               "description": "Filters: `q` over name/brand/sku, `categoryId`, `isActive`, `lowStock`. Live stock is joined from `inventory` — it is never stored on the product (§5.2).",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -2688,12 +3132,14 @@
                   "description": "Only rows at or under their low-stock threshold."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -2702,11 +3148,13 @@
               "description": "Writes the product, its inventory row and the opening stock log in ONE transaction. `slug` and `searchText` are derived server-side.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -2725,6 +3173,7 @@
                   "unit": "kg",
                   "unitValue": 500,
                   "sku": "MND-2001",
+                  "barcode": "8901063010277",
                   "mrp": 0,
                   "price": 0,
                   "openingStock": 0,
@@ -2781,6 +3230,12 @@
                     "description": "Unique per vendor."
                   },
                   {
+                    "name": "barcode",
+                    "type": "string",
+                    "required": false,
+                    "description": "The code on the pack, as a scanner types it. Unique per store when set."
+                  },
+                  {
                     "name": "mrp",
                     "type": "number",
                     "required": true,
@@ -2811,7 +3266,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -2820,7 +3276,8 @@
               "description": "Refused with 409 while an in-flight order contains it. Order history is unaffected either way: every line snapshots its own name, price and image at checkout.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2830,13 +3287,15 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "403",
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -2845,7 +3304,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2855,12 +3315,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -2869,7 +3331,8 @@
               "description": "",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2879,6 +3342,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -2893,6 +3357,7 @@
                     ""
                   ],
                   "brand": "",
+                  "barcode": {},
                   "unit": "kg",
                   "unitValue": 0,
                   "mrp": 0,
@@ -2931,6 +3396,12 @@
                     "description": ""
                   },
                   {
+                    "name": "barcode",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
                     "name": "unit",
                     "type": "kg | g | l | ml | piece | pack",
                     "required": false,
@@ -2961,7 +3432,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -2970,7 +3442,8 @@
               "description": "The file NEVER passes through this API. `contentType` is allowlisted and `sizeBytes` is capped at 5 MB — and both are SIGNED into the URL, so storage rejects anything else rather than trusting the browser. Returns 503 while object storage is unconfigured; the rest of the module keeps working.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -2980,6 +3453,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -3005,7 +3479,8 @@
                     "description": "Exact byte length. Hard cap 5 MB."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -3019,16 +3494,19 @@
               "description": "Resolved from the vendor id in the verified JWT. There is no `:vendorId` parameter anywhere in this module — see §8.1.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PUT",
@@ -3037,11 +3515,13 @@
               "description": "Commission, approval status, slug and rating are NOT editable here — they are platform decisions. Sending one is a 400, not a silent no-op.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -3124,7 +3604,8 @@
                     "description": "INTEGER PAISE. Platform ceiling is 200000 (Rs 2,000)."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -3138,7 +3619,8 @@
               "description": "Weeks use ISO week numbering, so the end of December lands in the week it belongs to rather than a phantom week 53.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -3165,11 +3647,13 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -3178,7 +3662,8 @@
               "description": "Fulfilled lines of DELIVERED orders only, using each line’s SNAPSHOT name — renaming a product must not rewrite last month’s report.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -3205,11 +3690,13 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -3223,7 +3710,8 @@
               "description": "Weekly payout windows, newest first. Read-only: generating and paying a settlement is SUPER_ADMIN-only.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
@@ -3278,11 +3766,13 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -3291,7 +3781,8 @@
               "description": "Another vendor’s settlement is a 404 — never a 403, which would confirm the id is real.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [
@@ -3301,12 +3792,361 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
+            }
+          ]
+        },
+        {
+          "name": "staff",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/vendor/staff",
+              "summary": "Staff list (paginated)",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": false,
+                  "example": 1,
+                  "description": ""
+                },
+                {
+                  "name": "limit",
+                  "type": "number",
+                  "required": false,
+                  "example": 20,
+                  "description": ""
+                },
+                {
+                  "name": "sort",
+                  "type": "string",
+                  "required": false,
+                  "example": "-createdAt",
+                  "description": "Field name, optionally prefixed with `-` for descending."
+                },
+                {
+                  "name": "q",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Free-text search term."
+                },
+                {
+                  "name": "from",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive start, ISO-8601."
+                },
+                {
+                  "name": "to",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Inclusive end, ISO-8601."
+                },
+                {
+                  "name": "status",
+                  "type": "active | suspended",
+                  "required": false,
+                  "example": "active",
+                  "description": ""
+                }
+              ],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "POST",
+              "path": "/vendor/staff",
+              "summary": "Add a staff member (creates their login)",
+              "description": "The password is hashed and never returned. A preset takes no `permissions`; CUSTOM requires them. Granting anything the caller does not hold is a 403.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "201",
+                "403",
+                "404",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "name": "Sunita Pawar",
+                  "phone": "9876543210",
+                  "email": "",
+                  "password": "",
+                  "staffRole": "MANAGER",
+                  "permissions": [
+                    "orders.view"
+                  ],
+                  "shiftLabel": "Morning counter"
+                },
+                "fields": [
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "phone",
+                    "type": "string",
+                    "required": true,
+                    "description": "10 digits. Also the sign-in identifier."
+                  },
+                  {
+                    "name": "email",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "password",
+                    "type": "string",
+                    "required": true,
+                    "description": "Never stored in plain text."
+                  },
+                  {
+                    "name": "staffRole",
+                    "type": "MANAGER | BILLER | ORDERS | INVENTORY | SUPERVISOR | CUSTOM",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "permissions",
+                    "type": "array",
+                    "required": false,
+                    "description": "Required for CUSTOM, refused for a preset."
+                  },
+                  {
+                    "name": "shiftLabel",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "DELETE",
+              "path": "/vendor/staff/{id}",
+              "summary": "Delete a staff member and their login",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "204",
+                "403",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/vendor/staff/{id}",
+              "summary": "One staff member",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "PATCH",
+              "path": "/vendor/staff/{id}",
+              "summary": "Change name, email, role, permissions or shift",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": {
+                "example": {
+                  "name": "",
+                  "email": "",
+                  "staffRole": "MANAGER",
+                  "permissions": [
+                    "orders.view"
+                  ],
+                  "shiftLabel": {}
+                },
+                "fields": [
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "email",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "staffRole",
+                    "type": "MANAGER | BILLER | ORDERS | INVENTORY | SUPERVISOR | CUSTOM",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "permissions",
+                    "type": "array",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "shiftLabel",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "PATCH",
+              "path": "/vendor/staff/{id}/status",
+              "summary": "Suspend or reinstate",
+              "description": "Suspending revokes the refresh-token family; the live access token stops on its next use because status is re-read every request.",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": {
+                "example": {
+                  "status": "active",
+                  "reason": ""
+                },
+                "fields": [
+                  {
+                    "name": "status",
+                    "type": "active | suspended",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/vendor/staff/roles",
+              "summary": "The permission catalogue, the presets, and what you may grant",
+              "description": "",
+              "public": false,
+              "roles": [
+                "VENDOR",
+                "STAFF"
+              ],
+              "tokenVar": "vendorToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "403",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
             }
           ]
         },
@@ -3320,11 +4160,13 @@
               "description": "A full replacement, not a merge: partial hour updates are how a store ends up advertising two overlapping Tuesday windows.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
@@ -3347,7 +4189,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -3356,11 +4199,13 @@
               "description": "Only an APPROVED store may open. A suspended store that could flip itself back open would make suspension advisory.",
               "public": false,
               "roles": [
-                "VENDOR"
+                "VENDOR",
+                "STAFF"
               ],
               "tokenVar": "vendorToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -3378,7 +4223,8 @@
                     "description": "Whether the store is accepting orders now."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         }
@@ -3404,6 +4250,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -3428,7 +4275,8 @@
                     "description": "Willing to receive a new offer. A rider can be online (visible on the dispatch board, location updating) but unavailable."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -3462,11 +4310,13 @@
                   "description": "Inclusive ISO-8601 end. Defaults to now."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -3507,11 +4357,13 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -3530,6 +4382,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -3568,7 +4421,8 @@
                     "description": "Degrees clockwise from north, 0-359."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -3587,11 +4441,13 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -3610,11 +4466,13 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -3633,12 +4491,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -3657,6 +4517,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "402",
@@ -3664,7 +4525,8 @@
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -3683,6 +4545,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -3701,7 +4564,8 @@
                     "description": "Why the rider declined. Feeds the dispatch quality view."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -3725,6 +4589,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -3751,7 +4616,8 @@
                     "description": "Optional handover photo, already uploaded to storage."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -3770,6 +4636,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -3788,7 +4655,8 @@
                     "description": "Mandatory. A failed delivery becomes a support case and somebody has to be able to read what happened."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -3807,13 +4675,15 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -3832,13 +4702,15 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -3857,6 +4729,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -3882,7 +4755,8 @@
                     "description": "Exact byte length. Hard cap 5 MB."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -3901,12 +4775,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -3920,11 +4796,13 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -3943,11 +4821,13 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -3961,6 +4841,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -3993,7 +4874,8 @@
                     "description": "8-20 letters and digits. State formats vary."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4007,6 +4889,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -4039,7 +4922,8 @@
                     "description": "Exact byte length. Hard cap 5 MB."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4053,6 +4937,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -4078,7 +4963,8 @@
                     "description": "The `publicUrl` returned by the presign call."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -4097,11 +4983,13 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4115,6 +5003,7 @@
               "tokenVar": "riderToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -4132,7 +5021,8 @@
                     "description": "INTEGER PAISE. 1000 is ₹10. Never a float, never rupees."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4151,6 +5041,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "401",
@@ -4184,7 +5075,8 @@
                     "description": "HMAC-SHA256 signature from the checkout sheet."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4220,11 +5112,13 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         }
@@ -4265,10 +5159,12 @@
                   "description": "Inclusive end, ISO-8601. Defaults to now."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4297,10 +5193,12 @@
                   "description": "Inclusive end, ISO-8601. Defaults to now."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4329,10 +5227,12 @@
                   "description": "Inclusive end, ISO-8601. Defaults to now."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4375,10 +5275,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4414,10 +5316,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4453,10 +5357,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -4539,10 +5445,12 @@
                   "description": "Inclusive end, ISO-8601."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -4561,10 +5469,12 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4578,6 +5488,7 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "409"
@@ -4629,7 +5540,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -4648,11 +5560,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -4671,6 +5585,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -4721,7 +5636,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -4804,10 +5720,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -4821,6 +5739,7 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "400",
@@ -4915,7 +5834,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -4934,11 +5854,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -4957,10 +5879,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -4979,6 +5903,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -5057,7 +5982,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -5076,6 +6002,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -5098,7 +6025,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -5167,10 +6095,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5189,11 +6119,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -5212,6 +6144,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -5234,7 +6167,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -5338,10 +6272,12 @@
                   "description": "`vendor` — riders attached to any store; `pool` — the shared platform pool (`vendorId: null`)."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5360,11 +6296,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -5383,6 +6321,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -5405,7 +6344,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -5495,10 +6435,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -5517,10 +6459,12 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -5539,6 +6483,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -5563,7 +6508,8 @@
                     "description": "Mandatory when `decision` is `reject`."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -5582,6 +6528,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -5606,7 +6553,8 @@
                     "description": "Mandatory when `decision` is `reject`."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5635,10 +6583,12 @@
                   "description": "Free-text over order number and customer name."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5652,10 +6602,12 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -5669,6 +6621,7 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404",
@@ -5700,7 +6653,8 @@
                     "description": "Recorded on the status transition."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -5714,6 +6668,7 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404",
@@ -5738,7 +6693,8 @@
                     "description": "Mandatory. Taking an order off a rider is a decision the rider and the customer both feel, and it needs a name against it."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5823,10 +6779,12 @@
                   "description": "The admin who owns the ticket."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -5840,6 +6798,7 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201"
               ],
@@ -5911,7 +6870,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -5930,11 +6890,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -5953,6 +6915,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "400",
@@ -5991,7 +6954,8 @@
                     "description": "What was actually done."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -6010,6 +6974,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
@@ -6026,7 +6991,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6083,10 +7049,12 @@
                   "description": "`out` is stock 0; `low` is at or under the threshold."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6108,10 +7076,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6147,10 +7117,12 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6164,10 +7136,12 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -6264,10 +7238,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6286,11 +7262,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -6309,6 +7287,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "409"
@@ -6325,7 +7304,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -6422,10 +7402,12 @@
                   "description": "Only products whose stock is at or below their threshold."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -6444,6 +7426,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -6466,7 +7449,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -6490,11 +7474,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -6513,6 +7499,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "409"
@@ -6529,7 +7516,8 @@
                     "description": "Shown to the rider verbatim, so it must say what to fix. Mandatory: a rejection with no reason is a rider who resubmits the same thing."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -6548,11 +7536,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "409"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6595,10 +7585,12 @@
                   "description": "Defaults to SUBMITTED — the queue that needs a human."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -6617,10 +7609,12 @@
               "tokenVar": "adminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -6696,10 +7690,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6718,10 +7714,12 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -6763,7 +7761,7 @@
                 },
                 {
                   "name": "role",
-                  "type": "super_admin | admin | vendor | customer | delivery",
+                  "type": "super_admin | admin | vendor | customer | delivery | staff",
                   "required": false,
                   "example": "super_admin",
                   "description": ""
@@ -6783,10 +7781,12 @@
                   "description": "Search name, email or phone."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6805,11 +7805,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -6828,6 +7830,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -6852,7 +7855,8 @@
                     "description": "Recorded on the audit trail. Why the status changed."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -6921,10 +7925,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -6943,11 +7949,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -7044,10 +8052,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -7144,10 +8154,37 @@
                   "description": "Only products whose stock is at or below their threshold."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
+            },
+            {
+              "method": "GET",
+              "path": "/admin/vendors/{id}/staff",
+              "summary": "A store's staff accounts (read-only)",
+              "description": "Name, phone, staff role, effective permissions and status. Managing them is the store owner’s job, under /vendor/staff.",
+              "public": false,
+              "roles": [
+                "ADMIN"
+              ],
+              "tokenVar": "adminToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "404"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
             },
             {
               "method": "PATCH",
@@ -7166,6 +8203,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
@@ -7188,7 +8226,8 @@
                     "description": "Why. Recorded on the vendor and in the audit trail. Required when suspending — \"who suspended this store and why\" is the first question asked when the owner calls support."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         }
@@ -7271,11 +8310,13 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -7294,6 +8335,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -7319,7 +8361,8 @@
                     "description": "Why. Recorded on the ledger row and in the audit log."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -7367,11 +8410,13 @@
                   "description": "Must be one the chosen report supports; defaults to its first. sales: day|week|month · vendor_performance: vendor · product_performance: aisle · delivery_performance: day · tax_summary: slab."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -7395,6 +8440,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "404"
@@ -7418,7 +8464,8 @@
                     "description": "Why. Mandatory — an unexplained credit is indistinguishable from theft six months later."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -7437,6 +8484,7 @@
               "tokenVar": "superAdminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
@@ -7523,7 +8571,8 @@
                     "description": "Minimum order age, in minutes, before it may be reported as stuck. A floor on the order age, not extra slack on each per-status threshold."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -7547,6 +8596,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403",
@@ -7571,7 +8621,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -7585,6 +8636,7 @@
               "tokenVar": "superAdminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403"
@@ -7615,7 +8667,8 @@
                     "description": "Restrict to one vendor. Omit to settle every vendor."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -7684,10 +8737,12 @@
                   "description": ""
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -7701,6 +8756,7 @@
               "tokenVar": "superAdminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "409"
@@ -7738,7 +8794,8 @@
                     "description": "Minimum 12 characters. Length is the property that matters (NIST 800-63B); composition rules mostly produce \"Password1!\"."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -7757,11 +8814,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "403"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -7780,6 +8839,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
@@ -7803,7 +8863,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         },
@@ -7822,6 +8883,7 @@
               "tokenVar": "superAdminToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "201",
                 "403",
@@ -7874,7 +8936,8 @@
                     "description": "Required for VENDOR and DELIVERY accounts (tenant scope)."
                   }
                 ]
-              }
+              },
+              "addedAt": null
             },
             {
               "method": "DELETE",
@@ -7893,12 +8956,14 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "204",
                 "403",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -7922,6 +8987,7 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "403"
@@ -7945,7 +9011,8 @@
                     "description": ""
                   }
                 ]
-              }
+              },
+              "addedAt": null
             }
           ]
         }
@@ -7969,10 +9036,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "204"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -7984,10 +9053,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         },
@@ -8026,10 +9097,12 @@
                   "description": "Field name, optionally prefixed with `-` for descending."
                 }
               ],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "PATCH",
@@ -8046,11 +9119,13 @@
                 }
               ],
               "query": [],
+              "headers": [],
               "responses": [
                 "200",
                 "404"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "POST",
@@ -8062,10 +9137,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             },
             {
               "method": "GET",
@@ -8077,10 +9154,12 @@
               "tokenVar": "customerToken",
               "pathParams": [],
               "query": [],
+              "headers": [],
               "responses": [
                 "200"
               ],
-              "body": null
+              "body": null,
+              "addedAt": null
             }
           ]
         }

@@ -17,6 +17,11 @@ import { AisleKey } from '../../../common/constants/aisle.enum';
 import { ProductUnit } from '../../../database/schemas/product.schema';
 import { VendorListQueryDto } from '../common/dto';
 
+/** EAN/UPC digits or a Code 128 payload — no spaces, nothing exotic. */
+const BARCODE_PATTERN = /^[A-Za-z0-9._-]{4,48}$/;
+const BARCODE_MESSAGE =
+  'barcode may contain 4-48 letters, digits, dot, underscore and hyphen';
+
 // ── Categories ────────────────────────────────────────────────────────
 
 export class CreateCategoryDto {
@@ -145,6 +150,16 @@ export class CreateProductDto {
   })
   sku: string;
 
+  @ApiPropertyOptional({
+    example: '8901063010277',
+    description:
+      'The code on the pack, as a scanner types it. Unique per store when set.',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(BARCODE_PATTERN, { message: BARCODE_MESSAGE })
+  barcode?: string;
+
   @ApiProperty({ description: 'INTEGER PAISE. Rs 149.50 is 14950.' })
   @Type(() => Number)
   @IsInt()
@@ -214,6 +229,13 @@ export class UpdateProductDto {
   @IsString()
   @Matches(/^.{0,80}$/)
   brand?: string;
+
+  /** `null` clears it — a relabelled product may lose its old code. */
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @Matches(BARCODE_PATTERN, { message: BARCODE_MESSAGE })
+  barcode?: string | null;
 
   @ApiPropertyOptional({ enum: ProductUnit })
   @IsOptional()

@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { VendorScopeGuard } from './common/guards/vendor-scope.guard';
 import { ResourceOwnerGuard } from './common/guards/resource-owner.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 import { RealtimeModule } from './realtime/realtime.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
@@ -82,7 +83,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     //    2. JwtAuthGuard        — authenticated?
     //    3. RolesGuard          — permitted role?
     //    4. VendorScopeGuard    — inject tenant scope from the token
-    //    5. ResourceOwnerGuard  — does this user own THIS document?
+    //    5. PermissionsGuard    — may this person do THIS in their store?
+    //    6. ResourceOwnerGuard  — does this user own THIS document?
     //
     //  The order is deliberate and widening-to-narrowing: reject cheaply
     //  and anonymously first (rate limit), then identity, then coarse
@@ -95,6 +97,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: VendorScopeGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: ResourceOwnerGuard },
 
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

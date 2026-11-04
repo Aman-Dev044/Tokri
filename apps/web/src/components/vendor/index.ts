@@ -125,3 +125,6 @@ export { InventoryView } from './inventory/InventoryView';
 export { PartnersView } from './partners/PartnersView';
 export { EarningsView } from './earnings/EarningsView';
 export { SettingsView } from './settings/SettingsView';
+export { StaffView } from './staff/StaffView';
+export { PosView } from './pos/PosView';
+export { PosInvoiceView } from './pos/PosInvoiceView';

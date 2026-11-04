@@ -39,6 +39,7 @@ import { AdminOrdersService, OrderRow } from '../orders/orders.service';
 import { ListOrdersQueryDto } from '../orders/dto';
 import { AdminCatalogService, ProductRow } from '../catalog/catalog.service';
 import { ListProductsQueryDto } from '../catalog/dto';
+import type { StaffRow } from '../../vendor/staff/staff.service';
 
 @ApiTags('admin/vendors')
 @ApiBearerAuth()
@@ -96,6 +97,18 @@ export class AdminVendorsController {
     @Query() query: ListProductsQueryDto,
   ): Promise<Paginated<ProductRow>> {
     return this.catalog.listProducts({ ...query, vendorId: assertId(id) });
+  }
+
+  @Get(':id/staff')
+  @ApiOperation({
+    summary: "A store's staff accounts (read-only)",
+    description:
+      'Name, phone, staff role, effective permissions and status. ' +
+      'Managing them is the store owner’s job, under /vendor/staff.',
+  })
+  @ApiNotFoundResponse({ description: 'Missing or malformed id.' })
+  vendorStaff(@Param('id') id: string): Promise<StaffRow[]> {
+    return this.vendors.staff(id);
   }
 
   @Patch(':id/status')

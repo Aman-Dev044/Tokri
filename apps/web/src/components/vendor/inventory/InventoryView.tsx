@@ -38,6 +38,7 @@
 
 import { useMemo, useState } from 'react';
 import { useDebounced, useVendorMutation, useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import { humanise } from '../format';
 import type {
   InventoryAdjust,
@@ -183,6 +184,28 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
     setFilters(EMPTY_FILTERS);
   };
 
+  // Without inventory.adjust the board is read-only: no adjust column, no
+  // queue. UX only — the API refuses the write either way.
+  const canAdjust = useVendorSession().can('inventory.adjust');
+
+  const adjustColumn: Column<InventoryRow> = {
+    key: 'adjust',
+    header: 'Adjust by',
+    width: '220px',
+    render: (row) => (
+      <AdjustCell
+        value={pending[row.productId] ?? 0}
+        onChange={(delta) => setDelta(row.productId, delta)}
+        onApply={() => {
+          const delta = pending[row.productId] ?? 0;
+          if (delta !== 0) void applyOne(row.productId, delta);
+        }}
+        busy={adjust.loading}
+        stock={row.stock}
+      />
+    ),
+  };
+
   const columns: Column<InventoryRow>[] = [
     {
       key: 'name',
@@ -249,23 +272,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
       numeric: true,
       render: (row) => <Money value={row.price} />,
     },
-    {
-      key: 'adjust',
-      header: 'Adjust by',
-      width: '220px',
-      render: (row) => (
-        <AdjustCell
-          value={pending[row.productId] ?? 0}
-          onChange={(delta) => setDelta(row.productId, delta)}
-          onApply={() => {
-            const delta = pending[row.productId] ?? 0;
-            if (delta !== 0) void applyOne(row.productId, delta);
-          }}
-          busy={adjust.loading}
-          stock={row.stock}
-        />
-      ),
-    },
+    ...(canAdjust ? [adjustColumn] : []),
     {
       key: 'updatedAt',
       header: 'Changed',
@@ -335,9 +342,11 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
                   {row.stock}
                   <span className="ven-field__hint"> / {row.lowStockThreshold} threshold</span>
                 </p>
-                <Btn size="sm" onClick={() => setDelta(row.productId, (pending[row.productId] ?? 0) + 10)}>
-                  Queue +10
-                </Btn>
+                {canAdjust ? (
+                  <Btn size="sm" onClick={() => setDelta(row.productId, (pending[row.productId] ?? 0) + 10)}>
+                    Queue +10
+                  </Btn>
+                ) : null}
               </article>
             ))}
           </div>
@@ -401,7 +410,7 @@ export function InventoryView({ initialLowStock = false }: { initialLowStock?: b
         />
       </VenSection>
 
-      {pendingEntries.length > 0 ? (
+      {canAdjust && pendingEntries.length > 0 ? (
         <div className="ven-dirty" role="status">
           <span className="ven-dirty__text">
             {pendingEntries.length} {pendingEntries.length === 1 ? 'adjustment' : 'adjustments'}{' '}

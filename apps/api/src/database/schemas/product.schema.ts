@@ -44,6 +44,15 @@ export class Product {
   @Prop({ required: true, trim: true })
   sku: string;
 
+  /**
+   * The code printed on the pack (EAN-13, UPC-A, Code 128…) — what a
+   * counter scanner types. Optional; unique per store WHEN SET, which is
+   * why the index below is partial: a hundred products without a barcode
+   * must not collide on `null`.
+   */
+  @Prop({ type: String, default: null, trim: true })
+  barcode?: string | null;
+
   /** Maximum retail price - INTEGER PAISE. */
   @Prop({ type: Number, required: true, min: 0 })
   mrp: number;
@@ -70,6 +79,10 @@ export const ProductSchema = SchemaFactory.createForClass(Product);
 
 ProductSchema.index({ vendorId: 1, categoryId: 1, isActive: 1 });
 ProductSchema.index({ vendorId: 1, sku: 1 }, { unique: true });
+ProductSchema.index(
+  { vendorId: 1, barcode: 1 },
+  { unique: true, partialFilterExpression: { barcode: { $type: 'string' } } },
+);
 ProductSchema.index({ searchText: 'text' });
 ProductSchema.index({ categoryId: 1 });
 ProductSchema.index({ isDemo: 1 });

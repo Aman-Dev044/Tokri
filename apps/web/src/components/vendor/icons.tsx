@@ -209,3 +209,54 @@ export const IconMenu = (props: IconProps) => (
     <path d="M4 7h16M4 12h16M4 17h16" />
   </Glyph>
 );
+
+/* ── staff and counter billing ───────────────────────────────────── */
+
+export const IconBilling = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" />
+    <path d="M9 8h6M9 12h6M9 16h3" />
+  </Glyph>
+);
+
+export const IconStaff = (props: IconProps) => (
+  <Glyph {...props}>
+    <circle cx="9" cy="8" r="3.5" />
+    <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+    <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.5a6.5 6.5 0 0 1 3 5.5" />
+  </Glyph>
+);
+
+export const IconScan = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+    <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
+  </Glyph>
+);
+
+export const IconPrint = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M7 8V3h10v5" />
+    <rect x="3" y="8" width="18" height="9" rx="2" />
+    <path d="M7 14h10v7H7z" />
+  </Glyph>
+);
+
+export const IconShare = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M20 12a8 8 0 0 1-11.8 7L4 20l1.1-4A8 8 0 1 1 20 12Z" />
+    <path d="M9 10.5c.5 2 2 3.5 4 4l1.2-1.2 2 .8-.4 1.6c-3.5.3-7.7-3.6-7.4-7.1L10 8.2l.8 2-1.3 1.3" />
+  </Glyph>
+);
+
+export const IconMinus = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M5 12h14" />
+  </Glyph>
+);
+
+export const IconTrash = (props: IconProps) => (
+  <Glyph {...props}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </Glyph>
+);

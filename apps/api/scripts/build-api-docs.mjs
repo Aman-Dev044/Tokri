@@ -90,39 +90,8 @@ function readRoles() {
 
   for (const file of files) {
     const src = decomment(readFileSync(file, 'utf8'));
-    const controllerAt = src.search(/@Controller\(/);
-    const base = /@Controller\(\s*'([^']*)'\s*\)/.exec(src)?.[1] ?? '';
-
-    // The class-level decorators are the ones above the CONTROLLER class,
-    // which is not necessarily the first `export class` in the file. Several
-    // controllers declare their DTOs above themselves — `orders.controller`
-    // opens with `export class CancelOrderDto` — and cutting at the first
-    // match put the controller's own `@Roles(Role.CUSTOMER)` outside the
-    // header, so every route in it was documented as open to any signed-in
-    // user instead of to customers.
-    const classAt = controllerAt === -1 ? -1 : src.indexOf('export class', controllerAt);
-    const head = classAt === -1 ? '' : src.slice(0, classAt);
-
-    const rolesIn = (text) => {
-      const blocks = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1]);
-      // Joined with a comma, not concatenated: `Role.SUPER_ADMIN` followed
-      // straight by `Role.ADMIN` reads as one token called SUPER_ADMINR.
-      return [...new Set([...blocks.join(',').matchAll(/Role\.([A-Z_]+)/g)].map((m) => m[1]))];
-    };
-
-    const classRoles = rolesIn(head);
-    const classPublic = head.includes('@Public()');
-
-    const hits = [...src.matchAll(new RegExp(`@(${VERBS.map((v) => v[0].toUpperCase() + v.slice(1)).join('|')})\\(\\s*(?:'([^']*)')?\\s*\\)`, 'g'))];
-
-    // A route's decorators are the CONTIGUOUS run of `@…` lines around its
-    // verb decorator — walk up while lines start with `@`, then down.
-    //
-    // Slicing "from the previous route to this one" instead reaches across
-    // the gap into the NEXT route's decorators, and that is not theoretical:
-    // `@Get('me')` sits directly above `@Public() @Post('register/...')`, so
-    // it inherited that `@Public()` and the reference told readers an
-    // authenticated endpoint needed no token. The live check caught it.
+    // Line bookkeeping first: the controller segments and the per-route
+    // decorator runs below are both found by walking lines.
     const lines = src.split('\n');
     const lineStart = [];
     let offset = 0;
@@ -141,6 +110,57 @@ function readRoles() {
       return low;
     };
     const isDecorator = (n) => n >= 0 && n < lines.length && lines[n].trim().startsWith('@');
+
+    // A file can hold more than one controller: `vendor/staff` keeps
+    // `VendorMeController` above `VendorStaffController`. Reading only the
+    // first one's base path and @Roles mis-filed every route of the second.
+    // Each controller gets its own segment, from its decorator block down
+    // to the next controller's.
+    const controllerAts = [...src.matchAll(/@Controller\(/g)].map((m) => m.index);
+    const segments = controllerAts.map((at, i) => {
+      if (i === 0) return { at, start: 0 };
+      let top = lineOf(at);
+      while (isDecorator(top - 1)) top -= 1;
+      return { at, start: lineStart[top] };
+    });
+    segments.forEach((seg, i) => {
+      seg.end = i + 1 < segments.length ? segments[i + 1].start : src.length;
+    });
+
+    for (const { at: controllerAt, start: segStart, end: segEnd } of segments) {
+    const base = /@Controller\(\s*'([^']*)'\s*\)/.exec(src.slice(controllerAt))?.[1] ?? '';
+
+    // The class-level decorators are the ones above the CONTROLLER class,
+    // which is not necessarily the first `export class` in the file. Several
+    // controllers declare their DTOs above themselves — `orders.controller`
+    // opens with `export class CancelOrderDto` — and cutting at the first
+    // match put the controller's own `@Roles(Role.CUSTOMER)` outside the
+    // header, so every route in it was documented as open to any signed-in
+    // user instead of to customers.
+    const classAt = src.indexOf('export class', controllerAt);
+    const head = classAt === -1 ? '' : src.slice(segStart, classAt);
+
+    const rolesIn = (text) => {
+      const blocks = [...text.matchAll(/@Roles\(([^)]*)\)/g)].map((m) => m[1]);
+      // Joined with a comma, not concatenated: `Role.SUPER_ADMIN` followed
+      // straight by `Role.ADMIN` reads as one token called SUPER_ADMINR.
+      return [...new Set([...blocks.join(',').matchAll(/Role\.([A-Z_]+)/g)].map((m) => m[1]))];
+    };
+
+    const classRoles = rolesIn(head);
+    const classPublic = head.includes('@Public()');
+
+    const hits = [...src.matchAll(new RegExp(`@(${VERBS.map((v) => v[0].toUpperCase() + v.slice(1)).join('|')})\\(\\s*(?:'([^']*)')?\\s*\\)`, 'g'))]
+      .filter((hit) => hit.index >= segStart && hit.index < segEnd);
+
+    // A route's decorators are the CONTIGUOUS run of `@…` lines around its
+    // verb decorator — walk up while lines start with `@`, then down.
+    //
+    // Slicing "from the previous route to this one" instead reaches across
+    // the gap into the NEXT route's decorators, and that is not theoretical:
+    // `@Get('me')` sits directly above `@Public() @Post('register/...')`, so
+    // it inherited that `@Public()` and the reference told readers an
+    // authenticated endpoint needed no token. The live check caught it.
 
     hits.forEach((hit, i) => {
       void i;
@@ -187,6 +207,7 @@ function readRoles() {
       }
       out.set(key, entry);
     });
+    }
   }
   return out;
 }
@@ -700,6 +721,42 @@ const total = rows.length;
  * refused. Served from :3000 the console is already an allowed origin, so
  * nothing about the API's security has to be relaxed to use it.
  */
+/**
+ * When each endpoint first appeared in the console, so the page can badge
+ * what is NEW.
+ *
+ * Read from the console file this run is about to overwrite: an endpoint
+ * already listed there keeps whatever date it had (none, for the original
+ * set), and one that was not there gets today. A first run with no previous
+ * file marks nothing, so a fresh checkout does not paint all 178 as new.
+ */
+let PREVIOUS_ADDED = null;
+const TODAY = new Date().toISOString().slice(0, 10);
+
+function readPreviousAddedAt(file) {
+  let previous;
+  try {
+    previous = JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return null;
+  }
+  const known = new Map();
+  for (const section of previous.sections ?? []) {
+    for (const group of section.groups ?? []) {
+      for (const e of group.endpoints ?? []) {
+        known.set(`${e.method} ${e.path}`, e.addedAt ?? null);
+      }
+    }
+  }
+  return known;
+}
+
+function addedAtFor(verb, path) {
+  if (PREVIOUS_ADDED === null) return null;
+  const key = `${verb} ${path}`;
+  return PREVIOUS_ADDED.has(key) ? PREVIOUS_ADDED.get(key) : TODAY;
+}
+
 function buildConsole(spec, rows) {
   const schemas = spec.components?.schemas ?? {};
   const sections = [];
@@ -757,8 +814,18 @@ function buildConsole(spec, rows) {
             example: exampleFor(p.schema ?? {}, schemas) ?? '',
             description: (p.description ?? '').replace(/\s+/g, ' ').trim(),
           })),
+        // Request headers the route declares (@ApiHeader), e.g. the
+        // Idempotency-Key a POS sale or a checkout must carry.
+        headers: (op.parameters ?? [])
+          .filter((p) => p.in === 'header')
+          .map((p) => ({
+            name: p.name,
+            required: p.required === true,
+            description: (p.description ?? '').replace(/\s+/g, ' ').trim(),
+          })),
         responses: Object.keys(op.responses ?? {}).sort(),
         body,
+        addedAt: addedAtFor(verb, path),
       });
     }
 
@@ -806,6 +873,7 @@ writeFileSync(
 writeFileSync(join(DOCS, 'API.md'), buildMarkdown(spec, rows, publicCount, total));
 
 const CONSOLE_DATA = join(ROOT, 'apps', 'web', 'public', 'api-console.json');
+PREVIOUS_ADDED = readPreviousAddedAt(CONSOLE_DATA);
 writeFileSync(CONSOLE_DATA, `${JSON.stringify(buildConsole(spec, rows), null, 2)}\n`);
 
 /**

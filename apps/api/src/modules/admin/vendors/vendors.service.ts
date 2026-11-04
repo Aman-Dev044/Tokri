@@ -14,7 +14,12 @@ import {
 import { FAILED_STATUSES } from '../../../common/constants/order-status.enum';
 import { JwtUser } from '../../../common/decorators/current-user.decorator';
 import { Paginated, paginate } from '../../../common/dto/paginated';
-import { UserStatus } from '../../../common/constants/roles.enum';
+import { Role, UserStatus } from '../../../common/constants/roles.enum';
+import { User, UserDocument } from '../../../database/schemas/user.schema';
+import {
+  StaffRow,
+  toStaffRow,
+} from '../../vendor/staff/staff.service';
 import { UsersService } from '../../users/users.service';
 import { AuditService } from '../audit/audit.service';
 import { escapeRegex } from '../common/dto';
@@ -107,6 +112,7 @@ export class AdminVendorsService {
 
   constructor(
     @InjectModel(Vendor.name) private readonly vendors: Model<VendorDocument>,
+    @InjectModel(User.name) private readonly users: Model<UserDocument>,
     private readonly usersService: UsersService,
     private readonly audit: AuditService,
   ) {}
@@ -260,6 +266,25 @@ export class AdminVendorsService {
           }
         : null,
     };
+  }
+
+  /**
+   * The store's employees, read-only. Platform staff see who can act for
+   * a store; managing them is the store's own business (`/vendor/staff`).
+   * Same row shape as the vendor endpoint, so the two screens agree.
+   */
+  async staff(id: string): Promise<StaffRow[]> {
+    const vendor = await this.mustFindLean(id);
+    const rows = await this.users
+      .find({ vendorId: vendor._id, role: Role.STAFF })
+      .select(
+        'name phone email role status vendorId staffProfile lastLoginAt createdAt updatedAt',
+      )
+      .sort({ createdAt: -1, _id: 1 })
+      .limit(200)
+      .lean<Parameters<typeof toStaffRow>[0][]>()
+      .exec();
+    return rows.map(toStaffRow);
   }
 
   // ────────────────────────────────────────────────────────────────────

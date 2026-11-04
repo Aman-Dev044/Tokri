@@ -40,6 +40,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import { formatDate } from '../format';
 import { NEXT_STATUS, REJECT_REASONS, STATUS_AISLE, previewFulfilment } from '@/lib/vendor/orders';
 import type {
@@ -60,9 +61,13 @@ const REPICKABLE = new Set(['ACCEPTED', 'PACKING']);
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const path = `/vendor/orders/${orderId}`;
   const order = useVendorQuery<VendorOrderDetail>(path, undefined, { refreshMs: 20_000 });
-  const partners = useVendorQuery<Paged<VendorPartner>>('/vendor/delivery-partners', {
-    limit: 100,
-  });
+  // UX only — the API checks orders.update on every write regardless.
+  const canUpdate = useVendorSession().can('orders.update');
+  const partners = useVendorQuery<Paged<VendorPartner>>(
+    '/vendor/delivery-partners',
+    { limit: 100 },
+    { enabled: canUpdate },
+  );
 
   /* ---- which lines are still going in the bag ---- */
   const [kept, setKept] = useState<ReadonlySet<string> | null>(null);
@@ -229,7 +234,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
       actions={
         <div className="ven-row">
           <OrderStatusPill status={data.status} />
-          {data.status === 'PLACED' ? (
+          {canUpdate && data.status === 'PLACED' ? (
             <>
               <Btn
                 variant="primary"
@@ -253,7 +258,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               </Btn>
             </>
           ) : null}
-          {nextStatus || (canRepick && changed) ? (
+          {canUpdate && (nextStatus || (canRepick && changed)) ? (
             <Btn variant="primary" onClick={() => setDialog('confirm')}>
               {!nextStatus
                 ? 'Confirm the short order'
@@ -262,7 +267,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                   : 'Confirm items & mark ready'}
             </Btn>
           ) : null}
-          {data.status === 'READY_FOR_PICKUP' ? (
+          {canUpdate && data.status === 'READY_FOR_PICKUP' ? (
             <Btn onClick={() => setDialog('assign')}>Assign rider</Btn>
           ) : null}
         </div>

@@ -5,8 +5,10 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../../database/schemas/user.schema';
-import { UserStatus } from '../../../common/constants/roles.enum';
+import { Vendor, VendorDocument, VendorStatus } from '../../../database/schemas/vendor.schema';
+import { Role, UserStatus } from '../../../common/constants/roles.enum';
 import { JwtUser } from '../../../common/decorators/current-user.decorator';
+import { permissionsFor } from '../../../common/constants/permissions';
 
 interface AccessTokenPayload {
   sub: string;
@@ -20,6 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     config: ConfigService,
     @InjectModel(User.name) private readonly users: Model<UserDocument>,
+    @InjectModel(Vendor.name) private readonly vendors: Model<VendorDocument>,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -36,12 +39,24 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(payload: AccessTokenPayload): Promise<JwtUser> {
     const user = await this.users
       .findById(payload.sub)
-      .select('role status vendorId')
+      .select('name role status vendorId staffProfile')
       .lean();
 
     if (!user) throw new UnauthorizedException('Account no longer exists');
     if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException(`Account is ${user.status}`);
+    }
+
+    // Staff work FOR a store, so they stop when it does. Suspending a store
+    // locks its owner's login; without this its employees carried on
+    // billing and packing under a store the platform had shut.
+    if (user.role === Role.STAFF) {
+      const store = user.vendorId
+        ? await this.vendors.findById(user.vendorId).select('status').lean()
+        : null;
+      if (!store || store.status !== VendorStatus.APPROVED) {
+        throw new UnauthorizedException('This store is not active');
+      }
     }
 
     return {
@@ -51,6 +66,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       role: user.role,
       vendorId: user.vendorId?.toString(),
       tokenId: payload.jti,
+      // Same query, same reasoning as `role`: a permission revoked a
+      // second ago is gone on this request. The token never carries them.
+      permissions: permissionsFor(user.role, user.staffProfile),
+      staffRole: user.staffProfile?.staffRole ?? null,
+      name: user.name,
     };
   }
 }

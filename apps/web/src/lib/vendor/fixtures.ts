@@ -186,6 +186,7 @@ export function productsFixture(): VendorProduct[] {
       unit: entry.unit,
       unitValue: entry.unitValue,
       sku: `SKU-${String(1000 + i * 7)}`,
+      barcode: null,
       mrp: entry.mrp,
       price: entry.price,
       discountPct: Math.round(((entry.mrp - entry.price) / entry.mrp) * 100),

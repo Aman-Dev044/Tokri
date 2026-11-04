@@ -56,7 +56,7 @@ const REFRESH_COOKIE: string = requiredCookieName();
  * cannot verify. The API enforces them for real.
  */
 const PROTECTED_PREFIXES: ReadonlyArray<{ prefix: string; roles: readonly string[] }> = [
-  { prefix: '/vendor', roles: ['vendor'] },
+  { prefix: '/vendor', roles: ['vendor', 'staff'] },
   { prefix: '/admin', roles: ['admin'] },
   { prefix: '/delivery', roles: ['delivery'] },
   { prefix: '/cart', roles: ['customer'] },

@@ -40,6 +40,7 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { APP_NAME } from '@/config/brand';
 import { useVendorMutation, useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import type {
   Paged,
   PartnerDraft,
@@ -90,11 +91,14 @@ export function PartnersView() {
     { limit: 100 },
     { refreshMs: 30_000 },
   );
+  const session = useVendorSession();
+  const canAssign = session.can('orders.update') && session.can('orders.view');
   // `status` is a single enum value, which is all this query needs.
-  const ready = useVendorQuery<Paged<VendorOrder>>('/vendor/orders', {
-    status: 'READY_FOR_PICKUP',
-    limit: 20,
-  });
+  const ready = useVendorQuery<Paged<VendorOrder>>(
+    '/vendor/orders',
+    { status: 'READY_FOR_PICKUP', limit: 20 },
+    { enabled: canAssign },
+  );
 
   const create = useVendorMutation<PartnerDraft, VendorPartner>(
     '/vendor/delivery-partners',
@@ -191,6 +195,7 @@ export function PartnersView() {
           <Btn
             size="sm"
             disabled={
+              !canAssign ||
               row.status !== 'active' ||
               !row.isOnline ||
               !row.isAvailable ||

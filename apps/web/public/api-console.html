@@ -209,6 +209,18 @@
       .ep[aria-current="true"] { background: color-mix(in oklab, var(--accent) 14%, var(--surface)); color: var(--ink); }
       .ep .p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+      /* NEW: an endpoint added in the last NEW_DAYS days, and the group and
+         role that contain one — so a fresh addition is easy to find. */
+      .new {
+        flex: none; display: inline-block; margin-left: 6px;
+        padding: 1px 6px; border-radius: 999px;
+        background: #d9480f; color: #fff7ed;
+        font-family: var(--sans); font-size: 9.5px; font-weight: 800; letter-spacing: 0.06em;
+        vertical-align: middle;
+      }
+      .ep .new { margin-left: auto; }
+      .ep.is-new { background: color-mix(in oklab, #d9480f 9%, transparent); }
+
       .verb { font-family: var(--mono); font-size: 10.5px; font-weight: 700; flex: 0 0 46px; }
       .verb.GET { color: var(--info); }
       .verb.POST { color: var(--good); }
@@ -604,9 +616,9 @@
             note: 'Day-to-day operations: approvals, dispatch, issues, orders, catalogue, coupons.' },
           { key: 'VENDOR', label: 'Vendor', tokenVar: 'vendorToken', sections: ['VENDOR'],
             signup: ['/auth/apply/vendor'],
-            order: ['profile', 'store', 'categories', 'products', 'inventory', 'dashboard', 'orders',
-              'delivery-partners', 'earnings', 'settlements', 'reports'],
-            note: 'A store: apply, set up the shop, list products, keep stock, run orders, see earnings.' },
+            order: ['me', 'profile', 'store', 'staff', 'categories', 'products', 'inventory', 'dashboard', 'orders',
+              'pos', 'delivery-partners', 'earnings', 'settlements', 'reports'],
+            note: 'A store: apply, set up the shop, hire staff, list products, keep stock, run orders, bill at the counter, see earnings. Store staff use these same APIs with their own login, limited to their permissions.' },
           { key: 'DELIVERY', label: 'Rider', tokenVar: 'riderToken', sections: ['DELIVERY'],
             signup: ['/auth/apply/rider'],
             order: ['me', 'profile', 'availability', 'offers', 'orders', 'location', 'wallet', 'earnings', 'history'],
@@ -623,10 +635,21 @@
 
         const titleCase = (name) => name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
         const GROUP_LABEL = { ops: 'Operations', 'audit-logs': 'Audit log', me: 'My profile',
-          'delivery-partners': 'Delivery partners', browse: 'Browse (no login needed)' };
+          'delivery-partners': 'Delivery partners', browse: 'Browse (no login needed)',
+          pos: 'POS billing (counter)', staff: 'Store staff' };
 
         // Step by step inside a group: list → create → read one →
         // change → delete.
+        // An endpoint's `addedAt` comes from the generator: the day it first
+        // appeared in this console. Recent ones are badged NEW.
+        const NEW_DAYS = 30;
+        const isNew = (e) => {
+          if (!e.addedAt) return false;
+          const age = (Date.now() - Date.parse(e.addedAt + 'T00:00:00Z')) / 86400000;
+          return age >= 0 && age <= NEW_DAYS;
+        };
+        const newBadge = (title) => el('span', { class: 'new', title, text: 'NEW' });
+
         const stepRank = (e) => {
           const hasParam = e.path.includes('{');
           if (e.method === 'GET' && !hasParam) return 0;
@@ -726,16 +749,18 @@
               if (hits.length === 0) return null;
               const gid = menu.key + '/' + g.id;
               const node = el('details', { class: 'grp', open: searching || state.open.has(gid) },
-                el('summary', {}, (step ? step + '. ' : '') + g.label, ' ', el('span', { class: 'count', text: '(' + hits.length + ')' })),
+                el('summary', {}, (step ? step + '. ' : '') + g.label, ' ', el('span', { class: 'count', text: '(' + hits.length + ')' }),
+                  hits.some((x) => isNew(x.ep)) ? newBadge('Has APIs added in the last ' + NEW_DAYS + ' days') : null),
                 ...hits.map((x) =>
                   el('button', {
-                    class: 'ep',
+                    class: isNew(x.ep) ? 'ep is-new' : 'ep',
                     'aria-current': String(state.currentKey === x.key),
                     title: x.ep.summary || '',
                     onclick: () => { state.current = x; state.currentKey = x.key; state.lastResponse = null; renderTree(); renderDetail(x); },
                   },
                     el('span', { class: 'verb ' + x.ep.method, text: x.ep.method }),
                     el('span', { class: 'p', text: x.ep.path }),
+                    isNew(x.ep) ? newBadge('Added ' + x.ep.addedAt) : null,
                   )),
               );
               node.addEventListener('toggle', () => { if (!searching) toggleOpen(gid, node.open); });
@@ -751,6 +776,8 @@
             const summary = el('summary', {},
               el('span', { class: 'dot', 'data-on': String(signedIn) }),
               menu.label,
+              [...groups, ...shared].some((g) => g.entries.some((x) => isNew(x.ep)))
+                ? newBadge('Has APIs added in the last ' + NEW_DAYS + ' days') : null,
               el('span', { class: 'who', text: login ? (signedIn ? 'signed in' : login.identifier) : 'no token' }),
             );
             const roleNode = el('details', { class: 'role', open: searching || state.open.has(menu.key) },
@@ -786,6 +813,7 @@
 
           const pathInputs = new Map();
           const queryInputs = new Map();
+          const headerInputs = new Map();
 
           const badges = el('div', { class: 'badges' },
             endpoint.public
@@ -805,6 +833,7 @@
             el('h1', { class: 'route' },
               el('span', { class: 'verb ' + endpoint.method, text: endpoint.method }),
               el('span', { text: endpoint.path }),
+              isNew(endpoint) ? el('span', { class: 'new', style: 'font-size:11px;padding:2px 8px', text: 'NEW · added ' + endpoint.addedAt }) : null,
             ),
             endpoint.summary ? el('p', { class: 'summary', text: endpoint.summary }) : null,
             endpoint.description ? el('p', { class: 'desc', text: endpoint.description }) : null,
@@ -856,6 +885,39 @@
                   }),
                 ),
               ),
+            ));
+          }
+
+          /* request headers the route declares */
+          const declaredHeaders = endpoint.headers || [];
+          if (declaredHeaders.length > 0) {
+            const freshKey = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+            parts.push(el('fieldset', {},
+              el('legend', { text: 'Headers' }),
+              el('table', {},
+                el('tbody', {},
+                  ...declaredHeaders.map((h) => {
+                    const input = el('input', { type: 'text', spellcheck: 'false' });
+                    const idem = /idempotency/i.test(h.name);
+                    // A fresh key per request: re-sending the SAME key is how
+                    // you check the route is replay-safe (same response, no
+                    // second sale), so it stays editable.
+                    if (idem) input.value = freshKey();
+                    headerInputs.set(h.name, input);
+                    return el('tr', {},
+                      el('td', { class: 'k' }, h.name, h.required ? el('span', { class: 'req', text: ' *' }) : ''),
+                      el('td', {}, input),
+                      el('td', { class: 'd' },
+                        idem
+                          ? el('button', { type: 'button', text: 'New key', onclick: () => { input.value = freshKey(); } })
+                          : (h.description || '')),
+                    );
+                  }),
+                ),
+              ),
+              declaredHeaders.some((h) => /idempotency/i.test(h.name))
+                ? el('p', { class: 'hint' }, 'Send twice with the same key and you get the same result back — that is the double-click protection. Press "New key" for a genuinely new request.')
+                : null,
             ));
           }
 
@@ -988,6 +1050,9 @@
             const url = state.baseUrl + path + (qs ? '?' + qs : '');
 
             const headers = {};
+            for (const [name, input] of headerInputs) {
+              if (input.value.trim() !== '') headers[name] = input.value.trim();
+            }
             if (tokenVar && state.tokens[tokenVar]) {
               headers.Authorization = 'Bearer ' + state.tokens[tokenVar];
             }

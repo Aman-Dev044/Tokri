@@ -1,13 +1,24 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Role } from '../constants/roles.enum';
+import type { Permission, StaffRole } from '../constants/permissions';
 
 export interface JwtUser {
   /** User id (JWT `sub`). */
   sub: string;
   role: Role;
-  /** Present for VENDOR and DELIVERY users. Drives tenant scoping. */
+  /** Present for VENDOR, STAFF and DELIVERY users. Drives tenant scoping. */
   vendorId?: string;
   tokenId: string;
+  /**
+   * What this person may do inside their store, resolved from the
+   * DATABASE on this request (never from the token). Every permission for
+   * the owner, the profile's set for STAFF, empty for everyone else.
+   */
+  permissions?: readonly Permission[];
+  /** STAFF only — the job title the permissions came from. */
+  staffRole?: StaffRole | null;
+  /** STAFF only — for the cashier name on an invoice. */
+  name?: string;
 }
 
 /**

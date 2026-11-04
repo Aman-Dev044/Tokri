@@ -28,7 +28,8 @@ import { api, setAccessToken } from '@/lib/api-client';
 
 // `super_admin` is a real role the API returns — it is NOT a flag on `admin`.
 // Leaving it out made every super admin fall through role checks as "unknown".
-export type Role = 'super_admin' | 'admin' | 'vendor' | 'customer' | 'delivery';
+// `staff` is a store employee — same panel as the owner, narrower permissions.
+export type Role = 'super_admin' | 'admin' | 'vendor' | 'staff' | 'customer' | 'delivery';
 
 /**
  * Where each role belongs after signing in.
@@ -40,6 +41,9 @@ export const HOME_FOR_ROLE: Record<Role, string> = {
   super_admin: '/admin',
   admin: '/admin',
   vendor: '/vendor',
+  // Store staff work in the owner's panel; it draws only what their
+  // permissions allow (and the API enforces the same on every request).
+  staff: '/vendor',
   delivery: '/delivery',
   // `/shop`, not `/` and no longer `/stores`.
   //

@@ -264,6 +264,25 @@ export interface VendorOrderRow {
  * `ProductRow` (`apps/api/src/modules/admin/catalog/catalog.service.ts`).
  * `stock` is the joined inventory value; `mrp` and `price` are INTEGER PAISE.
  */
+/**
+ * `StaffRow` — `GET /admin/vendors/:id/staff` returns a bare ARRAY of these.
+ * Read-only on the admin side; the store manages its own staff.
+ */
+export interface VendorStaffRow {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  staffRole: 'MANAGER' | 'BILLER' | 'ORDERS' | 'INVENTORY' | 'SUPERVISOR' | 'CUSTOM';
+  /** The effective permissions the API enforces. */
+  permissions: string[];
+  shiftLabel: string | null;
+  status: 'active' | 'suspended' | 'pending';
+  lastLoginAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface VendorProductRow {
   id: string;
   vendorId: string;

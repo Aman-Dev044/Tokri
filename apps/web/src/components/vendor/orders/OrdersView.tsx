@@ -40,6 +40,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useFreshness, useVendorMutation, useVendorQuery } from '@/hooks';
+import { useVendorSession } from '@/lib/vendor/session';
 import {
   CLOSED_STATUSES,
   LANES,
@@ -108,10 +109,16 @@ export function OrdersView() {
     { refreshMs: ORDER_POLL_MS },
   );
 
+  // UX only — the API checks orders.update on every write regardless.
+  const canUpdate = useVendorSession().can('orders.update');
+
   // `/vendor/delivery-partners` is PAGINATED — `{ data, meta }`, not an array.
-  const partners = useVendorQuery<Paged<VendorPartner>>('/vendor/delivery-partners', {
-    limit: 100,
-  });
+  // Only fetched for someone who can actually assign a rider.
+  const partners = useVendorQuery<Paged<VendorPartner>>(
+    '/vendor/delivery-partners',
+    { limit: 100 },
+    { enabled: canUpdate },
+  );
 
   const freshness = useFreshness(board.marker, ORDER_POLL_MS * 2.5);
 
@@ -267,6 +274,14 @@ export function OrdersView() {
             now={now}
             freshIds={freshIds}
             renderActions={(order) => {
+              if (!canUpdate) {
+                return (
+                  <Link className="ven-btn" data-variant="plain" data-size="sm" href={`/vendor/orders/${order.id}`}>
+                    Open
+                  </Link>
+                );
+              }
+
               if (order.status === 'PLACED') {
                 return (
                   <>

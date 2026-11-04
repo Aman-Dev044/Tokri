@@ -201,7 +201,7 @@ export type PaymentStatus =
   | 'refunded'
   | 'partially_refunded';
 
-export type ApiRole = 'super_admin' | 'admin' | 'vendor' | 'customer' | 'delivery';
+export type ApiRole = 'super_admin' | 'admin' | 'vendor' | 'staff' | 'customer' | 'delivery';
 
 export interface OrderItem {
   productId: string;
@@ -357,6 +357,8 @@ export interface VendorProduct {
   unit: ProductUnit;
   unitValue: number;
   sku: string;
+  /** The pack's scannable code, or `null`. Unique per store when set. */
+  barcode: string | null;
   /** INTEGER PAISE. */
   mrp: number;
   /** INTEGER PAISE. */
@@ -386,6 +388,8 @@ export interface ProductCreate {
   /** Integer ≥ 1, in `unit`. */
   unitValue: number;
   sku: string;
+  /** Omitted when blank on create; `null` on update clears it. */
+  barcode?: string | null;
   /** INTEGER PAISE. */
   mrp: number;
   /** INTEGER PAISE, must not exceed `mrp`. */
@@ -407,6 +411,8 @@ export interface ProductDraft {
   name: string;
   description: string;
   sku: string;
+  /** '' means "no barcode". */
+  barcode: string;
   brand: string;
   categoryId: string;
   images: string[];
@@ -691,4 +697,213 @@ export interface PresignedUpload {
   publicUrl: string;
   expiresAt: string;
   maxBytes: number;
+}
+
+/* ================================================================== */
+/* Staff and permissions — `modules/vendor/staff` + permissions.ts      */
+/* ================================================================== */
+
+/** The closed catalogue in `common/constants/permissions.ts`. */
+export type StorePermission =
+  | 'orders.view'
+  | 'orders.update'
+  | 'products.view'
+  | 'products.manage'
+  | 'inventory.adjust'
+  | 'billing.view'
+  | 'billing.create'
+  | 'billing.void'
+  | 'staff.manage'
+  | 'riders.manage'
+  | 'earnings.view'
+  | 'store.manage';
+
+export type StaffRole = 'MANAGER' | 'BILLER' | 'ORDERS' | 'INVENTORY' | 'SUPERVISOR' | 'CUSTOM';
+
+/** `StoreMe` — `GET /vendor/me`. */
+export interface VendorMe {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  /** 'vendor' for the owner, 'staff' for an employee. */
+  role: string;
+  isOwner: boolean;
+  staffRole: StaffRole | null;
+  shiftLabel: string | null;
+  permissions: StorePermission[];
+  store: {
+    id: string;
+    name: string;
+    slug: string;
+    isOpen: boolean;
+    status: VendorStatus;
+  };
+}
+
+/** `StaffRow` — `GET /vendor/staff` (paginated) and every staff write. */
+export interface StaffMember {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  staffRole: StaffRole;
+  /** The EFFECTIVE set the guard enforces. */
+  permissions: StorePermission[];
+  shiftLabel: string | null;
+  status: 'active' | 'suspended' | 'pending';
+  lastLoginAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** `StaffCatalogue` — `GET /vendor/staff/roles`. */
+export interface StaffCatalogue {
+  permissions: StorePermission[];
+  presets: Record<Exclude<StaffRole, 'CUSTOM'>, StorePermission[]>;
+  /** What the signed-in person may grant — the checklist's ceiling. */
+  grantable: StorePermission[];
+}
+
+/** `CreateStaffDto`. `permissions` only for CUSTOM. */
+export interface StaffCreate {
+  name: string;
+  phone: string;
+  email?: string;
+  password: string;
+  staffRole: StaffRole;
+  permissions?: StorePermission[];
+  shiftLabel?: string;
+}
+
+/** `UpdateStaffDto`. */
+export interface StaffUpdate {
+  name?: string;
+  email?: string;
+  staffRole?: StaffRole;
+  permissions?: StorePermission[];
+  shiftLabel?: string | null;
+}
+
+/** `UpdateStaffStatusDto`. */
+export interface StaffStatusUpdate {
+  status: 'active' | 'suspended';
+  reason?: string;
+}
+
+/* ================================================================== */
+/* Counter billing — `modules/vendor/pos`                               */
+/* ================================================================== */
+
+export type PosPaymentMode = 'cash' | 'upi' | 'card';
+export type PosSaleStatus = 'completed' | 'voided';
+
+/** `PosProduct`. Amounts INTEGER PAISE. */
+export interface PosProduct {
+  id: string;
+  name: string;
+  brand: string | null;
+  sku: string;
+  barcode: string | null;
+  unit: ProductUnit;
+  unitValue: number;
+  unitLabel: string;
+  price: number;
+  mrp: number;
+  /** Whole percent. */
+  gstRate: number;
+  available: number;
+  image: string | null;
+}
+
+/** `PosProductSearch` — `GET /vendor/pos/products?q=`. */
+export interface PosProductSearch {
+  query: string;
+  barcodeMatch: PosProduct | null;
+  items: PosProduct[];
+}
+
+/** `CreatePosSaleDto`. No prices — the server reads them from the product. */
+export interface PosSaleCreate {
+  items: { productId: string; qty: number }[];
+  paymentMode: PosPaymentMode;
+  cashTenderedPaise?: number;
+  customerPhone?: string;
+  customerName?: string;
+  discountPaise?: number;
+}
+
+export interface PosSaleLine {
+  productId: string;
+  name: string;
+  sku: string;
+  barcode: string | null;
+  unitLabel: string;
+  qty: number;
+  unitPrice: number;
+  mrp: number;
+  gstRate: number;
+  gst: number;
+  lineTotal: number;
+}
+
+/** `PosSaleDetail` — the invoice. Every amount INTEGER PAISE. */
+export interface PosSaleDetail {
+  id: string;
+  invoiceNo: string;
+  financialYear: string;
+  status: PosSaleStatus;
+  createdAt: string | null;
+  store: {
+    id: string;
+    name: string;
+    address: {
+      line1: string;
+      line2: string | null;
+      city: string;
+      state: string;
+      pincode: string;
+    };
+  };
+  cashier: { id: string; name: string; role: string };
+  items: PosSaleLine[];
+  subtotal: number;
+  discount: number;
+  taxableValue: number;
+  taxes: number;
+  grandTotal: number;
+  paymentMode: PosPaymentMode;
+  cashTendered: number | null;
+  change: number | null;
+  customer: { phone: string | null; name: string | null };
+  void: { reason: string; at: string | null; byName: string | null } | null;
+}
+
+/** `PosSaleRow`. */
+export interface PosSaleRow {
+  id: string;
+  invoiceNo: string;
+  status: PosSaleStatus;
+  createdAt: string | null;
+  itemCount: number;
+  grandTotal: number;
+  paymentMode: PosPaymentMode;
+  customerPhone: string | null;
+  customerName: string | null;
+  cashierName: string;
+}
+
+export interface PosModeTotal {
+  count: number;
+  total: number;
+}
+
+/** `PosSalesPage` — the paged list plus today's completed totals (IST day). */
+export interface PosSalesPage extends Paged<PosSaleRow> {
+  today: {
+    from: string;
+    count: number;
+    total: number;
+    byMode: Record<PosPaymentMode, PosModeTotal>;
+  };
 }

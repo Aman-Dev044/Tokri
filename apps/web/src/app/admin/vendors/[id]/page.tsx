@@ -7,6 +7,7 @@
  *   GET /admin/vendors/:id           -> VendorDetail   (the row + `owner`)
  *   GET /admin/vendors/:id/orders    -> Paginated<VendorOrderRow>
  *   GET /admin/vendors/:id/products  -> Paginated<VendorProductRow>
+ *   GET /admin/vendors/:id/staff     -> VendorStaffRow[]   (read-only)
  *
  * This page was first written against one fixture that bundled all three —
  * plus an `earnings` block with commission, refunds and net payable that no
@@ -39,6 +40,7 @@ import type {
   VendorDetail,
   VendorOrderRow,
   VendorProductRow,
+  VendorStaffRow,
 } from '@/lib/admin/types';
 import {
   AdminPage,
@@ -99,6 +101,56 @@ export default function AdminVendorDetailPage() {
     `/admin/vendors/${id}/products`,
     { page: productPage, limit: PRODUCTS_PER_PAGE },
     { enabled: id !== '' },
+  );
+
+  // The store's employees. Read-only here: staff are the owner's to manage.
+  const staff = useAdminQuery<VendorStaffRow[]>(`/admin/vendors/${id}/staff`, undefined, {
+    enabled: id !== '',
+  });
+
+  const staffColumns: Column<VendorStaffRow>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: 'Name',
+        render: (row) => (
+          <span style={{ minWidth: 0 }}>
+            {row.name}
+            <span className="adm-table__sub">
+              {row.phone}
+              {row.email ? ` · ${row.email}` : ''}
+            </span>
+          </span>
+        ),
+      },
+      {
+        key: 'staffRole',
+        header: 'Role',
+        render: (row) => (
+          <span>
+            {row.staffRole.charAt(0) + row.staffRole.slice(1).toLowerCase()}
+            {row.shiftLabel ? <span className="adm-table__sub">{row.shiftLabel}</span> : null}
+          </span>
+        ),
+      },
+      {
+        key: 'permissions',
+        header: 'Permissions',
+        render: (row) => <span className="adm-table__sub">{row.permissions.join(', ')}</span>,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        render: (row) => <StatusPill status={row.status} kind="user" />,
+      },
+      {
+        key: 'lastLoginAt',
+        header: 'Last sign-in',
+        render: (row) =>
+          row.lastLoginAt ? <RelativeTime value={row.lastLoginAt} live={false} /> : '—',
+      },
+    ],
+    [],
   );
 
   const [suspendOpen, setSuspendOpen] = useState(false);
@@ -461,6 +513,27 @@ export default function AdminVendorDetailPage() {
               <EmptyState title="No orders yet" body="This vendor has not taken an order." />
             ) : null}
           </div>
+        </div>
+      </AdminSection>
+
+      {/* ---- staff (read-only) ---- */}
+      <AdminSection
+        title="Staff"
+        description="Accounts the owner has created to run this store, and what each may do. Managed by the store, not from here."
+      >
+        <div className="adm-panel">
+          {staff.error ? (
+            <EmptyState title="Staff could not be loaded" body={staff.error.friendlyMessage} />
+          ) : (
+            <DataTable
+              columns={staffColumns}
+              rows={staff.data ?? []}
+              loading={staff.loading && !staff.hasLoadedOnce}
+              rowKey={(row) => row.id}
+              skeletonRows={3}
+              empty={<EmptyState title="No staff" body="Only the owner signs in to this store." />}
+            />
+          )}
         </div>
       </AdminSection>
 

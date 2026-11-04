@@ -8,6 +8,10 @@ import {
 } from '@nestjs/swagger';
 
 import { Roles } from '../../../common/decorators/roles.decorator';
+import {
+  RequirePermission,
+} from '../../../common/decorators/require-permission.decorator';
+import { Permission } from '../../../common/constants/permissions';
 import { Role } from '../../../common/constants/roles.enum';
 import {
   CurrentUser,
@@ -40,11 +44,12 @@ import {
 @ApiBearerAuth()
 @ApiForbiddenResponse({ description: 'Not a vendor token.' })
 @Controller('vendor')
-@Roles(Role.VENDOR)
+@Roles(Role.VENDOR, Role.STAFF)
 @UseInterceptors(AuditInterceptor)
 export class VendorStoreController {
   constructor(private readonly store: VendorStoreService) {}
 
+  @RequirePermission(Permission.STORE_MANAGE)
   @Get('profile')
   @ApiOperation({
     summary: 'The caller’s own store profile',
@@ -56,6 +61,7 @@ export class VendorStoreController {
     return this.store.getProfile(scope);
   }
 
+  @RequirePermission(Permission.STORE_MANAGE)
   @Put('profile')
   @ApiOperation({
     summary: 'Update the store profile',
@@ -73,6 +79,7 @@ export class VendorStoreController {
     return this.store.updateProfile(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.STORE_MANAGE)
   @Patch('store/status')
   @ApiOperation({
     summary: 'Open or close the store',
@@ -89,6 +96,7 @@ export class VendorStoreController {
     return this.store.setOpen(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.STORE_MANAGE)
   @Put('store/hours')
   @ApiOperation({
     summary: 'Replace the weekly opening hours',
@@ -104,6 +112,7 @@ export class VendorStoreController {
     return this.store.setHours(scope, dto, actor);
   }
 
+  @RequirePermission(Permission.ORDERS_VIEW)
   @Get('dashboard')
   @ApiOperation({
     summary: 'Today’s operating picture',

@@ -1,8 +1,45 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { Role, UserStatus } from '../../common/constants/roles.enum';
+import { StaffRole } from '../../common/constants/permissions';
 
 export type UserDocument = HydratedDocument<User>;
+
+/**
+ * What a STAFF account may do inside its store. `null` on every other role.
+ *
+ * ── Why it lives ON the user and not in a StoreStaff collection ─────────
+ * `JwtStrategy` already loads the user on EVERY request to re-check
+ * `status` and `role`. Putting the permissions in the same document means
+ * the guard reads them in that same query — revoking one is effective on
+ * the next request with zero extra round trips, and there is no second
+ * document that can disagree with the first. Creating or deleting a staff
+ * member is one insert or one delete, so no transaction is needed to keep
+ * a login and its profile in step, and the existing unique phone/email
+ * indexes already govern who can sign in.
+ */
+@Schema({ _id: false })
+export class StaffProfile {
+  @Prop({ type: String, enum: StaffRole, required: true })
+  staffRole: StaffRole;
+
+  /**
+   * The resolved list at the time of the last write. Authoritative only
+   * for CUSTOM — a preset resolves from `permissions.ts` so a preset
+   * change reaches everybody on it. Unknown strings are dropped on read.
+   */
+  @Prop({ type: [String], default: [] })
+  permissions: string[];
+
+  /** Display only, e.g. "Morning counter". Never an authorization input. */
+  @Prop({ type: String, default: null, trim: true })
+  shiftLabel?: string | null;
+
+  /** Who created the account — the owner or a manager. */
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  createdBy?: Types.ObjectId | null;
+}
+export const StaffProfileSchema = SchemaFactory.createForClass(StaffProfile);
 
 @Schema({ timestamps: true, collection: 'users' })
 export class User {
@@ -34,9 +71,13 @@ export class User {
   @Prop({ type: String, enum: UserStatus, default: UserStatus.ACTIVE })
   status: UserStatus;
 
-  /** Set for VENDOR and DELIVERY users. Drives tenant scoping. */
+  /** Set for VENDOR, STAFF and DELIVERY users. Drives tenant scoping. */
   @Prop({ type: Types.ObjectId, ref: 'Vendor', default: null })
   vendorId?: Types.ObjectId | null;
+
+  /** Present only on Role.STAFF. See `StaffProfile` above. */
+  @Prop({ type: StaffProfileSchema, default: null })
+  staffProfile?: StaffProfile | null;
 
   /**
    * Refresh-token family id. Rotation issues a new token in the same
