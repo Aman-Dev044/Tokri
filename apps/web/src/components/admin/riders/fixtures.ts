@@ -23,6 +23,8 @@ import type { OrderStatus } from '@/lib/admin/types';
 export type VehicleType = 'bicycle' | 'scooter' | 'motorcycle' | 'ev_scooter';
 export type RiderStatus = 'active' | 'suspended' | 'pending';
 export type KycStatus = 'not_started' | 'submitted' | 'verified' | 'rejected';
+/** The API's `InsuranceStanding` — computed on every read, never stored. */
+export type InsuranceStanding = 'not_provided' | 'valid' | 'expiring_soon' | 'expired';
 
 /** `GET /admin/delivery-partners` — one row. */
 export interface RiderRow {
@@ -48,6 +50,8 @@ export interface RiderRow {
   /** the last location ping — the screen's "last seen" */
   locationAt: string | null;
   createdAt: string | null;
+  /** The list's insurance flag. No vehicle NUMBER is ever on a list row. */
+  vehicleInsuranceStatus: InsuranceStanding;
 }
 
 export interface RiderDeliveryRow {
@@ -64,7 +68,7 @@ export interface RiderDeliveryRow {
 }
 
 export interface RiderKycDocument {
-  kind: 'aadhaar' | 'pan' | 'driving_licence' | 'selfie';
+  kind: 'aadhaar' | 'pan' | 'driving_licence' | 'selfie' | 'vehicle_rc' | 'vehicle_insurance';
   url: string;
   uploadedAt: string;
 }
@@ -82,6 +86,15 @@ export interface RiderKyc {
   aadhaarNumberMasked: string | null;
   panNumberMasked: string | null;
   drivingLicenceNumberMasked: string | null;
+  /** Masked by the same function as PAN — last four only. */
+  vehicleRegistrationNumberMasked: string | null;
+  vehicleRcNumberMasked: string | null;
+  vehicleInsurancePolicyNumberMasked: string | null;
+  /** `YYYY-MM-DD`, the last covered day */
+  vehicleInsuranceExpiresOn: string | null;
+  vehicleInsuranceStatus: InsuranceStanding;
+  /** 0 on the last covered day; negative once expired */
+  vehicleInsuranceDaysLeft: number | null;
   documents: RiderKycDocument[];
   canResubmit: boolean;
   breached: boolean;
@@ -152,6 +165,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 12.9121, lng: 77.6387 },
     locationAt: '2026-09-24T11:58:00+05:30',
     createdAt: '2025-05-12T10:00:00+05:30',
+    vehicleInsuranceStatus: 'valid',
   },
   {
     id: 'rdr_02',
@@ -173,6 +187,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 12.9352, lng: 77.6245 },
     locationAt: '2026-09-24T11:59:00+05:30',
     createdAt: '2025-07-03T09:30:00+05:30',
+    vehicleInsuranceStatus: 'valid',
   },
   {
     id: 'rdr_03',
@@ -194,6 +209,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 18.5204, lng: 73.8567 },
     locationAt: '2026-09-24T02:14:00+05:30',
     createdAt: '2025-02-20T11:15:00+05:30',
+    vehicleInsuranceStatus: 'expiring_soon',
   },
   {
     id: 'rdr_04',
@@ -215,6 +231,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 19.076, lng: 72.8777 },
     locationAt: '2026-09-24T11:57:00+05:30',
     createdAt: '2025-09-01T14:00:00+05:30',
+    vehicleInsuranceStatus: 'valid',
   },
   {
     id: 'rdr_05',
@@ -236,6 +253,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 22.5726, lng: 88.3639 },
     locationAt: '2026-09-24T11:54:00+05:30',
     createdAt: '2026-03-18T08:45:00+05:30',
+    vehicleInsuranceStatus: 'not_provided',
   },
   {
     id: 'rdr_06',
@@ -257,6 +275,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: null,
     locationAt: null,
     createdAt: '2026-06-02T10:20:00+05:30',
+    vehicleInsuranceStatus: 'expired',
   },
   {
     id: 'rdr_07',
@@ -278,6 +297,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: null,
     locationAt: null,
     createdAt: '2026-09-23T17:08:00+05:30',
+    vehicleInsuranceStatus: 'valid',
   },
   {
     id: 'rdr_08',
@@ -299,6 +319,7 @@ export const RIDERS_FIXTURE: readonly RiderRow[] = [
     location: { lat: 17.4326, lng: 78.4071 },
     locationAt: '2026-09-24T11:59:00+05:30',
     createdAt: '2025-04-11T12:00:00+05:30',
+    vehicleInsuranceStatus: 'valid',
   },
 ];
 
@@ -345,10 +366,20 @@ const DELIVERIES: readonly RiderDeliveryRow[] = [
   },
 ];
 
+/** The vehicle half of the sample KYC, consistent with the row's flag. */
+const SAMPLE_EXPIRY: Readonly<Record<InsuranceStanding, [string | null, number | null]>> = {
+  not_provided: [null, null],
+  valid: ['2027-06-30', 279],
+  expiring_soon: ['2026-10-12', 18],
+  expired: ['2026-09-01', -23],
+};
+
 function kycFixture(row: RiderRow): RiderKyc {
   // A pending account has sent its documents and is waiting on a human;
   // everyone else in the sample was verified long ago.
   const waiting = row.status === 'pending';
+  const insured = row.vehicleInsuranceStatus !== 'not_provided';
+  const [expiresOn, daysLeft] = SAMPLE_EXPIRY[row.vehicleInsuranceStatus];
   return {
     status: waiting ? 'submitted' : 'verified',
     submittedAt: waiting ? '2026-09-23T17:20:00+05:30' : '2025-05-12T10:30:00+05:30',
@@ -360,6 +391,12 @@ function kycFixture(row: RiderRow): RiderKyc {
     aadhaarNumberMasked: 'XXXX XXXX 4821',
     panNumberMasked: 'XXXXXX907K',
     drivingLicenceNumberMasked: 'XXXXXXXXXXX3310',
+    vehicleRegistrationNumberMasked: insured ? 'XXXXXX4417' : null,
+    vehicleRcNumberMasked: insured ? 'XXXXXXXXXXX0218' : null,
+    vehicleInsurancePolicyNumberMasked: insured ? 'XXXXXXXXXXXXXXXX/001' : null,
+    vehicleInsuranceExpiresOn: expiresOn,
+    vehicleInsuranceStatus: row.vehicleInsuranceStatus,
+    vehicleInsuranceDaysLeft: daysLeft,
     documents: [
       {
         kind: 'aadhaar',
@@ -397,6 +434,7 @@ const UNKNOWN_RIDER: RiderRow = {
   location: null,
   locationAt: null,
   createdAt: null,
+  vehicleInsuranceStatus: 'not_provided',
 };
 
 export function riderDetailFixture(id: string): RiderDetail {

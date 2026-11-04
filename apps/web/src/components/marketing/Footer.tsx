@@ -70,6 +70,9 @@ export function Footer() {
                 <li>
                   <Link href="/signup">Create an account</Link>
                 </li>
+                <li>
+                  <Link href="/help">Help &amp; FAQ</Link>
+                </li>
               </ul>
             </div>
           </nav>
@@ -79,7 +82,8 @@ export function Footer() {
 
         <div className="mk-foot__bottom">
           <p className="mk-foot__legal">
-            © {year} {APP_NAME} · Built for Indian grocery · All prices in ₹ INR
+            © {year} {APP_NAME} · Built for Indian grocery · All prices in ₹ INR ·{' '}
+            <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
           </p>
           <p className="mk-foot__strip" aria-hidden="true">
             {AISLES.map((a) => (

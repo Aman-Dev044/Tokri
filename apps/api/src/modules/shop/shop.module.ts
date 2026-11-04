@@ -34,6 +34,10 @@ import {
   OrderCounter,
   OrderCounterSchema,
 } from './schemas/order-counter.schema';
+import {
+  WishlistItem,
+  WishlistItemSchema,
+} from './schemas/wishlist-item.schema';
 
 import { IdempotencyModule } from '../../common/idempotency.module';
 import { PasswordService } from '../../common/utils/password.service';
@@ -53,6 +57,18 @@ import { CheckoutService } from './checkout/checkout.service';
 import { OrderNumberService } from './checkout/order-number.service';
 import { ShopOrdersController } from './orders/orders.controller';
 import { ShopOrdersService } from './orders/orders.service';
+import { WishlistController } from './wishlist/wishlist.controller';
+import { SearchController } from './search/search.controller';
+import { PopularSearchesService } from './search/popular-searches.service';
+import { ReorderController } from './orders/reorder.controller';
+import { ReorderService } from './orders/reorder.service';
+import {
+  SearchTermCount,
+  SearchTermCountSchema,
+} from './schemas/search-term-count.schema';
+import { WishlistService } from './wishlist/wishlist.service';
+import { OrderRatingController } from './ratings/order-rating.controller';
+import { OrderRatingService } from './ratings/order-rating.service';
 import { PAYMENT_PROVIDER } from './payments/payment-provider';
 import { RazorpayProvider } from './payments/razorpay.provider';
 import { PaymentsController } from './payments/payments.controller';
@@ -103,6 +119,9 @@ import { PaymentReconciliationSweeperService } from './jobs/payment-reconciliati
       { name: Cart.name, schema: CartSchema },
       { name: CouponRedemption.name, schema: CouponRedemptionSchema },
       { name: OrderCounter.name, schema: OrderCounterSchema },
+      { name: WishlistItem.name, schema: WishlistItemSchema },
+      // Anonymous per-day search counts — no user, no IP. See the schema.
+      { name: SearchTermCount.name, schema: SearchTermCountSchema },
     ]),
 
     // Supplies IdempotencyInterceptor for POST /checkout, where the
@@ -131,6 +150,10 @@ import { PaymentReconciliationSweeperService } from './jobs/payment-reconciliati
     AddressesController,
     CheckoutController,
     ShopOrdersController,
+    WishlistController,
+    SearchController,
+    ReorderController,
+    OrderRatingController,
     PaymentsController,
   ],
 
@@ -143,6 +166,10 @@ import { PaymentReconciliationSweeperService } from './jobs/payment-reconciliati
     OrderNumberService,
     CheckoutService,
     ShopOrdersService,
+    WishlistService,
+    PopularSearchesService,
+    ReorderService,
+    OrderRatingService,
     PaymentsService,
 
     // §8.2 / §8.3: the two interval sweepers. Neither is BullMQ — see

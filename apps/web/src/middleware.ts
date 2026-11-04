@@ -63,6 +63,7 @@ const PROTECTED_PREFIXES: ReadonlyArray<{ prefix: string; roles: readonly string
   { prefix: '/checkout', roles: ['customer'] },
   { prefix: '/orders', roles: ['customer'] },
   { prefix: '/addresses', roles: ['customer'] },
+  { prefix: '/wishlist', roles: ['customer'] },
 ];
 
 /**
@@ -113,6 +114,7 @@ export const config = {
     '/checkout/:path*',
     '/orders/:path*',
     '/addresses/:path*',
+    '/wishlist/:path*',
   ],
 };
 

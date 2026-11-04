@@ -54,6 +54,8 @@ import {
   type Track,
 } from '@/lib/shop/types';
 import { ConnectionBanner, ErrorNotice, FixtureBanner } from './notices';
+import { OrderRatingPanel } from './OrderRatingPanel';
+import { CancelOrder } from './CancelOrder';
 
 interface RiderFix {
   position: LatLng;
@@ -435,11 +437,20 @@ export function TrackView({ orderId }: { orderId: string }) {
                 </p>
               ) : null}
 
+              {/* Delivered: rate the store and the rider, once, within 14
+                  days. Reads `canRate` from the order; never recomputes it. */}
+              {detail.isFixture ? null : (
+                <OrderRatingPanel order={order} storeName={vendorName} onRated={refetchDetail} />
+              )}
+
               {order.canCancel ? (
                 <p className="shop-summary__note">
                   Cancelling is free until the store accepts. After that it needs approval from
                   the store or an admin.
                 </p>
+              ) : null}
+              {order.canCancel && !detail.isFixture ? (
+                <CancelOrder orderId={order.id} orderNo={order.orderNo} />
               ) : null}
             </>
           )}

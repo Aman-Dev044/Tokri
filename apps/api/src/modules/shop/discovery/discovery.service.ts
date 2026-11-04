@@ -104,6 +104,13 @@ export interface ProductRow {
   inStock: boolean;
   /** Live available stock, clamped for display. */
   availableQty: number;
+  /**
+   * Mean of the VISIBLE reviews, 0-5 to one decimal, and how many there
+   * are. Both 0 when nobody has reviewed it — a client shows nothing
+   * rather than "0.0 stars", which reads as a terrible product.
+   */
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export interface ProductDetail extends ProductRow {
@@ -182,7 +189,8 @@ interface CategoryLean {
   sortOrder: number;
 }
 
-interface ProductLean {
+/** Exported: the wishlist and reorder reads build a `ProductRow` too. */
+export interface ProductLean {
   _id: Types.ObjectId;
   vendorId: Types.ObjectId;
   categoryId: Types.ObjectId;
@@ -197,6 +205,43 @@ interface ProductLean {
   mrp: number;
   price: number;
   discountPct: number;
+  isActive?: boolean;
+  ratingAvg?: number;
+  ratingCount?: number;
+}
+
+/**
+ * The one `ProductLean` → `ProductRow` mapping.
+ *
+ * A module function rather than a private method because three readers
+ * build the same row — the catalogue, the wishlist and "order again" — and
+ * a second copy of this mapping is how one of them forgets `ratingAvg`.
+ */
+export function toProductRow(
+  product: ProductLean,
+  stock: Map<string, number>,
+  aisleByCategory: Map<string, AisleKey>,
+): ProductRow {
+  const available = stock.get(product._id.toString()) ?? 0;
+
+  return {
+    id: product._id.toString(),
+    name: product.name,
+    slug: product.slug,
+    brand: product.brand ?? null,
+    images: product.images,
+    unit: product.unit,
+    unitValue: product.unitValue,
+    mrp: product.mrp,
+    price: product.price,
+    discountPct: product.discountPct,
+    categoryId: product.categoryId.toString(),
+    aisleKey: aisleByCategory.get(product.categoryId.toString()) ?? null,
+    inStock: available > 0,
+    availableQty: available,
+    ratingAvg: product.ratingAvg ?? 0,
+    ratingCount: product.ratingCount ?? 0,
+  };
 }
 
 /** Sort keys a caller may ask for, mapped to what Mongo is actually given. */
@@ -948,23 +993,6 @@ export class DiscoveryService {
     stock: Map<string, number>,
     aisleByCategory: Map<string, AisleKey>,
   ): ProductRow {
-    const available = stock.get(product._id.toString()) ?? 0;
-
-    return {
-      id: product._id.toString(),
-      name: product.name,
-      slug: product.slug,
-      brand: product.brand ?? null,
-      images: product.images,
-      unit: product.unit,
-      unitValue: product.unitValue,
-      mrp: product.mrp,
-      price: product.price,
-      discountPct: product.discountPct,
-      categoryId: product.categoryId.toString(),
-      aisleKey: aisleByCategory.get(product.categoryId.toString()) ?? null,
-      inStock: available > 0,
-      availableQty: available,
-    };
+    return toProductRow(product, stock, aisleByCategory);
   }
 }

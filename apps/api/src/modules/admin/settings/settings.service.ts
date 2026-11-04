@@ -81,7 +81,7 @@ const NUMERIC_DEFAULTS = {
 } as const;
 
 /** The brand-dependent half, resolved from APP_NAME at construction. */
-function defaultsFor(appName: string): PlatformSettings {
+export function defaultsFor(appName: string): PlatformSettings {
   return {
     ...NUMERIC_DEFAULTS,
     platformName: appName,

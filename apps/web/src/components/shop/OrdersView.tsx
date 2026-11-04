@@ -17,6 +17,13 @@
  * every row rendered an empty item line and a total of ₹0.00 while the API was
  * answering perfectly. It now reads `preview` (the first few item NAMES),
  * `itemCount`, the flat `grandTotal` and `store.storeName`.
+ *
+ * ── ORDER AGAIN ─────────────────────────────────────────────────────────────
+ * A DELIVERED row carries an "Order again" button. It never rebuilds the basket
+ * from this row (which has no items and old prices); see `OrderAgain`.
+ *
+ * A PLACED row carries "Cancel order" — free until the store accepts; see
+ * `CancelOrder` for the 409 once it has.
  */
 
 import Link from 'next/link';
@@ -27,6 +34,8 @@ import { formatDateTime } from '@/lib/shop/format';
 import { ORDER_STATUS_LABEL, isLiveOrder } from '@/lib/shop/journey';
 import { readOrderSummary, readPaged, type OrderSummary, type Paged } from '@/lib/shop/types';
 import { ErrorNotice, FixtureBanner } from './notices';
+import { OrderAgain } from './OrderAgain';
+import { CancelOrder } from './CancelOrder';
 
 function StatusPill({ status }: { status: OrderSummary['status'] }) {
   const live = isLiveOrder(status);
@@ -123,6 +132,13 @@ export function OrdersView() {
                   >
                     {live ? 'Track it' : 'See the journey'}
                   </Link>
+                  {/* A fixture row has a made-up id the API would 404 on. */}
+                  {order.status === 'DELIVERED' && !orders.isFixture ? (
+                    <OrderAgain orderId={order.id} />
+                  ) : null}
+                  {order.status === 'PLACED' && !orders.isFixture ? (
+                    <CancelOrder orderId={order.id} orderNo={order.orderNo} />
+                  ) : null}
                 </div>
               </li>
             );

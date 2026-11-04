@@ -12,6 +12,7 @@ import { Paginated, paginate } from '../../../common/dto/paginated';
 import {
   DeliveryPartner,
   DeliveryPartnerDocument,
+  KYC_NUMBER_FIELDS,
   KycStatus,
 } from '../../../database/schemas/delivery-partner.schema';
 import { User, UserDocument } from '../../../database/schemas/user.schema';
@@ -23,6 +24,11 @@ import { WalletTxnType } from '../../../database/schemas/wallet-transaction.sche
 import { NotificationsService } from '../../notifications/notifications.service';
 import { NotificationTemplates } from '../../notifications/templates';
 import { RiderKycService } from '../../delivery/rider-kyc.service';
+import {
+  InsuranceStanding,
+  insuranceStanding,
+  toCalendarDay,
+} from '../../delivery/rider-vehicle';
 import { RiderWalletService } from '../../delivery/rider-wallet.service';
 import { problem } from '../../shop/common/problem';
 import { AuditService } from '../audit/audit.service';
@@ -71,6 +77,18 @@ export interface RiderKycFullView {
   aadhaarNumber: string | null;
   panNumber: string | null;
   drivingLicenceNumber: string | null;
+  /**
+   * The vehicle's numbers, IN FULL, for the same reason as the three
+   * above: a reviewer compares them against the RC and policy images.
+   */
+  vehicleRegistrationNumber: string | null;
+  vehicleRcNumber: string | null;
+  vehicleInsurancePolicyNumber: string | null;
+  /** `YYYY-MM-DD`, the last covered day. */
+  vehicleInsuranceExpiresOn: string | null;
+  vehicleInsuranceStatus: InsuranceStanding;
+  /** Negative once expired. */
+  vehicleInsuranceDaysLeft: number | null;
   documents: { kind: string; url: string; uploadedAt: string }[];
   walletBalancePaise: number;
 }
@@ -231,6 +249,8 @@ export class AdminRidersService {
     const wallet = await this.wallet.ensureWallet(partner._id);
     const due = partner.kycSlaDueAt ?? null;
     const remaining = due ? due.getTime() - Date.now() : null;
+    const expiresAt = partner.vehicleInsuranceExpiresAt ?? null;
+    const insurance = insuranceStanding(expiresAt);
 
     // Audited BY NAME: reading a government identifier is itself an
     // event worth a row, separately from any decision that follows it.
@@ -261,6 +281,12 @@ export class AdminRidersService {
       aadhaarNumber: partner.aadhaarNumber ?? null,
       panNumber: partner.panNumber ?? null,
       drivingLicenceNumber: partner.drivingLicenceNumber ?? null,
+      vehicleRegistrationNumber: partner.vehicleRegistrationNumber ?? null,
+      vehicleRcNumber: partner.vehicleRcNumber ?? null,
+      vehicleInsurancePolicyNumber: partner.vehicleInsurancePolicyNumber ?? null,
+      vehicleInsuranceExpiresOn: expiresAt ? toCalendarDay(expiresAt) : null,
+      vehicleInsuranceStatus: insurance.status,
+      vehicleInsuranceDaysLeft: insurance.daysLeft,
       documents: (partner.kycDocuments ?? []).map((doc) => ({
         kind: doc.kind,
         url: doc.url,
@@ -421,7 +447,7 @@ export class AdminRidersService {
 
     const query = this.partners.findById(new Types.ObjectId(id));
     if (options.withNumbers) {
-      query.select('+aadhaarNumber +panNumber +drivingLicenceNumber');
+      query.select(KYC_NUMBER_FIELDS);
     }
 
     const partner = await query.exec();

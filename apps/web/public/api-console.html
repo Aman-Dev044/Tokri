@@ -612,7 +612,7 @@
             note: 'Owner of the platform: team, settings, commission, payouts, payments, reports — plus every Admin API.' },
           { key: 'ADMIN', label: 'Admin', tokenVar: 'adminToken', sections: ['ADMIN'], signup: [],
             order: ['analytics', 'ops', 'vendors', 'delivery-partners', 'riders', 'customers', 'users', 'orders',
-              'categories', 'products', 'coupons', 'settlements', 'ledger', 'settings', 'audit-logs'],
+              'categories', 'products', 'reviews', 'coupons', 'settlements', 'ledger', 'settings', 'audit-logs'],
             note: 'Day-to-day operations: approvals, dispatch, issues, orders, catalogue, coupons.' },
           { key: 'VENDOR', label: 'Vendor', tokenVar: 'vendorToken', sections: ['VENDOR'],
             signup: ['/auth/apply/vendor'],
@@ -626,17 +626,18 @@
           { key: 'CUSTOMER', label: 'Customer', tokenVar: 'customerToken', sections: ['CUSTOMER'],
             browse: ['stores', 'products', 'pincodes'],
             signup: ['/auth/register/request-otp', '/auth/register/verify-otp', '/auth/register'],
-            order: ['browse', 'addresses', 'cart', 'checkout', 'payments', 'orders'],
-            note: 'Shopper: sign up with OTP, browse stores, fill the cart, check out, track orders.' },
+            order: ['browse', 'wishlist', 'addresses', 'cart', 'checkout', 'payments', 'orders', 'products'],
+            note: 'Shopper: sign up with OTP, browse stores, save a wishlist, fill the cart, check out, track, cancel or rate orders, review products.' },
           { key: 'PUBLIC', label: 'Public (no login)', tokenVar: null, sections: ['PUBLIC'],
-            order: ['health', 'webhooks'],
+            order: ['settings', 'search', 'health', 'webhooks'],
             note: 'Everything reachable without a token that is not already listed under a role.' },
         ];
 
         const titleCase = (name) => name.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
         const GROUP_LABEL = { ops: 'Operations', 'audit-logs': 'Audit log', me: 'My profile',
           'delivery-partners': 'Delivery partners', browse: 'Browse (no login needed)',
-          pos: 'POS billing (counter)', staff: 'Store staff' };
+          pos: 'POS billing (counter)', staff: 'Store staff', wishlist: 'Wishlist',
+          search: 'Popular searches', settings: 'Settings' };
 
         // Step by step inside a group: list → create → read one →
         // change → delete.

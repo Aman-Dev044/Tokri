@@ -91,6 +91,42 @@ export interface OrderDetail extends OrderSummary {
   canCancel: boolean;
   acceptedAt: string | null;
   deliveredAt: string | null;
+  /** The customer's rating of this order, once given. */
+  rating: OrderRatingView | null;
+  /**
+   * True while the order is DELIVERED, unrated and inside the
+   * `RATING_WINDOW_DAYS` window — the one condition `POST
+   * /orders/:id/rating` accepts. `rateUntil` is when that window closes.
+   */
+  canRate: boolean;
+  rateUntil: string | null;
+  /** Whether a rider carried it — i.e. whether there is a rider to rate. */
+  hasRider: boolean;
+}
+
+export interface OrderRatingView {
+  storeRating: number;
+  riderRating: number | null;
+  comment: string | null;
+  at: string;
+}
+
+/** How long after delivery an order may be rated. */
+export const RATING_WINDOW_DAYS = 14;
+
+/**
+ * The instant the rating window closes, or null when the order was never
+ * delivered. Measured from `deliveredAt`, falling back to the DELIVERED
+ * entry in the history for an order written before that field was stamped.
+ */
+export function ratingDeadline(order: OrderLean): Date | null {
+  if (order.status !== OrderStatus.DELIVERED) return null;
+  const delivered =
+    order.deliveredAt ??
+    [...order.statusHistory].reverse().find((c) => c.to === OrderStatus.DELIVERED)?.at ??
+    null;
+  if (!delivered) return null;
+  return new Date(delivered.getTime() + RATING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 }
 
 /** The lean shape both the orders and checkout services read. */
@@ -143,6 +179,12 @@ export interface OrderLean {
   placedAt: Date;
   acceptedAt?: Date | null;
   deliveredAt?: Date | null;
+  customerRating?: {
+    store: number;
+    rider?: number | null;
+    comment?: string | null;
+    at: Date;
+  } | null;
 }
 
 export interface StoreRef {
@@ -229,5 +271,26 @@ export function toOrderDetail(
     canCancel: isFreelyCancellable(order.status),
     acceptedAt: order.acceptedAt ? order.acceptedAt.toISOString() : null,
     deliveredAt: order.deliveredAt ? order.deliveredAt.toISOString() : null,
+    ...ratingFields(order),
+  };
+}
+
+function ratingFields(
+  order: OrderLean,
+): Pick<OrderDetail, 'rating' | 'canRate' | 'rateUntil' | 'hasRider'> {
+  const rating = order.customerRating ?? null;
+  const deadline = ratingDeadline(order);
+  return {
+    rating: rating
+      ? {
+          storeRating: rating.store,
+          riderRating: rating.rider ?? null,
+          comment: rating.comment ?? null,
+          at: rating.at.toISOString(),
+        }
+      : null,
+    canRate: rating === null && deadline !== null && deadline.getTime() > Date.now(),
+    rateUntil: rating === null && deadline ? deadline.toISOString() : null,
+    hasRider: Boolean(order.deliveryPartnerId),
   };
 }

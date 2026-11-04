@@ -25,6 +25,8 @@
  *   Track          GET /orders/:id/track              → TrackView
  *   CheckoutQuote  POST /checkout/validate            → CheckoutQuote
  *   PlacedOrder    POST /checkout                     → PlacedOrder
+ *   ReorderPreview GET /orders/:id/reorder-preview    → ReorderPreview
+ *   PopularSearches GET /search/popular               → PopularSearches
  *
  * The readers stay — but they are now NARROWING, not translating. They accept
  * `unknown`, check the one spelling the API actually uses, and fall back to a
@@ -301,6 +303,10 @@ export interface Product {
   inStock: boolean;
   /** Live available stock, clamped for display by the API. */
   availableQty: number;
+  /** Mean of the VISIBLE reviews, 0–5 to one decimal. 0 with no reviews. */
+  ratingAvg: number;
+  /** How many visible reviews `ratingAvg` averages. 0 ⇒ show nothing. */
+  ratingCount: number;
 }
 
 /** `GET /products/:id` → `ProductDetail`. This one DOES carry its store. */
@@ -337,6 +343,8 @@ export function readProduct(value: unknown): Product | null {
     aisleKey: readAisleKey(value['aisleKey']),
     inStock: bool(value, 'inStock') ?? false,
     availableQty: int(value, 'availableQty'),
+    ratingAvg: int(value, 'ratingAvg'),
+    ratingCount: int(value, 'ratingCount'),
   };
 }
 
@@ -736,6 +744,34 @@ export interface OrderDetail extends OrderSummary {
   canCancel: boolean;
   acceptedAt: string | null;
   deliveredAt: string | null;
+  /** The customer's rating of this order, once given. */
+  rating: OrderRating | null;
+  /** DELIVERED, unrated and inside the 14-day window — the API's own test. */
+  canRate: boolean;
+  /** When the rating window closes. Null once rated or never delivered. */
+  rateUntil: string | null;
+  /** Whether a rider carried it, i.e. whether there is a rider to rate. */
+  hasRider: boolean;
+}
+
+/** `OrderDetail.rating` and the body of `POST /orders/:id/rating`'s reply. */
+export interface OrderRating {
+  storeRating: number;
+  riderRating: number | null;
+  comment: string | null;
+  at: string;
+}
+
+export function readOrderRating(value: unknown): OrderRating | null {
+  if (!isDict(value)) return null;
+  const storeRating = num(value, 'storeRating');
+  if (storeRating === null) return null;
+  return {
+    storeRating,
+    riderRating: num(value, 'riderRating'),
+    comment: str(value, 'comment'),
+    at: str(value, 'at') ?? '',
+  };
 }
 
 function readOrderStore(value: unknown): OrderStore | null {
@@ -853,6 +889,10 @@ export function readOrderDetail(value: unknown): OrderDetail | null {
     canCancel: bool(value, 'canCancel') ?? false,
     acceptedAt: str(value, 'acceptedAt'),
     deliveredAt: str(value, 'deliveredAt'),
+    rating: readOrderRating(value['rating']),
+    canRate: bool(value, 'canRate') ?? false,
+    rateUntil: str(value, 'rateUntil'),
+    hasRider: bool(value, 'hasRider') ?? false,
   };
 }
 
@@ -1221,4 +1261,102 @@ export function readProblemCode(problem: unknown): string | null {
   if (!isDict(problem)) return null;
   const errors = dict(problem, 'errors');
   return errors === null ? null : str(errors, 'code');
+}
+
+/* ═════════════════════════════ order again ═════════════════════════════ */
+
+/**
+ * `GET /orders/:id/reorder-preview` → `ReorderPreview`. A DELIVERED order
+ * re-read against the live catalogue. `product` is the live `ProductRow` —
+ * TODAY's price; `orderedPrice` is what was paid then, for display only.
+ */
+export const REORDER_LINE_STATUSES = ['ok', 'reduced', 'out_of_stock', 'unavailable'] as const;
+export type ReorderLineStatus = (typeof REORDER_LINE_STATUSES)[number];
+
+export interface ReorderLine {
+  productId: string;
+  name: string;
+  image: string | null;
+  orderedQty: number;
+  /** INTEGER PAISE. */
+  orderedPrice: number;
+  /** How many can go into the basket now. 0 unless `ok` or `reduced`. */
+  qty: number;
+  status: ReorderLineStatus;
+  /** Null when `unavailable`. */
+  product: Product | null;
+}
+
+export type StoreAvailability = 'open' | 'closed' | 'unavailable';
+
+export interface ReorderPreview {
+  orderId: string;
+  orderNo: string;
+  store: { id: string; storeName: string; slug: string; availability: StoreAvailability };
+  lines: ReorderLine[];
+  addableCount: number;
+}
+
+function readReorderLine(value: unknown): ReorderLine | null {
+  if (!isDict(value)) return null;
+  const productId = str(value, 'productId');
+  if (productId === null) return null;
+  const status = value['status'];
+  const product = readProduct(value['product']);
+  return {
+    productId,
+    name: str(value, 'name') ?? 'Item',
+    image: str(value, 'image'),
+    orderedQty: int(value, 'orderedQty'),
+    orderedPrice: int(value, 'orderedPrice'),
+    // Without a live row nothing can be added, whatever `qty` claims.
+    qty: product === null ? 0 : int(value, 'qty'),
+    status: REORDER_LINE_STATUSES.find((known) => known === status) ?? 'unavailable',
+    product,
+  };
+}
+
+export function readReorderPreview(value: unknown): ReorderPreview | null {
+  if (!isDict(value)) return null;
+  const orderId = str(value, 'orderId');
+  const store = dict(value, 'store');
+  if (orderId === null || store === null) return null;
+  const storeId = str(store, 'id');
+  if (storeId === null) return null;
+  const availability = store['availability'];
+  const lines = compact(list(value, 'lines'), readReorderLine);
+
+  return {
+    orderId,
+    orderNo: str(value, 'orderNo') ?? orderId,
+    store: {
+      id: storeId,
+      storeName: str(store, 'storeName') ?? 'Store',
+      slug: str(store, 'slug') ?? storeId,
+      availability:
+        availability === 'open' || availability === 'closed' ? availability : 'unavailable',
+    },
+    lines,
+    addableCount: lines.filter((line) => line.qty > 0).length,
+  };
+}
+
+/* ═══════════════════════════ popular searches ══════════════════════════ */
+
+/** `GET /search/popular` → `PopularSearches`. Anonymous counts, top 8, 7 days. */
+export interface PopularSearches {
+  windowDays: number;
+  terms: { term: string; count: number }[];
+}
+
+export function readPopularSearches(value: unknown): PopularSearches {
+  if (!isDict(value)) return { windowDays: 7, terms: [] };
+  return {
+    windowDays: num(value, 'windowDays') ?? 7,
+    terms: compact(list(value, 'terms'), (row) => {
+      if (!isDict(row)) return null;
+      const term = str(row, 'term');
+      return term === null ? null : { term, count: int(row, 'count') };
+    }),
+  };
 }

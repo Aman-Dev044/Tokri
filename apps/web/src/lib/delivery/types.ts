@@ -457,12 +457,24 @@ export interface WalletLedgerRow {
 }
 
 /* ------------------------------------------------------------------ */
-/* KYC — GET/POST /delivery/profile/kyc                                */
+/* KYC — GET/POST /delivery/profile/kyc, PUT …/kyc/vehicle            */
 /* ------------------------------------------------------------------ */
 
 export type KycStatus = 'not_started' | 'submitted' | 'verified' | 'rejected';
 
-export type KycDocumentKind = 'aadhaar' | 'pan' | 'driving_licence' | 'selfie';
+export type KycDocumentKind =
+  | 'aadhaar'
+  | 'pan'
+  | 'driving_licence'
+  | 'selfie'
+  | 'vehicle_rc'
+  | 'vehicle_insurance';
+
+/**
+ * Where the vehicle's insurance stands today, computed by the API on every
+ * read. `expiring_soon` is 0–30 days of cover left, today included.
+ */
+export type InsuranceStanding = 'not_provided' | 'valid' | 'expiring_soon' | 'expired';
 
 export interface KycDocumentRow {
   kind: KycDocumentKind;
@@ -491,14 +503,37 @@ export interface RiderKyc {
   aadhaarNumberMasked: string | null;
   panNumberMasked: string | null;
   drivingLicenceNumberMasked: string | null;
+  /** Plate, RC and policy — masked exactly like PAN, last four only. */
+  vehicleRegistrationNumberMasked: string | null;
+  vehicleRcNumberMasked: string | null;
+  vehicleInsurancePolicyNumberMasked: string | null;
+  /** `YYYY-MM-DD`, the last covered day. Not an identifier, so whole. */
+  vehicleInsuranceExpiresOn: string | null;
+  vehicleInsuranceStatus: InsuranceStanding;
+  /** Days of cover left, 0 on the last day; negative once expired. */
+  vehicleInsuranceDaysLeft: number | null;
   documents: KycDocumentRow[];
   canResubmit: boolean;
+}
+
+/**
+ * The body of `PUT /delivery/profile/kyc/vehicle`, and `vehicle` inside a
+ * full submission. The API normalises the plate (`DL 8S AB 2048` →
+ * `DL8SAB2048`); the screen pre-checks the same formats.
+ */
+export interface VehicleSubmission {
+  vehicleRegistrationNumber: string;
+  vehicleRcNumber: string;
+  vehicleInsurancePolicyNumber: string;
+  vehicleInsuranceExpiresOn: string;
 }
 
 export interface KycSubmission {
   aadhaarNumber: string;
   panNumber: string;
   drivingLicenceNumber: string;
+  /** All four or none — a bicycle has no plate. */
+  vehicle?: VehicleSubmission;
 }
 
 /* ------------------------------------------------------------------ */

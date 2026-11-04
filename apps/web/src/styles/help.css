@@ -1,0 +1,307 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   HELP, PRIVACY AND TERMS — long-form reading inside the shop shell.
+
+   Imported by `components/help/InfoPage.tsx`, so it ships only with the three
+   pages that use it. Every value is a token from tokens.css (via the shop's
+   compat layer where the shop already uses one); there is no raw colour here,
+   and both themes come from the tokens rather than from rules in this file.
+
+   Reading comfort first: body copy is 16px (`--t-lg`), lines cap at
+   `--prose-max`, and nothing here has a fixed width, so a phone never scrolls
+   sideways — long email addresses wrap with `overflow-wrap: anywhere`.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hlp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  padding-bottom: calc(var(--shop-dock-h) + var(--s-6));
+  min-width: 0;
+}
+
+.hlp__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  max-width: var(--prose-max);
+}
+.hlp__lede {
+  margin: 0;
+  font-size: var(--t-lg);
+  line-height: var(--lh-body);
+  color: var(--ink-soft);
+}
+.hlp__updated {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
+
+/* ── sibling pages ─────────────────────────────────────────────────────── */
+
+.hlp__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hlp__tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.hlp__tabs a:hover {
+  color: var(--ink);
+  border-color: var(--hairline-bright);
+}
+.hlp__tabs a[aria-current='page'] {
+  background: var(--shop-fill);
+  border-color: var(--shop-fill);
+  color: var(--shop-on-fill);
+}
+.hlp__tabs a:focus-visible,
+.hlp a:focus-visible,
+.hlp summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ── the template warning ──────────────────────────────────────────────── */
+
+.hlp__notice {
+  margin: 0;
+  max-width: var(--prose-max);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--warn);
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+  font-size: var(--t-lg);
+  line-height: var(--lh-body);
+}
+.hlp__notice strong {
+  font-weight: 800;
+}
+
+/* A slot the legal entity has to fill in. Loud on purpose. */
+.hlp__ph {
+  padding: 0 var(--s-1);
+  border-radius: var(--r-xs);
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+  border: 1px dashed var(--warn);
+  font-weight: 600;
+}
+
+/* ── layout: contents beside the text on wide screens ──────────────────── */
+
+.hlp__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-6);
+  align-items: start;
+}
+@media (min-width: 1000px) {
+  .hlp__body {
+    grid-template-columns: 15rem minmax(0, 1fr);
+  }
+  .hlp__toc {
+    position: sticky;
+    top: calc(var(--shop-head-h) + var(--s-4));
+  }
+}
+
+.hlp__toc {
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.hlp__toc-title {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.hlp__toc ol {
+  margin: 0;
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-sm);
+  line-height: 1.45;
+}
+.hlp__toc a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.hlp__toc a:hover {
+  color: var(--aisle-ink);
+  text-decoration: underline;
+}
+
+/* ── prose ─────────────────────────────────────────────────────────────── */
+
+.hlp__prose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  max-width: var(--prose-max);
+  min-width: 0;
+  font-size: var(--t-lg);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.hlp__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  scroll-margin-top: calc(var(--shop-head-h) + var(--s-4));
+}
+.hlp__section h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h2);
+  font-weight: 800;
+  line-height: var(--lh-snug);
+  letter-spacing: var(--track-tight);
+}
+.hlp__section h3 {
+  margin: var(--s-2) 0 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+  font-weight: 700;
+  line-height: var(--lh-snug);
+}
+.hlp__section p,
+.hlp__section ul,
+.hlp__section ol {
+  margin: 0;
+}
+.hlp__section ul,
+.hlp__section ol {
+  padding-left: var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.hlp__prose a {
+  color: var(--aisle-ink);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+/* ── FAQ ───────────────────────────────────────────────────────────────── */
+
+.hlp-faq {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.hlp-faq details {
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.hlp-faq details[open] {
+  border-color: var(--shop-edge);
+}
+.hlp-faq summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  line-height: 1.4;
+  border-radius: var(--r-md);
+}
+.hlp-faq summary::-webkit-details-marker {
+  display: none;
+}
+.hlp-faq summary::after {
+  content: '+';
+  flex: 0 0 auto;
+  font-family: var(--data);
+  font-weight: 700;
+  color: var(--aisle-ink);
+  transition: transform var(--t-micro) var(--ease);
+}
+.hlp-faq details[open] summary::after {
+  transform: rotate(45deg);
+}
+.hlp-faq__answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: 0 var(--s-4) var(--s-4);
+  color: var(--ink-soft);
+}
+.hlp-faq__answer p,
+.hlp-faq__answer ul {
+  margin: 0;
+}
+.hlp-faq__answer ul {
+  padding-left: var(--s-5);
+}
+.hlp-faq__answer strong {
+  color: var(--ink);
+}
+
+/* ── contact card ──────────────────────────────────────────────────────── */
+
+.hlp-contact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.hlp-contact a,
+.hlp-contact__static {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-height: 44px;
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+.hlp-contact a:hover {
+  border-color: var(--shop-edge);
+}
+.hlp-contact__label {
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.hlp-contact__value {
+  font-weight: 700;
+  color: var(--aisle-ink);
+  overflow-wrap: anywhere;
+}

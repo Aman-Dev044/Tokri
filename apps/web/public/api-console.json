@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-04T08:55:14.075Z",
+  "generatedAt": "2026-11-04T10:52:46.231Z",
   "baseUrl": "http://49.13.70.253:9988/api/v1",
-  "endpointCount": 192,
+  "endpointCount": 206,
   "logins": [
     {
       "label": "Super Admin",
@@ -521,6 +521,94 @@
               ],
               "body": null,
               "addedAt": null
+            },
+            {
+              "method": "GET",
+              "path": "/products/{id}/reviews",
+              "summary": "Visible reviews of one product, newest first",
+              "description": "`{ data, meta, summary: { average, count } }`. Hidden reviews are excluded from the list AND from the summary. Same 404 rule as `GET /products/:id`.",
+              "public": true,
+              "roles": [],
+              "tokenVar": null,
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": false,
+                  "example": 1,
+                  "description": ""
+                },
+                {
+                  "name": "limit",
+                  "type": "number",
+                  "required": false,
+                  "example": 20,
+                  "description": ""
+                },
+                {
+                  "name": "sort",
+                  "type": "string",
+                  "required": false,
+                  "example": "-createdAt",
+                  "description": "Field name, optionally prefixed with `-` for descending."
+                }
+              ],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            }
+          ]
+        },
+        {
+          "name": "search",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/search/popular",
+              "summary": "The most-searched terms of the last week",
+              "description": "Top 8 normalised terms over the last 7 UTC days, most searched first. A term needs at least 2 searches in the window to appear. Counted anonymously from the first page of `GET /products?q=` and `GET /stores/:id/products?q=`: no user, no IP.",
+              "public": true,
+              "roles": [],
+              "tokenVar": null,
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            }
+          ]
+        },
+        {
+          "name": "settings",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/settings/public",
+              "summary": "Non-sensitive platform settings",
+              "description": "Exactly platformName, supportEmail, supportPhone, deliveryFeePaise, freeDeliveryThresholdPaise and serviceRadiusKm. Nothing else is ever returned — commission, the COD ceiling, maintenance mode and the ops thresholds stay behind the admin guard.",
+              "public": true,
+              "roles": [],
+              "tokenVar": null,
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
             }
           ]
         },
@@ -1416,6 +1504,85 @@
               "addedAt": null
             },
             {
+              "method": "POST",
+              "path": "/orders/{id}/rating",
+              "summary": "Rate a delivered order — the store and the rider",
+              "description": "Once per order, only once DELIVERED, within 14 days of delivery. Updates `Vendor.rating` and the rider's `rating` as exact running means (sum / count), in the same transaction.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "201",
+                "400",
+                "404",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "storeRating": 5,
+                  "riderRating": 4,
+                  "comment": {}
+                },
+                "fields": [
+                  {
+                    "name": "storeRating",
+                    "type": "number",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "riderRating",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "comment",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/orders/{id}/reorder-preview",
+              "summary": "What of a delivered order can go back in the basket",
+              "description": "Re-reads every line against the live catalogue: inactive or deleted products, and every line of a closed or suspended store, are `unavailable`; the rest are capped at live stock and the per-line ceiling. `product` carries TODAY's price — the order's own price is `orderedPrice`, for display only. Writes nothing: the client adds lines through `POST /cart/items`.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "404",
+                "409"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
               "method": "GET",
               "path": "/orders/{id}/track",
               "summary": "Where the order is",
@@ -1495,6 +1662,198 @@
                 ]
               },
               "addedAt": null
+            }
+          ]
+        },
+        {
+          "name": "products",
+          "endpoints": [
+            {
+              "method": "POST",
+              "path": "/products/{id}/reviews",
+              "summary": "Review a product you have received",
+              "description": "Rating 1-5, optional comment up to 500 characters.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "201",
+                "403",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "rating": 4,
+                  "comment": "Sweet and ripe, packed carefully."
+                },
+                "fields": [
+                  {
+                    "name": "rating",
+                    "type": "number",
+                    "required": true,
+                    "description": ""
+                  },
+                  {
+                    "name": "comment",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "GET",
+              "path": "/products/{id}/reviews/mine",
+              "summary": "My review of this product, and whether I may write one",
+              "description": "Returns the caller's own review even when an admin has hidden it (`isHidden: true`). `canReview` is true only with no review yet and a delivered order containing the product.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "PATCH",
+              "path": "/products/{id}/reviews/mine",
+              "summary": "Edit my review of this product",
+              "description": "",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "404"
+              ],
+              "body": {
+                "example": {
+                  "rating": 0,
+                  "comment": {}
+                },
+                "fields": [
+                  {
+                    "name": "rating",
+                    "type": "number",
+                    "required": false,
+                    "description": ""
+                  },
+                  {
+                    "name": "comment",
+                    "type": "object",
+                    "required": false,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            }
+          ]
+        },
+        {
+          "name": "wishlist",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/wishlist",
+              "summary": "Every saved product, newest first, with live data",
+              "description": "A BARE ARRAY (at most 200 rows) — the client needs every saved id to draw the hearts. Each row carries the live product (price, stock, `isActive`) and its store. A withdrawn or deleted product, or one whose store is no longer approved, is KEPT with `available: false` and an `unavailableReason`, never dropped.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "DELETE",
+              "path": "/wishlist/{productId}",
+              "summary": "Unsave a product (idempotent)",
+              "description": "Removing a product that was never saved is still a 200.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "productId",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "POST",
+              "path": "/wishlist/{productId}",
+              "summary": "Save a product (idempotent)",
+              "description": "Saving an already-saved product is a 200 with the same body. A new save must name an active product from an approved store.",
+              "public": false,
+              "roles": [
+                "CUSTOMER"
+              ],
+              "tokenVar": "customerToken",
+              "pathParams": [
+                {
+                  "name": "productId",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "404",
+                "409"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
             }
           ]
         }
@@ -4832,7 +5191,7 @@
             {
               "method": "POST",
               "path": "/delivery/profile/kyc",
-              "summary": "Submit Aadhaar, PAN and driving licence",
+              "summary": "Submit Aadhaar, PAN and driving licence (and the vehicle)",
               "description": "Sets status SUBMITTED and stamps `kycSlaDueAt = now + RIDER_KYC_SLA_HOURS`. Formats are validated at the edge — a typo must not consume a human's 24-hour SLA. A rider may resubmit while NOT_STARTED, SUBMITTED or REJECTED; a VERIFIED record is 409, because silently replacing an identity a human approved would make the approval meaningless.",
               "public": false,
               "roles": [
@@ -4872,6 +5231,12 @@
                     "type": "string",
                     "required": true,
                     "description": "8-20 letters and digits. State formats vary."
+                  },
+                  {
+                    "name": "vehicle",
+                    "type": "object",
+                    "required": false,
+                    "description": "The vehicle, sent with the identity. Optional — a bicycle has no plate — but all-or-nothing: the four fields travel together."
                   }
                 ]
               },
@@ -4905,7 +5270,7 @@
                 "fields": [
                   {
                     "name": "kind",
-                    "type": "aadhaar | pan | driving_licence | selfie",
+                    "type": "aadhaar | pan | driving_licence | selfie | vehicle_rc | vehicle_insurance",
                     "required": true,
                     "description": "Which document this is."
                   },
@@ -4929,7 +5294,7 @@
               "method": "POST",
               "path": "/delivery/profile/kyc/document/attach",
               "summary": "Record an upload that has landed",
-              "description": "The URL is checked against the key prefix a presign for THIS rider and THIS document kind would produce, so a rider cannot attach an arbitrary link or another rider's object. One document per kind — a second upload replaces the first.",
+              "description": "The URL is checked against the key prefix a presign for THIS rider and THIS document kind would produce, so a rider cannot attach an arbitrary link or another rider's object. One document per kind — a second upload replaces the first. A VERIFIED rider may still attach `vehicle_rc` / `vehicle_insurance`, which sends the record back for review; any other kind is 409.",
               "public": false,
               "roles": [
                 "DELIVERY"
@@ -4952,7 +5317,7 @@
                 "fields": [
                   {
                     "name": "kind",
-                    "type": "aadhaar | pan | driving_licence | selfie",
+                    "type": "aadhaar | pan | driving_licence | selfie | vehicle_rc | vehicle_insurance",
                     "required": true,
                     "description": ""
                   },
@@ -4965,6 +5330,61 @@
                 ]
               },
               "addedAt": null
+            },
+            {
+              "method": "PUT",
+              "path": "/delivery/profile/kyc/vehicle",
+              "summary": "Update the vehicle: plate, RC, insurance policy and expiry",
+              "description": "The one part of KYC a VERIFIED rider may change themselves — vehicles are replaced and insurance renews every year. A CHANGE to a verified record sends it back to SUBMITTED with a fresh SLA, because no human has seen the new details; resending what is already on file changes nothing. While SUBMITTED the deadline does not move; a REJECTED record is resubmitted. 409 before any identity has been submitted. An expired policy is accepted and flagged.",
+              "public": false,
+              "roles": [
+                "DELIVERY"
+              ],
+              "tokenVar": "riderToken",
+              "pathParams": [],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200",
+                "400",
+                "403",
+                "409"
+              ],
+              "body": {
+                "example": {
+                  "vehicleRegistrationNumber": "DL 8S AB 2048",
+                  "vehicleRcNumber": "DL0820230012345",
+                  "vehicleInsurancePolicyNumber": "3005/123456789/00/000",
+                  "vehicleInsuranceExpiresOn": "2027-03-31"
+                },
+                "fields": [
+                  {
+                    "name": "vehicleRegistrationNumber",
+                    "type": "string",
+                    "required": true,
+                    "description": "Indian registration plate. Spaces and dashes are ignored."
+                  },
+                  {
+                    "name": "vehicleRcNumber",
+                    "type": "string",
+                    "required": true,
+                    "description": "RC number, 6-20 letters and digits."
+                  },
+                  {
+                    "name": "vehicleInsurancePolicyNumber",
+                    "type": "string",
+                    "required": true,
+                    "description": "Motor insurance policy number. Slashes and dashes allowed."
+                  },
+                  {
+                    "name": "vehicleInsuranceExpiresOn",
+                    "type": "string",
+                    "required": true,
+                    "description": "The last day the policy covers, YYYY-MM-DD. May be in the past (flagged)."
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
             }
           ]
         },
@@ -7455,13 +7875,123 @@
           ]
         },
         {
+          "name": "reviews",
+          "endpoints": [
+            {
+              "method": "GET",
+              "path": "/admin/reviews",
+              "summary": "Every review, newest first (paginated)",
+              "description": "Filters: `status` (visible | hidden), `rating`, `productId`.",
+              "public": false,
+              "roles": [
+                "ADMIN"
+              ],
+              "tokenVar": "adminToken",
+              "pathParams": [],
+              "query": [
+                {
+                  "name": "page",
+                  "type": "number",
+                  "required": false,
+                  "example": 1,
+                  "description": ""
+                },
+                {
+                  "name": "limit",
+                  "type": "number",
+                  "required": false,
+                  "example": 20,
+                  "description": ""
+                },
+                {
+                  "name": "sort",
+                  "type": "string",
+                  "required": false,
+                  "example": "-createdAt",
+                  "description": "Field name, optionally prefixed with `-` for descending."
+                },
+                {
+                  "name": "status",
+                  "type": "visible | hidden",
+                  "required": false,
+                  "example": "visible",
+                  "description": ""
+                },
+                {
+                  "name": "rating",
+                  "type": "number",
+                  "required": false,
+                  "example": 0,
+                  "description": ""
+                },
+                {
+                  "name": "productId",
+                  "type": "string",
+                  "required": false,
+                  "example": "",
+                  "description": "Only reviews of this product."
+                }
+              ],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": null,
+              "addedAt": "2026-11-04"
+            },
+            {
+              "method": "PATCH",
+              "path": "/admin/reviews/{id}/visibility",
+              "summary": "Hide or restore a review, with a reason",
+              "description": "Audited as `review.hide` / `review.unhide`. The product's rating average and count are recomputed without hidden reviews.",
+              "public": false,
+              "roles": [
+                "ADMIN"
+              ],
+              "tokenVar": "adminToken",
+              "pathParams": [
+                {
+                  "name": "id",
+                  "description": ""
+                }
+              ],
+              "query": [],
+              "headers": [],
+              "responses": [
+                "200"
+              ],
+              "body": {
+                "example": {
+                  "hidden": true,
+                  "reason": "Contains a phone number"
+                },
+                "fields": [
+                  {
+                    "name": "hidden",
+                    "type": "boolean",
+                    "required": true,
+                    "description": "true hides the review, false restores it."
+                  },
+                  {
+                    "name": "reason",
+                    "type": "string",
+                    "required": true,
+                    "description": ""
+                  }
+                ]
+              },
+              "addedAt": "2026-11-04"
+            }
+          ]
+        },
+        {
           "name": "riders",
           "endpoints": [
             {
               "method": "GET",
               "path": "/admin/riders/{id}/kyc",
               "summary": "One rider's KYC — the numbers IN FULL",
-              "description": "The ONLY endpoint in this platform that returns Aadhaar, PAN and driving-licence numbers unmasked. It exists so a reviewer can compare the number against the uploaded document. Every call is audited as `admin.riders.kyc.read` — the audit row records that an identifier was revealed, never the identifier itself.",
+              "description": "The ONLY endpoint in this platform that returns Aadhaar, PAN, driving-licence and vehicle (plate, RC, policy) numbers unmasked. It exists so a reviewer can compare each number against the uploaded document. `vehicleInsuranceStatus` flags a policy that has expired or expires within 30 days. Every call is audited as `admin.riders.kyc.read` — the audit row records that an identifier was revealed, never the identifier itself.",
               "public": false,
               "roles": [
                 "ADMIN"

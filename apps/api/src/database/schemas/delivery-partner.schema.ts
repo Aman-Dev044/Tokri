@@ -34,13 +34,32 @@ export enum KycStatus {
   REJECTED = 'rejected',
 }
 
-/** The four documents the verification screen expects to compare against. */
+/**
+ * The documents the verification screen compares against: four for the
+ * person, two for the vehicle they ride.
+ */
 export enum KycDocumentKind {
   AADHAAR = 'aadhaar',
   PAN = 'pan',
   DRIVING_LICENCE = 'driving_licence',
   SELFIE = 'selfie',
+  /** The registration certificate (RC) of the vehicle. */
+  VEHICLE_RC = 'vehicle_rc',
+  /** The current motor insurance policy schedule. */
+  VEHICLE_INSURANCE = 'vehicle_insurance',
 }
+
+/**
+ * Every identifier a rider submits for KYC, as a Mongoose `select` string.
+ *
+ * All of them are `select: false`, so a query that wants them has to name
+ * them — and naming them in three places is how one gets forgotten the day
+ * a fourth is added. The two readers that MASK them and the one admin
+ * route that returns them whole all select through this constant.
+ */
+export const KYC_NUMBER_FIELDS =
+  '+aadhaarNumber +panNumber +drivingLicenceNumber ' +
+  '+vehicleRegistrationNumber +vehicleRcNumber +vehicleInsurancePolicyNumber';
 
 @Schema({ _id: false })
 export class KycDocument {
@@ -86,9 +105,19 @@ export class DeliveryPartner {
   @Prop({ type: Number, default: 0 })
   completedCount: number;
 
-  /** 0-5. */
+  /**
+   * 0-5, one decimal — the mean of every customer's rating of this rider.
+   * Same contract as `Vendor.rating`: written only by
+   * `OrderRatingService`, always as `ratingSum / ratingCount`.
+   */
   @Prop({ type: Number, default: 0 })
   rating: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingCount: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingSum: number;
 
   /**
    * Administrative state, distinct from `isOnline`.
@@ -157,6 +186,34 @@ export class DeliveryPartner {
 
   @Prop({ type: String, default: null, select: false })
   drivingLicenceNumber?: string | null;
+
+  /**
+   * ── THE VEHICLE ─────────────────────────────────────────────────────
+   * Registration plate, RC number and insurance policy number: the same
+   * `select: false` + masked-everywhere-but-one-route discipline as the
+   * three personal identifiers above. A plate is painted on the scooter,
+   * but a plate joined to a name, a phone and a home pincode is not
+   * public, and the policy number is what a fraudulent claim needs.
+   *
+   * All optional: a bicycle has none of them, and a rider who submitted
+   * before these fields existed must not be pushed back to NOT_STARTED.
+   */
+  @Prop({ type: String, default: null, select: false })
+  vehicleRegistrationNumber?: string | null;
+
+  @Prop({ type: String, default: null, select: false })
+  vehicleRcNumber?: string | null;
+
+  @Prop({ type: String, default: null, select: false })
+  vehicleInsurancePolicyNumber?: string | null;
+
+  /**
+   * The last day the policy covers. Not an identifier, so not hidden —
+   * the admin queue warns on it, and an expired policy is a reason to
+   * stop a rider taking work, not a secret.
+   */
+  @Prop({ type: Date, default: null })
+  vehicleInsuranceExpiresAt?: Date | null;
 
   /**
    * Uploaded document images. Not `select: false`: a URL to an object in

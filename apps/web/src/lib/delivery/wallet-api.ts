@@ -47,12 +47,14 @@ import {
 } from './api';
 import type {
   DeliveryTracking,
+  InsuranceStanding,
   KycDocumentKind,
   KycDocumentRow,
   KycStatus,
   KycSubmission,
   OfferDetail,
   RiderKyc,
+  VehicleSubmission,
   WalletLedgerRow,
   WalletSummary,
   WalletTxnType,
@@ -239,7 +241,25 @@ const KYC_DOCUMENT_KINDS: readonly KycDocumentKind[] = [
   'pan',
   'driving_licence',
   'selfie',
+  'vehicle_rc',
+  'vehicle_insurance',
 ];
+
+const INSURANCE_STANDINGS: readonly InsuranceStanding[] = [
+  'not_provided',
+  'valid',
+  'expiring_soon',
+  'expired',
+];
+
+/**
+ * An unknown standing reads as `not_provided` — never `valid`, which would
+ * be a claim about a policy this build could not read.
+ */
+function readInsuranceStanding(value: unknown): InsuranceStanding {
+  const text = str(value);
+  return INSURANCE_STANDINGS.find((standing) => standing === text) ?? 'not_provided';
+}
 
 function normaliseKycDocument(raw: unknown): KycDocumentRow | null {
   const b = bag(raw);
@@ -268,6 +288,12 @@ export function normaliseKyc(raw: unknown): RiderKyc {
     aadhaarNumberMasked: nullableStr(b['aadhaarNumberMasked']),
     panNumberMasked: nullableStr(b['panNumberMasked']),
     drivingLicenceNumberMasked: nullableStr(b['drivingLicenceNumberMasked']),
+    vehicleRegistrationNumberMasked: nullableStr(b['vehicleRegistrationNumberMasked']),
+    vehicleRcNumberMasked: nullableStr(b['vehicleRcNumberMasked']),
+    vehicleInsurancePolicyNumberMasked: nullableStr(b['vehicleInsurancePolicyNumberMasked']),
+    vehicleInsuranceExpiresOn: nullableStr(b['vehicleInsuranceExpiresOn']),
+    vehicleInsuranceStatus: readInsuranceStanding(b['vehicleInsuranceStatus']),
+    vehicleInsuranceDaysLeft: nullableNum(b['vehicleInsuranceDaysLeft']),
     documents: documents
       .map(normaliseKycDocument)
       .filter((row): row is KycDocumentRow => row !== null),
@@ -292,8 +318,31 @@ export async function submitKyc(input: KycSubmission): Promise<RiderKyc> {
     aadhaarNumber: input.aadhaarNumber,
     panNumber: input.panNumber,
     drivingLicenceNumber: input.drivingLicenceNumber,
+    ...(input.vehicle === undefined ? {} : { vehicle: vehicleBody(input.vehicle) }),
   });
   return normaliseKyc(raw);
+}
+
+/**
+ * Update the vehicle alone — the one part of KYC a VERIFIED rider may change.
+ *
+ * A change to a verified record sends it back for review (the response says
+ * `submitted`); resending what is on file changes nothing. Same discipline
+ * as `submitKyc`: the numbers go into the body and nowhere else.
+ */
+export async function updateKycVehicle(input: VehicleSubmission): Promise<RiderKyc> {
+  const raw = await api.put<unknown>(DELIVERY_PATHS.kycVehicle, vehicleBody(input));
+  return normaliseKyc(raw);
+}
+
+/** Exactly the four fields — `forbidNonWhitelisted` refuses anything else. */
+function vehicleBody(input: VehicleSubmission): VehicleSubmission {
+  return {
+    vehicleRegistrationNumber: input.vehicleRegistrationNumber,
+    vehicleRcNumber: input.vehicleRcNumber,
+    vehicleInsurancePolicyNumber: input.vehicleInsurancePolicyNumber,
+    vehicleInsuranceExpiresOn: input.vehicleInsuranceExpiresOn,
+  };
 }
 
 /** What a document presign produced, or why it could not be made. */

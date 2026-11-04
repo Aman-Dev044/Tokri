@@ -13,6 +13,7 @@ import { JwtUser } from '../../common/decorators/current-user.decorator';
 import {
   DeliveryPartner,
   DeliveryPartnerDocument,
+  KYC_NUMBER_FIELDS,
   KycDocument,
   KycDocumentKind,
   KycStatus,
@@ -25,8 +26,15 @@ import {
   AttachKycDocumentDto,
   KycDocumentPresignDto,
   SubmitKycDto,
+  VehicleDetailsDto,
 } from './dto';
 import { DeliveryProofPhotoService, PresignedUpload } from './proof-photo.service';
+import {
+  VEHICLE_DOCUMENT_KINDS,
+  insuranceStanding,
+  parseCalendarDay,
+  toCalendarDay,
+} from './rider-vehicle';
 import { KycDocumentRow, RiderKycView } from './types';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -36,12 +44,12 @@ const HOUR_MS = 60 * 60 * 1000;
  *  RIDER KYC
  * ════════════════════════════════════════════════════════════════════════
  *
- * Three government identifiers, up to four document images, one admin
- * decision, and a 24-hour promise.
+ * Three government identifiers, the vehicle's plate, RC and policy, up to
+ * six document images, one admin decision, and a 24-hour promise.
  *
  * ── The masking rule, and why it is enforced HERE ───────────────────────
- * `aadhaarNumber`, `panNumber` and `drivingLicenceNumber` are
- * `select: false` on the schema, so a query that does not name them
+ * `aadhaarNumber`, `panNumber`, `drivingLicenceNumber` and the three
+ * vehicle numbers are `select: false` on the schema, so a query that does not name them
  * cannot leak them. This service is the one place in the rider surface
  * that selects them at all, and it selects them only to MASK them:
  * nothing it returns carries a full number. The single endpoint in the
@@ -61,6 +69,23 @@ const HOUR_MS = 60 * 60 * 1000;
  * approved with a different one would make the verification meaningless.
  * Changing a verified identity is an admin action, not a self-service
  * one.
+ *
+ * ── The vehicle is the exception, and it reopens the review ─────────────
+ * A person keeps one Aadhaar for life; a rider changes scooters, and
+ * renews insurance every single year. Refusing vehicle changes once
+ * VERIFIED would send every rider to support annually, so
+ * `PUT /delivery/profile/kyc/vehicle` (and a vehicle document upload)
+ * stays open to a verified rider — but a CHANGE sends the record back to
+ * SUBMITTED with a fresh SLA. "Verified" is a human's statement that the
+ * numbers on file match the documents; a plate or policy that no human
+ * has seen would make that statement false while still displaying it.
+ *
+ * Two edges keep that from being harsher than it must be:
+ *   • Sending back the details already on file changes nothing, so it
+ *     does not demote anyone — a double-tapped Save is not a new claim.
+ *   • Only ACCEPTING an order is gated on VERIFIED. A rider mid-run when
+ *     they update their vehicle finishes that run; they wait for the
+ *     re-review only before taking the next one.
  */
 @Injectable()
 export class RiderKycService {
@@ -91,18 +116,29 @@ export class RiderKycService {
    * four digits before anything is returned.
    */
   async view(partnerId: Types.ObjectId): Promise<RiderKycView> {
+    return this.toView(await this.withNumbers(partnerId));
+  }
+
+  /**
+   * The partner WITH its identifiers selected, for this service to mask
+   * or compare. Never returned as-is.
+   */
+  private async withNumbers(
+    partnerId: Types.ObjectId,
+  ): Promise<DeliveryPartnerDocument> {
     const partner = await this.partners
       .findById(partnerId)
-      .select('+aadhaarNumber +panNumber +drivingLicenceNumber')
+      .select(KYC_NUMBER_FIELDS)
       .exec();
 
     if (!partner) throw new NotFoundException('No delivery partner profile');
-
-    return this.toView(partner);
+    return partner;
   }
 
   toView(partner: DeliveryPartnerDocument): RiderKycView {
     const slaDueAt = partner.kycSlaDueAt ?? null;
+    const expiresAt = partner.vehicleInsuranceExpiresAt ?? null;
+    const insurance = insuranceStanding(expiresAt);
 
     return {
       status: partner.kycStatus,
@@ -118,6 +154,18 @@ export class RiderKycService {
       aadhaarNumberMasked: maskAadhaar(partner.aadhaarNumber ?? null),
       panNumberMasked: maskTail(partner.panNumber ?? null),
       drivingLicenceNumberMasked: maskTail(partner.drivingLicenceNumber ?? null),
+      // Same `maskTail` as PAN and the licence: the console and the app
+      // cannot disagree about how much of a plate is shown.
+      vehicleRegistrationNumberMasked: maskTail(
+        partner.vehicleRegistrationNumber ?? null,
+      ),
+      vehicleRcNumberMasked: maskTail(partner.vehicleRcNumber ?? null),
+      vehicleInsurancePolicyNumberMasked: maskTail(
+        partner.vehicleInsurancePolicyNumber ?? null,
+      ),
+      vehicleInsuranceExpiresOn: expiresAt ? toCalendarDay(expiresAt) : null,
+      vehicleInsuranceStatus: insurance.status,
+      vehicleInsuranceDaysLeft: insurance.daysLeft,
       documents: (partner.kycDocuments ?? []).map(toDocumentRow),
       canResubmit: partner.kycStatus !== KycStatus.VERIFIED,
     };
@@ -142,28 +190,112 @@ export class RiderKycService {
       );
     }
 
-    const now = new Date();
-    const slaDueAt = new Date(now.getTime() + this.slaHours * HOUR_MS);
-
     // A resubmission after a rejection clears the old reason: leaving it
     // behind would show the rider a rejection message beside a pending
     // submission, which reads as a second rejection.
+    //
+    // An omitted `vehicle` leaves whatever is on file alone: resending
+    // the identity is not a statement that the rider has no vehicle.
     partner.set({
       aadhaarNumber: dto.aadhaarNumber,
       panNumber: dto.panNumber,
       drivingLicenceNumber: dto.drivingLicenceNumber,
+      ...(dto.vehicle ? vehicleFields(dto.vehicle) : {}),
+      ...this.submissionStamp(),
+    });
+    await partner.save();
+
+    await this.afterSubmission(user, partner, 'submitted');
+    // Re-read WITH the numbers: `partner` came from `requirePartner`,
+    // which does not select them, and a vehicle left untouched above
+    // would otherwise mask as "nothing on file".
+    return this.view(partner._id);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  The vehicle
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * `PUT /delivery/profile/kyc/vehicle` — the vehicle alone.
+   *
+   *   NOT_STARTED  409 `KYC_NOT_SUBMITTED`: a vehicle is verified as
+   *                belonging to an identified person, so it goes with the
+   *                identity on the first submission.
+   *   SUBMITTED    updated in place; the SLA deadline does NOT move, so
+   *                a correction never costs the rider their place.
+   *   REJECTED     updated, and resubmitted with a fresh SLA — exactly
+   *                what resending the identity form does.
+   *   VERIFIED     updated, and sent BACK to SUBMITTED with a fresh SLA.
+   *                See the class comment for why this is not a 409.
+   *
+   * Identical details are a no-op in every state, VERIFIED included.
+   */
+  async updateVehicle(
+    user: JwtUser,
+    ref: DeliveryPartnerDocument,
+    dto: VehicleDetailsDto,
+  ): Promise<RiderKycView> {
+    const partner = await this.withNumbers(ref._id);
+
+    if (partner.kycStatus === KycStatus.NOT_STARTED) {
+      throw new ConflictException(
+        problem(
+          'KYC_NOT_SUBMITTED',
+          'Send your identity details first — your vehicle goes with them.',
+          { kycStatus: partner.kycStatus },
+        ),
+      );
+    }
+
+    const next = vehicleFields(dto);
+    if (sameVehicle(partner, next)) return this.toView(partner);
+
+    const before = partner.kycStatus;
+    const resubmits = before !== KycStatus.SUBMITTED;
+    partner.set({
+      ...next,
+      ...(resubmits ? this.submissionStamp() : {}),
+    });
+    await partner.save();
+
+    if (resubmits) {
+      await this.afterSubmission(
+        user,
+        partner,
+        before === KycStatus.VERIFIED
+          ? 'reopened by a vehicle change'
+          : 'resubmitted',
+      );
+    }
+    return this.toView(partner);
+  }
+
+  /**
+   * The fields that make a record SUBMITTED, with a fresh deadline.
+   * Shared by every path that hands the record to a human again.
+   */
+  private submissionStamp(): Partial<DeliveryPartner> {
+    const now = new Date();
+    return {
       kycStatus: KycStatus.SUBMITTED,
       kycSubmittedAt: now,
       kycVerifiedAt: null,
       kycRejectedReason: null,
-      kycSlaDueAt: slaDueAt,
-    });
-    await partner.save();
+      kycSlaDueAt: new Date(now.getTime() + this.slaHours * HOUR_MS),
+    };
+  }
 
-    // Note what is NOT logged: the three numbers. The partner id is an
-    // internal identifier, the status is not sensitive.
+  private async afterSubmission(
+    user: JwtUser,
+    partner: DeliveryPartnerDocument,
+    how: string,
+  ): Promise<void> {
+    // Note what is NOT logged: any number. The partner id is an internal
+    // identifier, the status is not sensitive.
     this.logger.log(
-      `KYC submitted by partner ${partner._id.toString()}; due ${slaDueAt.toISOString()}`,
+      `KYC ${how} by partner ${partner._id.toString()}; ` +
+        `due ${partner.kycSlaDueAt?.toISOString() ?? '-'}`,
     );
 
     this.announce(user.sub, partner);
@@ -171,8 +303,6 @@ export class RiderKycService {
       user.sub,
       NotificationTemplates.kycSubmitted(this.slaHours),
     );
-
-    return this.toView(partner);
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -191,7 +321,12 @@ export class RiderKycService {
     partner: DeliveryPartnerDocument,
     dto: KycDocumentPresignDto,
   ): PresignedUpload {
-    if (partner.kycStatus === KycStatus.VERIFIED) {
+    // A verified rider may still send a NEW RC or policy — attaching it
+    // reopens the review, exactly as changing the numbers does.
+    if (
+      partner.kycStatus === KycStatus.VERIFIED &&
+      !VEHICLE_DOCUMENT_KINDS.has(dto.kind)
+    ) {
       throw new ConflictException(
         problem(
           'KYC_ALREADY_VERIFIED',
@@ -218,10 +353,15 @@ export class RiderKycService {
    * first, because two "Aadhaar" images are two answers to one question.
    */
   async attachDocument(
+    user: JwtUser,
     partner: DeliveryPartnerDocument,
     dto: AttachKycDocumentDto,
   ): Promise<RiderKycView> {
-    if (partner.kycStatus === KycStatus.VERIFIED) {
+    const reopens =
+      partner.kycStatus === KycStatus.VERIFIED &&
+      VEHICLE_DOCUMENT_KINDS.has(dto.kind);
+
+    if (partner.kycStatus === KycStatus.VERIFIED && !reopens) {
       throw new ConflictException(
         problem(
           'KYC_ALREADY_VERIFIED',
@@ -248,10 +388,14 @@ export class RiderKycService {
         ...kept,
         { kind: dto.kind, url: dto.url, uploadedAt: new Date() },
       ],
+      ...(reopens ? this.submissionStamp() : {}),
     });
     await partner.save();
 
-    return this.toView(partner);
+    if (reopens) {
+      await this.afterSubmission(user, partner, 'reopened by a vehicle document');
+    }
+    return this.view(partner._id);
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -276,6 +420,35 @@ export class RiderKycService {
       at: new Date().toISOString(),
     });
   }
+}
+
+// ── The vehicle ─────────────────────────────────────────────────────────
+
+/** A validated DTO → the stored fields. The DTO has already normalised. */
+function vehicleFields(dto: VehicleDetailsDto): Partial<DeliveryPartner> {
+  return {
+    vehicleRegistrationNumber: dto.vehicleRegistrationNumber,
+    vehicleRcNumber: dto.vehicleRcNumber,
+    vehicleInsurancePolicyNumber: dto.vehicleInsurancePolicyNumber,
+    // The validator has already proved this is a real day.
+    vehicleInsuranceExpiresAt: parseCalendarDay(dto.vehicleInsuranceExpiresOn),
+  };
+}
+
+/** True when `next` says nothing the record does not already say. */
+function sameVehicle(
+  partner: DeliveryPartnerDocument,
+  next: Partial<DeliveryPartner>,
+): boolean {
+  return (
+    (partner.vehicleRegistrationNumber ?? null) ===
+      next.vehicleRegistrationNumber &&
+    (partner.vehicleRcNumber ?? null) === next.vehicleRcNumber &&
+    (partner.vehicleInsurancePolicyNumber ?? null) ===
+      next.vehicleInsurancePolicyNumber &&
+    (partner.vehicleInsuranceExpiresAt?.getTime() ?? null) ===
+      (next.vehicleInsuranceExpiresAt?.getTime() ?? null)
+  );
 }
 
 // ── Masking ─────────────────────────────────────────────────────────────

@@ -294,6 +294,13 @@ describe('Customer shop API (integration)', () => {
     coupons = ctx.app.get<Model<CouponDocument>>(getModelToken(Coupon.name));
     passwords = ctx.app.get(PasswordService);
 
+    // Wait for Mongoose's autoIndex build before the first `$text` query.
+    // On a fresh in-memory replica set "searches through the text index"
+    // could race the `searchText` index and fail with "text index required
+    // for $text query" — intermittently, so only in a full-suite run. Same
+    // guard as discovery-search.spec.
+    await Promise.all([users.init(), vendors.init(), products.init(), inventory.init()]);
+
     storeA = await seedStore('Green Basket', STORE_A);
     storeB = await seedStore('Corner Mandi', STORE_B);
 

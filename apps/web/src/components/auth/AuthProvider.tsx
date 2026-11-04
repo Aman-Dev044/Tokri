@@ -24,7 +24,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, setAccessToken } from '@/lib/api-client';
+import { api, refreshAccessToken, setAccessToken } from '@/lib/api-client';
 
 // `super_admin` is a real role the API returns — it is NOT a flag on `admin`.
 // Leaving it out made every super admin fall through role checks as "unknown".
@@ -153,12 +153,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // the app believed it was signed in while every `user.role` read
       // threw. The account comes from /auth/me, which is the one endpoint
       // that reports it, and which re-checks status on every call.
-      const { accessToken } = await api.post<{ accessToken: string }>(
-        '/auth/refresh',
-        undefined,
-        { anonymous: true },
-      );
-      setAccessToken(accessToken);
+      //
+      // Through the SHARED refresh: a request that hit 401 may be
+      // refreshing at this very moment, and a second POST with the same
+      // cookie would trip reuse detection and end the session.
+      const accessToken = await refreshAccessToken();
+      if (!accessToken) throw new Error('No session to restore');
 
       const me = await api.get<SessionUser>('/auth/me');
       setUser(me);

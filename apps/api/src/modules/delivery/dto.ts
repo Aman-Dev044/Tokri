@@ -15,10 +15,20 @@ import {
   Matches,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { KycDocumentKind } from '../../database/schemas/delivery-partner.schema';
+import {
+  IsIndianPlate,
+  IsInsuranceExpiry,
+  POLICY_NUMBER,
+  RC_NUMBER,
+  normalisePlate,
+  normalisePolicyNumber,
+  normaliseRcNumber,
+} from './rider-vehicle';
 
 /**
  * Every DTO here is validated by the GLOBAL ValidationPipe with
@@ -224,6 +234,65 @@ export class VerifyWalletTopupDto {
 // ══════════════════════════════════════════════════════════════════════
 
 /**
+ * The vehicle half of KYC — inside `SubmitKycDto.vehicle`, and the whole
+ * body of `PUT /delivery/profile/kyc/vehicle`.
+ *
+ * Normalised BEFORE validation, so the rider types the plate the way it
+ * is painted and the reviewer reads one canonical spelling:
+ *
+ *   Plate    `DL 8S AB 2048` / `dl-8s-ab-2048` → `DL8SAB2048`. A real
+ *            state code, RTO digits, an optional series and the number —
+ *            or the BH series, `22BH1234AA`.
+ *   RC       6-20 letters and digits; spaces and dashes dropped.
+ *   Policy   6-30 characters; insurers print slashes and dashes, so those
+ *            are kept, but not at either end.
+ *   Expiry   A real calendar day, `YYYY-MM-DD`. An already-expired policy
+ *            is ACCEPTED and flagged — refusing it would stop a rider
+ *            recording the truth, and the decision belongs to a human.
+ *
+ * Same discipline as the identity numbers: never logged, never echoed
+ * whole, never in a notification.
+ */
+export class VehicleDetailsDto {
+  @ApiProperty({
+    description: 'Indian registration plate. Spaces and dashes are ignored.',
+    example: 'DL 8S AB 2048',
+  })
+  @Transform(({ value }) => normalisePlate(value))
+  @IsString()
+  @IsIndianPlate()
+  vehicleRegistrationNumber: string;
+
+  @ApiProperty({ description: 'RC number, 6-20 letters and digits.', example: 'DL0820230012345' })
+  @Transform(({ value }) => normaliseRcNumber(value))
+  @IsString()
+  @Matches(RC_NUMBER, {
+    message: 'vehicleRcNumber must be 6 to 20 letters or digits',
+  })
+  vehicleRcNumber: string;
+
+  @ApiProperty({
+    description: 'Motor insurance policy number. Slashes and dashes allowed.',
+    example: '3005/123456789/00/000',
+  })
+  @Transform(({ value }) => normalisePolicyNumber(value))
+  @IsString()
+  @Matches(POLICY_NUMBER, {
+    message:
+      'vehicleInsurancePolicyNumber must be 6 to 30 letters, digits, slashes or dashes',
+  })
+  vehicleInsurancePolicyNumber: string;
+
+  @ApiProperty({
+    description: 'The last day the policy covers, YYYY-MM-DD. May be in the past (flagged).',
+    example: '2027-03-31',
+  })
+  @IsString()
+  @IsInsuranceExpiry()
+  vehicleInsuranceExpiresOn: string;
+}
+
+/**
  * `POST /delivery/profile/kyc`.
  *
  * Formats are validated HERE, at the edge, because a malformed Aadhaar
@@ -268,6 +337,17 @@ export class SubmitKycDto {
     message: 'drivingLicenceNumber must be 8 to 20 letters or digits',
   })
   drivingLicenceNumber: string;
+
+  @ApiPropertyOptional({
+    type: () => VehicleDetailsDto,
+    description:
+      'The vehicle, sent with the identity. Optional — a bicycle has no ' +
+      'plate — but all-or-nothing: the four fields travel together.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => VehicleDetailsDto)
+  vehicle?: VehicleDetailsDto;
 }
 
 /**

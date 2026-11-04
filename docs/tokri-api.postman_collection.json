@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Tokri API",
-    "description": "# Tokri API\n\nMulti-vendor grocery delivery. Every endpoint the service exposes, grouped\nby **who is allowed to call it**.\n\n## Start here\n\nOpen **00 · Sign in** and run the login for the role you want. Each one\nsaves its token into a collection variable, so the folders below work\nimmediately afterwards — no copying JWTs by hand.\n\n## How authorisation works\n\nThe API is **deny by default**. A global guard chain runs on every request:\n\n```\nThrottlerGuard -> JwtAuthGuard -> RolesGuard -> VendorScopeGuard -> ResourceOwnerGuard\n```\n\nA route is only reachable without a token if it is explicitly marked\n`@Public()`, and there are 17 of those out of 192.\n\n`VendorScopeGuard` is worth calling out: a vendor cannot reach another\nvendor's data by changing an id in the URL. The scope comes from the token,\nnever from the request.\n\n## Conventions\n\n* **Money is always INTEGER PAISE.** ₹429 is `42900`.\n* **Lists paginate** with `?page=&limit=` and answer\n  `{ data, meta: { page, limit, total, pages } }`.\n* **Errors are RFC 7807** problem documents, with a machine-readable\n  `errors.code` where one exists.\n* **Validation is strict.** An unknown query parameter or body field is a\n  `400`, never a silent ignore.\n",
+    "description": "# Tokri API\n\nMulti-vendor grocery delivery. Every endpoint the service exposes, grouped\nby **who is allowed to call it**.\n\n## Start here\n\nOpen **00 · Sign in** and run the login for the role you want. Each one\nsaves its token into a collection variable, so the folders below work\nimmediately afterwards — no copying JWTs by hand.\n\n## How authorisation works\n\nThe API is **deny by default**. A global guard chain runs on every request:\n\n```\nThrottlerGuard -> JwtAuthGuard -> RolesGuard -> VendorScopeGuard -> ResourceOwnerGuard\n```\n\nA route is only reachable without a token if it is explicitly marked\n`@Public()`, and there are 20 of those out of 206.\n\n`VendorScopeGuard` is worth calling out: a vendor cannot reach another\nvendor's data by changing an id in the URL. The scope comes from the token,\nnever from the request.\n\n## Conventions\n\n* **Money is always INTEGER PAISE.** ₹429 is `42900`.\n* **Lists paginate** with `?page=&limit=` and answer\n  `{ data, meta: { page, limit, total, pages } }`.\n* **Errors are RFC 7807** problem documents, with a machine-readable\n  `errors.code` where one exists.\n* **Validation is strict.** An unknown query parameter or body field is a\n  `400`, never a silent ignore.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -700,6 +700,101 @@
                   ]
                 },
                 "description": "One product, with its store and live stock\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`, `404`"
+              },
+              "response": []
+            },
+            {
+              "name": "Visible reviews of one product, newest first",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{id}/reviews",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{id}",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt",
+                      "description": "Field name, optionally prefixed with `-` for descending.",
+                      "disabled": true
+                    }
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Visible reviews of one product, newest first\n\n`{ data, meta, summary: { average, count } }`. Hidden reviews are excluded from the list AND from the summary. Same 404 rule as `GET /products/:id`.\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "search",
+          "item": [
+            {
+              "name": "The most-searched terms of the last week",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/search/popular",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "search",
+                    "popular"
+                  ]
+                },
+                "description": "The most-searched terms of the last week\n\nTop 8 normalised terms over the last 7 UTC days, most searched first. A term needs at least 2 searches in the window to appear. Counted anonymously from the first page of `GET /products?q=` and `GET /stores/:id/products?q=`: no user, no IP.\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "settings",
+          "item": [
+            {
+              "name": "Non-sensitive platform settings",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/settings/public",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "settings",
+                    "public"
+                  ]
+                },
+                "description": "Non-sensitive platform settings\n\nExactly platformName, supportEmail, supportPhone, deliveryFeePaise, freeDeliveryThresholdPaise and serviceRadiusKm. Nothing else is ever returned — commission, the COD ceiling, maintenance mode and the ops thresholds stay behind the admin guard.\n\n**Auth** — none. This route is `@Public()`.\n\n**Responses** — `200`"
               },
               "response": []
             }
@@ -1464,6 +1559,51 @@
               "response": []
             },
             {
+              "name": "Rate a delivered order — the store and the rider",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{id}/rating",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{id}",
+                    "rating"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Rate a delivered order — the store and the rider\n\nOnce per order, only once DELIVERED, within 14 days of delivery. Updates `Vendor.rating` and the rider's `rating` as exact running means (sum / count), in the same transaction.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `201`, `400`, `404`, `409`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"storeRating\": 5,\n  \"riderRating\": 4,\n  \"comment\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
               "name": "The caller's orders, newest first",
               "request": {
                 "method": "GET",
@@ -1503,6 +1643,38 @@
                   ]
                 },
                 "description": "The caller's orders, newest first\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            },
+            {
+              "name": "What of a delivered order can go back in the basket",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/orders/{id}/reorder-preview",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "orders",
+                    "{id}",
+                    "reorder-preview"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "What of a delivered order can go back in the basket\n\nRe-reads every line against the live catalogue: inactive or deleted products, and every line of a closed or suspended store, are `unavailable`; the rest are capped at live stock and the per-line ceiling. `product` carries TODAY's price — the order's own price is `orderedPrice`, for display only. Writes nothing: the client adds lines through `POST /cart/items`.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`, `404`, `409`"
               },
               "response": []
             },
@@ -1585,6 +1757,225 @@
                     }
                   }
                 }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "products",
+          "item": [
+            {
+              "name": "Edit my review of this product",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{id}/reviews/mine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{id}",
+                    "reviews",
+                    "mine"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Edit my review of this product\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`, `404`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 0,\n  \"comment\": {}\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "My review of this product, and whether I may write one",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{id}/reviews/mine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{id}",
+                    "reviews",
+                    "mine"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "My review of this product, and whether I may write one\n\nReturns the caller's own review even when an admin has hidden it (`isHidden: true`). `canReview` is true only with no review yet and a delivered order containing the product.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            },
+            {
+              "name": "Review a product you have received",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/products/{id}/reviews",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "products",
+                    "{id}",
+                    "reviews"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Review a product you have received\n\nRating 1-5, optional comment up to 500 characters.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `201`, `403`, `409`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Sweet and ripe, packed carefully.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "wishlist",
+          "item": [
+            {
+              "name": "Every saved product, newest first, with live data",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/wishlist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "wishlist"
+                  ]
+                },
+                "description": "Every saved product, newest first, with live data\n\nA BARE ARRAY (at most 200 rows) — the client needs every saved id to draw the hearts. Each row carries the live product (price, stock, `isActive`) and its store. A withdrawn or deleted product, or one whose store is no longer approved, is KEPT with `available: false` and an `unavailableReason`, never dropped.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            },
+            {
+              "name": "Save a product (idempotent)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/wishlist/{productId}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "wishlist",
+                    "{productId}"
+                  ],
+                  "variable": [
+                    {
+                      "key": "productId",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Save a product (idempotent)\n\nSaving an already-saved product is a 200 with the same body. A new save must name an active product from an approved store.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`, `404`, `409`"
+              },
+              "response": []
+            },
+            {
+              "name": "Unsave a product (idempotent)",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{customerToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/wishlist/{productId}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "wishlist",
+                    "{productId}"
+                  ],
+                  "variable": [
+                    {
+                      "key": "productId",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Unsave a product (idempotent)\n\nRemoving a product that was never saved is still a 200.\n\n**Auth** — bearer token, role must be `customer`.\n\n**Responses** — `200`"
               },
               "response": []
             }
@@ -4612,7 +5003,7 @@
                     "attach"
                   ]
                 },
-                "description": "Record an upload that has landed\n\nThe URL is checked against the key prefix a presign for THIS rider and THIS document kind would produce, so a rider cannot attach an arbitrary link or another rider's object. One document per kind — a second upload replaces the first.\n\n**Auth** — bearer token, role must be `delivery`.\n\n**Responses** — `200`, `400`, `403`, `409`",
+                "description": "Record an upload that has landed\n\nThe URL is checked against the key prefix a presign for THIS rider and THIS document kind would produce, so a rider cannot attach an arbitrary link or another rider's object. One document per kind — a second upload replaces the first. A VERIFIED rider may still attach `vehicle_rc` / `vehicle_insurance`, which sends the record back for review; any other kind is 409.\n\n**Auth** — bearer token, role must be `delivery`.\n\n**Responses** — `200`, `400`, `403`, `409`",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"kind\": \"aadhaar\",\n  \"url\": \"\"\n}",
@@ -4626,7 +5017,7 @@
               "response": []
             },
             {
-              "name": "Submit Aadhaar, PAN and driving licence",
+              "name": "Submit Aadhaar, PAN and driving licence (and the vehicle)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -4650,10 +5041,49 @@
                     "kyc"
                   ]
                 },
-                "description": "Submit Aadhaar, PAN and driving licence\n\nSets status SUBMITTED and stamps `kycSlaDueAt = now + RIDER_KYC_SLA_HOURS`. Formats are validated at the edge — a typo must not consume a human's 24-hour SLA. A rider may resubmit while NOT_STARTED, SUBMITTED or REJECTED; a VERIFIED record is 409, because silently replacing an identity a human approved would make the approval meaningless.\n\n**Auth** — bearer token, role must be `delivery`.\n\n**Responses** — `200`, `400`, `403`, `409`",
+                "description": "Submit Aadhaar, PAN and driving licence (and the vehicle)\n\nSets status SUBMITTED and stamps `kycSlaDueAt = now + RIDER_KYC_SLA_HOURS`. Formats are validated at the edge — a typo must not consume a human's 24-hour SLA. A rider may resubmit while NOT_STARTED, SUBMITTED or REJECTED; a VERIFIED record is 409, because silently replacing an identity a human approved would make the approval meaningless.\n\n**Auth** — bearer token, role must be `delivery`.\n\n**Responses** — `200`, `400`, `403`, `409`",
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"aadhaarNumber\": \"123412341234\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"drivingLicenceNumber\": \"KA0120210012345\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update the vehicle: plate, RC, insurance policy and expiry",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{riderToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/delivery/profile/kyc/vehicle",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "delivery",
+                    "profile",
+                    "kyc",
+                    "vehicle"
+                  ]
+                },
+                "description": "Update the vehicle: plate, RC, insurance policy and expiry\n\nThe one part of KYC a VERIFIED rider may change themselves — vehicles are replaced and insurance renews every year. A CHANGE to a verified record sends it back to SUBMITTED with a fresh SLA, because no human has seen the new details; resending what is already on file changes nothing. While SUBMITTED the deadline does not move; a REJECTED record is resubmitted. 409 before any identity has been submitted. An expired policy is accepted and flagged.\n\n**Auth** — bearer token, role must be `delivery`.\n\n**Responses** — `200`, `400`, `403`, `409`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"vehicleRegistrationNumber\": \"DL 8S AB 2048\",\n  \"vehicleRcNumber\": \"DL0820230012345\",\n  \"vehicleInsurancePolicyNumber\": \"3005/123456789/00/000\",\n  \"vehicleInsuranceExpiresOn\": \"2027-03-31\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -7049,6 +7479,119 @@
           ]
         },
         {
+          "name": "reviews",
+          "item": [
+            {
+              "name": "Every review, newest first (paginated)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/reviews",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "reviews"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "sort",
+                      "value": "-createdAt",
+                      "description": "Field name, optionally prefixed with `-` for descending.",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "visible",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "rating",
+                      "value": "0",
+                      "description": "",
+                      "disabled": true
+                    },
+                    {
+                      "key": "productId",
+                      "value": "",
+                      "description": "Only reviews of this product.",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Every review, newest first (paginated)\n\nFilters: `status` (visible | hidden), `rating`, `productId`.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`"
+              },
+              "response": []
+            },
+            {
+              "name": "Hide or restore a review, with a reason",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/reviews/{id}/visibility",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "reviews",
+                    "{id}",
+                    "visibility"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "",
+                      "description": "required"
+                    }
+                  ]
+                },
+                "description": "Hide or restore a review, with a reason\n\nAudited as `review.hide` / `review.unhide`. The product's rating average and count are recomputed without hidden reviews.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"hidden\": true,\n  \"reason\": \"Contains a phone number\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "riders",
           "item": [
             {
@@ -7114,7 +7657,7 @@
                     }
                   ]
                 },
-                "description": "One rider's KYC — the numbers IN FULL\n\nThe ONLY endpoint in this platform that returns Aadhaar, PAN and driving-licence numbers unmasked. It exists so a reviewer can compare the number against the uploaded document. Every call is audited as `admin.riders.kyc.read` — the audit row records that an identifier was revealed, never the identifier itself.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
+                "description": "One rider's KYC — the numbers IN FULL\n\nThe ONLY endpoint in this platform that returns Aadhaar, PAN, driving-licence and vehicle (plate, RC, policy) numbers unmasked. It exists so a reviewer can compare each number against the uploaded document. `vehicleInsuranceStatus` flags a policy that has expired or expires within 30 days. Every call is audited as `admin.riders.kyc.read` — the audit row records that an identifier was revealed, never the identifier itself.\n\n**Auth** — bearer token, role must be `admin`.\n\n**Responses** — `200`, `404`"
               },
               "response": []
             },

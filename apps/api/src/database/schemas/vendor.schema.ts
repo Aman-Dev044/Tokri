@@ -101,9 +101,25 @@ export class Vendor {
   @Prop({ type: String, enum: VendorStatus, default: VendorStatus.PENDING })
   status: VendorStatus;
 
-  /** 0-5, one decimal place. */
+  /**
+   * 0-5, one decimal place — the mean of every customer's order rating.
+   *
+   * Written ONLY by `OrderRatingService`, in the same transaction that
+   * claims the order's one rating, and always as `ratingSum / ratingCount`.
+   * Keeping the sum beside the count is what makes the mean exact: an
+   * incremental average recomputed from its own rounded value drifts a
+   * little further from the truth with every rating it absorbs.
+   */
   @Prop({ type: Number, default: 0 })
   rating: number;
+
+  /** How many order ratings `rating` is the mean of. */
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingCount: number;
+
+  /** Sum of every store rating received (each 1-5). */
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingSum: number;
 
   /** Reason recorded the last time an admin suspended or re-pended it. */
   @Prop({ type: String, default: null })

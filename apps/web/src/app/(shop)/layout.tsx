@@ -4,6 +4,7 @@ import '@/styles/shop.css';
 
 import { BasketProvider } from '@/components/shop/BasketProvider';
 import { BasketDock } from '@/components/shop/BasketDock';
+import { WishlistProvider } from '@/components/shop/WishlistProvider';
 import { ShopHeader } from '@/components/shop/ShopHeader';
 import { ShopFooter } from '@/components/shop/ShopFooter';
 import { APP_NAME } from '@/config/brand';
@@ -50,20 +51,24 @@ export const metadata: Metadata = {
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
     <BasketProvider>
-      <div className="shop">
-        {/* useSearchParams inside the header needs a boundary, or the whole
-            shop opts out of static rendering at build time. */}
-        <Suspense fallback={<div className="shop-head shop-head--placeholder" />}>
-          <ShopHeader />
-        </Suspense>
+      {/* Inside the basket: a saved product is added to the basket from the
+          wishlist page, and both read the same session. */}
+      <WishlistProvider>
+        <div className="shop">
+          {/* useSearchParams inside the header needs a boundary, or the whole
+              shop opts out of static rendering at build time. */}
+          <Suspense fallback={<div className="shop-head shop-head--placeholder" />}>
+            <ShopHeader />
+          </Suspense>
 
-        <main id="main" className="shop-main">
-          {children}
-        </main>
+          <main id="main" className="shop-main">
+            {children}
+          </main>
 
-        <ShopFooter />
-        <BasketDock />
-      </div>
+          <ShopFooter />
+          <BasketDock />
+        </div>
+      </WishlistProvider>
     </BasketProvider>
   );
 }

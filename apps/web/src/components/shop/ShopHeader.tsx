@@ -31,24 +31,22 @@
  */
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { APP_NAME } from '@/config/brand';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { AisleRail } from './AisleRail';
 import { NotifyBell } from './NotifyBell';
+import { SearchBox } from './SearchBox';
 
 /** One restore attempt per page load, not per mount. */
 let restoreStarted = false;
 
 export function ShopHeader() {
-  const router = useRouter();
-  const params = useSearchParams();
   const geo = useGeolocation();
   const { restore } = useAuth();
 
-  const [query, setQuery] = useState(params.get('q') ?? '');
   const [pincode, setPincode] = useState('');
   const locationDetails = useRef<HTMLDetailsElement | null>(null);
 
@@ -166,43 +164,8 @@ export function ShopHeader() {
           </div>
         </details>
 
-        {/* ── search ───────────────────────────────────────────────────── */}
-        <form
-          className="shop-search"
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const trimmed = query.trim();
-            // ★ Products, not stores. `GET /products?q=` searches the whole
-            // market through the `searchText` index, so the search box can
-            // finally answer the question people actually type into it —
-            // "milk", not "which shop might sell milk".
-            router.push(trimmed === '' ? '/shop' : `/shop?q=${encodeURIComponent(trimmed)}`);
-          }}
-        >
-          <label htmlFor="shop-q" className="mnd-visually-hidden">
-            Search for a product
-          </label>
-          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-            <circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M10.6 10.6 L14 14" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-          </svg>
-          {/* `GET /products?q=` is market-wide and rides the `searchText`
-              text index, so the placeholder can promise items again — it
-              used to say "find a store" because only `GET /stores?q=`
-              existed and promising products would have been a lie.
-              `/stores?q=` still searches store names; it is one link away. */}
-          <input
-            id="shop-q"
-            type="search"
-            className="shop-search__input"
-            placeholder="Search for milk, atta, bananas…"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-          />
-        </form>
+        {/* ── search — the box and its recent/popular suggestions ──────── */}
+        <SearchBox />
 
         <div className="shop-head__actions">
           <NotifyBell />
@@ -329,6 +292,19 @@ function ProfileMenu() {
               />
             </svg>
             Orders
+          </Link>
+
+          <Link href="/wishlist" className="shop-profile__item" role="menuitem">
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path
+                d="M8 13.6s-5-3.1-5-6.8A2.9 2.9 0 0 1 8 5a2.9 2.9 0 0 1 5 1.8c0 3.7-5 6.8-5 6.8Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Wishlist
           </Link>
 
           <Link href="/addresses" className="shop-profile__item" role="menuitem">

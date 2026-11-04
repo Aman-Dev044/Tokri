@@ -1092,6 +1092,21 @@
   color: var(--adm-soft);
 }
 
+/* Tone modifiers, for a notice that is a warning rather than information —
+   e.g. a rider's vehicle insurance lapsing. Opt-in classes rather than
+   `[data-tone]`, which existing notices already carry without meaning it. */
+.adm-notice--warn {
+  background: var(--warn-wash);
+  border-color: color-mix(in oklab, var(--warn) 40%, transparent);
+  color: var(--warn-ink);
+}
+
+.adm-notice--crit {
+  background: var(--crit-wash);
+  border-color: color-mix(in oklab, var(--crit) 40%, transparent);
+  color: var(--crit-ink);
+}
+
 /* ===========================================================================
    6. KPI tiles
    =========================================================================== */

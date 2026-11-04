@@ -23,6 +23,7 @@ import {
   BrowseProductsQueryDto,
   BrowseStoresQueryDto,
 } from './dto';
+import { PopularSearchesService } from '../search/popular-searches.service';
 
 /**
  * ════════════════════════════════════════════════════════════════════════
@@ -49,7 +50,10 @@ import {
 @ApiTags('shop/discovery')
 @Controller()
 export class DiscoveryController {
-  constructor(private readonly discovery: DiscoveryService) {}
+  constructor(
+    private readonly discovery: DiscoveryService,
+    private readonly popularSearches: PopularSearchesService,
+  ) {}
 
   @Public()
   @Get('stores')
@@ -102,6 +106,7 @@ export class DiscoveryController {
     @Param('id') id: string,
     @Query() query: BrowseProductsQueryDto,
   ): Promise<Paginated<ProductRow>> {
+    this.countSearch(query);
     return this.discovery.browseProducts(id, query);
   }
 
@@ -122,6 +127,7 @@ export class DiscoveryController {
   browseMarketProducts(
     @Query() query: BrowseMarketProductsQueryDto,
   ): Promise<Paginated<MarketProductRow>> {
+    this.countSearch(query);
     return this.discovery.browseMarketProducts(query);
   }
 
@@ -153,5 +159,15 @@ export class DiscoveryController {
   })
   productById(@Param('id') id: string): Promise<ProductDetail> {
     return this.discovery.productById(id);
+  }
+
+  /**
+   * Feeds `GET /search/popular`. Only the TERM crosses — no user, no IP —
+   * and only on the first page, so "show more" is not a second search.
+   * `count` returns before its write starts: the search never waits on
+   * it and never fails because of it.
+   */
+  private countSearch(query: { q?: string; page?: number }): void {
+    if (query.q && (query.page ?? 1) === 1) this.popularSearches.count(query.q);
   }
 }

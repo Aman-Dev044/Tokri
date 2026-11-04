@@ -8,6 +8,7 @@ import {
   AdminSection,
   ConfirmDialog,
   DataTable,
+  IconAlert,
   KpiTile,
   Money,
   RelativeTime,
@@ -88,7 +89,53 @@ const DOCUMENT_LABEL: Readonly<Record<string, string>> = {
   pan: 'PAN',
   driving_licence: 'Driving licence',
   selfie: 'Selfie',
+  vehicle_rc: 'Vehicle RC',
+  vehicle_insurance: 'Insurance policy',
 };
+
+/**
+ * The insurance warning, or null when there is nothing to warn about.
+ *
+ * Read from `vehicleInsuranceStatus`, which the API computes against today's
+ * date in India on every request — this screen never decides for itself
+ * whether a date is "soon".
+ */
+function insuranceWarning(kyc: RiderKyc): { tone: 'warn' | 'crit'; text: string } | null {
+  const days = kyc.vehicleInsuranceDaysLeft;
+  const until = kyc.vehicleInsuranceExpiresOn;
+  if (kyc.vehicleInsuranceStatus === 'expired') {
+    return {
+      tone: 'crit',
+      text:
+        `Vehicle insurance expired${until === null ? '' : ` on ${formatDay(until)}`}` +
+        `${days === null ? '' : ` — ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} ago`}. ` +
+        'Ask the rider to renew it and update the policy before taking more work.',
+    };
+  }
+  if (kyc.vehicleInsuranceStatus === 'expiring_soon') {
+    return {
+      tone: 'warn',
+      text:
+        days === 0
+          ? 'Vehicle insurance ends today.'
+          : `Vehicle insurance ends${until === null ? '' : ` on ${formatDay(until)}`}` +
+            `${days === null ? '' : `, in ${days} day${days === 1 ? '' : 's'}`}.`,
+    };
+  }
+  return null;
+}
+
+/** `2027-03-31` → "31 Mar 2027". A calendar day, so formatted in UTC. */
+function formatDay(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return day;
+  return new Intl.DateTimeFormat('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+}
 
 export function RiderDetailView({ riderId }: { riderId: string }) {
   const router = useRouter();
@@ -184,6 +231,9 @@ export function RiderDetailView({ riderId }: { riderId: string }) {
   const performance = value.performance ?? null;
   const currentAssignment = value.currentAssignment ?? null;
   const kyc: RiderKyc | null = value.kyc ?? null;
+  // Optional-read: an API not yet redeployed has no vehicle fields, and
+  // `insuranceWarning` must not invent a standing from their absence.
+  const insurance = kyc !== null && kyc.vehicleInsuranceStatus ? insuranceWarning(kyc) : null;
   const deliveries = safeArray(value.deliveries);
   const walletPaise = value.walletBalancePaise ?? null;
   const suspended = value.status === 'suspended';
@@ -453,6 +503,16 @@ export function RiderDetailView({ riderId }: { riderId: string }) {
                   <p className={styles.subtle}>Not in this response.</p>
                 ) : (
                   <>
+                    {insurance === null ? null : (
+                      <div
+                        className={`adm-notice adm-notice--${insurance.tone}`}
+                        role={insurance.tone === 'crit' ? 'alert' : 'status'}
+                        style={{ marginBottom: 'var(--s-3)' }}
+                      >
+                        <IconAlert />
+                        <p>{insurance.text}</p>
+                      </div>
+                    )}
                     <dl className={styles.defList}>
                       <dt className={styles.dt}>Status</dt>
                       <dd className={styles.dd}>
@@ -514,6 +574,50 @@ export function RiderDetailView({ riderId }: { riderId: string }) {
                       <dt className={styles.dt}>Licence</dt>
                       <dd className={`${styles.dd} ${styles.mono}`}>
                         {kyc.drivingLicenceNumberMasked ?? (
+                          <span className={styles.nullish}>not provided</span>
+                        )}
+                      </dd>
+
+                      {/*
+                        The vehicle, masked by the same function as PAN. A
+                        plate is painted on the scooter, but beside a name and
+                        a phone number it is not public — and this console
+                        masks every identifier, so it masks this one too.
+                      */}
+                      <dt className={styles.dt}>Plate</dt>
+                      <dd className={`${styles.dd} ${styles.mono}`}>
+                        {kyc.vehicleRegistrationNumberMasked ?? (
+                          <span className={styles.nullish}>not provided</span>
+                        )}
+                      </dd>
+
+                      <dt className={styles.dt}>RC</dt>
+                      <dd className={`${styles.dd} ${styles.mono}`}>
+                        {kyc.vehicleRcNumberMasked ?? (
+                          <span className={styles.nullish}>not provided</span>
+                        )}
+                      </dd>
+
+                      <dt className={styles.dt}>Insurance</dt>
+                      <dd className={`${styles.dd} ${styles.mono}`}>
+                        {kyc.vehicleInsurancePolicyNumberMasked ?? (
+                          <span className={styles.nullish}>not provided</span>
+                        )}
+                      </dd>
+
+                      <dt className={styles.dt}>Insured until</dt>
+                      <dd
+                        className={`${styles.dd} ${
+                          kyc.vehicleInsuranceStatus === 'expired'
+                            ? styles.crit
+                            : kyc.vehicleInsuranceStatus === 'expiring_soon'
+                              ? styles.warn
+                              : ''
+                        }`}
+                      >
+                        {kyc.vehicleInsuranceExpiresOn ? (
+                          formatDay(kyc.vehicleInsuranceExpiresOn)
+                        ) : (
                           <span className={styles.nullish}>not provided</span>
                         )}
                       </dd>

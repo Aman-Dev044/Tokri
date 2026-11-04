@@ -11,7 +11,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DeliveryModule } from './modules/delivery/delivery.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PublicSettingsModule } from './modules/settings/settings.module';
 import { ShopModule } from './modules/shop/shop.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 import { UsersModule } from './modules/users/users.module';
 import { VendorModule } from './modules/vendor/vendor.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -67,7 +69,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     RealtimeModule,
     VendorModule,
     ShopModule,
+    ReviewsModule,
     NotificationsModule,
+    PublicSettingsModule,
   ],
 
   providers: [

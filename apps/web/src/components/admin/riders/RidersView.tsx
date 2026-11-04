@@ -306,7 +306,28 @@ export function RidersView() {
             header: 'Vehicle',
             width: '8rem',
             sortable: true,
-            render: (row: RiderRow) => vehicleLabel(row.vehicleType),
+            // The insurance flag rides under the vehicle it belongs to. Read
+            // optionally: an API not yet redeployed sends no standing, and
+            // silence is the honest rendering of "unknown".
+            render: (row: RiderRow) =>
+              row.vehicleInsuranceStatus === 'expired' ||
+              row.vehicleInsuranceStatus === 'expiring_soon' ? (
+                <span className={styles.twoLine}>
+                  <span>{vehicleLabel(row.vehicleType)}</span>
+                  <span
+                    className={styles.tag}
+                    title="Vehicle insurance — see the rider's KYC panel for the date"
+                  >
+                    {row.vehicleInsuranceStatus === 'expired' ? (
+                      <span className={styles.crit}>insurance expired</span>
+                    ) : (
+                      <span className={styles.warn}>insurance ≤30d</span>
+                    )}
+                  </span>
+                </span>
+              ) : (
+                vehicleLabel(row.vehicleType)
+              ),
           },
           {
             key: 'vendor',

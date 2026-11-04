@@ -35,6 +35,14 @@ export function ShopFooter() {
           <Link href="/#riders">Deliver with {APP_NAME}</Link>
         </nav>
 
+        <nav className="shop-foot__nav" aria-label="Help and policies">
+          <h2 className="shop-foot__title">Help</h2>
+          <Link href="/help">Help &amp; FAQ</Link>
+          <Link href="/help#contact">Contact support</Link>
+          <Link href="/privacy">Privacy policy</Link>
+          <Link href="/terms">Terms of service</Link>
+        </nav>
+
         <div className="shop-foot__nav">
           <h2 className="shop-foot__title">Good to know</h2>
           <p className="shop-foot__note">

@@ -188,6 +188,32 @@ export class OrderCancellation {
 export const OrderCancellationSchema =
   SchemaFactory.createForClass(OrderCancellation);
 
+/**
+ * The customer's one rating of a delivered order: the store, and the rider
+ * if there was one.
+ *
+ * Embedded rather than its own collection because "once per order" is
+ * then a property of a single document: the write that sets it filters on
+ * `customerRating: null`, so two taps of Submit cannot both land.
+ */
+@Schema({ _id: false })
+export class OrderCustomerRating {
+  @Prop({ type: Number, required: true, min: 1, max: 5 })
+  store: number;
+
+  /** Null when the order had no rider, or the customer skipped them. */
+  @Prop({ type: Number, default: null, min: 1, max: 5 })
+  rider?: number | null;
+
+  @Prop({ type: String, default: null })
+  comment?: string | null;
+
+  @Prop({ type: Date, required: true })
+  at: Date;
+}
+export const OrderCustomerRatingSchema =
+  SchemaFactory.createForClass(OrderCustomerRating);
+
 @Schema({ timestamps: true, collection: 'orders' })
 export class Order {
   /** Human-readable: MND-20260924-0001. Unique. */
@@ -255,6 +281,10 @@ export class Order {
 
   @Prop({ type: Date, default: null })
   deliveredAt?: Date | null;
+
+  /** Set once, by the customer, after delivery. See `OrderCustomerRating`. */
+  @Prop({ type: OrderCustomerRatingSchema, default: null })
+  customerRating?: OrderCustomerRating | null;
 
   @Prop({ type: Boolean, default: false })
   isDemo: boolean;

@@ -35,6 +35,42 @@ export function getAccessToken(): string | null {
 }
 
 /* ------------------------------------------------------------------ */
+/* Session refresh — one at a time                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Exchange the refresh cookie for a new access token, SHARED by every caller.
+ *
+ * Refresh tokens rotate and reuse is detected: presenting the same cookie
+ * twice revokes the whole session family. So two refreshes must never be in
+ * flight together — the mount-time restore and a request that just hit 401
+ * both await this one promise instead of each POSTing /auth/refresh.
+ *
+ * Resolves to the new token, or null when there is no session to restore.
+ */
+let refreshInFlight: Promise<string | null> | null = null;
+
+export function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = apiFetch<{ accessToken: string }>('/auth/refresh', {
+    method: 'POST',
+    anonymous: true,
+  })
+    .then((res) => {
+      setAccessToken(res.accessToken);
+      return res.accessToken;
+    })
+    .catch(() => {
+      setAccessToken(null);
+      return null;
+    })
+    .finally(() => {
+      refreshInFlight = null;
+    });
+  return refreshInFlight;
+}
+
+/* ------------------------------------------------------------------ */
 /* Errors                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -120,6 +156,8 @@ export interface RequestOptions extends Omit<RequestInit, 'body'> {
   anonymous?: boolean;
   /** abort after N ms; defaults to 20s so a hung API cannot hang the UI */
   timeoutMs?: number;
+  /** internal: set on the one automatic retry after a session refresh */
+  _retried?: boolean;
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
@@ -157,6 +195,7 @@ export async function apiFetch<T>(
     idempotencyKey,
     anonymous = false,
     timeoutMs = 20_000,
+    _retried = false,
     headers,
     signal,
     ...init
@@ -206,6 +245,17 @@ export async function apiFetch<T>(
     );
   }
   clearTimeout(timer);
+
+  // A signed-in request that raced the session restore on a full page load
+  // went out with no token, got 401, and the page stayed empty: /orders
+  // fired before /auth/refresh had answered and was never asked again.
+  // Restore once (shared — see refreshAccessToken) and retry once. Not for
+  // /auth/* itself: a 401 from /auth/login is a wrong password, and
+  // refreshing on a failed refresh would loop.
+  if (res.status === 401 && !anonymous && !_retried && !path.startsWith('/auth/')) {
+    const token = await refreshAccessToken();
+    if (token) return apiFetch<T>(path, { ...options, _retried: true });
+  }
 
   if (!res.ok) {
     const problem = await parseProblem(res);

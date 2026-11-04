@@ -30,7 +30,9 @@ import { useRef } from 'react';
 import { Depth, formatPaise, Tilt3D, type AisleKey } from '@mandi/design-system';
 import { useBasket, type BasketStore } from './BasketProvider';
 import { QuantityStepper } from './QuantityStepper';
+import { WishlistHeart } from './WishlistProvider';
 import { formatPackSize } from '@/lib/shop/format';
+import { formatRating } from '@/lib/shop/engagement';
 import type { Product } from '@/lib/shop/types';
 
 /* ───────────────────────────────── media ───────────────────────────────── */
@@ -151,6 +153,15 @@ export function ProductCard({ product, store, aisleKey, priority = false }: Prod
         {!product.inStock ? <span className="shop-card__out">Out of stock</span> : null}
       </Link>
 
+      {/* The heart is a SIBLING of the media link, never inside it (a button
+          in an <a> is invalid and the tap would navigate). It rides the
+          nearest Depth layer so, whenever the tilt tokens give the layers
+          real depth, nothing renders — or hit-tests — in front of it. The
+          button itself never transforms; see `WishlistHeart`. */}
+      <Depth depth={4} className="shop-card__fav">
+        <WishlistHeart productId={product.id} name={product.name} />
+      </Depth>
+
       <div className="shop-card__body">
         <h3 className="shop-card__name">
           <Link href={`/product/${encodeURIComponent(product.id)}`}>{product.name}</Link>
@@ -161,6 +172,20 @@ export function ProductCard({ product, store, aisleKey, priority = false }: Prod
           {formatPackSize(product.unit, product.unitValue)}
           {product.brand !== null ? <span className="shop-card__brand"> · {product.brand}</span> : null}
         </p>
+        {/* Only once somebody has reviewed it: "0.0 ★" reads as a bad
+            product, when it means nobody has said anything yet. */}
+        {product.ratingCount > 0 ? (
+          <p className="shop-card__rating">
+            <span aria-hidden="true">
+              ★ {formatRating(product.ratingAvg)}
+              <span className="shop-card__rating-count"> ({product.ratingCount})</span>
+            </span>
+            <span className="mnd-visually-hidden">
+              Rated {formatRating(product.ratingAvg)} out of 5 from {product.ratingCount}{' '}
+              {product.ratingCount === 1 ? 'review' : 'reviews'}
+            </span>
+          </p>
+        ) : null}
 
         <div className="shop-card__foot">
           <p className="shop-card__price">

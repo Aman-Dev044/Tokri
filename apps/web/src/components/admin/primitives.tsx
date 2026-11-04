@@ -183,7 +183,14 @@ export const AISLE_SERIES_COLOR: Record<AisleKey, string> = {
 /* ================================================================== */
 
 export type PillTone = 'good' | 'warn' | 'crit' | 'neutral' | 'info';
-export type StatusKind = 'order' | 'vendor' | 'user' | 'payment' | 'settlement' | 'kyc';
+export type StatusKind =
+  | 'order'
+  | 'vendor'
+  | 'user'
+  | 'payment'
+  | 'settlement'
+  | 'kyc'
+  | 'review';
 
 /**
  * Status -> semantic tone, per domain.
@@ -237,6 +244,11 @@ const TONES: Record<StatusKind, Record<string, PillTone>> = {
     submitted: 'warn',
     rejected: 'crit',
     not_started: 'neutral',
+  },
+  // A product review. HIDDEN is a moderation decision, so it reads as one.
+  review: {
+    visible: 'good',
+    hidden: 'warn',
   },
 };
 

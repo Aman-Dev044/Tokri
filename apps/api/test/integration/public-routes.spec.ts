@@ -160,6 +160,17 @@ const EXPECTED_PUBLIC_ROUTES: readonly string[] = [
   // The non-map lat/lng fallback. Static table in, static centre out —
   // see the justification in the header block above.
   'GET /pincodes/:pincode',
+  // The top eight search terms of the last week. An aggregate over
+  // per-day counters that hold a term, a day and a number — no user id,
+  // no IP, no field to put one in — so it is the same eight words for
+  // every caller. A term needs two searches in the window to show.
+  'GET /search/popular',
+  // Verified-purchase reviews of one product. The same CATALOGUE
+  // guarantee: only ACTIVE products of APPROVED stores, only reviews an
+  // admin has not hidden, and each author shown as "First L." — never an
+  // id, phone or full name. Read-only; writing a review needs a CUSTOMER
+  // token and a delivered order.
+  'GET /products/:id/reviews',
 
   // ── Signup ──────────────────────────────────────────────────────────
   'POST /auth/register/request-otp',
@@ -170,6 +181,15 @@ const EXPECTED_PUBLIC_ROUTES: readonly string[] = [
 
   // ── Payments (§8.3) ───────────────────────────────────────────────
   'POST /webhooks/razorpay',
+
+  // ── Help / privacy / terms ──────────────────────────────────────────
+  // Six non-sensitive settings — platform name, support email and
+  // phone, delivery fee, free-delivery threshold, default radius — that
+  // are already printed on public pages. Identical for every caller,
+  // read-only, and built key by key from an allowlist; commission, the
+  // COD ceiling, maintenance mode and ops thresholds are never in it.
+  // `public-settings.spec.ts` asserts the exact key set.
+  'GET /settings/public',
 ];
 
 interface RouteInfo {

@@ -32,6 +32,12 @@
  * `ProductRow` (`GET /stores/:id/products`) carries no `vendorId`; only
  * `ProductDetail` carries a `store`. So `add()` takes the store explicitly and
  * every caller passes the one it fetched from.
+ *
+ * ── MANY AT ONCE: "ORDER AGAIN" ─────────────────────────────────────────────
+ * `addMany()` is the same rules for a list: one store, the same park-and-ask
+ * switch, each line capped at live stock and the per-line ceiling. It mirrors
+ * the lines to `POST /cart/items` ONE AT A TIME — parallel adds would race the
+ * server's read-modify-save of the one cart document and drop lines.
  */
 
 import {
@@ -79,11 +85,17 @@ export interface ParkedBasket extends BasketStore {
   parkedAt: number;
 }
 
+/** One product to add, and how many. `addMany` takes a list of these. */
+export interface BasketAddition {
+  product: Product;
+  qty: number;
+}
+
 interface PendingSwitch {
   from: BasketStore;
   to: BasketStore;
-  product: Product;
-  qty: number;
+  /** One for a tap on Add; a whole order for "Order again". */
+  items: BasketAddition[];
 }
 
 interface BasketValue {
@@ -98,6 +110,13 @@ interface BasketValue {
   hydrated: boolean;
 
   add: (product: Product, store: BasketStore, qty: number, origin?: HTMLElement | null) => void;
+  /**
+   * Adds every item, each capped at live stock and `MAX_QTY_PER_LINE`.
+   * `'added'` — done; `'pending'` — the basket holds another store's items,
+   * so the switch dialog is asking first (nothing is added until it is
+   * confirmed); `'nothing'` — every line was already at its cap.
+   */
+  addMany: (items: BasketAddition[], store: BasketStore) => 'added' | 'pending' | 'nothing';
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
@@ -337,16 +356,92 @@ export function BasketProvider({ children }: { children: ReactNode }) {
     [mirror],
   );
 
+  /**
+   * Many lines onto `base` — the basket as it stands, or `[]` straight after a
+   * park. Each line goes up by its qty, capped at live stock and the per-line
+   * ceiling, so a product already in the basket is topped up rather than
+   * pushed past what the shelf holds (which the server would refuse).
+   * Returns how many lines actually changed.
+   */
+  const applyMany = useCallback(
+    (nextStore: BasketStore, items: BasketAddition[], base: BasketLine[]): number => {
+      const next = [...base];
+      const deltas: { productId: string; qty: number }[] = [];
+
+      for (const { product, qty } of items) {
+        const ceiling = Math.min(product.availableQty, MAX_QTY_PER_LINE);
+        const index = next.findIndex((line) => line.productId === product.id);
+        const current = index === -1 ? 0 : (next[index]?.qty ?? 0);
+        const target = Math.min(current + qty, ceiling);
+        if (target <= current) continue;
+
+        deltas.push({ productId: product.id, qty: target - current });
+        const line: BasketLine = {
+          productId: product.id,
+          name: product.name,
+          image: product.images[0] ?? null,
+          unit: product.unit,
+          pricePaise: product.price,
+          qty: target,
+          maxQty: ceiling,
+        };
+        if (index === -1) next.push(line);
+        else next[index] = line;
+      }
+
+      if (deltas.length === 0) return 0;
+
+      setStore(nextStore);
+      setLines(next);
+
+      mirror(async () => {
+        let refusal: unknown = null;
+        for (const delta of deltas) {
+          try {
+            await api.post('/cart/items', { vendorId: nextStore.vendorId, ...delta });
+          } catch (cause) {
+            // Unreachable API: stop, the rest would fail the same way.
+            if (!(cause instanceof ApiError) || cause.isNetworkError) throw cause;
+            // A refusal (stock moved since the preview) — keep going, say so once.
+            refusal ??= cause;
+          }
+        }
+        if (refusal !== null) throw refusal;
+      });
+
+      return deltas.length;
+    },
+    [mirror],
+  );
+
   const add = useCallback(
     (product: Product, target: BasketStore, qty: number, origin?: HTMLElement | null) => {
       if (store !== null && lines.length > 0 && store.vendorId !== target.vendorId) {
         // Do not merge, do not destroy. Ask.
-        setPendingSwitch({ from: store, to: target, product, qty });
+        setPendingSwitch({ from: store, to: target, items: [{ product, qty }] });
         return;
       }
       applyAdd(store !== null && lines.length > 0 ? store : target, product, qty, origin);
     },
     [store, lines.length, applyAdd],
+  );
+
+  const addMany = useCallback(
+    (items: BasketAddition[], target: BasketStore): 'added' | 'pending' | 'nothing' => {
+      if (items.length === 0) return 'nothing';
+      if (store !== null && lines.length > 0 && store.vendorId !== target.vendorId) {
+        // Exactly the single-item rule: ask, then park — never merge, never destroy.
+        setPendingSwitch({ from: store, to: target, items });
+        return 'pending';
+      }
+      const changed = applyMany(
+        store !== null && lines.length > 0 ? store : target,
+        items,
+        lines,
+      );
+      return changed > 0 ? 'added' : 'nothing';
+    },
+    [store, lines, applyMany],
   );
 
   const setQty = useCallback(
@@ -378,7 +473,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
 
   const confirmSwitch = useCallback(() => {
     if (pendingSwitch === null) return;
-    const { from, to, product, qty } = pendingSwitch;
+    const { from, to, items } = pendingSwitch;
 
     const nextParked: ParkedBasket = { ...from, lines, parkedAt: Date.now() };
     setParked(nextParked);
@@ -387,14 +482,16 @@ export function BasketProvider({ children }: { children: ReactNode }) {
 
     setLines([]);
     setPendingSwitch(null);
-    applyAdd(to, product, qty, null);
+    const [only] = items;
+    if (items.length === 1 && only !== undefined) applyAdd(to, only.product, only.qty, null);
+    else applyMany(to, items, []);
 
     toast({
       tone: 'info',
       title: `${from.storeName} basket parked`,
       description: 'Nothing was thrown away — restore it from the basket at any time.',
     });
-  }, [pendingSwitch, lines, mirror, applyAdd, toast]);
+  }, [pendingSwitch, lines, mirror, applyAdd, applyMany, toast]);
 
   const cancelSwitch = useCallback(() => {
     setPendingSwitch(null);
@@ -443,6 +540,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
       isLocalOnly,
       hydrated,
       add,
+      addMany,
       setQty,
       remove,
       clear,
@@ -463,6 +561,7 @@ export function BasketProvider({ children }: { children: ReactNode }) {
       isLocalOnly,
       hydrated,
       add,
+      addMany,
       setQty,
       remove,
       clear,

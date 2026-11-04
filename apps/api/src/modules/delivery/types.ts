@@ -7,6 +7,7 @@ import {
   PartnerStatus,
   VehicleType,
 } from '../../database/schemas/delivery-partner.schema';
+import { InsuranceStanding } from './rider-vehicle';
 
 /**
  * The rider app's response shapes.
@@ -221,7 +222,10 @@ export interface WalletTopupResponse {
 // ══════════════════════════════════════════════════════════════════════
 
 export interface KycDocumentRow {
-  /** `KycDocumentKind` — aadhaar | pan | driving_licence | selfie. */
+  /**
+   * `KycDocumentKind` — aadhaar | pan | driving_licence | selfie |
+   * vehicle_rc | vehicle_insurance.
+   */
   kind: string;
   url: string;
   uploadedAt: string;
@@ -249,6 +253,16 @@ export interface RiderKycView {
   aadhaarNumberMasked: string | null;
   panNumberMasked: string | null;
   drivingLicenceNumberMasked: string | null;
+  /** The plate, RC and policy numbers — masked exactly like the three above. */
+  vehicleRegistrationNumberMasked: string | null;
+  vehicleRcNumberMasked: string | null;
+  vehicleInsurancePolicyNumberMasked: string | null;
+  /** The last covered day, `YYYY-MM-DD`. Not an identifier, so not masked. */
+  vehicleInsuranceExpiresOn: string | null;
+  /** `InsuranceStanding` — not_provided | valid | expiring_soon | expired. */
+  vehicleInsuranceStatus: InsuranceStanding;
+  /** Whole days of cover left, today included as 0; negative once expired. */
+  vehicleInsuranceDaysLeft: number | null;
   documents: KycDocumentRow[];
   /** False once VERIFIED: a verified rider may not overwrite their identity. */
   canResubmit: boolean;

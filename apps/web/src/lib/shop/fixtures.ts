@@ -165,6 +165,9 @@ interface FixtureProduct {
   aisleKey: AisleKey;
   inStock: boolean;
   availableQty: number;
+  /** `ProductRow.ratingAvg` / `ratingCount` — the visible-review aggregate. */
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 function storeForAisle(aisle: AisleKey): FixtureStore {
@@ -196,6 +199,9 @@ const PRODUCTS: readonly FixtureProduct[] = AISLES.flatMap((aisle) => {
       aisleKey: aisle.key,
       inStock: !out,
       availableQty: out ? 0 : 6 + index * 3,
+      // Most sample products are unreviewed, which is the honest default.
+      ratingAvg: index % 3 === 0 ? 4.2 : 0,
+      ratingCount: index % 3 === 0 ? 12 + index : 0,
     };
   });
 });
@@ -395,6 +401,10 @@ interface FixtureOrder {
   canCancel: boolean;
   acceptedAt: string | null;
   deliveredAt: string | null;
+  rating: { storeRating: number; riderRating: number | null; comment: string | null; at: string } | null;
+  canRate: boolean;
+  rateUntil: string | null;
+  hasRider: boolean;
 }
 
 const LIVE_ORDER: FixtureOrder = {
@@ -431,6 +441,10 @@ const LIVE_ORDER: FixtureOrder = {
   canCancel: false,
   acceptedAt: minutesAgo(24),
   deliveredAt: null,
+  rating: null,
+  canRate: false,
+  rateUntil: null,
+  hasRider: true,
 };
 
 const DELIVERED_ORDER: FixtureOrder = {
@@ -453,6 +467,8 @@ const DELIVERED_ORDER: FixtureOrder = {
   ],
   canCancel: false,
   deliveredAt: minutesAgo(60 * 72 - 34),
+  canRate: true,
+  rateUntil: minutesAgo(60 * 72 - 34 - 14 * 24 * 60),
 };
 
 const CANCELLED_ORDER: FixtureOrder = {
@@ -485,6 +501,7 @@ const CANCELLED_ORDER: FixtureOrder = {
   canCancel: false,
   acceptedAt: null,
   deliveredAt: null,
+  hasRider: false,
 };
 
 const ALL_ORDERS = [LIVE_ORDER, DELIVERED_ORDER, CANCELLED_ORDER];

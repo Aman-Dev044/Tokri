@@ -8,12 +8,14 @@ import { AdminPage } from '@/components/admin';
 import styles from '../_shared-pages/pages.module.css';
 import { AislesTab } from './AislesTab';
 import { ProductsTab } from './ProductsTab';
+import { ReviewsTab } from './ReviewsTab';
 
-type TabKey = 'aisles' | 'products';
+type TabKey = 'aisles' | 'products' | 'reviews';
 
 const TABS: readonly { key: TabKey; label: string }[] = [
   { key: 'aisles', label: 'Aisles & categories' },
   { key: 'products', label: 'Products' },
+  { key: 'reviews', label: 'Reviews' },
 ];
 
 /**
@@ -24,7 +26,9 @@ const TABS: readonly { key: TabKey; label: string }[] = [
  */
 export function CatalogView() {
   const params = useSearchParams();
-  const initialTab: TabKey = params.get('tab') === 'products' ? 'products' : 'aisles';
+  const requested = params.get('tab');
+  const initialTab: TabKey =
+    requested === 'products' || requested === 'reviews' ? requested : 'aisles';
   const initialQuery = params.get('q') ?? '';
 
   const [tab, setTab] = useState<TabKey>(initialTab);
@@ -32,7 +36,7 @@ export function CatalogView() {
   return (
     <AdminPage
       title="Catalog"
-      description="The shape of the shop: nine aisles, the categories inside them, and every product across every vendor."
+      description="The shape of the shop: nine aisles, the categories inside them, every product across every vendor, and what customers say about them."
       breadcrumbs={[
         { label: 'Admin', href: '/admin' },
         { label: 'Catalog', href: '/admin/catalog' },
@@ -66,7 +70,13 @@ export function CatalogView() {
         className={styles.enter}
         key={tab}
       >
-        {tab === 'aisles' ? <AislesTab /> : <ProductsTab initialQuery={initialQuery} />}
+        {tab === 'aisles' ? (
+          <AislesTab />
+        ) : tab === 'products' ? (
+          <ProductsTab initialQuery={initialQuery} />
+        ) : (
+          <ReviewsTab />
+        )}
       </div>
     </AdminPage>
   );

@@ -88,9 +88,11 @@ export class AdminRidersController {
   @ApiOperation({
     summary: 'One rider\'s KYC — the numbers IN FULL',
     description:
-      'The ONLY endpoint in this platform that returns Aadhaar, PAN and ' +
-      'driving-licence numbers unmasked. It exists so a reviewer can ' +
-      'compare the number against the uploaded document. Every call is ' +
+      'The ONLY endpoint in this platform that returns Aadhaar, PAN, ' +
+      'driving-licence and vehicle (plate, RC, policy) numbers unmasked. ' +
+      'It exists so a reviewer can compare each number against the ' +
+      'uploaded document. `vehicleInsuranceStatus` flags a policy that ' +
+      'has expired or expires within 30 days. Every call is ' +
       'audited as `admin.riders.kyc.read` — the audit row records that an ' +
       'identifier was revealed, never the identifier itself.',
   })

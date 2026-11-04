@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -28,6 +29,7 @@ import {
   AttachKycDocumentDto,
   KycDocumentPresignDto,
   SubmitKycDto,
+  VehicleDetailsDto,
 } from './dto';
 import { PresignedUpload } from './proof-photo.service';
 import { RiderKycService } from './rider-kyc.service';
@@ -44,7 +46,8 @@ import { RiderKycView } from './types';
  * record.
  *
  * ── Nothing here returns a full identifier ──────────────────────────────
- * `GET /delivery/profile/kyc` masks all three numbers to their last four
+ * `GET /delivery/profile/kyc` masks every number — the three identity
+ * numbers and the vehicle's plate, RC and policy — to its last four
  * characters. The rider does not need to read their own Aadhaar back off
  * a server — they are holding the card — and a response that carries it
  * is one screenshot, one proxy log and one crash reporter away from
@@ -83,7 +86,7 @@ export class RiderKycController {
   @Post()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Submit Aadhaar, PAN and driving licence',
+    summary: 'Submit Aadhaar, PAN and driving licence (and the vehicle)',
     description:
       'Sets status SUBMITTED and stamps `kycSlaDueAt = now + ' +
       'RIDER_KYC_SLA_HOURS`. Formats are validated at the edge — a typo ' +
@@ -100,6 +103,29 @@ export class RiderKycController {
   ): Promise<RiderKycView> {
     const partner = await this.delivery.requirePartner(user);
     return this.kyc.submit(user, partner, dto);
+  }
+
+  @Put('vehicle')
+  @ApiOperation({
+    summary: 'Update the vehicle: plate, RC, insurance policy and expiry',
+    description:
+      'The one part of KYC a VERIFIED rider may change themselves — ' +
+      'vehicles are replaced and insurance renews every year. A CHANGE ' +
+      'to a verified record sends it back to SUBMITTED with a fresh SLA, ' +
+      'because no human has seen the new details; resending what is ' +
+      'already on file changes nothing. While SUBMITTED the deadline does ' +
+      'not move; a REJECTED record is resubmitted. 409 before any identity ' +
+      'has been submitted. An expired policy is accepted and flagged.',
+  })
+  @ApiOkResponse({ description: "The rider's KYC record, masked." })
+  @ApiBadRequestResponse({ description: 'A field did not match its format.' })
+  @ApiConflictResponse({ description: 'KYC_NOT_SUBMITTED.' })
+  async updateVehicle(
+    @CurrentUser() user: JwtUser,
+    @Body() dto: VehicleDetailsDto,
+  ): Promise<RiderKycView> {
+    const partner = await this.delivery.requirePartner(user);
+    return this.kyc.updateVehicle(user, partner, dto);
   }
 
   @Post('document')
@@ -133,7 +159,9 @@ export class RiderKycController {
       'The URL is checked against the key prefix a presign for THIS ' +
       'rider and THIS document kind would produce, so a rider cannot ' +
       'attach an arbitrary link or another rider\'s object. One document ' +
-      'per kind — a second upload replaces the first.',
+      'per kind — a second upload replaces the first. A VERIFIED rider ' +
+      'may still attach `vehicle_rc` / `vehicle_insurance`, which sends ' +
+      'the record back for review; any other kind is 409.',
   })
   @ApiBadRequestResponse({ description: 'KYC_DOCUMENT_URL_REJECTED.' })
   @ApiConflictResponse({ description: 'KYC_ALREADY_VERIFIED.' })
@@ -142,6 +170,6 @@ export class RiderKycController {
     @Body() dto: AttachKycDocumentDto,
   ): Promise<RiderKycView> {
     const partner = await this.delivery.requirePartner(user);
-    return this.kyc.attachDocument(partner, dto);
+    return this.kyc.attachDocument(user, partner, dto);
   }
 }

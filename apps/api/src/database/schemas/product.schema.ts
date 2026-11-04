@@ -67,6 +67,21 @@ export class Product {
   @Prop({ type: Boolean, default: true })
   isActive: boolean;
 
+  /**
+   * ── REVIEW AGGREGATE — denormalised, never written by hand ──────────
+   * The mean of every VISIBLE review (0-5, one decimal) and how many there
+   * are. `ReviewsService.recompute` rewrites both from the `product_reviews`
+   * collection after every create, edit, hide and unhide, so a catalogue
+   * page reads a rating without a per-row aggregation. A hidden review is
+   * excluded from both numbers: moderation that left the score untouched
+   * would not be moderation.
+   */
+  @Prop({ type: Number, default: 0, min: 0, max: 5 })
+  ratingAvg: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingCount: number;
+
   /** Lowercased name + brand + tags. Backs the `text` index below. */
   @Prop({ type: String, default: '' })
   searchText: string;

@@ -3213,3 +3213,568 @@
   font-size: var(--t-sm);
   color: var(--ink-soft);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WISHLIST · REVIEWS · ORDER RATING
+   ───────────────────────────────────────────────────────────────────────────
+   ★ Nothing interactive in this section transforms — not on hover, not while
+   pressed. The heart lives inside the tilting product card, where a pressed-
+   state transform lifts a button onto its own 3D layer between press and
+   release and the click never fires (the Add button's old bug). Feedback is
+   colour, fill and border only. The star inputs follow the same rule.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── the heart ──────────────────────────────────────────────────────────── */
+
+.shop-card__fav {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  z-index: 2;
+}
+
+.shop-heart {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--hairline-bright);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
+}
+.shop-heart:hover {
+  color: var(--crit);
+  border-color: color-mix(in oklab, var(--crit) 45%, var(--hairline));
+  background: var(--surface);
+}
+.shop-heart:active {
+  filter: brightness(0.92);
+}
+.shop-heart:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.shop-heart[data-on='true'] {
+  color: var(--crit);
+  background: var(--crit-wash);
+  border-color: color-mix(in oklab, var(--crit) 40%, transparent);
+}
+.shop-heart:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+.shop-heart--lg {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+}
+
+/* ── stars ──────────────────────────────────────────────────────────────── */
+
+.shop-card__rating {
+  margin: 0;
+  font-family: var(--data);
+  font-size: var(--t-xs);
+  color: var(--gold-ink);
+}
+.shop-card__rating-count {
+  color: var(--ink-faint);
+}
+
+.shop-stars {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+  color: var(--hairline-strong);
+}
+.shop-stars [data-on='true'] {
+  color: var(--gold);
+}
+
+.shop-product__titlerow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.shop-product__rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.shop-product__rating a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+.shop-starinput {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.shop-starinput__legend {
+  padding: 0;
+  margin-bottom: var(--s-1);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+.shop-starinput__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+.shop-starinput__star {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  font-size: 1.45rem;
+  line-height: 1;
+  color: var(--hairline-strong);
+  cursor: pointer;
+  transition: color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+}
+.shop-starinput__star[data-on='true'] {
+  color: var(--gold);
+}
+.shop-starinput__star:hover {
+  background: var(--gold-wash);
+}
+.shop-starinput__star:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.shop-starinput:disabled .shop-starinput__star {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.shop-starinput__word {
+  margin-left: var(--s-2);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* ── product reviews ────────────────────────────────────────────────────── */
+
+.shop-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin-top: var(--s-8);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--hairline);
+  max-width: 46rem;
+}
+.shop-reviews__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.shop-reviews__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-h3);
+}
+.shop-reviews__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.shop-reviews__note {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: var(--ink-soft);
+}
+.shop-reviews__mine,
+.shop-reviews__form,
+.shop-rate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+}
+.shop-reviews__mine-title,
+.shop-rate__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+.shop-reviews__label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+}
+.shop-reviews__optional {
+  font-size: var(--t-xs);
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.shop-reviews__text {
+  width: 100%;
+  min-height: 0;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--hairline-bright);
+  border-radius: var(--r-md);
+  background: var(--ground);
+  resize: vertical;
+}
+.shop-reviews__text:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.shop-reviews__count {
+  margin: calc(var(--s-2) * -1) 0 0;
+  align-self: flex-end;
+  font-size: var(--t-2xs);
+  color: var(--ink-faint);
+}
+.shop-reviews__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.shop-reviews__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding-block: var(--s-4);
+  border-bottom: 1px solid var(--hairline);
+}
+.shop-review__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+.shop-review__who {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.shop-review__badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--good-wash);
+  color: var(--good-ink);
+  font-size: var(--t-2xs);
+  font-weight: 600;
+}
+.shop-review__badge[data-tone='warn'] {
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+}
+.shop-review__body {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.shop-review__when {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* ── the wishlist page ──────────────────────────────────────────────────── */
+
+.shop-wish__gone {
+  margin-top: var(--s-8);
+}
+.shop-wish__gone-title {
+  margin: 0 0 var(--s-3);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+}
+.shop-wish__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-wish__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding-block: var(--s-3);
+  border-bottom: 1px solid var(--hairline);
+  opacity: 0.85;
+}
+.shop-wish__name {
+  margin: 0;
+  font-weight: 600;
+}
+.shop-wish__why {
+  margin: 0;
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* ── order rating (track page) ──────────────────────────────────────────── */
+
+.shop-rate {
+  margin-top: var(--s-4);
+}
+.shop-rate__given {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  margin: 0;
+  font-size: var(--t-sm);
+}
+.shop-rate__comment {
+  margin: 0;
+  font-style: italic;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+/* ── search suggestions: recent (this device) + popular (anonymous) ───────── */
+
+.shop-search {
+  position: relative;
+}
+.shop-suggest {
+  position: absolute;
+  z-index: 65;
+  top: calc(100% + var(--s-2));
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: var(--raised);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--lift-3), var(--rim);
+  animation: tkr-pop-3d var(--t-move) var(--spring-soft) both;
+}
+.shop-suggest__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 0 var(--s-2);
+}
+.shop-suggest__head .eyebrow,
+.shop-suggest__label {
+  margin: 0;
+}
+.shop-suggest__label {
+  padding: var(--s-2) var(--s-2) 0;
+}
+.shop-suggest__clear {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.shop-suggest__clear:hover {
+  color: var(--aisle-ink);
+}
+.shop-suggest__list,
+.shop-suggest__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-suggest__option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
+}
+.shop-suggest__option[data-active='true'] {
+  background: var(--shop-wash);
+  color: var(--aisle-ink);
+}
+.shop-suggest__option svg {
+  flex: 0 0 auto;
+  color: var(--ink-faint);
+}
+.shop-suggest__term {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shop-suggest__note {
+  margin: 0;
+  padding: var(--s-2) var(--s-2) 0;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* ── order again: what went into the basket, and what did not ──────────────── */
+
+.shop-reorder {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--shop-wash);
+  border: 1px solid var(--hairline);
+  font-size: var(--t-sm);
+}
+.shop-reorder--error {
+  background: var(--crit-wash);
+  color: var(--crit-ink);
+}
+.shop-reorder__title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+.shop-reorder__detail {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.shop-reorder .eyebrow {
+  margin: var(--s-1) 0 0;
+}
+.shop-reorder__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shop-reorder__list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-3);
+}
+.shop-reorder__name {
+  font-weight: 600;
+  color: var(--ink);
+}
+.shop-reorder__why {
+  font-size: var(--t-xs);
+  color: var(--warn-ink);
+}
+.shop-order__foot .shop-reorder__go {
+  margin-left: 0;
+}
+
+/* ── cancel order: a confirm step with a reason, never a one-tap destroy ───── */
+
+.shop-cancel {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  border: 1px solid var(--hairline-bright);
+  font-size: var(--t-sm);
+}
+.shop-cancel__title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+.shop-cancel__body {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.shop-cancel__reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.shop-cancel__reasons legend {
+  margin-bottom: var(--s-1);
+  padding: 0;
+}
+.shop-cancel__reason {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--ink);
+  cursor: pointer;
+}
+.shop-cancel__note-label {
+  font-size: var(--t-xs);
+  font-weight: 620;
+  color: var(--ink-soft);
+}
+.shop-cancel__optional {
+  font-weight: 400;
+  color: var(--ink-faint);
+}
+.shop-cancel__note {
+  resize: vertical;
+}
+.shop-cancel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.shop-cancel__refusal {
+  flex-basis: 100%;
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--warn-wash);
+  color: var(--warn-ink);
+  font-size: var(--t-sm);
+}
+.shop-order__foot .shop-cancel__refusal a {
+  margin-left: 0;
+}

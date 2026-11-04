@@ -9,6 +9,7 @@ import { FilterQuery, Model, PipelineStage, Types } from 'mongoose';
 import {
   DeliveryPartner,
   DeliveryPartnerDocument,
+  KYC_NUMBER_FIELDS,
   KycStatus,
   PartnerStatus,
   VehicleType,
@@ -28,6 +29,10 @@ import { UserStatus } from '../../../common/constants/roles.enum';
 import { JwtUser } from '../../../common/decorators/current-user.decorator';
 import { Paginated, paginate } from '../../../common/dto/paginated';
 import { RiderKycService } from '../../delivery/rider-kyc.service';
+import {
+  InsuranceStanding,
+  insuranceStanding,
+} from '../../delivery/rider-vehicle';
 import { RiderKycView } from '../../delivery/types';
 import { UsersService } from '../../users/users.service';
 import { AuditService } from '../audit/audit.service';
@@ -56,6 +61,12 @@ export interface PartnerRow {
   /** The last location ping — the closest thing to "last seen" there is. */
   locationAt: string | null;
   createdAt: string | null;
+  /**
+   * Where the vehicle's insurance stands today — the list's warning flag.
+   * Only the standing: the expiry date is on the detail screen, and no
+   * vehicle number is ever on a list.
+   */
+  vehicleInsuranceStatus: InsuranceStanding;
 }
 
 /**
@@ -137,7 +148,16 @@ const HISTORY_LIMIT = 20;
  * a response body. One safeguard is not enough for an Aadhaar number.
  */
 const PARTNER_JOINS: PipelineStage[] = [
-  { $project: { aadhaarNumber: 0, panNumber: 0, drivingLicenceNumber: 0 } },
+  {
+    $project: {
+      aadhaarNumber: 0,
+      panNumber: 0,
+      drivingLicenceNumber: 0,
+      vehicleRegistrationNumber: 0,
+      vehicleRcNumber: 0,
+      vehicleInsurancePolicyNumber: 0,
+    },
+  },
   {
     $lookup: {
       from: 'users',
@@ -192,6 +212,7 @@ interface PartnerAggregateRow {
   currentLocation?: { coordinates?: number[] } | null;
   locationAt?: Date | null;
   createdAt?: Date;
+  vehicleInsuranceExpiresAt?: Date | null;
   user?: { name?: string; phone?: string; email?: string };
   vendor?: { storeName?: string };
   activeOrder?: { orderNo?: string };
@@ -665,7 +686,7 @@ export class AdminDeliveryPartnersService {
   ): Promise<PartnerDetail['kyc']> {
     const partner = await this.partners
       .findById(partnerId)
-      .select('+aadhaarNumber +panNumber +drivingLicenceNumber')
+      .select(KYC_NUMBER_FIELDS)
       .exec();
     if (!partner) throw new NotFoundException('Delivery partner not found');
 
@@ -730,6 +751,11 @@ function toRow(partner: PartnerAggregateRow): PartnerRow {
     createdAt: partner.createdAt
       ? new Date(partner.createdAt).toISOString()
       : null,
+    vehicleInsuranceStatus: insuranceStanding(
+      partner.vehicleInsuranceExpiresAt
+        ? new Date(partner.vehicleInsuranceExpiresAt)
+        : null,
+    ).status,
   };
 }
 

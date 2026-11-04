@@ -86,6 +86,7 @@ export const DELIVERY_PATHS = {
   walletTransactions: '/delivery/wallet/transactions',
   walletTopup: '/delivery/wallet/topup',
   kyc: '/delivery/profile/kyc',
+  kycVehicle: '/delivery/profile/kyc/vehicle',
   kycDocument: '/delivery/profile/kyc/document',
   kycDocumentAttach: '/delivery/profile/kyc/document/attach',
 } as const;

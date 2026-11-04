@@ -39,7 +39,11 @@ import { readProductDetail, type ProductDetail } from '@/lib/shop/types';
 import { MAX_QTY_PER_LINE, useBasket, type BasketStore } from './BasketProvider';
 import { ErrorNotice, FixtureBanner } from './notices';
 import { ProductMedia } from './ProductCard';
+import { ProductReviews } from './ProductReviews';
 import { QuantityStepper } from './QuantityStepper';
+import { Stars } from './Stars';
+import { WishlistHeart } from './WishlistProvider';
+import { formatRating } from '@/lib/shop/engagement';
 
 export function ProductView({ productId }: { productId: string }) {
   const { setAisle } = useAisle();
@@ -136,7 +140,20 @@ export function ProductView({ productId }: { productId: string }) {
         <ProductGallery product={product} discount={discount} />
 
         <div className="shop-product__body">
-          <h1 className="shop-product__name">{product.name}</h1>
+          <div className="shop-product__titlerow">
+            <h1 className="shop-product__name">{product.name}</h1>
+            <WishlistHeart productId={product.id} name={product.name} className="shop-heart--lg" />
+          </div>
+
+          {product.ratingCount > 0 ? (
+            <p className="shop-product__rating">
+              <Stars value={product.ratingAvg} />
+              <span className="mono">{formatRating(product.ratingAvg)}</span>
+              <a href="#reviews">
+                {product.ratingCount} {product.ratingCount === 1 ? 'review' : 'reviews'}
+              </a>
+            </p>
+          ) : null}
 
           <p className="shop-product__meta">
             {/* The PACK SIZE, not the bare unit. "kg" does not say whether
@@ -257,6 +274,8 @@ export function ProductView({ productId }: { productId: string }) {
           </dl>
         </div>
       </div>
+
+      <ProductReviews productId={product.id} />
     </div>
   );
 }
