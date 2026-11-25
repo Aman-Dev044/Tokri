@@ -162,7 +162,19 @@ export function AuthButton({
       className="authbtn authbtn--solid authbtn--lg authbtn--block authbtn--glow"
       data-loading={loading ? 'true' : undefined}
     >
-      <span className="authbtn__label">{children}</span>
+      <span className="authbtn__label">
+        {children}
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="authbtn__arrow">
+          <path
+            d="M5 12h13m0 0-5-5m5 5-5 5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
       {loading ? (
         <span className="authbtn__spin" aria-hidden="true">
           <span />

@@ -257,15 +257,15 @@ export function IssueDetailView({ issueId }: { issueId: string }) {
             </div>
           </AdminSection>
 
-          {value.resolution === undefined || value.resolution === '' ? null : (
+          {value.resolution == null || value.resolution === '' ? null : (
             <AdminSection title="Resolution">
               <div className={styles.resolutionBox}>
                 <p style={{ margin: 0 }}>{value.resolution}</p>
                 <p className={shared.subtle} style={{ margin: 0 }}>
-                  {value.resolvedAt === undefined
+                  {value.resolvedAt == null
                     ? 'Recorded'
                     : `Resolved ${formatDate(value.resolvedAt, 'long')}`}
-                  {value.resolvedBy === undefined ? '' : ` by ${value.resolvedBy}`}
+                  {value.resolvedBy == null ? '' : ` by ${value.resolvedBy}`}
                 </p>
               </div>
             </AdminSection>
@@ -427,7 +427,7 @@ export function IssueDetailView({ issueId }: { issueId: string }) {
                     ))}
                     {/* An assignee the roster does not know about — a live row
                         pointing at a real admin this fixture has never seen. */}
-                    {value.assignedToUserId !== undefined &&
+                    {value.assignedToUserId != null &&
                     !SUPPORT_AGENTS.some((agent) => agent.id === value.assignedToUserId) ? (
                       <option value={value.assignedToUserId}>
                         {value.assignedToName ?? value.assignedToUserId}
@@ -476,30 +476,30 @@ export function IssueDetailView({ issueId }: { issueId: string }) {
               <div className={`${shared.panelBody} ${styles.linkList}`}>
                 <Ref
                   label="Order"
-                  href={value.orderId === undefined ? null : `/admin/orders/${value.orderId}`}
-                  text={value.orderNo ?? value.orderId}
+                  href={value.orderId == null ? null : `/admin/orders/${value.orderId}`}
+                  text={value.orderNo ?? value.orderId ?? undefined}
                 />
                 <Ref
                   label="Customer"
                   href={
-                    value.customerId === undefined ? null : `/admin/customers/${value.customerId}`
+                    value.customerId == null ? null : `/admin/customers/${value.customerId}`
                   }
-                  text={value.customerName ?? value.customerId}
+                  text={value.customerName ?? value.customerId ?? undefined}
                 />
                 <Ref
                   label="Vendor"
-                  href={value.vendorId === undefined ? null : `/admin/vendors/${value.vendorId}`}
-                  text={value.vendorName ?? value.vendorId}
+                  href={value.vendorId == null ? null : `/admin/vendors/${value.vendorId}`}
+                  text={value.vendorName ?? value.vendorId ?? undefined}
                 />
                 <Ref
                   label="Rider"
-                  href={value.riderId === undefined ? null : `/admin/riders/${value.riderId}`}
-                  text={value.riderName ?? value.riderId}
+                  href={value.riderId == null ? null : `/admin/riders/${value.riderId}`}
+                  text={value.riderName ?? value.riderId ?? undefined}
                 />
-                {value.orderId === undefined &&
-                value.customerId === undefined &&
-                value.vendorId === undefined &&
-                value.riderId === undefined ? (
+                {value.orderId == null &&
+                value.customerId == null &&
+                value.vendorId == null &&
+                value.riderId == null ? (
                   <p className={shared.muted}>
                     Nothing linked. This issue stands on its own — add an order id if one turns up.
                   </p>

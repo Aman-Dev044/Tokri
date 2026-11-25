@@ -218,7 +218,12 @@ function AisleMenu() {
         </svg>
       </button>
 
-      <ul id={menuId} className="mk-menu__panel" hidden={!open} onMouseLeave={clearPreview}>
+      <ul
+        id={menuId}
+        className="mk-menu__panel tkr-stagger"
+        hidden={!open}
+        onMouseLeave={clearPreview}
+      >
         <li className="mk-menu__hint" aria-hidden="true">
           Hover one — the whole page changes colour
         </li>
@@ -328,7 +333,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <nav className="mk-drawer__nav" aria-label="Mobile">
+        <nav className="mk-drawer__nav tkr-stagger" aria-label="Mobile">
           <Link href="/#top" className="mk-drawer__link" onClick={onClose}>
             Home
           </Link>
@@ -341,7 +346,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
 
         <div>
           <p className="mk-drawer__label">Shop by aisle</p>
-          <ul className="mk-drawer__aisles" style={{ marginTop: 'var(--s-3)' }}>
+          <ul className="mk-drawer__aisles tkr-stagger" style={{ marginTop: 'var(--s-3)' }}>
             {AISLES.map((aisle) => (
               <li key={aisle.key}>
                 <Link
@@ -446,8 +451,18 @@ export function TopBar() {
           </Link>
           {/* Styled as a button but it IS a link — a <button> inside an <a> is
               invalid HTML and breaks keyboard and assistive-tech behaviour. */}
-          <Link href="/signup" className="mk-btn mk-btn--solid mk-btn--sm">
+          <Link href="/signup" className="mk-btn mk-btn--solid mk-btn--sm mk-top__cta">
             Get started
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="mk-btn__arrow">
+              <path
+                d="M5 12h13m0 0-5-5m5 5-5 5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </Link>
 
           <button

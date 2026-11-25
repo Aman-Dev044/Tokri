@@ -22,7 +22,7 @@ const TONE_STROKE: Record<SparkTone, string> = {
   good: 'var(--good-ink)',
   warn: 'var(--warn-ink)',
   crit: 'var(--crit-ink)',
-  neutral: 'var(--muted)',
+  neutral: 'var(--accent-ink)',
 };
 
 /**

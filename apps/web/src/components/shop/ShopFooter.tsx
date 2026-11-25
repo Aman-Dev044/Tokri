@@ -12,7 +12,7 @@ import { APP_NAME } from '@/config/brand';
 export function ShopFooter() {
   return (
     <footer className="shop-foot">
-      <div className="shell shop-foot__inner">
+      <div className="shell shop-foot__inner tkr-reveal-kids">
         <div>
           <p className="shop-foot__mark">{APP_NAME}</p>
           <p className="shop-foot__line">

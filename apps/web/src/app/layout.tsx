@@ -5,6 +5,7 @@ import { THEME_INIT_SCRIPT } from '@mandi/design-system';
 
 import '@mandi/design-system/tokens.css';
 import '@mandi/design-system/styles.css';
+import '@mandi/design-system/forest.css';
 import '@/styles/globals.css';
 
 import { Providers } from '@/components/shared/Providers';
@@ -143,14 +144,20 @@ export const viewport: Viewport = {
   // address bar and the area behind an overscroll with them, so a stale
   // value shows as a band of the PREVIOUS design system above the page.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fbf8f1' },
-    { media: '(prefers-color-scheme: dark)', color: '#0d130c' },
+    { media: '(prefers-color-scheme: light)', color: '#0b1d13' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1d13' },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-IN" className={`${display.variable} ${body.variable} ${serif.variable} ${data.variable}`}>
+    // The theme script stamps `data-theme` on <html> before React hydrates;
+    // that one attribute is expected to differ from the server render.
+    <html
+      lang="en-IN"
+      className={`${display.variable} ${body.variable} ${serif.variable} ${data.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/*
           Runs before first paint, on the user's own machine, reading the user's

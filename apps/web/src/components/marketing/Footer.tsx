@@ -13,7 +13,7 @@ export function Footer() {
     <footer className="mk-foot">
       <div className="mk-shell">
         <div className="mk-foot__top">
-          <div className="mk-foot__brand">
+          <div className="mk-foot__brand tkr-reveal">
             <p className="mk-foot__mark">
               {APP_NAME}
               <span className="mk-foot__mark-hi" aria-hidden="true">
@@ -26,7 +26,7 @@ export function Footer() {
             </p>
           </div>
 
-          <nav className="mk-foot__cols" aria-label="Footer">
+          <nav className="mk-foot__cols tkr-reveal-kids" aria-label="Footer">
             <div className="mk-foot__col">
               <h2>Shop</h2>
               <ul>
@@ -77,6 +77,10 @@ export function Footer() {
             </div>
           </nav>
         </div>
+
+        <p className="mk-foot__giant" aria-hidden="true">
+          {APP_NAME}
+        </p>
 
         <hr className="mk-rule" />
 

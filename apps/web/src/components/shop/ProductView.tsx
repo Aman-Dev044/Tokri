@@ -236,13 +236,13 @@ export function ProductView({ productId }: { productId: string }) {
           ) : null}
 
           {product.description !== null ? (
-            <div className="shop-product__desc">
+            <div className="shop-product__desc tkr-reveal">
               <h2 className="shop-product__desc-title">About this</h2>
               <p>{product.description}</p>
             </div>
           ) : null}
 
-          <dl className="shop-product__spec">
+          <dl className="shop-product__spec tkr-reveal">
             <div>
               <dt>Pack size</dt>
               <dd className="mono">{packSize}</dd>

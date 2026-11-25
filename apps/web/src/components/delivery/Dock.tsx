@@ -34,6 +34,7 @@
 
 import Link from 'next/link';
 import styles from './delivery.module.css';
+import { IconArrow } from './icons';
 import { isCurrent, riderNavItems } from './nav';
 
 export function Dock({
@@ -91,8 +92,20 @@ export function RiderNav({
     kycPending,
   }).filter((item) => item.railOnly !== true);
 
+  /*
+    The yellow active pill is ONE element — the bar's own pseudo-element —
+    slid to the current tab by index, so a route change is a single
+    translate rather than one tab fading out while another fades in. -1
+    means no tab is current (the dashboard), and the pill hides.
+  */
+  const activeIndex = items.findIndex((item) => isCurrent(pathname, item.match));
+
   return (
-    <nav className={styles.nav} aria-label="Rider sections">
+    <nav
+      className={`${styles.nav} ${activeIndex >= 0 ? styles.navHasActive : ''}`}
+      aria-label="Rider sections"
+      style={{ ['--tab-i' as string]: activeIndex, ['--tab-n' as string]: items.length }}
+    >
       {items.map((item) => {
         const active = isCurrent(pathname, item.match);
         return (
@@ -146,11 +159,14 @@ export function PrimaryButton({
   return (
     <button
       type={type}
-      className={`${styles.primary} ${tone === 'crit' ? styles.primaryCrit : ''}`}
+      className={`${styles.primary} ${styles.primaryWithArrow} ${
+        tone === 'crit' ? styles.primaryCrit : ''
+      }`}
       onClick={onClick}
       disabled={disabled}
     >
       {children}
+      <PrimaryArrow />
     </button>
   );
 }
@@ -163,8 +179,22 @@ export function PrimaryLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className={styles.primary}>
+    <Link href={href} className={`${styles.primary} ${styles.primaryWithArrow}`}>
       {children}
+      <PrimaryArrow />
     </Link>
+  );
+}
+
+/**
+ * The round arrow button on the right of a full-width yellow pill. Purely
+ * decorative — the label beside it is the accessible name — and only for
+ * full-width primaries: in a two-button row there is no room for it.
+ */
+export function PrimaryArrow() {
+  return (
+    <span className={styles.primaryArrow} aria-hidden="true">
+      <IconArrow size={22} />
+    </span>
   );
 }

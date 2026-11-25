@@ -96,9 +96,7 @@ export function EarningsView() {
 
       <section className={styles.panel}>
         <span className={styles.stepTag}>Cash you are holding</span>
-        <div className={styles.summaryValue} style={{ fontSize: '2rem' }}>
-          {money(value.codCollectedPaise)}
-        </div>
+        <div className={styles.holdValue}>{money(value.codCollectedPaise)}</div>
         <p className={styles.lede} style={{ fontSize: '0.9rem', marginTop: '0.35rem' }}>
           Cash on delivery you collected over {windowLabel}. This is owed to {APP_NAME} —
           it is not part of what you earned.

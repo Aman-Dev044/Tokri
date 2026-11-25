@@ -1,41 +1,54 @@
 /* =============================================================================
-   VENDOR PANEL — IN "NEON ORCHARD"
+   VENDOR PANEL — IN "FOREST GOLD"
    -----------------------------------------------------------------------------
    Someone is reading this during a dinner rush, standing up, with wet hands, at
-   arm's length. Legibility and speed beat spectacle every single time — but it
-   still has to feel like the same product as the customer app, so every value
-   below comes from a token in @mandi/design-system/tokens.css. Zero raw hex.
+   arm's length. Legibility and speed still beat spectacle — but the panel now
+   wears the product's forest: dark green glass over the body's drifting
+   ambient light, cream type, heavy display headings, and ONE loud accent, the
+   sunflower-yellow pill. Every value below comes from a token in
+   @mandi/design-system/tokens.css. Zero raw colour.
 
    ── WHAT THIS FILE IS ────────────────────────────────────────────────────────
    The panel is SELF-CONTAINED: it uses the shared tokens, the shared keyframes
-   (tkr-*) and the `<Tilt3D>`/`<Depth>` depth engine from the design system, and
+   (tkr-* in tokens.css and forest.css) and the `<Tilt3D>` depth engine, and
    builds everything else itself — nothing here reaches into the admin
    console's `.adm-*` layer, a different surface owned by someone else.
 
-   ── ★ DEPTH, ON PURPOSE AND NOT EVERYWHERE ───────────────────────────────────
-   Four real planes, not one colour: --ground → --surface → --raised → --lifted.
-   A thing that sits ON another thing steps one plane lighter; the thing being
-   hovered steps lighter again. Depth (tilt + lift) is reserved for two shapes:
-   the KPI tile and the order-board card — both are glanced at, not read
-   closely. Every table, every form, every chart panel stays FLAT: a surface
-   someone is comparing rows on, or reading a bar chart on, must not move under
-   the cursor.
+   ── ★ GLASS, AND WHERE IT IS NOT FROSTED ─────────────────────────────────────
+   Every panel is glass: translucent green, a pale 1px rim, a generous radius.
+   Only the chrome is FROSTED (backdrop-filter) — the rail, the top bar, the
+   dirty dock, menus, the drawer and the dialog. A frosted element becomes the
+   containing block of every `position: fixed` thing inside it, and the
+   drawers and dialogs on these screens are rendered inside the page body; a
+   blurred page panel would have trapped them. Over the smooth ambient light a
+   blur is invisible anyway.
+
+   ── ★ MOTION RULES ───────────────────────────────────────────────────────────
+     · Entrances move `translate` / `scale` / `opacity`, NEVER `transform`. The
+       Tilt3D stage and every hover lift own `transform`; the two compose.
+     · Entrances use `backwards` fill, so nothing is left holding a transform
+       once it has arrived — a finished `translate: 0 0` would still be a
+       containing block for a fixed overlay rendered inside it.
+     · Nothing animates on `.ven-page`, `.ven-page__body`, `.ven-pos` or the
+       shell: those hold the drawers, dialogs, the camera and the sticky docks.
+     · Press feedback is `filter: brightness()`, never a transform — a pressed
+       button inside a tilting card must not change its own layer.
+     · Staggers are capped at ten steps; row eleven does not wait for row one.
+     · Reduced motion: the kill switch in tokens.css collapses durations, and
+       section 19 below removes the scroll-driven and infinite ones outright.
 
    ── ★ COLOUR ───────────────────────────────────────────────────────────────
-   The chromatic-aisle palette appears in exactly one operational place: order
-   STATUS, via [data-aisle] (lib/vendor/orders → STATUS_AISLE) — the lane
-   header rule, the card's edge, the status pill, the timeline dot. It is a
-   second time inside <ProductPreviewCard/>, which is a deliberate quotation of
-   the customer app. Nowhere else. Colour never carries meaning alone: every
-   coloured thing on this screen has the status WORD beside it.
+   The chromatic-aisle palette does operational work in exactly one place:
+   order STATUS, via [data-aisle] (lib/vendor/orders → STATUS_AISLE). It is a
+   second time inside <ProductPreviewCard/>, a deliberate quotation of the
+   customer app. Colour never carries meaning alone: every coloured thing on
+   this screen has its WORD beside it. Text in the accent colour is always
+   `--accent-ink`, never `--accent` — yellow text is unreadable in light mode.
 
-   ── ★ GLOW BUDGET ─────────────────────────────────────────────────────────
-   One glowing thing per screen, and it is the new-order alert — the only
-   event on this panel that is actually urgent while it is unactioned. A
-   freshly-arrived board card gets a one-shot pulse ring (not a glow) that
-   decays in just over a second. Nothing else on this panel glows: not a KPI
-   tile, not a button, not a nav link — a shop owner stares at this for eight
-   hours, and a screen with more than one urgent-looking thing on it has none.
+   ── ★ URGENCY ─────────────────────────────────────────────────────────────
+   Gold glows are decoration and live on hover and on the one primary action.
+   RED that moves is reserved for the new-order alert and the rail badge — the
+   only events on this panel that are urgent while unactioned.
    ============================================================================= */
 
 /* ===========================================================================
@@ -44,9 +57,24 @@
 
 .ven {
   --ven-lane-w: 340px;
-  --ven-rail: 248px;
-  --ven-rail-min: 68px;
-  --ven-top: 60px;
+  --ven-rail: 256px;
+  --ven-rail-min: 78px;
+  --ven-top: 64px;
+
+  /* surface-local paints, all derived — restated here because these must
+     follow the theme switch at :root, and .ven is below it */
+  --ven-rail-bg: color-mix(in oklab, var(--void) 48%, transparent);
+  --ven-top-bg: color-mix(in oklab, var(--ground) 64%, transparent);
+  --ven-sunk: color-mix(in oklab, var(--void) 38%, transparent);
+  --ven-field: color-mix(in oklab, var(--void) 32%, transparent);
+  --ven-field-edge: color-mix(in oklab, var(--ink) 16%, transparent);
+  --ven-edge-hot: color-mix(in oklab, var(--accent) 46%, transparent);
+  --ven-row-hover: color-mix(in oklab, var(--accent) 8%, transparent);
+  --ven-focus-edge: color-mix(in oklab, var(--accent) 72%, var(--ink));
+  --ven-focus-ring: color-mix(in oklab, var(--accent) 34%, transparent);
+  --ven-badge: var(--ink);
+  --ven-badge-ink: var(--ground);
+  --ven-glint: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 55%, transparent), transparent);
 }
 
 /* Visually hidden, not display:none — a screen reader still gets it. */
@@ -74,18 +102,23 @@
    2. Shell — rail, top bar, main
    =========================================================================== */
 
+/* Transparent on purpose: the body's drifting forest light shows through
+   every glass panel above it. */
 .ven-shell {
   display: grid;
   grid-template-columns: var(--ven-rail) minmax(0, 1fr);
   min-height: 100dvh;
-  background: var(--ground);
+  background: transparent;
   color: var(--ink);
   font-family: var(--body);
+  transition: grid-template-columns var(--t-move) var(--ease);
 }
 
 .ven-shell[data-collapsed='true'] {
   grid-template-columns: var(--ven-rail-min) minmax(0, 1fr);
 }
+
+/* ---- the rail: dark frosted glass ---- */
 
 .ven-rail {
   position: sticky;
@@ -94,30 +127,61 @@
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: var(--s-3) var(--s-2);
-  background: var(--surface);
-  border-right: 1px solid var(--hairline);
+  gap: 4px;
+  padding: var(--s-4) var(--s-3);
+  background: var(--ven-rail-bg);
+  border-right: 1px solid var(--glass-edge);
+  backdrop-filter: blur(var(--blur)) saturate(1.25);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.25);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
+
+/* the items arrive as a short wave, top to bottom */
+.ven-rail > * {
+  --ven-n: 0;
+  animation: tkr-slide-in-left var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 40ms);
+}
+.ven-rail > :nth-child(2) { --ven-n: 1; }
+.ven-rail > :nth-child(3) { --ven-n: 2; }
+.ven-rail > :nth-child(4) { --ven-n: 3; }
+.ven-rail > :nth-child(5) { --ven-n: 4; }
+.ven-rail > :nth-child(6) { --ven-n: 5; }
+.ven-rail > :nth-child(7) { --ven-n: 6; }
+.ven-rail > :nth-child(8) { --ven-n: 7; }
+.ven-rail > :nth-child(9) { --ven-n: 8; }
+.ven-rail > :nth-child(10) { --ven-n: 9; }
+.ven-rail > :nth-child(n + 11) { --ven-n: 10; }
 
 .ven-rail__brand {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2);
-  margin-bottom: var(--s-2);
+  gap: var(--s-3);
+  padding: var(--s-1) var(--s-2) var(--s-1) var(--s-1);
+  margin-bottom: var(--s-3);
   color: inherit;
   text-decoration: none;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
 }
 
+/* the basket mark, in a gold coin */
 .ven-rail__mark {
-  width: 24px;
-  height: 24px;
+  width: 40px;
+  height: 40px;
+  padding: 9px;
   flex: 0 0 auto;
-  color: var(--accent-ink);
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--on-accent);
+  box-shadow: var(--halo-sm);
+  transition: rotate var(--t-move) var(--spring), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-rail__brand:hover .ven-rail__mark {
+  rotate: -12deg;
+  box-shadow: var(--halo);
 }
 
 .ven-rail__store {
@@ -129,8 +193,9 @@
 .ven-rail__name {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.05rem;
-  line-height: 1.15;
+  font-size: 1.08rem;
+  line-height: 1.1;
+  letter-spacing: var(--track-tight);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -141,50 +206,76 @@
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* a nav item: an icon badge and a word, in a pill */
 .ven-rail__link {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--s-2);
-  padding: 9px var(--s-2);
-  border-radius: var(--r-sm);
+  gap: var(--s-3);
+  padding: 5px var(--s-3) 5px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
   color: var(--ink-soft);
+  font-weight: 600;
   text-decoration: none;
   position: relative;
-  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
-}
-
-.ven-rail__link:hover {
-  background: var(--lifted);
-  color: var(--ink);
-}
-
-.ven-rail__link[aria-current='page'] {
-  background: var(--accent-wash);
-  color: var(--accent-ink);
-  font-weight: 700;
-}
-
-.ven-rail__link[aria-current='page']::before {
-  content: '';
-  position: absolute;
-  inset-block: 7px;
-  left: -8px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent);
+  transition:
+    background-color var(--t-move) var(--ease),
+    color var(--t-micro) var(--ease),
+    border-color var(--t-move) var(--ease),
+    box-shadow var(--t-move) var(--ease);
 }
 
 .ven-rail__link svg {
-  width: 18px;
-  height: 18px;
-  color: var(--ink-faint);
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border-radius: 50%;
+  background: var(--glass-strong);
+  color: var(--ink-soft);
+  transition:
+    translate var(--t-move) var(--spring),
+    rotate var(--t-move) var(--spring),
+    background-color var(--t-move) var(--ease),
+    color var(--t-micro) var(--ease);
+}
+
+.ven-rail__link:hover {
+  background: var(--glass);
+  border-color: var(--glass-edge);
+  color: var(--ink);
+}
+
+.ven-rail__link:hover svg {
+  translate: 2px 0;
+  rotate: -8deg;
+  color: var(--accent-ink);
+}
+
+/* ★ the active item is the yellow pill, and it pops into place */
+.ven-rail__link[aria-current='page'] {
+  background: var(--gold);
+  border-color: transparent;
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: var(--halo-sm);
+  animation: ven-pill-in var(--t-move) var(--spring) backwards;
 }
 
 .ven-rail__link[aria-current='page'] svg {
-  color: var(--accent-ink);
+  background: var(--on-accent);
+  color: var(--gold);
+  rotate: 0deg;
+  translate: 0 0;
+}
+
+.ven-rail__link[aria-current='page']:hover {
+  box-shadow: var(--halo);
 }
 
 .ven-rail__label {
@@ -197,25 +288,34 @@
   font-family: var(--data);
   font-size: var(--t-2xs);
   line-height: 1;
-  padding: 3px 5px;
-  border: 1px solid var(--hairline-bright);
+  padding: 3px 6px;
+  border: 1px solid var(--glass-edge);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--ink-faint);
-  background: var(--void);
+  background: var(--ven-sunk);
 }
 
+.ven-rail__link[aria-current='page'] .ven-key {
+  color: var(--on-accent);
+  background: transparent;
+  border-color: color-mix(in oklab, var(--on-accent) 30%, transparent);
+}
+
+/* ★ new orders waiting — red, and the one badge on the rail that moves */
 .ven-rail__count {
+  position: relative;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--t-2xs);
-  min-width: 20px;
+  min-width: 22px;
   text-align: center;
-  padding: 2px 5px;
+  padding: 3px 6px;
   border-radius: var(--r-pill);
   background: var(--crit);
-  color: var(--void);
+  color: var(--ground);
   font-weight: 700;
+  animation: ven-ring 1.8s var(--ease-out) infinite;
 }
 
 .ven-shell[data-collapsed='true'] .ven-rail__label,
@@ -225,14 +325,29 @@
 }
 
 .ven-shell[data-collapsed='true'] .ven-rail__link {
-  grid-template-columns: 18px;
+  grid-template-columns: 32px;
   justify-content: center;
+  padding: 5px;
+}
+
+.ven-shell[data-collapsed='true'] .ven-rail__brand {
+  justify-content: center;
+  padding: var(--s-1);
+}
+
+/* collapsed: the count rides on the badge's shoulder */
+.ven-shell[data-collapsed='true'] .ven-rail__count {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  min-width: 18px;
+  padding: 2px 4px;
 }
 
 .ven-rail__foot {
   margin-top: auto;
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--hairline);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--glass-edge);
 }
 
 .ven-rail__collapse {
@@ -240,28 +355,39 @@
   align-items: center;
   gap: var(--s-2);
   width: 100%;
-  padding: 8px var(--s-2);
+  padding: 7px var(--s-3);
   background: none;
-  border: 0;
-  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
   color: var(--ink-faint);
   font: inherit;
   cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease);
 }
 
 .ven-rail__collapse:hover {
-  background: var(--lifted);
+  background: var(--glass);
+  border-color: var(--glass-edge);
   color: var(--ink);
+}
+
+.ven-rail__collapse:active {
+  filter: brightness(0.92);
 }
 
 .ven-rail__collapse svg {
   width: 16px;
   height: 16px;
-  transition: transform var(--t-move) var(--ease);
+  transition: rotate var(--t-move) var(--spring);
+}
+
+.ven-shell[data-collapsed='true'] .ven-rail__collapse {
+  justify-content: center;
 }
 
 .ven-shell[data-collapsed='true'] .ven-rail__collapse svg {
-  transform: rotate(180deg);
+  rotate: 180deg;
 }
 
 /* ---- main column ---- */
@@ -272,6 +398,7 @@
   min-width: 0;
 }
 
+/* the glass top bar, with a thin gold glint along its lower edge */
 .ven-top {
   position: sticky;
   top: 0;
@@ -280,11 +407,23 @@
   align-items: center;
   gap: var(--s-2);
   height: var(--ven-top);
-  padding: 0 var(--s-4);
-  background: color-mix(in oklab, var(--ground) 82%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  border-bottom: 1px solid var(--hairline);
-  box-shadow: var(--rim);
+  padding: 0 var(--s-5);
+  background: var(--ven-top-bg);
+  backdrop-filter: blur(var(--blur)) saturate(1.3);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.3);
+  border-bottom: 1px solid var(--glass-edge);
+  animation: tkr-fade-in var(--t-enter) var(--ease-out) backwards;
+}
+
+.ven-top::after {
+  content: '';
+  position: absolute;
+  inset-inline: 8%;
+  bottom: -1px;
+  height: 1px;
+  background: var(--ven-glint);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .ven-top__spacer {
@@ -292,7 +431,7 @@
 }
 
 .ven-content {
-  padding: var(--s-5) var(--s-4) var(--s-8);
+  padding: var(--s-6) var(--s-5) var(--s-8);
   min-width: 0;
 }
 
@@ -308,15 +447,24 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 5px var(--s-3) 5px 7px;
-  border: 1px solid var(--hairline-bright);
+  padding: 6px var(--s-4) 6px 10px;
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--glass);
   color: inherit;
   font: inherit;
   font-size: var(--t-sm);
   cursor: pointer;
-  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+  transition: border-color var(--t-move) var(--ease), background-color var(--t-move) var(--ease),
+    box-shadow var(--t-move) var(--ease);
+}
+
+button.ven-openstate:hover:not(:disabled) {
+  box-shadow: var(--halo-mint);
+}
+
+button.ven-openstate:active:not(:disabled) {
+  filter: brightness(0.92);
 }
 
 .ven-openstate:disabled {
@@ -325,26 +473,36 @@
 }
 
 .ven-openstate__dot {
-  width: 9px;
-  height: 9px;
+  position: relative;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--ink-faint);
   flex: 0 0 auto;
 }
 
 .ven-openstate[data-open='true'] {
-  border-color: color-mix(in oklab, var(--good) 55%, transparent);
-  background: var(--good-wash);
+  border-color: color-mix(in oklab, var(--good) 50%, transparent);
+  background: color-mix(in oklab, var(--good) 14%, transparent);
 }
 
+/* ★ open: a live dot that pings */
 .ven-openstate[data-open='true'] .ven-openstate__dot {
   background: var(--good);
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--good) 25%, transparent);
+}
+
+.ven-openstate[data-open='true'] .ven-openstate__dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: tkr-ping 1.6s var(--ease-out) infinite;
 }
 
 .ven-openstate[data-open='false'] {
-  border-color: color-mix(in oklab, var(--crit) 55%, transparent);
-  background: var(--crit-wash);
+  border-color: color-mix(in oklab, var(--crit) 50%, transparent);
+  background: color-mix(in oklab, var(--crit) 14%, transparent);
 }
 
 .ven-openstate[data-open='false'] .ven-openstate__dot {
@@ -352,7 +510,9 @@
 }
 
 .ven-openstate__word {
-  font-weight: 700;
+  font-weight: 800;
+  font-family: var(--display);
+  letter-spacing: var(--track-tight);
 }
 
 .ven-openstate__hint {
@@ -360,22 +520,37 @@
   font-size: var(--t-xs);
 }
 
-/* ---- ★ the new-order alert — the panel's one glow, pulses ONCE then holds ---- */
+/* ---- ★ the new-order alert — red, pulses on arrival, the dot keeps pinging ---- */
 
 .ven-alert {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 6px var(--s-3);
+  padding: 7px var(--s-3) 7px var(--s-3);
   border-radius: var(--r-pill);
-  border: 1px solid color-mix(in oklab, var(--crit) 50%, transparent);
-  background: var(--crit-wash);
+  border: 1px solid color-mix(in oklab, var(--crit) 55%, transparent);
+  background: color-mix(in oklab, var(--crit) 18%, transparent);
   color: var(--crit-ink);
   font-weight: 700;
   font-size: var(--t-sm);
   text-decoration: none;
-  box-shadow: 0 0 0 3px color-mix(in oklab, var(--crit) 16%, transparent);
-  animation: ven-alert-pulse 900ms var(--ease-out) 1 both;
+  box-shadow: 0 0 22px -6px color-mix(in oklab, var(--crit) 60%, transparent);
+  animation: ven-alert-pulse 900ms var(--ease-out) 1 backwards;
+  transition: background-color var(--t-micro) var(--ease);
+}
+
+.ven-alert:hover {
+  background: color-mix(in oklab, var(--crit) 26%, transparent);
+}
+
+.ven-alert::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--crit);
+  animation: ven-ring 1.6s var(--ease-out) infinite;
 }
 
 .ven-alert svg {
@@ -395,6 +570,11 @@
   color: inherit;
   cursor: pointer;
   display: inline-flex;
+  transition: rotate var(--t-move) var(--spring);
+}
+
+.ven-alert__dismiss:hover {
+  rotate: 90deg;
 }
 
 .ven-alert__dismiss svg {
@@ -403,7 +583,7 @@
 }
 
 .ven-soundbtn[data-on='true'] {
-  color: var(--good);
+  color: var(--good-ink);
 }
 
 /* ---- user menu ---- */
@@ -416,29 +596,40 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 4px var(--s-2) 4px 4px;
-  border: 1px solid var(--hairline);
+  padding: 4px var(--s-3) 4px 4px;
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: var(--surface);
+  background: var(--glass);
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
 }
 
 .ven-user:hover {
-  border-color: var(--hairline-bright);
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+}
+
+.ven-user:active {
+  filter: brightness(0.92);
 }
 
 .ven-user__initials {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--gold);
   color: var(--on-accent);
   font-size: var(--t-xs);
-  font-weight: 700;
+  font-weight: 800;
+  transition: rotate var(--t-move) var(--spring);
+}
+
+.ven-user:hover .ven-user__initials {
+  rotate: -10deg;
 }
 
 .ven-user__name {
@@ -453,20 +644,23 @@
 .ven-usermenu__panel {
   position: absolute;
   right: 0;
-  top: calc(100% + 6px);
-  min-width: 240px;
+  top: calc(100% + 8px);
+  min-width: 250px;
   padding: var(--s-2);
-  background: var(--raised);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-md);
-  box-shadow: var(--lift-3), var(--rim);
+  background: color-mix(in oklab, var(--raised) 90%, transparent);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-4);
   z-index: 60;
-  animation: ven-pop 160ms var(--ease-out) both;
+  transform-origin: top right;
+  animation: ven-pop var(--t-move) var(--spring-soft) backwards;
 }
 
 .ven-usermenu__head {
   padding: var(--s-2);
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--glass-edge);
   margin-bottom: var(--s-1);
 }
 
@@ -481,55 +675,76 @@
   align-items: center;
   gap: var(--s-2);
   width: 100%;
-  padding: 8px var(--s-2);
+  padding: 9px var(--s-2);
   border: 0;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   background: none;
   color: inherit;
   font: inherit;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color var(--t-micro) var(--ease);
 }
 
 .ven-usermenu__item:hover {
-  background: var(--lifted);
+  background: var(--ven-row-hover);
 }
 
 .ven-usermenu__item svg {
   width: 16px;
   height: 16px;
   color: var(--ink-faint);
+  transition: translate var(--t-move) var(--spring), color var(--t-micro) var(--ease);
 }
 
-/* ---- generic icon button ---- */
+.ven-usermenu__item:hover svg {
+  translate: 3px 0;
+  color: var(--accent-ink);
+}
+
+/* ---- generic icon button: a round glass coin ---- */
 
 .ven-iconbtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: none;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--glass-edge);
+  border-radius: 50%;
+  background: var(--glass);
   color: var(--ink-soft);
   cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
+  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease);
 }
 
 .ven-iconbtn svg {
   width: 18px;
   height: 18px;
+  transition: rotate var(--t-move) var(--spring);
 }
 
 .ven-iconbtn:hover {
-  background: var(--lifted);
+  background: var(--glass-strong);
+  border-color: var(--ven-edge-hot);
   color: var(--ink);
+  box-shadow: var(--halo-sm);
+}
+
+.ven-iconbtn:hover svg {
+  rotate: -12deg;
+}
+
+.ven-iconbtn:active {
+  filter: brightness(0.9);
 }
 
 .ven-iconbtn[data-on='true'] {
-  color: var(--good);
+  color: var(--good-ink);
+  border-color: color-mix(in oklab, var(--good) 45%, transparent);
 }
 
 /* ===========================================================================
@@ -540,9 +755,9 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(var(--ven-lane-w), 1fr);
-  gap: var(--s-3);
+  gap: var(--s-4);
   overflow-x: auto;
-  padding-bottom: var(--s-2);
+  padding: 2px 2px var(--s-3);
   scroll-snap-type: x proximity;
 }
 
@@ -556,45 +771,61 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
   scroll-snap-align: start;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 90ms);
 }
+
+.ven-board > * { --ven-n: 0; }
+.ven-board > :nth-child(2) { --ven-n: 1; }
+.ven-board > :nth-child(3) { --ven-n: 2; }
+.ven-board > :nth-child(n + 4) { --ven-n: 3; }
 
 .ven-lane__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--s-2);
-  padding: var(--s-3) var(--s-3) var(--s-2);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--s-4) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--glass-edge);
   position: relative;
 }
 
-/* ★ the aisle hue — the lane's state, and nothing else */
+/* ★ the aisle hue — the lane's state, and nothing else; a glowing rule */
 .ven-lane__head::before {
   content: '';
   position: absolute;
-  inset-inline: 0;
-  top: 0;
+  inset-inline: var(--s-5);
+  top: -1px;
   height: 3px;
   background: var(--aisle);
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  border-radius: 0 0 var(--r-pill) var(--r-pill);
+  box-shadow: 0 0 14px 1px color-mix(in oklab, var(--aisle) 55%, transparent);
 }
 
 .ven-lane__title {
   font-family: var(--display);
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 
+/* the count: a cream coin */
 .ven-lane__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--t-sm);
-  padding: 1px 8px;
+  font-weight: 700;
   border-radius: var(--r-pill);
-  background: var(--void);
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
 }
 
 .ven-lane__hint {
@@ -608,8 +839,8 @@
 .ven-lane__body {
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
-  padding: var(--s-2);
+  gap: var(--s-3);
+  padding: var(--s-3);
   min-height: 120px;
 }
 
@@ -630,41 +861,41 @@
   display: block;
   width: 100%;
   text-align: left;
-  padding: var(--s-3) var(--s-3) var(--s-3) calc(var(--s-3) + 4px);
-  background: var(--raised);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4) var(--s-3) calc(var(--s-4) + 4px);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
   color: inherit;
   text-decoration: none;
   box-shadow: var(--lift-1);
-  animation: tkr-rise-3d var(--t-enter) var(--spring-soft) backwards;
-  animation-delay: calc(var(--ven-i, 0) * var(--stagger));
+  transition: border-color var(--t-move) var(--ease), box-shadow var(--t-move) var(--ease);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--ven-i, 0), 10) * var(--stagger) + 120ms);
 }
 
 .ven-cardslot:hover .ven-card {
-  border-color: var(--hairline-bright);
-  box-shadow: var(--lift-2), var(--rim);
+  border-color: var(--ven-edge-hot);
+  box-shadow: var(--lift-3), var(--halo-sm);
 }
 
-/* ★ the status hue — a rule down the edge, never a fill behind text */
+/* ★ the status hue — a glowing rule down the edge, never a fill behind text */
 .ven-card::before {
   content: '';
   position: absolute;
-  inset-block: -1px;
-  left: -1px;
+  inset-block: var(--s-3);
+  left: 6px;
   width: 4px;
-  border-radius: var(--r-md) 0 0 var(--r-md);
+  border-radius: var(--r-pill);
   background: var(--aisle);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--aisle) 60%, transparent);
 }
 
 /* a just-arrived order: the entrance, then ONE pulse ring in the aisle hue —
-   then it holds like every other card. Never a glow: the alert already
-   spends this screen's one glow, and a persistently glowing card is exactly
-   the "everything looks urgent" failure this system avoids. */
+   then it holds like every other card. */
 .ven-card[data-fresh='true'] {
   animation:
-    tkr-rise-3d var(--t-enter) var(--spring-soft) backwards,
-    ven-card-pulse 1100ms var(--ease-out) var(--t-enter) 1 both;
+    tkr-fade-up var(--t-enter) var(--ease-out) backwards,
+    ven-card-pulse 1100ms var(--ease-out) var(--t-enter) 1 backwards;
 }
 
 .ven-card__top {
@@ -681,6 +912,11 @@
   letter-spacing: -0.01em;
   color: var(--ink);
   text-decoration: none;
+  transition: color var(--t-micro) var(--ease);
+}
+
+.ven-card__no:hover {
+  color: var(--accent-ink);
 }
 
 .ven-card__wait {
@@ -692,17 +928,19 @@
 }
 
 .ven-card[data-urgency='warn'] .ven-card__wait {
-  color: var(--warn);
+  color: var(--warn-ink);
   font-weight: 700;
 }
 
 .ven-card[data-urgency='late'] .ven-card__wait {
-  color: var(--crit);
+  color: var(--crit-ink);
   font-weight: 700;
 }
 
 .ven-card__customer {
   font-weight: 700;
+  font-family: var(--display);
+  font-size: 1.02rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -742,20 +980,20 @@
   align-items: center;
   gap: var(--s-2);
   padding-top: var(--s-2);
-  border-top: 1px dashed var(--hairline);
+  border-top: 1px dashed var(--glass-edge);
 }
 
 .ven-card__total {
   margin-left: auto;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .ven-card__actions {
   display: flex;
   gap: var(--s-2);
-  margin-top: var(--s-2);
+  margin-top: var(--s-3);
 }
 
 .ven-card__actions .ven-btn {
@@ -763,19 +1001,25 @@
   justify-content: center;
 }
 
+/* inside a tilting card, buttons do not lift — the card already does */
+.ven-card .ven-btn:hover:not(:disabled) {
+  transform: none;
+}
+
 .ven-paytag {
   font-family: var(--data);
   font-size: var(--t-2xs);
   letter-spacing: 0.05em;
-  padding: 2px 6px;
-  border: 1px solid var(--hairline);
-  border-radius: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
   color: var(--ink-faint);
 }
 
 .ven-paytag[data-method='cod'] {
-  color: var(--warn);
+  color: var(--warn-ink);
   border-color: color-mix(in oklab, var(--warn) 45%, transparent);
+  background: color-mix(in oklab, var(--warn) 10%, transparent);
 }
 
 /* ===========================================================================
@@ -786,17 +1030,32 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-2);
+  padding: 5px var(--s-2) 5px var(--s-3);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   font-family: var(--data);
   font-size: var(--t-xs);
   color: var(--ink-faint);
 }
 
 .ven-fresh__dot {
-  width: 6px;
-  height: 6px;
+  position: relative;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--good);
   flex: 0 0 auto;
+}
+
+/* ★ live: the dot pings */
+.ven-fresh[data-state='live'] .ven-fresh__dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: tkr-ping 1.8s var(--ease-out) infinite;
 }
 
 .ven-fresh__btn {
@@ -805,7 +1064,14 @@
   background: none;
   color: inherit;
   cursor: pointer;
-  padding: 2px;
+  padding: 3px;
+  border-radius: 50%;
+  transition: rotate var(--t-slow) var(--spring), color var(--t-micro) var(--ease);
+}
+
+.ven-fresh__btn:hover {
+  rotate: 180deg;
+  color: var(--accent-ink);
 }
 
 .ven-fresh__btn svg {
@@ -814,8 +1080,10 @@
 }
 
 .ven-fresh[data-state='stale'] {
-  color: var(--crit);
+  color: var(--crit-ink);
   font-weight: 700;
+  border-color: color-mix(in oklab, var(--crit) 45%, transparent);
+  background: color-mix(in oklab, var(--crit) 12%, transparent);
 }
 
 .ven-fresh[data-state='stale'] .ven-fresh__dot {
@@ -830,52 +1098,131 @@
    5. ★ KPI grid + chart grid — dashboard + earnings ONLY
    =========================================================================== */
 
+/* the needs-action strip: glass pills, each with a cream coin */
 .ven-needs {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: var(--s-3);
 }
 
+.ven-needs > * {
+  --ven-n: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * var(--stagger));
+}
+.ven-needs > :nth-child(2) { --ven-n: 1; }
+.ven-needs > :nth-child(3) { --ven-n: 2; }
+.ven-needs > :nth-child(4) { --ven-n: 3; }
+.ven-needs > :nth-child(5) { --ven-n: 4; }
+.ven-needs > :nth-child(n + 6) { --ven-n: 5; }
+
 .ven-need {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--s-3);
-  border: 1px solid var(--hairline);
-  border-left-width: 3px;
-  border-radius: var(--r-md);
-  background: var(--surface);
+  --ven-tone: var(--good);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4) var(--s-2) var(--s-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-2xl);
+  background: var(--glass);
   color: inherit;
   text-decoration: none;
-  box-shadow: var(--lift-1);
-  transition: border-color var(--t-micro) var(--ease), transform var(--t-micro) var(--spring-soft),
-    box-shadow var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+  transition:
+    border-color var(--t-move) var(--ease),
+    transform var(--t-move) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    background-color var(--t-move) var(--ease);
 }
+
+.ven-need[data-tone='crit'] { --ven-tone: var(--crit); }
+.ven-need[data-tone='warn'] { --ven-tone: var(--warn); }
+.ven-need[data-tone='good'] { --ven-tone: var(--good); }
 
 .ven-need:hover {
-  border-color: var(--hairline-bright);
-  background: var(--raised);
-  box-shadow: var(--lift-2);
-  transform: translateY(-2px);
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+  box-shadow: var(--lift-2), var(--halo-sm);
+  transform: translateY(-3px);
 }
 
-.ven-need[data-tone='crit'] { border-left-color: var(--crit); }
-.ven-need[data-tone='warn'] { border-left-color: var(--warn); }
-.ven-need[data-tone='good'] { border-left-color: var(--good); }
+.ven-need:active {
+  filter: brightness(0.94);
+}
+
+.ven-need__badge {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--ven-tone) 55%, transparent),
+    0 0 20px -2px color-mix(in oklab, var(--ven-tone) 55%, transparent);
+  transition: rotate var(--t-move) var(--spring), scale var(--t-move) var(--spring);
+}
+
+.ven-need:hover .ven-need__badge {
+  rotate: -8deg;
+  scale: 1.06;
+}
 
 .ven-need__count {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 800;
   line-height: 1;
+  animation: tkr-count-pop var(--t-enter) var(--spring) backwards;
+  animation-delay: calc(var(--ven-n, 0) * var(--stagger) + 160ms);
+}
+
+/* a state with no number — the store switch — gets a live dot instead */
+.ven-need__live {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ven-tone);
+}
+
+.ven-need[data-tone='good'] .ven-need__live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: tkr-ping 1.6s var(--ease-out) infinite;
+}
+
+.ven-need__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .ven-need__label {
-  font-weight: 700;
+  font-weight: 800;
+  font-family: var(--display);
+  letter-spacing: var(--track-tight);
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+}
+
+.ven-need__arrow {
+  width: 13px;
+  height: 13px;
+  transition: translate var(--t-move) var(--spring);
+}
+
+.ven-need:hover .ven-need__arrow {
+  translate: 4px 0;
+  color: var(--accent-ink);
 }
 
 .ven-need__detail {
@@ -887,16 +1234,16 @@
 
 .ven-kpigrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: var(--s-3);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--s-4);
 }
 
 /* the Tilt3D wrapper — perspective + pointer tracking only, no paint */
 .ven-kpitile {
   display: block;
   width: 100%;
-  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
 }
 
 .ven-kpi {
@@ -904,47 +1251,109 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding: var(--s-4);
+  padding: var(--s-5);
   height: 100%;
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
   box-shadow: var(--lift-1);
-  transition: box-shadow var(--t-move) var(--ease), background-color var(--t-move) var(--ease);
+  overflow: clip;
+  transition: box-shadow var(--t-move) var(--ease), background-color var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease);
+}
+
+/* a soft gold light in the corner, which brightens under the cursor */
+.ven-kpi::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 55%);
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--t-move) var(--ease);
 }
 
 .ven-kpitile:hover .ven-kpi {
-  background: var(--raised);
-  box-shadow: var(--lift-2), var(--rim);
+  background: var(--glass-strong);
+  border-color: var(--ven-edge-hot);
+  box-shadow: var(--lift-3), var(--halo-sm);
 }
 
-.ven-kpi[data-tone='good'] { border-color: color-mix(in oklab, var(--good) 30%, var(--hairline)); }
-.ven-kpi[data-tone='warn'] { border-color: color-mix(in oklab, var(--warn) 32%, var(--hairline)); }
-.ven-kpi[data-tone='crit'] { border-color: color-mix(in oklab, var(--crit) 32%, var(--hairline)); }
+.ven-kpitile:hover .ven-kpi::after {
+  opacity: 1;
+}
 
+.ven-kpi[data-tone='good'] { --ven-tone: var(--good); }
+.ven-kpi[data-tone='warn'] { --ven-tone: var(--warn); }
+.ven-kpi[data-tone='crit'] { --ven-tone: var(--crit); }
+
+/* a toned tile carries a thin glowing rule along its top edge */
 .ven-kpi[data-tone='good']::before,
 .ven-kpi[data-tone='warn']::before,
 .ven-kpi[data-tone='crit']::before {
   content: '';
   position: absolute;
-  inset-inline: var(--s-4);
+  inset-inline: var(--s-5);
   top: 0;
   height: 2px;
   border-radius: var(--r-pill);
+  background: var(--ven-tone);
+  box-shadow: 0 0 12px 1px color-mix(in oklab, var(--ven-tone) 65%, transparent);
+  transform-origin: left center;
+  animation: tkr-underline var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger) + 200ms);
 }
 
-.ven-kpi[data-tone='good']::before { background: var(--good); }
-.ven-kpi[data-tone='warn']::before { background: var(--warn); }
-.ven-kpi[data-tone='crit']::before { background: var(--crit); }
+.ven-kpi__head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+/* the cream coin in the tile's corner */
+.ven-kpi__badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: calc(var(--s-1) * -1) calc(var(--s-1) * -1) 0 0;
+  border-radius: 50%;
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--ink) 8%, transparent);
+  transition: rotate var(--t-move) var(--spring), scale var(--t-move) var(--spring);
+}
+
+.ven-kpi__badge svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ven-kpitile:hover .ven-kpi__badge {
+  rotate: -10deg;
+  scale: 1.08;
+}
+
+.ven-kpi > :not(.ven-kpi__head) {
+  position: relative;
+  z-index: 1;
+}
 
 .ven-kpi__value {
-  /* the big figure */
+  /* the big figure — pops in once the tile has landed */
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.4rem);
+  font-size: clamp(1.9rem, 1.3rem + 1.8vw, 2.75rem);
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.03em;
+  transform-origin: left bottom;
+  animation: tkr-count-pop var(--t-enter) var(--spring) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger) + 140ms);
 }
 
 .ven-kpi__note {
@@ -952,45 +1361,41 @@
   color: var(--ink-faint);
 }
 
-.ven-kpi__unit {
-  font-family: var(--display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  margin-left: 2px;
-}
-
 /* ---- chart grid + panel — flat by design, see the note in primitives.tsx ---- */
 
 .ven-chartgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: var(--s-4);
-}
-
-.ven-chartpanel {
-  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
 }
 
 .ven-panel__head {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--s-4) var(--s-4) 0;
+  padding: var(--s-5) var(--s-5) 0;
 }
 
 .ven-panel__title {
   font-family: var(--display);
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 
 .ven-panel__body {
-  padding: var(--s-4);
+  padding: var(--s-4) var(--s-5) var(--s-5);
 }
 
 .ven-panel--hero {
-  border-radius: var(--r-xl);
-  box-shadow: var(--lift-2), var(--rim);
+  border-radius: var(--r-2xl);
+  border-color: color-mix(in oklab, var(--accent) 28%, var(--glass-edge));
+  background:
+    radial-gradient(90% 120% at 100% 0%, color-mix(in oklab, var(--accent) 13%, transparent), transparent 60%),
+    radial-gradient(80% 120% at 0% 100%, color-mix(in oklab, var(--mint) 12%, transparent), transparent 60%),
+    var(--glass-strong);
+  box-shadow: var(--lift-2), var(--halo-sm);
+  animation: tkr-zoom-in var(--t-enter) var(--ease-out) backwards;
 }
 
 /* ===========================================================================
@@ -1000,9 +1405,10 @@
 .ven-lines {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  overflow: hidden;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  overflow: clip;
 }
 
 .ven-line {
@@ -1010,14 +1416,18 @@
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--hairline);
-  transition: opacity var(--t-micro) var(--ease);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--glass-edge);
+  transition: opacity var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 40ms);
 }
+
+.ven-line:hover { background: var(--ven-row-hover); }
 
 .ven-line:last-child { border-bottom: 0; }
 
-.ven-line[data-kept='false'] { opacity: 0.55; }
+.ven-line[data-kept='false'] { opacity: 0.5; }
 
 .ven-line[data-kept='false'] .ven-line__name {
   text-decoration: line-through;
@@ -1051,7 +1461,7 @@
 .ven-check input {
   width: 18px;
   height: 18px;
-  accent-color: var(--good);
+  accent-color: var(--gold);
   cursor: pointer;
 }
 
@@ -1059,10 +1469,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--s-1) var(--s-4);
-  padding: var(--s-3);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--void);
+  padding: var(--s-4);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--ven-sunk);
 }
 
 .ven-sum__label { color: var(--ink-soft); }
@@ -1076,19 +1486,28 @@
 .ven-sum__rule {
   grid-column: 1 / -1;
   height: 1px;
-  background: var(--hairline);
+  background: var(--glass-edge);
   margin: var(--s-1) 0;
 }
 
+.ven-sum__total.ven-sum__label,
+.ven-sum__total.ven-sum__value,
 .ven-sum__total .ven-sum__label,
 .ven-sum__total .ven-sum__value {
   font-weight: 800;
   color: var(--ink);
 }
 
+.ven-sum__total.ven-sum__value {
+  color: var(--accent-ink);
+  font-size: 1.1rem;
+}
+
+.ven-sum__refund.ven-sum__label,
+.ven-sum__refund.ven-sum__value,
 .ven-sum__refund .ven-sum__label,
 .ven-sum__refund .ven-sum__value {
-  color: var(--crit);
+  color: var(--crit-ink);
   font-weight: 700;
 }
 
@@ -1103,12 +1522,28 @@
   gap: var(--s-3);
 }
 
+.ven-eq > * {
+  --ven-n: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 70ms + 120ms);
+}
+.ven-eq > :nth-child(2) { --ven-n: 1; }
+.ven-eq > :nth-child(3) { --ven-n: 2; }
+.ven-eq > :nth-child(4) { --ven-n: 3; }
+.ven-eq > :nth-child(5) { --ven-n: 4; }
+.ven-eq > :nth-child(6) { --ven-n: 5; }
+.ven-eq > :nth-child(n + 7) { --ven-n: 6; }
+
 .ven-eq__term {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 128px;
   flex: 1 1 128px;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
 }
 
 .ven-eq__label {
@@ -1121,7 +1556,7 @@
 .ven-eq__value {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: 1.3rem;
+  font-size: 1.35rem;
   font-weight: 700;
 }
 
@@ -1130,18 +1565,31 @@
   color: var(--ink-faint);
 }
 
+/* the operator: a small cream coin between the terms */
 .ven-eq__op {
   align-self: center;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
   font-family: var(--data);
-  font-size: 1.4rem;
-  color: var(--ink-faint);
-  padding: 0 2px;
+  font-size: 1.15rem;
+  font-weight: 800;
   flex: 0 0 auto;
+}
+
+.ven-eq__term[data-role='net'] {
+  border-color: var(--ven-edge-hot);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  box-shadow: var(--halo-sm);
 }
 
 .ven-eq__term[data-role='net'] .ven-eq__value {
   color: var(--good-ink);
-  font-size: 1.6rem;
+  font-size: 1.7rem;
   font-weight: 800;
 }
 
@@ -1167,28 +1615,35 @@
   text-align: right;
 }
 
-.ven-stock[data-level='out'] .ven-stock__n { color: var(--crit); }
-.ven-stock[data-level='low'] .ven-stock__n { color: var(--warn); }
+.ven-stock[data-level='out'] .ven-stock__n { color: var(--crit-ink); }
+.ven-stock[data-level='low'] .ven-stock__n { color: var(--warn-ink); }
 
 .ven-stock__bar {
   position: relative;
-  width: 64px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--void);
+  width: 72px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--ven-sunk);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
   overflow: hidden;
 }
 
 .ven-stock__fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 3px;
+  border-radius: var(--r-pill);
   background: var(--good);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--good) 55%, transparent);
   transform-origin: left center;
   transition: width var(--t-move) var(--ease);
+  animation: ven-fill-grow var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * 35ms + 120ms);
 }
 
-.ven-stock[data-level='low'] .ven-stock__fill { background: var(--warn); }
+.ven-stock[data-level='low'] .ven-stock__fill {
+  background: var(--warn);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--warn) 55%, transparent);
+}
 .ven-stock[data-level='out'] .ven-stock__fill { background: var(--crit); }
 
 .ven-adjust {
@@ -1198,50 +1653,120 @@
   flex-wrap: wrap;
 }
 
+/* round keypad-style steppers, with press feedback */
 .ven-adjust__step {
-  min-width: 30px;
-  padding: 4px 6px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
   font-family: var(--data);
   font-size: var(--t-sm);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  font-weight: 700;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   color: inherit;
   cursor: pointer;
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
+    box-shadow var(--t-micro) var(--ease);
 }
 
-.ven-adjust__step:hover:not(:disabled) { border-color: var(--ink-faint); }
+.ven-adjust__step svg {
+  width: 15px;
+  height: 15px;
+}
+
+.ven-adjust__step:hover:not(:disabled) {
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+  box-shadow: var(--halo-sm);
+}
+
+.ven-adjust__step:active:not(:disabled) {
+  filter: brightness(0.86);
+  background: color-mix(in oklab, var(--accent) 22%, transparent);
+}
+
+.ven-adjust__step:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .ven-adjust__input {
-  width: 62px;
-  padding: 4px 6px;
+  width: 66px;
+  height: 34px;
+  padding: 4px 8px;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   text-align: right;
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  border: 1px solid var(--ven-field-edge);
+  border-radius: var(--r-md);
+  background: var(--ven-field);
   color: inherit;
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
+}
+
+.ven-adjust__input:focus-visible {
+  outline: none;
+  border-color: var(--ven-focus-edge);
+  box-shadow: 0 0 0 3px var(--ven-focus-ring);
 }
 
 .ven-rail-low {
   display: flex;
-  gap: var(--s-2);
+  gap: var(--s-3);
   overflow-x: auto;
-  padding-bottom: var(--s-2);
+  padding: 4px 2px var(--s-3);
 }
+
+.ven-rail-low > * {
+  --ven-n: 0;
+  animation: tkr-slide-in-right var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * var(--stagger));
+}
+.ven-rail-low > :nth-child(2) { --ven-n: 1; }
+.ven-rail-low > :nth-child(3) { --ven-n: 2; }
+.ven-rail-low > :nth-child(4) { --ven-n: 3; }
+.ven-rail-low > :nth-child(5) { --ven-n: 4; }
+.ven-rail-low > :nth-child(6) { --ven-n: 5; }
+.ven-rail-low > :nth-child(7) { --ven-n: 6; }
+.ven-rail-low > :nth-child(8) { --ven-n: 7; }
+.ven-rail-low > :nth-child(9) { --ven-n: 8; }
+.ven-rail-low > :nth-child(10) { --ven-n: 9; }
+.ven-rail-low > :nth-child(n + 11) { --ven-n: 10; }
 
 .ven-lowcard {
+  --ven-tone: var(--warn);
+  position: relative;
   flex: 0 0 auto;
-  width: 190px;
-  padding: var(--s-3);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--warn);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  width: 196px;
+  padding: var(--s-3) var(--s-4) var(--s-3) calc(var(--s-4) + 4px);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  transition: transform var(--t-move) var(--spring), border-color var(--t-move) var(--ease),
+    box-shadow var(--t-move) var(--ease);
 }
 
-.ven-lowcard[data-level='out'] { border-left-color: var(--crit); }
+.ven-lowcard::before {
+  content: '';
+  position: absolute;
+  inset-block: var(--s-3);
+  left: 6px;
+  width: 4px;
+  border-radius: var(--r-pill);
+  background: var(--ven-tone);
+  box-shadow: 0 0 10px color-mix(in oklab, var(--ven-tone) 60%, transparent);
+}
+
+.ven-lowcard[data-level='out'] { --ven-tone: var(--crit); }
+
+.ven-lowcard:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--ven-tone) 45%, transparent);
+  box-shadow: var(--lift-2);
+}
 
 .ven-lowcard__name {
   font-weight: 700;
@@ -1253,7 +1778,7 @@
 .ven-lowcard__n {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
 }
 
@@ -1263,9 +1788,9 @@
 
 .ven-preview {
   border: 1px dashed var(--hairline-bright);
-  border-radius: var(--r-lg);
-  padding: var(--s-3);
-  background: var(--ground);
+  border-radius: var(--r-xl);
+  padding: var(--s-4);
+  background: var(--ven-sunk);
 }
 
 .ven-preview__tag {
@@ -1277,11 +1802,21 @@
 }
 
 .ven-pcard {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
   overflow: hidden;
-  background: var(--surface);
+  background: var(--glass-strong);
   max-width: 260px;
+  box-shadow: var(--lift-2);
+  transition: transform var(--t-move) var(--spring), box-shadow var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease), opacity var(--t-move) var(--ease);
+  animation: tkr-zoom-in var(--t-enter) var(--ease-out) backwards;
+}
+
+.ven-pcard:hover {
+  transform: translateY(-4px);
+  border-color: var(--ven-edge-hot);
+  box-shadow: var(--lift-3), var(--halo-sm);
 }
 
 .ven-pcard__media {
@@ -1289,7 +1824,7 @@
   display: grid;
   place-items: center;
   background: color-mix(in oklab, var(--aisle) 16%, var(--surface));
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--glass-edge);
   color: var(--aisle-ink);
   font-family: var(--display);
   font-size: var(--t-sm);
@@ -1300,10 +1835,15 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: scale var(--t-slow) var(--ease-out);
+}
+
+.ven-pcard:hover .ven-pcard__media img {
+  scale: 1.06;
 }
 
 .ven-pcard__body {
-  padding: var(--s-3);
+  padding: var(--s-3) var(--s-4) var(--s-4);
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1318,7 +1858,7 @@
 
 .ven-pcard__name {
   font-family: var(--display);
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -1338,8 +1878,8 @@
 .ven-pcard__price {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
 }
 
 .ven-pcard__mrp {
@@ -1365,35 +1905,59 @@
   gap: var(--s-2);
 }
 
+.ven-images > * {
+  animation: tkr-zoom-in var(--t-move) var(--spring-soft) backwards;
+}
+
 .ven-thumb {
   position: relative;
-  width: 72px;
-  height: 72px;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
+  width: 76px;
+  height: 76px;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-md);
   overflow: hidden;
-  background: var(--void);
+  background: var(--ven-sunk);
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-thumb:hover {
+  border-color: var(--ven-edge-hot);
+  box-shadow: var(--halo-sm);
 }
 
 .ven-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: scale var(--t-slow) var(--ease-out);
+}
+
+.ven-thumb:hover img {
+  scale: 1.08;
 }
 
 .ven-thumb__remove {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px;
-  height: 20px;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--ink) 72%, transparent);
+  background: color-mix(in oklab, var(--ink) 78%, transparent);
   color: var(--surface);
   cursor: pointer;
+  transition: rotate var(--t-move) var(--spring);
+}
+
+.ven-thumb__remove:hover {
+  rotate: 90deg;
+}
+
+.ven-thumb__remove:active {
+  filter: brightness(0.9);
 }
 
 .ven-thumb__remove svg {
@@ -1402,30 +1966,36 @@
 }
 
 /* ===========================================================================
-   10. Forms — fields, switches, hours editor
+   10. Forms — glass fields with a gold focus ring, switches, hours editor
    =========================================================================== */
 
 .ven-form {
   display: grid;
-  gap: var(--s-3);
+  gap: var(--s-4);
 }
 
 .ven-form__row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: var(--s-3);
 }
 
 .ven-field {
   display: flex;
   flex-direction: column;
-  gap: var(--s-1);
+  gap: 6px;
   min-width: 0;
 }
 
 .ven-field__label {
   font-size: var(--t-sm);
   font-weight: 700;
+  color: var(--ink-soft);
+  transition: color var(--t-micro) var(--ease);
+}
+
+.ven-field:focus-within .ven-field__label {
+  color: var(--accent-ink);
 }
 
 .ven-field__hint {
@@ -1437,28 +2007,61 @@
   font-size: var(--t-xs);
   color: var(--crit-ink);
   font-weight: 700;
+  animation: tkr-slide-in-left var(--t-move) var(--spring-soft) backwards;
 }
 
 .ven-input,
 .ven-select,
 .ven-textarea {
   width: 100%;
-  padding: 8px var(--s-2);
+  padding: 10px var(--s-3);
   font: inherit;
   font-size: var(--t-md);
   color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
-  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
+  background: var(--ven-field);
+  border: 1px solid var(--ven-field-edge);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease),
+    background-color var(--t-micro) var(--ease);
+}
+
+.ven-input::placeholder,
+.ven-textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+.ven-input:hover:not(:disabled),
+.ven-select:hover:not(:disabled),
+.ven-textarea:hover:not(:disabled) {
+  border-color: var(--hairline-bright);
 }
 
 .ven-input:focus-visible,
 .ven-select:focus-visible,
 .ven-textarea:focus-visible {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash);
+  border-color: var(--ven-focus-edge);
+  background: var(--glass-strong);
+  box-shadow: 0 0 0 3px var(--ven-focus-ring), var(--halo-sm);
+}
+
+.ven-input:disabled,
+.ven-select:disabled,
+.ven-textarea:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* the native list opens on an OPAQUE plane — a translucent select paints its
+   options on whatever the OS puts underneath, which is often white */
+.ven-select {
+  background-color: var(--surface);
+  cursor: pointer;
+}
+
+.ven-select option {
+  background: var(--raised);
+  color: var(--ink);
 }
 
 .ven-input--num,
@@ -1468,8 +2071,9 @@
   text-align: right;
 }
 
-.ven-textarea {
-  min-height: 78px;
+.ven-textarea,
+textarea.ven-input {
+  min-height: 84px;
   resize: vertical;
 }
 
@@ -1483,7 +2087,7 @@
 .ven-switch input {
   width: 18px;
   height: 18px;
-  accent-color: var(--good);
+  accent-color: var(--gold);
 }
 
 .ven-rupee {
@@ -1491,34 +2095,44 @@
   align-items: center;
   gap: 4px;
   width: 100%;
-  padding: 0 var(--s-2);
-  background: var(--surface);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
+  padding: 0 var(--s-3);
+  background: var(--ven-field);
+  border: 1px solid var(--ven-field-edge);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-rupee:focus-within {
+  border-color: var(--ven-focus-edge);
+  box-shadow: 0 0 0 3px var(--ven-focus-ring), var(--halo-sm);
 }
 
 .ven-rupee__sign {
-  color: var(--ink-faint);
+  color: var(--accent-ink);
   font-family: var(--data);
+  font-weight: 700;
 }
 
 .ven-rupee .ven-input {
   border: 0;
-  padding: 8px 0;
+  padding: 10px 0;
   text-align: right;
+  background: transparent;
 }
 
 .ven-rupee .ven-input:focus-visible {
   box-shadow: none;
+  background: transparent;
 }
 
 /* hours */
 .ven-hours {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  overflow: hidden;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  overflow: clip;
 }
 
 .ven-hours__row {
@@ -1527,24 +2141,45 @@
   align-items: center;
   gap: var(--s-2);
   padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--glass-edge);
+  transition: background-color var(--t-micro) var(--ease);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 40ms);
 }
+
+.ven-hours__row:hover { background: var(--ven-row-hover); }
 
 .ven-hours__row:last-child { border-bottom: 0; }
 
-.ven-hours__day { font-weight: 700; }
+.ven-hours__day { font-weight: 700; font-family: var(--display); }
 
 .ven-hourtime {
   font-family: var(--data);
   width: 7.5rem;
-  padding: 5px var(--s-2);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  padding: 6px var(--s-2);
+  border: 1px solid var(--ven-field-edge);
+  border-radius: var(--r-md);
+  background: var(--ven-field);
   color: inherit;
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
 }
 
-/* ★ the dirty bar — a save/discard dock that exists only while dirty */
+.ven-hourtime:focus-visible {
+  outline: none;
+  border-color: var(--ven-focus-edge);
+  box-shadow: 0 0 0 3px var(--ven-focus-ring);
+}
+
+@media (max-width: 520px) {
+  .ven-hours__row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ven-hourtime {
+    width: 100%;
+  }
+}
+
+/* ★ the dirty bar — a frosted save/discard dock that exists only while dirty */
 .ven-dirty {
   position: sticky;
   bottom: var(--s-3);
@@ -1554,15 +2189,17 @@
   flex-wrap: wrap;
   gap: var(--s-3);
   margin-top: var(--s-4);
-  padding: var(--s-3) var(--s-4);
-  background: var(--raised);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lift-3), var(--rim);
-  animation: ven-dock 220ms var(--ease-out) both;
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-5);
+  background: color-mix(in oklab, var(--raised) 86%, transparent);
+  backdrop-filter: blur(var(--blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
+  border: 1px solid var(--ven-edge-hot);
+  border-radius: var(--r-pill);
+  box-shadow: var(--lift-4), var(--halo-sm);
+  animation: ven-dock var(--t-enter) var(--spring-soft) backwards;
 }
 
-.ven-dirty__text { font-weight: 700; }
+.ven-dirty__text { font-weight: 800; font-family: var(--display); }
 
 .ven-dirty__count {
   font-family: var(--data);
@@ -1576,10 +2213,19 @@
   gap: var(--s-2);
 }
 
+@media (max-width: 560px) {
+  .ven-dirty {
+    border-radius: var(--r-xl);
+    padding: var(--s-3);
+  }
+}
+
 /* ===========================================================================
    11. Page frame, sections, panels — shared by every screen
    =========================================================================== */
 
+/* NOTE: `.ven-page` and `.ven-page__body` never animate — they hold the
+   drawers, dialogs and sticky docks. Their children do. */
 .ven-page {
   display: flex;
   flex-direction: column;
@@ -1589,9 +2235,11 @@
 .ven-crumbs {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 4px;
   font-size: var(--t-xs);
   color: var(--ink-faint);
+  animation: tkr-fade-in var(--t-enter) var(--ease-out) backwards;
 }
 
 .ven-crumbs__item {
@@ -1603,9 +2251,20 @@
 .ven-crumbs__item a {
   color: var(--ink-faint);
   text-decoration: none;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  transition: color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
 }
 
-.ven-crumbs__item a:hover { color: var(--ink); }
+.ven-crumbs__item a:hover {
+  color: var(--accent-ink);
+  background: var(--glass);
+}
+
+.ven-crumbs__item [aria-current='page'] {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
 
 .ven-crumbs__sep {
   width: 12px;
@@ -1614,7 +2273,7 @@
 
 .ven-page__head {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--s-4);
   flex-wrap: wrap;
@@ -1623,14 +2282,36 @@
 .ven-page__headtext {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
 }
 
+/* heavy display type, with a thin glowing gold rule that draws in under it */
 .ven-page__title {
   font-family: var(--display);
-  font-size: var(--t-h2);
+  font-size: var(--t-h1);
   font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-display);
+  overflow-wrap: anywhere;
+}
+
+.ven-page__title::after {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 3px;
+  margin-top: var(--s-3);
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+  transform-origin: left center;
+  animation: tkr-underline var(--t-slow) var(--ease-out) 180ms backwards;
+}
+
+.ven-page__headtext > .ven-label {
+  color: var(--accent-ink);
 }
 
 .ven-page__desc {
@@ -1643,12 +2324,13 @@
   align-items: center;
   gap: var(--s-2);
   flex-wrap: wrap;
+  animation: tkr-slide-in-right var(--t-enter) var(--ease-out) 90ms backwards;
 }
 
 .ven-page__body {
   display: flex;
   flex-direction: column;
-  gap: var(--s-5);
+  gap: var(--s-6);
 }
 
 .ven-label {
@@ -1663,27 +2345,30 @@
 /* the "sample data" fixture banner */
 .ven-sample {
   display: flex;
+  align-items: center;
   gap: var(--s-3);
-  padding: var(--s-3);
+  padding: var(--s-3) var(--s-4) var(--s-3) var(--s-3);
   border: 1px solid color-mix(in oklab, var(--warn) 45%, transparent);
-  background: var(--warn-wash);
-  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--warn) 12%, transparent);
+  border-radius: var(--r-xl);
+  animation: tkr-zoom-in var(--t-enter) var(--ease-out) 120ms backwards;
 }
 
 .ven-sample__mark {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--warn);
-  color: var(--void);
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--warn) 55%, transparent);
   font-weight: 800;
 }
 
 .ven-sample__title {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--warn-ink);
 }
 
@@ -1701,11 +2386,12 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+  min-width: 0;
 }
 
 .ven-section__head {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--s-3);
   flex-wrap: wrap;
@@ -1713,14 +2399,29 @@
 
 .ven-section__title {
   font-family: var(--display);
-  font-size: 1.2rem;
+  font-size: var(--t-h3);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+/* a small gold spark before each section title */
+.ven-section__head .ven-section__title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
 }
 
 .ven-section__desc {
   font-size: var(--t-sm);
   color: var(--ink-faint);
-  margin-top: 2px;
+  margin-top: 4px;
   max-width: 68ch;
 }
 
@@ -1729,14 +2430,15 @@
 }
 
 .ven-panel {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  overflow: hidden;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  box-shadow: var(--lift-1);
+  overflow: clip;
 }
 
 .ven-panel--pad {
-  padding: var(--s-4);
+  padding: var(--s-5);
 }
 
 /* a simple list of link-rows — the dashboard's "latest orders" feed */
@@ -1746,22 +2448,39 @@
 }
 
 .ven-feed__item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--glass-edge);
   color: inherit;
   text-decoration: none;
-  animation: ven-rise var(--t-micro) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * 30ms);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
   transition: background-color var(--t-micro) var(--ease);
+}
+
+.ven-feed__item::before {
+  content: '';
+  position: absolute;
+  inset-block: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 var(--r-pill) var(--r-pill) 0;
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+  scale: 1 0;
+  transition: scale var(--t-move) var(--spring);
 }
 
 .ven-feed__item:last-child { border-bottom: 0; }
 
-.ven-feed__item:hover { background: var(--lifted); }
+.ven-feed__item:hover { background: var(--ven-row-hover); }
+
+.ven-feed__item:hover::before { scale: 1 1; }
 
 .ven-feed__no {
   font-family: var(--data);
@@ -1777,7 +2496,7 @@
 .ven-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
+  gap: var(--s-5);
   min-width: 0;
 }
 
@@ -1817,14 +2536,16 @@
 
 .ven-dl dd {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .ven-note {
   padding: var(--s-2) var(--s-3);
   border-left: 3px solid var(--warn);
-  background: var(--warn-wash);
-  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  background: color-mix(in oklab, var(--warn) 12%, transparent);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
   font-size: var(--t-sm);
+  animation: tkr-slide-in-left var(--t-enter) var(--ease-out) backwards;
 }
 
 .ven-timeline {
@@ -1839,7 +2560,9 @@
   grid-template-columns: 14px minmax(0, 1fr);
   gap: var(--s-3);
   position: relative;
-  padding-bottom: var(--s-3);
+  padding-bottom: var(--s-4);
+  animation: tkr-slide-in-left var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 60ms);
 }
 
 .ven-tl:last-child { padding-bottom: 0; }
@@ -1848,17 +2571,18 @@
   content: '';
   position: absolute;
   left: 6px;
-  top: 14px;
+  top: 16px;
   bottom: 0;
   width: 1px;
-  background: var(--hairline);
+  background: linear-gradient(var(--hairline-bright), var(--glass-edge));
 }
 
 .ven-tl:last-child::before { display: none; }
 
 .ven-tl__dot {
-  width: 13px;
-  height: 13px;
+  position: relative;
+  width: 14px;
+  height: 14px;
   margin-top: 2px;
   border-radius: 50%;
   border: 2px solid var(--aisle);
@@ -1866,7 +2590,21 @@
   z-index: 1;
 }
 
-.ven-tl__dot[data-current='true'] { background: var(--aisle); }
+.ven-tl__dot[data-current='true'] {
+  background: var(--aisle);
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--aisle) 22%, transparent),
+    0 0 14px color-mix(in oklab, var(--aisle) 60%, transparent);
+}
+
+.ven-tl__dot[data-current='true']::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: var(--aisle);
+  animation: tkr-ping 2s var(--ease-out) infinite;
+}
 
 .ven-tl__to { font-weight: 700; }
 
@@ -1880,73 +2618,190 @@
   margin-top: 2px;
 }
 
+/* stagger steps shared by the vertical lists above */
+:is(.ven-lines, .ven-hours, .ven-timeline) > * { --ven-n: 0; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(2) { --ven-n: 1; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(3) { --ven-n: 2; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(4) { --ven-n: 3; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(5) { --ven-n: 4; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(6) { --ven-n: 5; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(7) { --ven-n: 6; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(8) { --ven-n: 7; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(9) { --ven-n: 8; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(10) { --ven-n: 9; }
+:is(.ven-lines, .ven-hours, .ven-timeline) > :nth-child(n + 11) { --ven-n: 10; }
+
+/* ---- the gate: checking / not authorised / not your role ---- */
+
 .ven-gate {
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
   display: grid;
   place-items: center;
   min-height: 100dvh;
-  padding: var(--s-5);
-  background: var(--ground);
+  padding: var(--s-5) var(--s-4);
+  background: transparent;
   color: var(--ink);
   font-family: var(--body);
 }
 
+/* the gold orbit behind the card — decoration only */
+.ven-gate::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: min(900px, 140vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid var(--orbit);
+  box-shadow: var(--halo-sm);
+  translate: -50% -50%;
+  rotate: -18deg;
+  scale: 1 0.42;
+  pointer-events: none;
+  animation: tkr-orbit-breathe 6s var(--ease) infinite;
+}
+
 .ven-gate__card {
-  width: min(520px, 100%);
+  position: relative;
+  width: min(540px, 100%);
   padding: var(--s-6);
-  background: var(--surface);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-xl);
-  box-shadow: var(--lift-2), var(--rim);
+  background: color-mix(in oklab, var(--surface) 62%, transparent);
+  backdrop-filter: blur(var(--blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--lift-4);
+  animation: tkr-zoom-in var(--t-enter) var(--spring-soft) backwards;
+}
+
+.ven-gate__card::before {
+  content: '';
+  position: absolute;
+  inset-inline: 18%;
+  top: -1px;
+  height: 1px;
+  background: var(--ven-glint);
+}
+
+.ven-gate__card[aria-busy='true'] .ven-gate__title::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: var(--s-2);
+  vertical-align: -1px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  border-top-color: var(--gold);
+  animation: tkr-spin 0.8s linear infinite;
 }
 
 .ven-gate__title {
   font-family: var(--display);
-  font-size: 1.4rem;
+  font-size: var(--t-h2);
   font-weight: 800;
-  margin-bottom: var(--s-2);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--track-display);
+  margin-bottom: var(--s-3);
 }
 
 .ven-gate__body {
   color: var(--ink-soft);
-  margin-bottom: var(--s-4);
+  margin-bottom: var(--s-5);
+}
+
+.ven-gate__body code,
+.ven-gate__note code {
+  font-family: var(--data);
+  font-size: 0.92em;
+  padding: 1px 6px;
+  border-radius: var(--r-xs);
+  background: var(--ven-sunk);
 }
 
 .ven-gate__note {
-  margin-top: var(--s-4);
+  margin-top: var(--s-5);
   padding-top: var(--s-3);
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--glass-edge);
   font-size: var(--t-sm);
   color: var(--ink-faint);
 }
 
-/* ---- segmented control (period switcher) ---- */
+/* ---- segmented control (period switcher) — the gold pill slides ---- */
 
 .ven-seg {
+  position: relative;
+  isolation: isolate;
   display: inline-flex;
-  padding: 3px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 4px;
   gap: 2px;
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: var(--void);
+  background: var(--ven-sunk);
+  scrollbar-width: none;
+}
+
+/* the indicator, placed by Segmented from the pressed button's own box */
+.ven-seg::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: var(--seg-w, 0px);
+  translate: var(--seg-x, 0px) 0;
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+  opacity: 0;
+  transition:
+    translate var(--t-move) var(--spring-soft),
+    width var(--t-move) var(--spring-soft),
+    opacity var(--t-micro) var(--ease);
+}
+
+.ven-seg[data-slide='on']::before {
+  opacity: 1;
 }
 
 .ven-seg__btn {
-  padding: 5px var(--s-3);
+  padding: 6px var(--s-4);
   border: 0;
   border-radius: var(--r-pill);
   background: none;
   color: var(--ink-faint);
   font: inherit;
   font-size: var(--t-sm);
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
+  transition: background-color var(--t-micro) var(--ease), color var(--t-move) var(--ease);
 }
 
-.ven-seg__btn[aria-pressed='true'] {
-  background: var(--surface);
+.ven-seg__btn:hover:not([aria-pressed='true']) {
   color: var(--ink);
+}
+
+.ven-seg__btn:active {
+  filter: brightness(0.92);
+}
+
+/* before the indicator is measured, the pressed button paints its own pill */
+.ven-seg__btn[aria-pressed='true'] {
+  background: var(--gold);
+  color: var(--on-accent);
   font-weight: 700;
-  box-shadow: var(--lift-1);
+}
+
+.ven-seg[data-slide='on'] .ven-seg__btn[aria-pressed='true'] {
+  background: transparent;
 }
 
 /* ===========================================================================
@@ -1973,10 +2828,11 @@
   cursor: pointer;
   text-decoration: underline dotted var(--hairline-bright);
   text-underline-offset: 3px;
+  transition: color var(--t-micro) var(--ease);
 }
 .ven-time-btn:hover {
-  color: var(--aisle-ink);
-  text-decoration-color: var(--aisle);
+  color: var(--accent-ink);
+  text-decoration-color: var(--accent);
 }
 
 .ven-time {
@@ -1986,15 +2842,19 @@
   cursor: help;
 }
 
+/* soft tinted pills — a word in a capsule */
 .ven-pill {
+  --ven-tone: var(--ink-faint);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-pill);
   font-size: var(--t-xs);
   font-weight: 700;
-  background: var(--void);
+  white-space: nowrap;
+  background: var(--glass-strong);
   color: var(--ink-soft);
 }
 
@@ -2002,22 +2862,36 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--ven-tone);
   flex: 0 0 auto;
 }
 
-.ven-pill[data-tone='good'] { background: var(--good-wash); color: var(--good-ink); }
-.ven-pill[data-tone='warn'] { background: var(--warn-wash); color: var(--warn-ink); }
-.ven-pill[data-tone='crit'] { background: var(--crit-wash); color: var(--crit-ink); }
-.ven-pill[data-tone='info'] { background: var(--info-wash); color: var(--info-ink); }
+.ven-pill[data-tone='good'] { --ven-tone: var(--good); color: var(--good-ink); }
+.ven-pill[data-tone='warn'] { --ven-tone: var(--warn); color: var(--warn-ink); }
+.ven-pill[data-tone='crit'] { --ven-tone: var(--crit); color: var(--crit-ink); }
+.ven-pill[data-tone='info'] { --ven-tone: var(--info); color: var(--info-ink); }
+
+.ven-pill:is([data-tone='good'], [data-tone='warn'], [data-tone='crit'], [data-tone='info']) {
+  background: color-mix(in oklab, var(--ven-tone) 15%, transparent);
+  border-color: color-mix(in oklab, var(--ven-tone) 38%, transparent);
+}
+
+.ven-pill:is([data-tone='good'], [data-tone='warn'], [data-tone='crit'], [data-tone='info']) .ven-pill__glyph {
+  box-shadow: 0 0 6px color-mix(in oklab, var(--ven-tone) 70%, transparent);
+}
 
 /* ★ order status — the one place the aisle palette does operational work */
 .ven-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid color-mix(in oklab, var(--aisle) 38%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--aisle) 14%, transparent);
   font-weight: 700;
-  font-size: var(--t-sm);
+  font-size: var(--t-xs);
+  white-space: nowrap;
   color: var(--aisle-ink);
 }
 
@@ -2026,54 +2900,103 @@
   height: 8px;
   border-radius: 50%;
   background: var(--aisle);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--aisle) 70%, transparent);
   flex: 0 0 auto;
 }
 
+/* ---- the button: a glass pill; primary is the yellow pill ---- */
+
 .ven-btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   color: var(--ink);
   font: inherit;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease),
-    transform var(--t-micro) var(--ease), box-shadow var(--t-micro) var(--ease);
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    filter var(--t-micro) var(--ease);
 }
 
-.ven-btn svg { width: 16px; height: 16px; }
+.ven-btn svg {
+  width: 16px;
+  height: 16px;
+  transition: translate var(--t-move) var(--spring);
+}
 
-.ven-btn[data-size='md'] { padding: 8px var(--s-3); font-size: var(--t-sm); }
-.ven-btn[data-size='sm'] { padding: 5px var(--s-2); font-size: var(--t-xs); }
-.ven-btn[data-size='lg'] { padding: 11px var(--s-4); font-size: var(--t-md); }
+.ven-btn:hover:not(:disabled) svg:last-child:not(:first-child) {
+  translate: 3px 0;
+}
 
-.ven-btn:hover:not(:disabled) { border-color: var(--ink-faint); background: var(--lifted); }
+.ven-btn[data-size='md'] { padding: 9px var(--s-4); font-size: var(--t-sm); }
+.ven-btn[data-size='sm'] { padding: 6px var(--s-3); font-size: var(--t-xs); }
+.ven-btn[data-size='lg'] { padding: 13px var(--s-5); font-size: var(--t-md); }
+
+.ven-btn:hover:not(:disabled) {
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+  transform: translateY(-1px);
+}
 
 .ven-btn[data-variant='primary'] {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--gold);
+  border-color: transparent;
   color: var(--on-accent);
+  box-shadow: var(--halo-sm);
+}
+
+/* the light sweep across the yellow pill */
+.ven-btn[data-variant='primary']::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, var(--sheen), transparent);
+  translate: -130% 0;
+  pointer-events: none;
 }
 
 .ven-btn[data-variant='primary']:hover:not(:disabled) {
-  background: var(--accent-ink);
-  border-color: var(--accent-ink);
-  box-shadow: var(--glow-sm);
+  background: var(--gold);
+  border-color: transparent;
+  box-shadow: var(--halo);
+  transform: translateY(-2px);
+}
+
+.ven-btn[data-variant='primary']:hover:not(:disabled)::after {
+  animation: tkr-shine 0.9s var(--ease) both;
+}
+
+/* a figure inside a filled button takes the button's ink, zero or not */
+.ven-btn:is([data-variant='primary'], [data-variant='danger']) .ven-money {
+  color: inherit;
 }
 
 .ven-btn[data-variant='danger'] {
   background: var(--crit);
-  border-color: var(--crit);
-  color: var(--void);
+  border-color: transparent;
+  color: var(--ground);
 }
 
 .ven-btn[data-variant='danger']:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--crit) 85%, black);
+  background: var(--crit);
+  border-color: transparent;
+  box-shadow: 0 0 24px -6px color-mix(in oklab, var(--crit) 70%, transparent);
+  filter: brightness(1.06);
 }
 
 .ven-btn[data-variant='ghost'] {
@@ -2082,12 +3005,19 @@
   color: var(--ink-soft);
 }
 
-.ven-btn[data-variant='ghost']:hover:not(:disabled) { background: var(--lifted); }
+.ven-btn[data-variant='ghost']:hover:not(:disabled) {
+  background: var(--glass);
+  border-color: var(--glass-edge);
+  color: var(--ink);
+  transform: none;
+}
 
-.ven-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ven-btn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
 
-/* squash on press — the signature feedback, reuses the shared keyframe */
-.ven-btn:active:not(:disabled) { animation: tkr-squash 220ms var(--spring); }
+/* ★ press: a brightness dip, never a transform (see the header) */
+.ven-btn:active:not(:disabled) {
+  filter: brightness(0.92);
+}
 
 /* the KPI count-up figure, and any other bare stat */
 .ven-stat {
@@ -2108,28 +3038,40 @@
   gap: var(--s-2);
   padding: var(--s-7) var(--s-4);
   color: var(--ink-soft);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
 }
 
 .ven-empty[data-tight='true'] {
   padding: var(--s-4) var(--s-3);
 }
 
+/* the cream coin, floating gently */
 .ven-empty__icon {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
+  margin-bottom: var(--s-2);
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--void);
-  color: var(--ink-faint);
+  background: var(--ven-badge);
+  color: var(--ven-badge-ink);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--ink) 7%, transparent), var(--halo-mint);
+  animation: ven-bob 5s var(--ease) infinite;
 }
 
-.ven-empty__icon svg { width: 22px; height: 22px; }
+.ven-empty[data-tight='true'] .ven-empty__icon {
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--s-1);
+}
+
+.ven-empty__icon svg { width: 24px; height: 24px; }
 
 .ven-empty__title {
   font-family: var(--display);
   font-weight: 800;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
+  letter-spacing: var(--track-tight);
   color: var(--ink);
 }
 
@@ -2138,16 +3080,19 @@
   max-width: 40ch;
 }
 
-.ven-empty__act { margin-top: var(--s-1); }
+.ven-empty__act { margin-top: var(--s-2); }
 
 .ven-fail {
-  padding: var(--s-4);
-  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
-  background: var(--crit-wash);
-  border-radius: var(--r-lg);
+  padding: var(--s-5);
+  border: 1px solid color-mix(in oklab, var(--crit) 42%, transparent);
+  background: color-mix(in oklab, var(--crit) 12%, transparent);
+  border-radius: var(--r-xl);
+  animation: tkr-zoom-in var(--t-enter) var(--spring-soft) backwards;
 }
 
 .ven-fail__title {
+  font-family: var(--display);
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--crit-ink);
 }
@@ -2155,32 +3100,37 @@
 .ven-fail__body {
   font-size: var(--t-sm);
   color: var(--ink-soft);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .ven-fail__path {
   display: inline-block;
-  margin-top: var(--s-2);
+  margin-top: var(--s-3);
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--ven-sunk);
   font-family: var(--data);
   font-size: var(--t-xs);
   color: var(--ink-faint);
+  overflow-wrap: anywhere;
 }
 
-.ven-fail__act { margin-top: var(--s-3); }
+.ven-fail__act { margin-top: var(--s-4); }
 
 .ven-writefail {
-  padding: var(--s-3);
-  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
-  background: var(--crit-wash);
-  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid color-mix(in oklab, var(--crit) 42%, transparent);
+  background: color-mix(in oklab, var(--crit) 12%, transparent);
+  border-radius: var(--r-lg);
   font-size: var(--t-sm);
   color: var(--ink);
+  animation: tkr-slide-in-left var(--t-enter) var(--spring-soft) backwards;
 }
 
 .ven-writefail strong { color: var(--crit-ink); }
 
 /* ===========================================================================
-   14. Skeletons — shaped like the real thing, reuses the shared shimmer
+   14. Skeletons — shaped like the real thing, shimmering in forest tones
    =========================================================================== */
 
 .ven-skel {
@@ -2188,20 +3138,24 @@
   border-radius: var(--r-sm);
   background: linear-gradient(
     90deg,
-    var(--void) 25%,
-    color-mix(in oklab, var(--void) 55%, var(--surface)) 50%,
-    var(--void) 75%
+    color-mix(in oklab, var(--ink) 6%, transparent) 25%,
+    color-mix(in oklab, var(--ink) 14%, transparent) 50%,
+    color-mix(in oklab, var(--ink) 6%, transparent) 75%
   );
   background-size: 200% 100%;
-  animation: tkr-shimmer 1.4s linear infinite;
+  animation: tkr-shimmer 1.3s linear infinite;
 }
 
 .ven-skelstat {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  animation: tkr-pop-3d var(--t-enter) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
+  padding: var(--s-5);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
 }
 
 .ven-skelchart {
@@ -2212,6 +3166,10 @@
   padding-top: var(--s-3);
 }
 
+.ven-skelchart .ven-skel {
+  border-radius: var(--r-sm) var(--r-sm) 4px 4px;
+}
+
 /* ===========================================================================
    15. Tables — the catalogue, the ledger, the history. Tables stay tables,
    and tables never tilt — a row that moves under the cursor is unusable.
@@ -2220,15 +3178,17 @@
 .ven-tablewrap {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  overflow: hidden;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  box-shadow: var(--lift-1);
+  overflow: clip;
 }
 
 /* the table scrolls in its own box — the page body never scrolls sideways */
 .ven-scroll {
   overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .ven-table {
@@ -2239,20 +3199,20 @@
 
 .ven-table th,
 .ven-table td {
-  padding: 10px var(--s-3);
+  padding: 12px var(--s-4);
   text-align: left;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--glass-edge);
   vertical-align: middle;
 }
 
 .ven-table th {
   font-family: var(--body);
-  font-size: var(--t-xs);
+  font-size: var(--t-2xs);
   font-weight: 700;
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--ink-faint);
-  background: var(--void);
+  background: var(--ven-sunk);
   white-space: nowrap;
 }
 
@@ -2267,19 +3227,36 @@
 }
 
 .ven-table tbody tr {
-  animation: ven-rise var(--t-micro) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * 25ms);
+  transition: background-color var(--t-micro) var(--ease);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * 35ms);
 }
 
 .ven-table tbody tr:last-child td { border-bottom: 0; }
 
+/* hover: the row warms, and a gold rule appears at its leading edge */
+.ven-table tbody tr:hover {
+  background: var(--ven-row-hover);
+}
+
+.ven-table tbody tr > td:first-child {
+  transition: box-shadow var(--t-move) var(--ease);
+}
+
+.ven-table tbody tr:hover > td:first-child {
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
 .ven-table tbody tr[data-clickable='true'] {
   cursor: pointer;
-  transition: background-color var(--t-micro) var(--ease);
 }
 
 .ven-table tbody tr[data-clickable='true']:hover {
-  background: var(--lifted);
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+}
+
+.ven-table tbody tr[data-clickable='true']:active {
+  filter: brightness(0.95);
 }
 
 .ven-table__empty {
@@ -2291,8 +3268,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
-  padding: var(--s-3);
-  border-top: 1px solid var(--hairline);
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--glass-edge);
   flex-wrap: wrap;
 }
 
@@ -2311,6 +3288,7 @@
   align-items: flex-end;
   gap: var(--s-3);
   flex-wrap: wrap;
+  animation: tkr-fade-in var(--t-enter) var(--ease-out) backwards;
 }
 
 .ven-toolbar__spacer {
@@ -2321,14 +3299,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
-  min-width: 200px;
+  min-width: min(200px, 100%);
   flex: 1 1 220px;
+}
+
+.ven-search .ven-input {
+  border-radius: var(--r-pill);
+  padding-inline: var(--s-4);
 }
 
 .ven-selectwrap {
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
+  min-width: 0;
 }
 
 .ven-selectwrap__label {
@@ -2337,8 +3321,13 @@
   color: var(--ink-faint);
 }
 
+.ven-selectwrap .ven-select {
+  border-radius: var(--r-pill);
+  padding-inline: var(--s-4) var(--s-5);
+}
+
 /* ===========================================================================
-   16. Overlays — drawer + confirm dialog
+   16. Overlays — drawer + confirm dialog, frosted
    =========================================================================== */
 
 .ven-overlay {
@@ -2360,8 +3349,10 @@
   inset: 0;
   border: 0;
   padding: 0;
-  background: color-mix(in oklab, var(--void) 65%, transparent);
-  animation: ven-fade 180ms var(--ease-out) both;
+  background: color-mix(in oklab, var(--void) 62%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: tkr-fade-in var(--t-move) var(--ease-out) backwards;
   cursor: default;
 }
 
@@ -2371,19 +3362,39 @@
   max-width: 100vw;
   display: flex;
   flex-direction: column;
-  background: var(--raised);
+  background: color-mix(in oklab, var(--raised) 90%, transparent);
+  backdrop-filter: blur(var(--blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
+  border-left: 1px solid var(--glass-edge);
+  border-radius: var(--r-2xl) 0 0 var(--r-2xl);
   box-shadow: var(--lift-4);
-  animation: ven-drawer-in 320ms var(--spring-soft) both;
+  animation: ven-drawer-in var(--t-enter) var(--ease-out) backwards;
   outline: none;
+  overflow: hidden;
 }
 
 .ven-drawer__head {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--s-3);
-  padding: var(--s-4);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--s-5);
+  border-bottom: 1px solid var(--glass-edge);
+}
+
+.ven-drawer__head::after {
+  content: '';
+  position: absolute;
+  left: var(--s-5);
+  bottom: -1px;
+  width: 64px;
+  height: 2px;
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+  transform-origin: left center;
+  animation: tkr-underline var(--t-slow) var(--ease-out) 160ms backwards;
 }
 
 .ven-drawer__headtext {
@@ -2392,63 +3403,109 @@
 
 .ven-drawer__title {
   font-family: var(--display);
-  font-size: 1.3rem;
+  font-size: var(--t-h3);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 
 .ven-drawer__sub {
   font-size: var(--t-sm);
   color: var(--ink-faint);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .ven-drawer__body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: var(--s-4);
+  padding: var(--s-5);
 }
+
+/* the drawer's contents settle in just after it lands */
+.ven-drawer__body > * {
+  --ven-n: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 50ms + 120ms);
+}
+.ven-drawer__body > :nth-child(2) { --ven-n: 1; }
+.ven-drawer__body > :nth-child(3) { --ven-n: 2; }
+.ven-drawer__body > :nth-child(4) { --ven-n: 3; }
+.ven-drawer__body > :nth-child(n + 5) { --ven-n: 4; }
 
 .ven-drawer__foot {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--s-2);
-  padding: var(--s-3) var(--s-4);
-  border-top: 1px solid var(--hairline);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--glass-edge);
+  background: var(--ven-sunk);
 }
 
 .ven-dialog {
-  width: min(480px, 92vw);
+  position: relative;
+  width: min(500px, 92vw);
   max-height: 86vh;
   overflow-y: auto;
-  padding: var(--s-4);
-  background: var(--raised);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lift-4), var(--rim);
-  animation: ven-pop 220ms var(--spring-soft) both;
+  padding: var(--s-6) var(--s-5) var(--s-5);
+  background: color-mix(in oklab, var(--raised) 92%, transparent);
+  backdrop-filter: blur(var(--blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--lift-4), var(--halo-sm);
+  animation: tkr-zoom-in var(--t-move) var(--spring-soft) backwards;
   outline: none;
+}
+
+.ven-dialog::before {
+  content: '';
+  position: absolute;
+  inset-inline: 22%;
+  top: 0;
+  height: 2px;
+  border-radius: 0 0 var(--r-pill) var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+}
+
+.ven-dialog[role='alertdialog']:has(.ven-btn[data-variant='danger'])::before {
+  background: var(--crit);
+  box-shadow: 0 0 18px -2px color-mix(in oklab, var(--crit) 70%, transparent);
 }
 
 .ven-dialog__title {
   font-family: var(--display);
-  font-size: 1.2rem;
+  font-size: var(--t-h3);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
   margin-bottom: var(--s-2);
 }
 
 .ven-dialog__body {
   color: var(--ink-soft);
-  margin-bottom: var(--s-4);
+  margin-bottom: var(--s-5);
 }
 
 .ven-dialog__foot {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--s-2);
 }
 
 /* ===========================================================================
-   17. Charts — hand-drawn SVG
+   17. Charts — hand-drawn SVG, marks that grow in as the chart scrolls into
+   view (time-based where scroll timelines are unsupported)
    =========================================================================== */
+
+.ven-chartpanel {
+  transition: border-color var(--t-move) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-chartpanel:hover {
+  border-color: color-mix(in oklab, var(--accent) 26%, var(--glass-edge));
+  box-shadow: var(--lift-2);
+}
 
 .ven-chart {
   margin: 0;
@@ -2461,6 +3518,7 @@
   width: 100%;
   height: auto;
   display: block;
+  overflow: visible;
 }
 
 .ven-chart__axis {
@@ -2470,45 +3528,53 @@
 
 .ven-chart__bar {
   fill: var(--accent);
-  transition: opacity var(--t-micro) var(--ease);
-  animation: ven-bar-grow 480ms var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
-  transform-origin: bottom;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  transition: opacity var(--t-micro) var(--ease), filter var(--t-move) var(--ease);
+  animation: ven-bar-grow var(--t-slow) var(--spring-soft) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
 }
 
-.ven-chart[data-tone='pop-2'] .ven-chart__bar { fill: var(--gold); }
-.ven-chart[data-tone='pop-3'] .ven-chart__bar { fill: var(--violet); }
-.ven-chart[data-tone='pop-4'] .ven-chart__bar { fill: var(--coral); }
+.ven-chart[data-tone='pop-2'] { --ven-mark: var(--gold); }
+.ven-chart[data-tone='pop-3'] { --ven-mark: var(--violet); }
+.ven-chart[data-tone='pop-4'] { --ven-mark: var(--coral); }
 
-.ven-chart__bar:hover { opacity: 0.85; }
+.ven-chart[data-tone] .ven-chart__bar { fill: var(--ven-mark, var(--accent)); }
+
+.ven-chart__bar:hover {
+  filter: drop-shadow(0 0 8px color-mix(in oklab, var(--accent) 70%, transparent));
+}
 
 .ven-chart__area {
-  fill: color-mix(in oklab, var(--accent) 18%, transparent);
+  fill: color-mix(in oklab, var(--ven-mark, var(--accent)) 20%, transparent);
+  animation: tkr-fade-in var(--t-slow) var(--ease-out) 200ms backwards;
 }
 
 .ven-chart__line {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--ven-mark, var(--accent));
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: var(--draw-length, 1400);
-  animation: tkr-draw 900ms var(--ease-out) both;
+  /* `pathLength="1"` on the path makes the dash exactly one line long */
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--accent) 55%, transparent));
+  animation: ven-draw 1100ms var(--ease-out) backwards;
 }
-
-.ven-chart[data-tone='pop-2'] .ven-chart__line { stroke: var(--gold); }
-.ven-chart[data-tone='pop-2'] .ven-chart__area { fill: color-mix(in oklab, var(--gold) 18%, transparent); }
-.ven-chart[data-tone='pop-3'] .ven-chart__line { stroke: var(--violet); }
-.ven-chart[data-tone='pop-3'] .ven-chart__area { fill: color-mix(in oklab, var(--violet) 18%, transparent); }
-.ven-chart[data-tone='pop-4'] .ven-chart__line { stroke: var(--coral); }
-.ven-chart[data-tone='pop-4'] .ven-chart__area { fill: color-mix(in oklab, var(--coral) 18%, transparent); }
 
 .ven-chart__dot {
   fill: var(--surface);
-  stroke: var(--accent);
+  stroke: var(--ven-mark, var(--accent));
   stroke-width: 2;
-  animation: ven-rise var(--t-micro) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--t-move) var(--spring);
+  animation: ven-dot-pop var(--t-move) var(--spring) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger) + 500ms);
+}
+
+.ven-chart__dot:hover {
+  scale: 1.5;
 }
 
 .ven-chart__ticks {
@@ -2527,17 +3593,21 @@
 
 .ven-spark {
   width: 100%;
-  height: 34px;
+  height: 36px;
   display: block;
+  overflow: visible;
 }
 
 .ven-spark__line {
   fill: none;
   stroke: currentColor;
-  stroke-width: 2;
+  stroke-width: 2.25;
   color: var(--accent);
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-dasharray: 1;
+  filter: drop-shadow(0 0 5px color-mix(in oklab, var(--accent) 60%, transparent));
+  animation: ven-draw 1200ms var(--ease-out) 300ms backwards;
 }
 
 .ven-rank {
@@ -2546,16 +3616,16 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--s-3);
 }
 
 .ven-rank__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
   align-items: center;
-  gap: var(--s-2);
-  animation: ven-rise var(--t-micro) var(--spring-soft) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
+  gap: var(--s-3);
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
 }
 
 .ven-rank__name {
@@ -2568,7 +3638,8 @@
 .ven-rank__track {
   height: 10px;
   border-radius: var(--r-pill);
-  background: var(--void);
+  background: var(--ven-sunk);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
   overflow: hidden;
 }
 
@@ -2576,100 +3647,257 @@
   display: block;
   height: 100%;
   border-radius: var(--r-pill);
-  background: var(--accent);
+  background: linear-gradient(90deg, var(--mint), var(--gold));
+  box-shadow: 0 0 10px color-mix(in oklab, var(--accent) 45%, transparent);
+  transform-origin: left center;
   transition: width var(--t-move) var(--ease);
+  animation: ven-fill-grow var(--t-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 10) * var(--stagger) + 120ms);
 }
 
 .ven-rank__value {
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
   font-size: var(--t-sm);
+  font-weight: 700;
   text-align: right;
 }
 
+/* ---- scroll-driven: sections reveal, chart marks grow as they arrive ---- */
+@supports (animation-timeline: view()) {
+  /* sections below the fold rise in as they scroll into view; ones already on
+     screen at load are simply past their range and sit still */
+  .ven-page__body > .ven-section,
+  .ven-stack > .ven-section,
+  .ven-chartgrid > .ven-chartpanel {
+    animation: tkr-fade-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 65%;
+  }
+
+  .ven-chartgrid > .ven-chartpanel {
+    animation-name: tkr-zoom-in;
+  }
+
+  .ven-chart,
+  .ven-rank {
+    view-timeline: --ven-chart block;
+  }
+
+  .ven-chart__bar {
+    animation: ven-bar-grow linear both;
+    animation-timeline: --ven-chart;
+    animation-range: entry calc(min(var(--i, 0), 10) * 3%) cover calc(32% + min(var(--i, 0), 10) * 3%);
+  }
+
+  .ven-chart__line {
+    animation: ven-draw linear both;
+    animation-timeline: --ven-chart;
+    animation-range: entry 10% cover 50%;
+  }
+
+  .ven-chart__area {
+    animation: tkr-fade-in linear both;
+    animation-timeline: --ven-chart;
+    animation-range: entry 20% cover 50%;
+  }
+
+  .ven-rank__fill {
+    animation: ven-fill-grow linear both;
+    animation-timeline: --ven-chart;
+    animation-range: entry calc(min(var(--i, 0), 10) * 4%) cover calc(30% + min(var(--i, 0), 10) * 4%);
+  }
+}
+
 /* ===========================================================================
-   18. Keyframes — local, 2D. The shared 3D entrances (tkr-rise-3d,
-   tkr-pop-3d, tkr-squash, tkr-shimmer, tkr-draw) live in the design system.
+   18. Keyframes — local, and every one moves translate/scale/opacity only.
+   The shared ones (tkr-fade-up, tkr-zoom-in, tkr-count-pop, tkr-ping,
+   tkr-shimmer, tkr-shine, tkr-underline, …) live in forest.css.
    =========================================================================== */
 
-/* the plain fade+rise used for rows, feed items and chart marks — deliberately
-   NOT 3D: a table row or a chart dot is not a card and does not need a
-   vanishing point to arrive convincingly. */
-@keyframes ven-rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+/* the active rail item lands like a dropped coin */
+@keyframes ven-pill-in {
+  from { scale: 0.9; opacity: 0.4; }
+  to { scale: 1; opacity: 1; }
 }
 
 /* ONE pulse in the order's own aisle hue. See the note on .ven-card[data-fresh]. */
 @keyframes ven-card-pulse {
   0% { box-shadow: var(--lift-1), 0 0 0 0 color-mix(in oklab, var(--aisle) 55%, transparent); }
-  60% { box-shadow: var(--lift-1), 0 0 0 10px color-mix(in oklab, var(--aisle) 0%, transparent); }
+  60% { box-shadow: var(--lift-1), 0 0 0 12px color-mix(in oklab, var(--aisle) 0%, transparent); }
   100% { box-shadow: var(--lift-1), 0 0 0 0 color-mix(in oklab, var(--aisle) 0%, transparent); }
 }
 
-/* the topbar alert's own arrival flourish, on top of its steady glow */
+/* the topbar alert's own arrival flourish */
 @keyframes ven-alert-pulse {
-  0% { transform: scale(0.96); box-shadow: 0 0 0 0 color-mix(in oklab, var(--crit) 45%, transparent); }
-  55% { transform: scale(1); box-shadow: 0 0 0 9px color-mix(in oklab, var(--crit) 0%, transparent); }
-  100% { transform: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--crit) 16%, transparent); }
+  0% { scale: 0.94; box-shadow: 0 0 0 0 color-mix(in oklab, var(--crit) 50%, transparent); }
+  55% { scale: 1.02; box-shadow: 0 0 0 10px color-mix(in oklab, var(--crit) 0%, transparent); }
+  100% { scale: 1; box-shadow: 0 0 22px -6px color-mix(in oklab, var(--crit) 60%, transparent); }
+}
+
+/* a red ring that rolls outward — for the alert dot and the rail badge */
+@keyframes ven-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--crit) 60%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 7px color-mix(in oklab, var(--crit) 0%, transparent); }
 }
 
 @keyframes ven-pop {
-  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes ven-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; translate: 0 -6px; scale: 0.96; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 @keyframes ven-drawer-in {
-  from { opacity: 0; transform: translateX(28px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; translate: 56px 0; }
+  to { opacity: 1; translate: 0 0; }
 }
 
 @keyframes ven-dock {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; translate: 0 18px; scale: 0.98; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 @keyframes ven-bar-grow {
-  from { transform: scaleY(0.2); opacity: 0; }
-  to { transform: scaleY(1); opacity: 1; }
+  from { scale: 1 0; opacity: 0.3; }
+  to { scale: 1 1; opacity: 1; }
+}
+
+@keyframes ven-fill-grow {
+  from { scale: 0 1; }
+  to { scale: 1 1; }
+}
+
+@keyframes ven-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes ven-dot-pop {
+  from { scale: 0; }
+  to { scale: 1; }
+}
+
+@keyframes ven-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+
+/* the receipt prints downward */
+@keyframes ven-receipt {
+  from { opacity: 0; clip-path: inset(0 0 100% 0 round var(--r-xl)); translate: 0 -8px; }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round var(--r-xl)); translate: 0 0; }
 }
 
 /* ===========================================================================
    19. ★ REDUCED MOTION
    ---------------------------------------------------------------------------
-   The global rule in tokens.css already collapses every animation/transition
-   duration on the page to ~0, and already flattens every `<Tilt3D>` outright
-   (`.tkr-tilt3d__stage`/`.tkr-depth` are forced to `transform: none`). This
-   block only restores the CONTENT a couple of those animations were
-   carrying, so nothing is lost when the motion is gone: a fresh order is
-   still marked, a bar chart still has full-height bars.
+   The global rule in tokens.css already collapses every duration on the page
+   to ~0 and flattens every `<Tilt3D>`. That rule cannot reach a delay, a
+   scroll-driven timeline or an infinite loop, so those go here outright —
+   and the content a couple of animations were carrying is restored, so
+   nothing is lost when the motion is gone: a fresh order is still marked, a
+   chart still has full-height bars.
    =========================================================================== */
 
 @media (prefers-reduced-motion: reduce) {
+  .ven-rail > *,
+  .ven-rail__link[aria-current='page'],
+  .ven-rail__count,
+  .ven-top,
+  .ven-openstate__dot::after,
+  .ven-alert,
+  .ven-alert::before,
+  .ven-lane,
+  .ven-card,
+  .ven-fresh__dot::after,
+  .ven-needs > *,
+  .ven-need__count,
+  .ven-need__live::after,
+  .ven-kpitile,
+  .ven-kpi::before,
+  .ven-kpi__value,
+  .ven-panel--hero,
+  .ven-line,
+  .ven-eq > *,
+  .ven-stock__fill,
+  .ven-rail-low > *,
+  .ven-pcard,
+  .ven-images > *,
+  .ven-field__error,
+  .ven-hours__row,
+  .ven-dirty,
+  .ven-crumbs,
+  .ven-page__headtext,
+  .ven-page__title::after,
+  .ven-page__actions,
+  .ven-sample,
+  .ven-feed__item,
+  .ven-note,
+  .ven-tl,
+  .ven-tl__dot::after,
+  .ven-gate::before,
+  .ven-gate__card,
+  .ven-empty,
+  .ven-empty__icon,
+  .ven-fail,
+  .ven-writefail,
+  .ven-skel,
+  .ven-skelstat,
+  .ven-table tbody tr,
+  .ven-toolbar,
+  .ven-overlay__scrim,
+  .ven-drawer,
+  .ven-drawer__head::after,
+  .ven-drawer__body > *,
+  .ven-dialog,
+  .ven-usermenu__panel,
+  .ven-page__body > .ven-section,
+  .ven-stack > .ven-section,
+  .ven-chartgrid > .ven-chartpanel,
+  .ven-chart__bar,
+  .ven-chart__area,
+  .ven-chart__line,
+  .ven-chart__dot,
+  .ven-spark__line,
+  .ven-rank__row,
+  .ven-rank__fill,
+  .ven-pos__find,
+  .ven-pos__cart,
+  .ven-pos__pay,
+  .ven-pos__notice,
+  .ven-pos__results > li,
+  .ven-pos__line,
+  .ven-pos__mode[aria-checked='true'],
+  .ven-pos__change,
+  .ven-pos__charge.ven-btn[data-variant='primary'],
+  .ven-pos__todaycell strong,
+  .ven-gate__card[aria-busy='true'] .ven-gate__title::after,
+  .ven-pos__pop,
+  .ven-pos__today > *,
+  .ven-pos__camerabox,
+  .ven-handover,
+  .ven-rolepick > *,
+  .ven-permgrid > *,
+  .ven-invoice,
+  .ven-invoice__items tbody tr {
+    animation: none !important;
+  }
+
   .ven-card[data-fresh='true'] {
     border-color: var(--crit);
     box-shadow: var(--lift-1);
   }
-  .ven-alert {
-    animation: none;
-  }
-  .ven-chart__bar,
-  .ven-chart__dot,
-  .ven-table tbody tr,
-  .ven-rank__row,
-  .ven-kpi,
-  .ven-kpitile,
-  .ven-chartpanel {
-    transform: none;
-    opacity: 1;
-  }
-  .ven-chart__line {
+
+  .ven-chart__line,
+  .ven-spark__line {
     stroke-dasharray: none;
+  }
+
+  .ven-need:hover,
+  .ven-btn:hover:not(:disabled),
+  .ven-lowcard:hover,
+  .ven-pcard:hover,
+  .ven-pos__result:hover {
+    transform: none !important;
   }
 }
 
@@ -2696,14 +3924,23 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* the rail becomes a scrolling row of icon coins */
   .ven-rail {
     position: static;
     height: auto;
     flex-direction: row;
+    align-items: center;
     overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--s-2) var(--s-3);
     border-right: 0;
-    border-bottom: 1px solid var(--hairline);
-    gap: 2px;
+    border-bottom: 1px solid var(--glass-edge);
+    gap: 6px;
+    scrollbar-width: none;
+  }
+
+  .ven-rail > * {
+    animation-name: tkr-fade-in;
   }
 
   .ven-rail__brand,
@@ -2713,25 +3950,90 @@
     display: none;
   }
 
-  .ven-rail__link {
-    grid-template-columns: 18px;
-    padding: var(--s-2);
+  .ven-rail__link,
+  .ven-shell[data-collapsed='true'] .ven-rail__link {
+    flex: 0 0 auto;
+    grid-template-columns: 32px;
+    padding: 4px;
   }
 
-  .ven-rail__link[aria-current='page']::before {
-    inset-block: auto 0;
-    inset-inline: 6px;
-    left: auto;
-    height: 2px;
-    width: auto;
+  .ven-rail__count,
+  .ven-shell[data-collapsed='true'] .ven-rail__count {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 18px;
+    padding: 2px 4px;
+  }
+
+  .ven-top {
+    padding: 0 var(--s-3);
+    gap: 6px;
   }
 
   .ven-content {
-    padding: var(--s-4) var(--s-3) var(--s-7);
+    padding: var(--s-5) var(--s-3) var(--s-7);
   }
 
   .ven-drawer {
     width: 100vw !important;
+    border-radius: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .ven-openstate__hint,
+  .ven-user__name {
+    display: none;
+  }
+
+  .ven-openstate {
+    padding: 6px var(--s-3) 6px 10px;
+  }
+
+  .ven-alert {
+    padding-inline: var(--s-2);
+  }
+
+  .ven-iconbtn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .ven-panel--pad,
+  .ven-kpi {
+    padding: var(--s-4);
+  }
+
+  .ven-panel__head {
+    padding: var(--s-4) var(--s-4) 0;
+  }
+
+  .ven-panel__body {
+    padding: var(--s-3) var(--s-4) var(--s-4);
+  }
+
+  .ven-dialog {
+    padding: var(--s-5) var(--s-4) var(--s-4);
+  }
+
+  .ven-drawer__head,
+  .ven-drawer__body {
+    padding: var(--s-4);
+  }
+
+  .ven-drawer__foot {
+    padding: var(--s-3) var(--s-4);
+  }
+
+  .ven-gate__card {
+    padding: var(--s-5);
+  }
+
+  .ven-eq__op {
+    width: 28px;
+    height: 28px;
   }
 }
 
@@ -2759,6 +4061,10 @@
   .ven-top__whoname { display: none; }
 }
 
+@media (max-width: 480px) {
+  .ven-top__who .ven-dim { display: none; }
+}
+
 .ven-gate__card--inline {
   margin: var(--s-6) auto;
 }
@@ -2776,29 +4082,50 @@
 }
 
 .ven-permchip {
-  padding: 1px var(--s-2);
-  border: 1px solid var(--hairline);
+  padding: 2px var(--s-2);
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: var(--raised);
+  background: var(--glass-strong);
   color: var(--ink-soft);
   font-size: var(--t-2xs);
   white-space: nowrap;
+  transition: border-color var(--t-micro) var(--ease), color var(--t-micro) var(--ease);
 }
 
+.ven-permchip:hover {
+  border-color: var(--ven-edge-hot);
+  color: var(--ink);
+}
+
+/* the one-time credentials hand-over: gold-tinted glass with a glowing rule */
 .ven-handover {
+  position: relative;
   display: grid;
   gap: var(--s-2);
   margin-bottom: var(--s-4);
-  padding: var(--s-4);
-  border: 1px solid var(--hairline-bright);
-  border-left: 4px solid var(--accent);
-  border-radius: var(--r-md);
-  background: var(--accent-wash);
+  padding: var(--s-4) var(--s-4) var(--s-4) calc(var(--s-4) + 6px);
+  border: 1px solid var(--ven-edge-hot);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+  box-shadow: var(--halo-sm);
+  animation: tkr-zoom-in var(--t-enter) var(--spring-soft) backwards;
+}
+
+.ven-handover::before {
+  content: '';
+  position: absolute;
+  inset-block: var(--s-3);
+  left: 6px;
+  width: 4px;
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
 }
 
 .ven-handover__title {
   margin: 0;
-  font-weight: 700;
+  font-weight: 800;
+  font-family: var(--display);
 }
 
 .ven-handover__creds {
@@ -2809,7 +4136,12 @@
 }
 
 .ven-handover__creds dt { color: var(--ink-faint); font-size: var(--t-sm); }
-.ven-handover__creds dd { margin: 0; font-size: var(--t-md); user-select: all; }
+.ven-handover__creds dd {
+  margin: 0;
+  font-size: var(--t-md);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
 
 .ven-fieldset {
   display: grid;
@@ -2817,25 +4149,62 @@
   margin: 0;
   padding: 0;
   border: 0;
+  min-width: 0;
 }
 
 .ven-rolepick,
 .ven-permgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
   gap: var(--s-2);
 }
+
+.ven-rolepick > *,
+.ven-permgrid > * {
+  --ven-n: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 35ms);
+}
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(2) { --ven-n: 1; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(3) { --ven-n: 2; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(4) { --ven-n: 3; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(5) { --ven-n: 4; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(6) { --ven-n: 5; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(7) { --ven-n: 6; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(8) { --ven-n: 7; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(9) { --ven-n: 8; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(10) { --ven-n: 9; }
+:is(.ven-rolepick, .ven-permgrid) > :nth-child(n + 11) { --ven-n: 10; }
 
 .ven-rolepick__opt,
 .ven-permgrid__item {
   display: flex;
   align-items: flex-start;
   gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  padding: var(--s-3);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
   cursor: pointer;
+  transition: border-color var(--t-move) var(--ease), background-color var(--t-move) var(--ease),
+    box-shadow var(--t-move) var(--ease);
+}
+
+.ven-rolepick__opt input,
+.ven-permgrid__item input {
+  accent-color: var(--gold);
+  margin-top: 3px;
+}
+
+.ven-rolepick__opt:hover:not([data-disabled='true']),
+.ven-permgrid__item:hover:not([data-disabled='true']) {
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+}
+
+.ven-rolepick__opt:active:not([data-disabled='true']),
+.ven-permgrid__item:active:not([data-disabled='true']) {
+  filter: brightness(0.95);
 }
 
 .ven-rolepick__opt > span,
@@ -2846,7 +4215,13 @@
 
 .ven-rolepick__opt:has(input:checked) {
   border-color: var(--accent);
-  background: var(--accent-wash);
+  background: color-mix(in oklab, var(--accent) 13%, transparent);
+  box-shadow: var(--halo-sm);
+}
+
+.ven-permgrid__item:has(input:checked) {
+  border-color: color-mix(in oklab, var(--accent) 38%, transparent);
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
 }
 
 .ven-rolepick__opt[data-disabled='true'],
@@ -2859,9 +4234,10 @@
 /* Billing — the counter                                                 */
 /* ==================================================================== */
 
+/* NOTE: `.ven-pos` itself never animates — it holds the fixed camera. */
 .ven-pos {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(280px, 0.8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(290px, 0.85fr);
   gap: var(--s-4);
   align-items: start;
 }
@@ -2881,16 +4257,30 @@
   display: grid;
   gap: var(--s-3);
   padding: var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--rim);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  box-shadow: var(--lift-1);
   min-width: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
 }
 
+.ven-pos__cart { animation-delay: 70ms; }
+
+/* the receipt panel: strong glass, a gold rim, and it stays under the bar */
 .ven-pos__pay {
   position: sticky;
-  top: var(--s-4);
+  top: calc(var(--ven-top) + var(--s-4));
+  background:
+    radial-gradient(110% 60% at 100% 0%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%),
+    var(--glass-strong);
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--glass-edge));
+  box-shadow: var(--lift-3), var(--halo-sm);
+  animation-delay: 140ms;
+}
+
+@media (max-width: 760px) {
+  .ven-pos__pay { position: static; }
 }
 
 .ven-pos__searchrow {
@@ -2904,62 +4294,167 @@
   gap: var(--s-2);
   flex: 1 1 auto;
   min-width: 0;
-  padding-left: var(--s-2);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-md);
-  background: var(--raised);
+  padding-left: var(--s-4);
+  border: 1px solid var(--ven-field-edge);
+  border-radius: var(--r-pill);
+  background: var(--ven-field);
   color: var(--ink-faint);
+  transition: border-color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-pos__search:focus-within {
+  border-color: var(--ven-focus-edge);
+  box-shadow: 0 0 0 3px var(--ven-focus-ring), var(--halo-sm);
+  color: var(--accent-ink);
+}
+
+.ven-pos__search svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
 }
 
 .ven-pos__search .ven-input {
   flex: 1 1 auto;
   min-width: 0;
   border: 0;
+  border-radius: var(--r-pill);
   background: transparent;
-  font-size: var(--t-md);
+  font-size: var(--t-lg);
+  padding-block: 12px;
+}
+
+.ven-pos__search .ven-input:focus-visible {
+  box-shadow: none;
+  background: transparent;
 }
 
 .ven-pos__notice {
   margin: 0;
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-sm);
-  background: var(--warn-wash);
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklab, var(--warn) 40%, transparent);
+  background: color-mix(in oklab, var(--warn) 12%, transparent);
   color: var(--warn-ink);
   font-size: var(--t-sm);
+  animation: tkr-slide-in-left var(--t-move) var(--spring-soft) backwards;
 }
 
+/* ★ the product tiles — big, touch-sized, arriving as a wave */
 .ven-pos__results {
   display: grid;
-  gap: var(--s-1);
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  gap: var(--s-2);
   margin: 0;
-  padding: 0;
+  padding: 4px 2px 2px;
   list-style: none;
   max-height: 60vh;
   overflow-y: auto;
+  scrollbar-width: thin;
 }
 
-.ven-pos__none { padding: var(--s-2); }
+.ven-pos__results > li {
+  --ven-n: 0;
+  display: flex;
+  min-width: 0;
+  animation: tkr-zoom-in var(--t-move) var(--spring-soft) backwards;
+  animation-delay: calc(var(--ven-n, 0) * 35ms);
+}
+.ven-pos__results > :nth-child(2) { --ven-n: 1; }
+.ven-pos__results > :nth-child(3) { --ven-n: 2; }
+.ven-pos__results > :nth-child(4) { --ven-n: 3; }
+.ven-pos__results > :nth-child(5) { --ven-n: 4; }
+.ven-pos__results > :nth-child(6) { --ven-n: 5; }
+.ven-pos__results > :nth-child(7) { --ven-n: 6; }
+.ven-pos__results > :nth-child(8) { --ven-n: 7; }
+.ven-pos__results > :nth-child(9) { --ven-n: 8; }
+.ven-pos__results > :nth-child(10) { --ven-n: 9; }
+.ven-pos__results > :nth-child(n + 11) { --ven-n: 10; }
+
+.ven-pos__none {
+  grid-column: 1 / -1;
+  padding: var(--s-2);
+}
 
 .ven-pos__result {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--s-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'name name'
+    'price stock';
+  align-content: space-between;
+  gap: var(--s-2) var(--s-2);
   width: 100%;
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  min-height: 118px;
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-3);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass-strong);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+  touch-action: manipulation;
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background-color var(--t-micro) var(--ease),
+    box-shadow var(--t-move) var(--ease),
+    transform var(--t-move) var(--spring),
+    filter var(--t-instant) var(--ease);
+}
+
+/* the gold "+" coin in the corner */
+.ven-pos__result::after {
+  content: '+';
+  content: '+' / '';
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--on-accent);
+  font-family: var(--display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: var(--halo-sm);
+  transition: rotate var(--t-move) var(--spring), scale var(--t-move) var(--spring);
 }
 
 .ven-pos__result:hover,
-.ven-pos__result:focus-visible { border-color: var(--accent); background: var(--accent-wash); }
-.ven-pos__result[data-out='true'] { opacity: 0.6; }
+.ven-pos__result:focus-visible {
+  border-color: var(--ven-edge-hot);
+  background: color-mix(in oklab, var(--accent) 10%, var(--glass-strong));
+  box-shadow: var(--lift-2), var(--halo-sm);
+  transform: translateY(-2px);
+}
+
+.ven-pos__result:hover::after {
+  rotate: 90deg;
+  scale: 1.1;
+}
+
+/* ★ press: a dip and a gold inner rim — a filter, not a transform */
+.ven-pos__result:active {
+  filter: brightness(0.86);
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.ven-pos__result[data-out='true'] {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.ven-pos__result[data-out='true']::after {
+  background: var(--glass-strong);
+  color: var(--ink-faint);
+  box-shadow: none;
+}
 
 .ven-pos__resultname,
 .ven-pos__linename {
@@ -2968,7 +4463,28 @@
   min-width: 0;
 }
 
-.ven-pos__resultname strong,
+.ven-pos__resultname {
+  grid-area: name;
+  padding-right: 30px;
+}
+
+.ven-pos__resultname strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--display);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.ven-pos__resultname .ven-dim {
+  font-size: var(--t-2xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ven-pos__linename strong {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2976,23 +4492,39 @@
 }
 
 .ven-pos__resultprice {
+  grid-area: price;
   display: grid;
-  justify-items: end;
+  justify-items: start;
+  align-self: end;
   font-size: var(--t-sm);
 }
 
+.ven-pos__resultprice > .ven-money {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: var(--accent-ink);
+}
+
 .ven-pos__stock {
+  grid-area: stock;
+  align-self: end;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--ven-sunk);
   font-family: var(--data);
-  font-size: var(--t-xs);
+  font-size: var(--t-2xs);
   color: var(--ink-faint);
   white-space: nowrap;
 }
 
-.ven-pos__stock[data-low='true'] { color: var(--warn-ink); }
+.ven-pos__stock[data-low='true'] {
+  color: var(--warn-ink);
+  background: color-mix(in oklab, var(--warn) 14%, transparent);
+}
 
 .ven-pos__carthead {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--s-2);
 }
 
@@ -3006,17 +4538,32 @@
   list-style: none;
 }
 
+/* ★ a line slides in the moment it lands in the cart */
 .ven-pos__line {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: var(--s-2);
-  padding-bottom: var(--s-2);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass-strong);
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-micro) var(--ease);
+  animation: ven-line-in var(--t-enter) var(--spring-soft) backwards;
+}
+
+.ven-pos__line:hover {
+  border-color: var(--hairline-bright);
 }
 
 .ven-pos__line[data-short='true'] {
-  border-bottom-color: var(--crit);
+  border-color: var(--crit);
+  background: color-mix(in oklab, var(--crit) 10%, transparent);
+}
+
+@keyframes ven-line-in {
+  from { opacity: 0; translate: -28px 0; scale: 0.97; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
 }
 
 @media (max-width: 520px) {
@@ -3032,30 +4579,46 @@
 .ven-pos__qty {
   width: 4.5ch;
   text-align: center;
+  padding-inline: 4px;
 }
 
-.ven-pos__linetotal { text-align: right; min-width: 9ch; }
+.ven-pos__linetotal { text-align: right; min-width: 9ch; font-weight: 700; }
+
+/* a keyed span — it re-mounts, and so pops, each time its figure changes */
+.ven-pos__pop {
+  display: inline-block;
+  animation: tkr-count-pop var(--t-move) var(--spring) backwards;
+}
 
 .ven-pos__totals {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--s-1) var(--s-3);
   margin: 0;
+  padding-bottom: var(--s-2);
 }
 
 .ven-pos__totals dt { color: var(--ink-soft); }
 .ven-pos__totals dd { margin: 0; text-align: right; }
 
 .ven-pos__grand {
-  padding-top: var(--s-2);
-  border-top: 1px solid var(--hairline-bright);
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px dashed var(--hairline-bright);
   color: var(--ink);
   font-family: var(--display);
-  font-size: var(--t-lg);
+  font-size: var(--t-h3);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 
-.ven-pos__totals dt.ven-pos__grand { color: var(--ink); }
+.ven-pos__totals dt.ven-pos__grand { color: var(--ink); align-self: end; }
+
+.ven-pos__totals dd.ven-pos__grand {
+  color: var(--accent-ink);
+  font-size: var(--t-h2);
+  line-height: 1;
+}
 
 .ven-pos__modes {
   display: grid;
@@ -3064,32 +4627,71 @@
 }
 
 .ven-pos__mode {
-  padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  padding: var(--s-3) var(--s-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   color: inherit;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color var(--t-micro) var(--ease), background-color var(--t-move) var(--ease),
+    color var(--t-micro) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-pos__mode:hover:not([aria-checked='true']) {
+  border-color: var(--ven-edge-hot);
+  background: var(--glass-strong);
+}
+
+.ven-pos__mode:active {
+  filter: brightness(0.88);
 }
 
 .ven-pos__mode[aria-checked='true'] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-ink);
+  border-color: transparent;
+  background: var(--gold);
+  color: var(--on-accent);
+  box-shadow: var(--halo-sm);
+  animation: ven-pill-in var(--t-move) var(--spring) backwards;
 }
 
 .ven-pos__change {
   margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: color-mix(in oklab, var(--good) 12%, transparent);
+  color: var(--good-ink);
   font-family: var(--display);
   font-size: var(--t-lg);
   font-weight: 800;
+  animation: tkr-zoom-in var(--t-move) var(--spring-soft) backwards;
 }
 
+/* ★ the big yellow Charge pill */
 .ven-pos__charge {
   width: 100%;
   justify-content: center;
+  margin-top: var(--s-1);
+}
+
+.ven-pos__charge.ven-btn[data-size='lg'] {
+  padding: 16px var(--s-5);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: var(--track-tight);
+}
+
+.ven-pos__charge.ven-btn[data-variant='primary']:not(:disabled) {
+  box-shadow: var(--halo);
+  animation: tkr-halo-breathe 3.2s var(--ease) infinite;
+}
+
+.ven-pos__charge.ven-btn[data-variant='primary']:hover:not(:disabled) {
+  box-shadow: var(--halo-lg);
+  animation: none;
 }
 
 .ven-pos__camera {
@@ -3099,7 +4701,9 @@
   display: grid;
   place-items: center;
   padding: var(--s-4);
-  background: var(--void);
+  background: color-mix(in oklab, var(--void) 88%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .ven-pos__camerabox {
@@ -3108,54 +4712,107 @@
   justify-items: center;
   width: min(520px, 100%);
   padding: var(--s-4);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--lift-2);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-2xl);
+  background: color-mix(in oklab, var(--raised) 90%, transparent);
+  box-shadow: var(--lift-4), var(--halo-sm);
+  animation: tkr-zoom-in var(--t-move) var(--spring-soft) backwards;
 }
 
 .ven-pos__video {
   width: 100%;
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--ground);
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
 }
 
 .ven-pos__today {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: var(--s-3);
   margin-bottom: var(--s-4);
 }
 
+.ven-pos__today > * {
+  --ven-n: 0;
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--ven-n, 0) * var(--stagger));
+}
+.ven-pos__today > :nth-child(2) { --ven-n: 1; }
+.ven-pos__today > :nth-child(3) { --ven-n: 2; }
+.ven-pos__today > :nth-child(n + 4) { --ven-n: 3; }
+
 .ven-pos__todaycell {
+  position: relative;
   display: grid;
   gap: 2px;
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
+  overflow: clip;
+  transition: border-color var(--t-move) var(--ease), box-shadow var(--t-move) var(--ease);
+}
+
+.ven-pos__todaycell:first-child {
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--glass-edge));
+  background:
+    radial-gradient(100% 90% at 100% 0%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 60%),
+    var(--glass-strong);
+}
+
+.ven-pos__todaycell:hover {
+  border-color: var(--ven-edge-hot);
+  box-shadow: var(--halo-sm);
 }
 
 .ven-pos__todaycell strong {
-  font-family: var(--display);
-  font-size: var(--t-lg);
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  animation: tkr-count-pop var(--t-enter) var(--spring) backwards;
+  animation-delay: calc(var(--ven-n, 0) * var(--stagger) + 140ms);
 }
 
 /* ==================================================================== */
 /* Billing — the invoice, on screen and on paper                         */
 /* ==================================================================== */
 
+/* ★ the receipt prints downward on arrival */
 .ven-invoice {
+  position: relative;
   display: grid;
   gap: var(--s-4);
   max-width: 820px;
-  padding: var(--s-5);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-  box-shadow: var(--rim);
+  padding: var(--s-6) var(--s-5) var(--s-5);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass-strong);
+  box-shadow: var(--lift-3);
+  overflow-x: auto;
+  animation: ven-receipt var(--t-slow) var(--ease-out) backwards;
 }
 
-.ven-invoice[data-voided='true'] { border-color: var(--crit); }
+/* a gold tear-line along the top edge of the paper */
+.ven-invoice::before {
+  content: '';
+  position: absolute;
+  inset-inline: var(--s-5);
+  top: var(--s-3);
+  height: 0;
+  border-top: 2px dashed color-mix(in oklab, var(--accent) 55%, transparent);
+  pointer-events: none;
+}
+
+.ven-invoice[data-voided='true'] {
+  border-color: var(--crit);
+}
+
+.ven-invoice[data-voided='true']::before {
+  border-top-color: color-mix(in oklab, var(--crit) 60%, transparent);
+}
 
 .ven-invoice__head {
   display: flex;
@@ -3167,8 +4824,9 @@
 .ven-invoice__store {
   margin: 0;
   font-family: var(--display);
-  font-size: var(--t-lg);
+  font-size: var(--t-h3);
   font-weight: 800;
+  letter-spacing: var(--track-tight);
 }
 
 .ven-invoice__addr {
@@ -3181,7 +4839,7 @@
 .ven-invoice__totals {
   display: grid;
   grid-template-columns: max-content auto;
-  gap: 2px var(--s-3);
+  gap: 3px var(--s-3);
   margin: 0;
   font-size: var(--t-sm);
 }
@@ -3193,26 +4851,33 @@
 
 .ven-invoice__totals {
   justify-self: end;
-  min-width: 260px;
+  min-width: min(280px, 100%);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--ven-sunk);
 }
 
 .ven-invoice__totals dd { text-align: right; }
 
 .ven-invoice__grand {
-  padding-top: var(--s-1);
-  border-top: 1px solid var(--hairline-bright);
+  margin-top: var(--s-1);
+  padding-top: var(--s-2);
+  border-top: 1px dashed var(--hairline-bright);
   color: var(--ink);
-  font-size: var(--t-md);
+  font-size: var(--t-lg);
   font-weight: 800;
 }
 
 .ven-invoice__totals dt.ven-invoice__grand { color: var(--ink); }
 
+.ven-invoice__totals dd.ven-invoice__grand { color: var(--accent-ink); }
+
 .ven-invoice__void {
   margin: 0;
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-sm);
-  background: var(--crit-wash);
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in oklab, var(--crit) 40%, transparent);
+  background: color-mix(in oklab, var(--crit) 12%, transparent);
   color: var(--crit-ink);
 }
 
@@ -3223,7 +4888,7 @@
 }
 
 .ven-invoice__items th {
-  padding: var(--s-1) var(--s-2);
+  padding: var(--s-2);
   border-bottom: 1px solid var(--hairline-bright);
   color: var(--ink-faint);
   font-size: var(--t-2xs);
@@ -3231,12 +4896,23 @@
   letter-spacing: var(--track-label);
   text-align: left;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .ven-invoice__items td {
   padding: var(--s-2);
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px dashed var(--glass-edge);
   vertical-align: top;
+}
+
+.ven-invoice__items tbody tr {
+  transition: background-color var(--t-micro) var(--ease);
+  animation: tkr-fade-in var(--t-enter) var(--ease-out) backwards;
+  animation-delay: 260ms;
+}
+
+.ven-invoice__items tbody tr:hover {
+  background: var(--ven-row-hover);
 }
 
 .ven-invoice__items .ven-num { text-align: right; white-space: nowrap; }
@@ -3252,18 +4928,19 @@
   color: var(--ink-faint);
   font-size: var(--t-sm);
   text-align: center;
+  font-family: var(--display);
 }
 
 @media (max-width: 560px) {
-  .ven-invoice { padding: var(--s-3); }
+  .ven-invoice { padding: var(--s-5) var(--s-3) var(--s-3); }
   .ven-invoice__items th:nth-child(3),
   .ven-invoice__items td:nth-child(3) { display: none; }
 }
 
 /*
   Print / Save as PDF. Everything that is the PANEL goes; only the invoice
-  stays, flat on the page. Colours still come from tokens, and shadows are
-  dropped because a printer turns them into grey smudges.
+  stays, flat on the page. Colours still come from tokens, and shadows,
+  glass and motion are dropped because a printer turns them into smudges.
 */
 @media print {
   .ven-rail,
@@ -3287,12 +4964,19 @@
 
   .ven-page__head { margin-bottom: var(--s-2); }
 
+  .ven-page__title::after { display: none; }
+
   .ven-invoice {
     max-width: none;
     border: 0;
     box-shadow: none;
     padding: 0;
+    background: var(--surface);
+    animation: none;
+    overflow: visible;
   }
 
-  .ven-invoice__items tr { break-inside: avoid; }
+  .ven-invoice::before { display: none; }
+
+  .ven-invoice__items tr { break-inside: avoid; animation: none; }
 }

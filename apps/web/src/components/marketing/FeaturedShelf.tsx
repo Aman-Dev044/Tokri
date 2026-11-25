@@ -130,7 +130,7 @@ export async function FeaturedShelf() {
   return (
     <section className="mk-sec" id="shelf">
       <div className="mk-shell">
-        <header className="mk-sec__head">
+        <header className="mk-sec__head tkr-reveal">
           <p className="mk-eyebrow">On the shelf today</p>
           <h2 className="mk-title">Simple. Fresh. Local.</h2>
           <p className="mk-lede">
@@ -139,7 +139,7 @@ export async function FeaturedShelf() {
           </p>
         </header>
 
-        <ul className="mk-shelf">
+        <ul className="mk-shelf tkr-reveal-kids">
           {products.map((product, i) => {
             const image = product.images[0];
             return (
@@ -195,7 +195,7 @@ export async function FeaturedShelf() {
           })}
         </ul>
 
-        <p className="mk-shelf__more">
+        <p className="mk-shelf__more tkr-reveal">
           <Link className="mk-link" href="/shop">
             Browse the whole shop →
           </Link>

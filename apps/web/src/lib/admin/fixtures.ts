@@ -34,6 +34,7 @@ import type {
   AdminNotification,
   OrderDetail,
   OrderListRow,
+  OrderPricing,
   OrderStatus,
   OrdersByStatusSlice,
   OverviewResponse,
@@ -533,34 +534,55 @@ function buildVendorProducts(id: string): VendorProductRow[] {
   });
 }
 
+/**
+ * `OrderPricingView`, derived the way the API derives it: 5% tax on the
+ * subtotal after discount, a flat delivery fee under ₹499, commission on the
+ * subtotal, and the delivery fee kept by the platform (plan §1, decision 5).
+ */
+function orderPricing(itemsSubtotal: number, commissionPct: number, discount = 0): OrderPricing {
+  const deliveryFee = itemsSubtotal >= 49_900 ? 0 : 2_500;
+  const taxes = Math.round((itemsSubtotal - discount) * 0.05);
+  const commissionAmount = Math.round((itemsSubtotal * commissionPct) / 100);
+  return {
+    itemsSubtotal,
+    discount,
+    deliveryFee,
+    taxes,
+    grandTotal: itemsSubtotal - discount + deliveryFee + taxes,
+    commissionPct,
+    commissionAmount,
+    vendorPayout: itemsSubtotal - commissionAmount,
+  };
+}
+
 function buildOrders(): OrderListRow[] {
   const rng = seeded(61);
   return Array.from({ length: 40 }, (_, i) => {
     const vendor = VENDORS[i % VENDORS.length];
     const status = pick(rng, ORDER_STATUSES);
     const method: 'online' | 'cod' = rng() > 0.55 ? 'cod' : 'online';
+    const paymentStatus: OrderListRow['payment']['status'] =
+      status === 'DELIVERED'
+        ? 'paid'
+        : status === 'CANCELLED' || status === 'REJECTED'
+          ? 'refunded'
+          : method === 'cod'
+            ? 'pending'
+            : 'authorized';
     return {
       id: `ord-${i + 1}`,
       orderNo: `MND-20260924-${String(1841 - i).padStart(4, '0')}`,
+      status,
+      customerId: `cus-${(i % 12) + 1}`,
+      customerName: pick(rng, CUSTOMERS),
       vendorId: vendor?.id ?? 'ven-1',
       vendorName: vendor?.storeName ?? 'Mandi Store',
-      customerName: pick(rng, CUSTOMERS),
-      city: vendor?.address.city ?? 'Bengaluru',
-      status,
-      paymentMethod: method,
-      paymentStatus:
-        status === 'DELIVERED'
-          ? method === 'cod'
-            ? 'paid'
-            : 'paid'
-          : status === 'CANCELLED' || status === 'REJECTED'
-            ? 'refunded'
-            : method === 'cod'
-              ? 'pending'
-              : 'authorized',
       itemCount: 2 + Math.floor(rng() * 12),
-      totalPaise: Math.round((240 + rng() * 2800) * 100),
+      pricing: orderPricing(Math.round((240 + rng() * 2800) * 100), vendor?.commissionPct ?? 12),
+      payment: { method, status: paymentStatus },
+      deliveryPartnerId: null,
       placedAt: ago(i * 17 * MINUTE + 4 * MINUTE),
+      deliveredAt: status === 'DELIVERED' ? ago(i * 17 * MINUTE) : null,
     };
   });
 }
@@ -579,6 +601,7 @@ const STATUS_CHAIN: readonly OrderStatus[] = [
   'DELIVERED',
 ];
 
+/** `GET /admin/orders/:id` — the API's `OrderDetail`, field for field. */
 function buildOrderDetail(id: string): OrderDetail {
   const base = ORDERS.find((o) => o.id === id) ?? ORDERS[0];
   if (!base) throw new Error('fixtures: no orders');
@@ -595,43 +618,48 @@ function buildOrderDetail(id: string): OrderDetail {
           ? ['PLACED', 'ACCEPTED', 'CANCELLED']
           : ['PLACED', 'ACCEPTED', 'PACKING', 'READY_FOR_PICKUP', 'ASSIGNED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'DELIVERY_FAILED'];
 
-  const actorFor = (status: OrderStatus): { byName: string; byRole: OrderDetail['statusHistory'][number]['byRole'] } => {
+  // The API records the actor as a ROLE and a user id — never a name. `null`
+  // is a transition the system made on its own (the assignment worker).
+  const roleFor = (status: OrderStatus): string | null => {
     switch (status) {
       case 'PLACED':
-        return { byName: base.customerName, byRole: 'customer' };
+        return 'customer';
       case 'ACCEPTED':
       case 'PACKING':
       case 'READY_FOR_PICKUP':
       case 'REJECTED':
-        return { byName: base.vendorName, byRole: 'vendor' };
+        return 'vendor';
       case 'ASSIGNED':
-        return { byName: 'Assignment worker', byRole: 'system' };
+        return null;
       case 'CANCELLED':
-        return { byName: 'Priya Nair (ops)', byRole: 'admin' };
+        return 'admin';
       default:
-        return { byName: pick(rng, RIDERS), byRole: 'delivery' };
+        return 'delivery';
     }
   };
 
+  const cancelReason = 'Customer called — wrong delivery window';
   const placedAtMs = Date.parse(base.placedAt);
   const statusHistory = chain.map((to, i) => {
-    const actor = actorFor(to);
+    const byRole = roleFor(to);
     return {
       from: i === 0 ? null : (chain[i - 1] ?? null),
       to,
-      byName: actor.byName,
-      byRole: actor.byRole,
+      byUserId: byRole === null ? null : `usr-${byRole}-${numeric}`,
+      byRole,
       reason:
         to === 'CANCELLED'
-          ? 'Customer called — wrong delivery window'
+          ? cancelReason
           : to === 'REJECTED'
             ? 'Two staple lines out of stock'
             : to === 'DELIVERY_FAILED'
               ? 'Nobody at the door after 3 attempts'
-              : undefined,
+              : null,
       at: new Date(placedAtMs + i * (4 + Math.floor(rng() * 9)) * MINUTE).toISOString(),
     };
   });
+  const reachedAt = (status: OrderStatus): string | null =>
+    statusHistory.find((event) => event.to === status)?.at ?? null;
 
   const lineCount = Math.max(2, Math.min(base.itemCount, 7));
   const items = Array.from({ length: lineCount }, (_, i) => {
@@ -641,77 +669,74 @@ function buildOrderDetail(id: string): OrderDetail {
     return {
       productId: `prd-${numeric}-${i}`,
       name: p.name,
-      aisleKey: p.aisleKey,
+      image: null,
       unit: p.name.split('·')[1]?.trim() ?? '1 pc',
+      price: p.pricePaise,
       qty,
-      pricePaise: p.pricePaise,
-      lineTotalPaise: p.pricePaise * qty,
+      lineTotal: p.pricePaise * qty,
       fulfilled: rng() > 0.08,
     };
   });
 
-  const itemsSubtotalPaise = items.reduce((sum, l) => sum + l.lineTotalPaise, 0);
-  const discountPaise = rng() > 0.6 ? Math.round(itemsSubtotalPaise * 0.08) : 0;
-  const deliveryFeePaise = 2900;
-  const taxesPaise = Math.round((itemsSubtotalPaise - discountPaise) * 0.05);
-  const grandTotalPaise = itemsSubtotalPaise - discountPaise + deliveryFeePaise + taxesPaise;
-  const commissionPct = 12;
-  const commissionAmountPaise = Math.round((itemsSubtotalPaise * commissionPct) / 100);
+  const itemsSubtotal = items.reduce((sum, l) => sum + l.lineTotal, 0);
+  const discount = rng() > 0.6 ? Math.round(itemsSubtotal * 0.08) : 0;
+  const pricing = orderPricing(itemsSubtotal, base.pricing.commissionPct, discount);
 
-  const hasRider = chain.includes('ASSIGNED');
+  const riderId = chain.includes('ASSIGNED') ? `rid-${numeric}` : null;
+  const vendor = VENDORS.find((v) => v.id === base.vendorId);
+  const online = base.payment.method === 'online';
+  const deliveredAt = reachedAt('DELIVERED');
 
   return {
     ...base,
-    totalPaise: grandTotalPaise,
     itemCount: items.length,
-    statusHistory,
+    pricing,
+    deliveryPartnerId: riderId,
+    deliveredAt,
     items,
-    pricing: {
-      itemsSubtotalPaise,
-      discountPaise,
-      deliveryFeePaise,
-      taxesPaise,
-      grandTotalPaise,
-      commissionPct,
-      commissionAmountPaise,
-      // Delivery fee is platform revenue, not the vendor's (plan §1, decision 5).
-      vendorPayoutPaise: itemsSubtotalPaise - commissionAmountPaise,
-    },
-    payment: {
-      method: base.paymentMethod,
-      status: base.paymentStatus,
-      provider: 'razorpay',
-      providerOrderId: base.paymentMethod === 'online' ? `order_QxK${numeric}9fJ2aLm` : null,
-      providerPaymentId:
-        base.paymentMethod === 'online' && base.paymentStatus === 'paid'
-          ? `pay_QxK${numeric}0bT7uYz`
-          : null,
-      paidAt: base.paymentStatus === 'paid' ? ago(numeric * 13 * MINUTE) : null,
-      refundedAmountPaise: base.paymentStatus === 'refunded' ? grandTotalPaise : 0,
-    },
     address: {
       label: pick(rng, ['Home', 'Work', 'Mum'] as const),
       line1: `${201 + (numeric % 40)}, Sanjeevini Apartments`,
       line2: '14th Main, HSR Layout Sector 3',
-      city: base.city,
-      pincode: String(560000 + (numeric * 11) % 900),
-      phone: `+91 9${String(700000000 + numeric * 913571).slice(0, 9)}`,
+      city: 'Bengaluru',
+      pincode: String(560000 + ((numeric * 11) % 900)),
+      phone: `9${String(700000000 + numeric * 913571).slice(0, 9)}`,
+      location: { lat: 12.9116 + (numeric % 7) / 1000, lng: 77.6474 + (numeric % 5) / 1000 },
     },
-    rider: hasRider
-      ? {
-          id: `rid-${numeric}`,
-          name: pick(rng, RIDERS),
-          phone: `+91 8${String(600000000 + numeric * 771).slice(0, 9)}`,
-          vehicleType: pick(rng, ['Scooter', 'Motorcycle', 'Bicycle'] as const),
-          assignedAt: ago(numeric * 9 * MINUTE),
-          completedCount: 120 + Math.floor(rng() * 900),
-          rating: Math.round((4.2 + rng() * 0.7) * 10) / 10,
-        }
-      : null,
+    paymentDetail: {
+      method: base.payment.method,
+      status: base.payment.status,
+      provider: online ? 'razorpay' : null,
+      providerOrderId: online ? `order_QxK${numeric}9fJ2aLm` : null,
+      providerPaymentId:
+        online && base.payment.status === 'paid' ? `pay_QxK${numeric}0bT7uYz` : null,
+      paidAt: base.payment.status === 'paid' ? ago(numeric * 13 * MINUTE) : null,
+      refundedAmount: base.payment.status === 'refunded' ? pricing.grandTotal : 0,
+    },
+    statusHistory,
     cancellation:
       base.status === 'CANCELLED'
-        ? { by: 'Priya Nair (ops)', reason: 'Customer called — wrong delivery window', at: ago(numeric * 7 * MINUTE) }
+        ? { by: 'admin', reason: cancelReason, at: reachedAt('CANCELLED') }
         : null,
+    proof: { otpVerifiedAt: deliveredAt, photoUrl: null },
+    vendor: vendor ? { id: vendor.id, storeName: vendor.storeName, city: vendor.address.city } : null,
+    customer: {
+      id: base.customerId,
+      name: base.customerName ?? 'Customer',
+      phone: `9${String(810000000 + numeric * 4271).slice(0, 9)}`,
+      email: null,
+    },
+    rider: riderId
+      ? {
+          id: riderId,
+          name: pick(rng, RIDERS),
+          phone: `8${String(600000000 + numeric * 771).slice(0, 9)}`,
+          vehicleType: pick(rng, ['scooter', 'motorcycle', 'bicycle'] as const),
+        }
+      : null,
+    acceptedAt: reachedAt('ACCEPTED'),
+    readyAt: reachedAt('READY_FOR_PICKUP'),
+    pickedUpAt: reachedAt('PICKED_UP'),
   };
 }
 
@@ -947,11 +972,8 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
     const status = String(params.status ?? '').trim();
     const vendorId = String(params.vendorId ?? '').trim();
     let rows = ORDERS;
-    if (q) {
-      rows = rows.filter(
-        (o) => matches(o.orderNo, q) || matches(o.customerName, q) || matches(o.vendorName, q),
-      );
-    }
+    // The API matches `q` against orderNo and nothing else.
+    if (q) rows = rows.filter((o) => matches(o.orderNo, q));
     if (status && status !== 'all') rows = rows.filter((o) => o.status === status);
     if (vendorId && vendorId !== 'all') rows = rows.filter((o) => o.vendorId === vendorId);
     return paginate(sortRows(rows, params.sort === undefined ? undefined : String(params.sort)), params);
@@ -971,9 +993,4 @@ export function resolveFixture(path: string, params: QueryParams = {}): unknown 
   if (ops !== null) return ops;
 
   return null;
-}
-
-/** For the vendor filter dropdown on the orders page. */
-export function fixtureVendorOptions(): Array<{ label: string; value: string }> {
-  return VENDORS.slice(0, 12).map((v) => ({ label: v.storeName, value: v.id }));
 }

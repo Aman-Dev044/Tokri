@@ -43,7 +43,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
 import styles from './delivery.module.css';
-import { Dock } from './Dock';
+import { Dock, PrimaryArrow } from './Dock';
 import { Notice } from './Banners';
 import { PlaceCard } from './PlaceCard';
 import { CardSkeleton } from './Skeletons';
@@ -55,6 +55,11 @@ import { fetchOfferDetail } from '@/lib/delivery/wallet-api';
 import { clock, distanceKm, money, secondsUntil } from '@/lib/delivery/format';
 import { useTicker } from '@/lib/delivery/tracking';
 import type { OfferDetail } from '@/lib/delivery/types';
+
+/** The same dial as the offer screen: drawn against the offer's fixed life. */
+const OFFER_TOTAL_SECONDS = 45;
+const RING_RADIUS = 45;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function OfferConfirmView({ assignmentId }: { assignmentId: string }) {
   useHideNav();
@@ -178,8 +183,12 @@ export function OfferConfirmView({ assignmentId }: { assignmentId: string }) {
         <Notice tone="neutral" title="That offer is no longer yours">
           It expired, or another rider took it first. Nothing was charged.
         </Notice>
-        <Link className={styles.primary} href="/delivery/offers">
+        <Link
+          className={`${styles.primary} ${styles.primaryWithArrow}`}
+          href="/delivery/offers"
+        >
           Back to offers
+          <PrimaryArrow />
         </Link>
       </>
     );
@@ -192,7 +201,7 @@ export function OfferConfirmView({ assignmentId }: { assignmentId: string }) {
 
   return (
     <>
-      <section className={styles.panelFlat}>
+      <section className={styles.offerCard}>
         <div className={styles.offerHead}>
           <div className={styles.payoutBlock}>
             <span className={styles.stepTag}>You earn</span>
@@ -206,6 +215,22 @@ export function OfferConfirmView({ assignmentId }: { assignmentId: string }) {
             role="timer"
             aria-live="off"
           >
+            {/* Decorative, as on the offer screen — the number is the data. */}
+            <svg className={styles.ring} viewBox="0 0 104 104" aria-hidden="true">
+              <circle className={styles.ringTrack} cx="52" cy="52" r={RING_RADIUS} />
+              <circle
+                className={styles.ringDrain}
+                cx="52"
+                cy="52"
+                r={RING_RADIUS}
+                style={{
+                  strokeDasharray: RING_CIRCUMFERENCE,
+                  strokeDashoffset:
+                    RING_CIRCUMFERENCE *
+                    (1 - Math.max(0, Math.min(1, remaining / OFFER_TOTAL_SECONDS))),
+                }}
+              />
+            </svg>
             <div className={styles.countdownInner}>
               <div className={styles.countdownValue}>{clock(remaining)}</div>
               <div className={styles.countdownLabel}>left</div>

@@ -90,23 +90,22 @@ self.addEventListener('activate', (event) => {
 /**
  * The last-resort page. Inline, so it needs nothing from the network — which
  * means these colours cannot come from tokens.css either; nothing on this
- * page can fetch anything. They are hand-copied from Neon Orchard's ground,
- * ink, mint and on-accent tokens (light and dark) so a rider who loses signal
- * mid-shift lands on the same palette, not a flash of something else. Same
+ * page can fetch anything. They are hand-copied from Forest Gold's ground,
+ * ink, gold and on-accent tokens (dark — the theme's default for everyone) so
+ * a rider who loses signal mid-shift lands on the same palette, not a flash
+ * of something else: forest ground, cream type, one yellow pill. Same
  * reasoning as the two hex values in delivery/layout.tsx's viewport.themeColor.
  */
 const OFFLINE_HTML = [
   '<!doctype html><html lang="en"><head><meta charset="utf-8">',
   '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">',
   '<title>Offline · ${APP_NAME} Rider</title><style>',
-  ':root{color-scheme:light dark}',
+  ':root{color-scheme:dark}',
   'body{margin:0;min-height:100dvh;display:grid;place-items:center;padding:1.5rem;',
-  'background:#faf7ff;color:#170e22;font:600 1rem/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center}',
-  '@media (prefers-color-scheme:dark){body{background:#0e0a14;color:#f4eefb}}',
-  'h1{font-size:1.6rem;margin:0 0 .5rem}p{margin:0 0 1.25rem;max-width:32ch}',
-  'button{min-height:64px;padding:0 1.5rem;font:inherit;font-size:1.1rem;font-weight:800;',
-  'border-radius:18px;border:3px solid #0aa96a;background:#0aa96a;color:#fff}',
-  '@media (prefers-color-scheme:dark){button{border-color:#2bf5a0;background:#2bf5a0;color:#06180f}}',
+  'background:#0b1d13;color:#f4f0e1;font:600 1rem/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center}',
+  'h1{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;margin:0 0 .5rem}p{margin:0 0 1.25rem;max-width:32ch;opacity:.82}',
+  'button{min-height:64px;padding:0 1.75rem;font:inherit;font-size:1.1rem;font-weight:800;',
+  'border-radius:999px;border:0;background:#f6d54a;color:#0c2015;cursor:pointer}',
   '</style></head><body><main><h1>No connection</h1>',
   '<p>${APP_NAME} cannot be reached right now. Your delivery has not been lost &mdash; reconnect and it will still be here.</p>',
   '<button type="button" onclick="location.reload()">Try again</button>',

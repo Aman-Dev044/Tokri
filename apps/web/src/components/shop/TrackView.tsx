@@ -220,7 +220,7 @@ export function TrackView({ orderId }: { orderId: string }) {
   const mapCenter = rider?.position ?? dropLocation ?? vendorLocation;
 
   return (
-    <div className="shell shop-page shop-track">
+    <div className="shell shop-page shop-track" data-live={live ? 'true' : undefined}>
       {track.isFixture ? <FixtureBanner endpoint={`GET /orders/${orderId}/track`} /> : null}
 
       <header className="shop-page__head">
@@ -266,8 +266,23 @@ export function TrackView({ orderId }: { orderId: string }) {
 
           {/* The rider, stated honestly. */}
           {live ? (
-            <section className="shop-rider" aria-label="Rider">
-              <div>
+            <section className="shop-rider tkr-reveal" aria-label="Rider">
+              <span className="tkr-badge-icon shop-rider__badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22">
+                  <circle cx="6" cy="17" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="18" cy="17" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  <path
+                    d="M8.6 17h6.8l2-6.5h-4M13.4 10.5 11 6.5H8.5M6 17l2.5-6.5h3"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {rider !== null && !riderStale ? <span className="tkr-live shop-rider__live" /> : null}
+              </span>
+              <div className="shop-rider__who">
                 <p className="shop-rider__name">
                   {snapshot.rider?.name ?? 'No rider assigned yet'}
                 </p>
@@ -293,7 +308,7 @@ export function TrackView({ orderId }: { orderId: string }) {
           ) : null}
 
           {/* ── the map: secondary, desaturated, collapsed ─────────────── */}
-          <section className="shop-track__map">
+          <section className="shop-track__map tkr-reveal">
             <button
               type="button"
               className="shop-track__maptoggle"

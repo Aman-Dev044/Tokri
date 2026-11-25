@@ -57,14 +57,16 @@ export const viewport: Viewport = {
   // usable at 200% zoom, and blocking pinch-zoom on the one surface read in
   // bright sun is exactly the wrong call.
   //
-  // These two hex values are the ONLY hand-typed colour in the rider surface.
-  // A `<meta name="theme-color">` is painted by the OS chrome before any
-  // stylesheet — tokens.css, "Neon Orchard" — has loaded, so it cannot read a
-  // custom property. They are kept in lockstep with `--ground` by hand: light
-  // #faf7ff, dark #0e0a14.
+  // These hex values (with the manifest's and the offline page's) are the
+  // ONLY hand-typed colour in the rider surface. A `<meta name="theme-color">`
+  // is painted by the OS chrome before any stylesheet — tokens.css, "Forest
+  // Gold" — has loaded, so it cannot read a custom property. They are kept in
+  // lockstep with `--ground` by hand. Forest Gold is dark by default for
+  // everyone, whatever the OS asks for, so both entries are the forest
+  // ground.
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#faf7ff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0e0a14' },
+    { media: '(prefers-color-scheme: light)', color: '#0b1d13' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1d13' },
   ],
 };
 

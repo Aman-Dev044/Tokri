@@ -1,0 +1,477 @@
+/* ════════════════════════════════════════════════════════════════════════
+   FOREST GOLD — the shared look and motion layer
+   ════════════════════════════════════════════════════════════════════════
+
+   Loaded once from the root layout, after components.css and before every
+   surface stylesheet. Two halves:
+
+     1. VOCABULARY — classes and keyframes any surface can use
+        (`.tkr-reveal`, `.tkr-glass`, `.tkr-cta`, `.tkr-mega`, `.tkr-orbit`,
+        `.tkr-float`, `.tkr-badge-icon`, …).
+     2. PRIMITIVES — the shared design-system components (`.mnd-btn`,
+        `.mnd-toast`, `.mnd-sheet`, `.tkr-card`, skeletons) restyled for the
+        theme, so every screen that uses them changes at once.
+
+   Motion rules that hold everywhere in this file:
+     · Every entrance keyframe ENDS at `translate: none` / `scale: none`,
+       and time-based ones fill `backwards`. A finished animation holding
+       `translate: 0 0` still makes its element the containing block of any
+       `position: fixed` drawer or dialog rendered inside it.
+     · Reveal animations move `translate`/`scale`/`opacity`, NEVER
+       `transform`. Hover effects across the app use `transform`; the two
+       compose instead of one silently cancelling the other.
+     · Nothing here sets a transform on `:active` inside a 3D context.
+       That once put the product card's Add button on a layer behind the
+       card, and taps stopped reaching it.
+     · Reduced motion is honoured twice: the global kill switch in
+       tokens.css, plus explicit `animation: none` for the scroll-driven
+       ones below, whose duration that switch cannot reach.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* ══ KEYFRAMES ═════════════════════════════════════════════════════════ */
+@keyframes tkr-fade-up {
+  from { opacity: 0; translate: 0 18px; }
+  to { opacity: 1; translate: none; }
+}
+@keyframes tkr-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes tkr-zoom-in {
+  from { opacity: 0; scale: 0.94; }
+  to { opacity: 1; scale: none; }
+}
+@keyframes tkr-slide-in-left {
+  from { opacity: 0; translate: -22px 0; }
+  to { opacity: 1; translate: none; }
+}
+@keyframes tkr-slide-in-right {
+  from { opacity: 0; translate: 22px 0; }
+  to { opacity: 1; translate: none; }
+}
+@keyframes tkr-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -10px; }
+}
+@keyframes tkr-bob-tilt {
+  0%, 100% { translate: 0 0; rotate: -6deg; }
+  50% { translate: 0 -12px; rotate: -2deg; }
+}
+@keyframes tkr-spin {
+  to { rotate: 360deg; }
+}
+@keyframes tkr-shine {
+  from { translate: -130% 0; }
+  to { translate: 230% 0; }
+}
+@keyframes tkr-halo-breathe {
+  0%, 100% { box-shadow: var(--halo-sm); }
+  50% { box-shadow: var(--halo); }
+}
+@keyframes tkr-ping {
+  0% { scale: 1; opacity: 0.55; }
+  100% { scale: 2.2; opacity: 0; }
+}
+@keyframes tkr-drift {
+  0% { translate: 0 0; scale: 1; }
+  100% { translate: -3% 2%; scale: 1.08; }
+}
+@keyframes tkr-nudge {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 4px 0; }
+}
+@keyframes tkr-count-pop {
+  0% { scale: 0.6; opacity: 0; }
+  60% { scale: 1.15; opacity: 1; }
+  100% { scale: none; }
+}
+/* Read by `.tkr-skel` since "Paper", but never defined until now — so the
+   skeletons sat still. */
+@keyframes tkr-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@keyframes tkr-underline {
+  from { scale: 0 1; }
+  to { scale: 1 1; }
+}
+
+/* ══ AMBIENT LIGHT ═════════════════════════════════════════════════════
+   The body's two pools of forest light drift very slowly. A fixed pseudo
+   element behind everything — `translate` on it is cheap and creates no
+   containing block for anyone else. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -12%;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--ground-art);
+  animation: tkr-drift 28s var(--ease) infinite alternate;
+}
+body { background-image: none; }
+
+/* ══ PAGE ENTER ════════════════════════════════════════════════════════
+   OPACITY ONLY on <main>: a transform or filter there would become the
+   containing block of every fixed bar, sheet and toast inside it for the
+   length of the animation. The route-change replay is `MotionRoot`. */
+main {
+  animation: tkr-fade-in var(--t-enter) var(--ease-out) both;
+}
+
+/* ══ 1. VOCABULARY ═════════════════════════════════════════════════════ */
+
+/* Scroll reveal, driven by the element's own visibility — no script, and
+   where `view()` is unsupported the element is simply visible. */
+@supports (animation-timeline: view()) {
+  .tkr-reveal,
+  .tkr-reveal-kids > * {
+    animation: tkr-fade-up linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+  .tkr-reveal--zoom {
+    animation-name: tkr-zoom-in;
+  }
+  .tkr-reveal--left {
+    animation-name: tkr-slide-in-left;
+  }
+  .tkr-reveal--right {
+    animation-name: tkr-slide-in-right;
+  }
+}
+
+/* Load-time stagger for lists: set `--i` per child, or rely on these. */
+.tkr-stagger > * {
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+.tkr-stagger > :nth-child(2) { --i: 1; }
+.tkr-stagger > :nth-child(3) { --i: 2; }
+.tkr-stagger > :nth-child(4) { --i: 3; }
+.tkr-stagger > :nth-child(5) { --i: 4; }
+.tkr-stagger > :nth-child(6) { --i: 5; }
+.tkr-stagger > :nth-child(7) { --i: 6; }
+.tkr-stagger > :nth-child(n + 8) { --i: 7; }
+
+/* Glass — the dark-green translucent card with a pale rim. */
+.tkr-glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  backdrop-filter: blur(var(--blur)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(1.2);
+}
+
+/* The yellow pill call-to-action, with a light sweep and an arrow nudge. */
+.tkr-cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 0.8rem 1.4rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  color: var(--on-accent);
+  font-family: var(--body);
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: var(--halo-sm);
+  transition:
+    transform var(--t-micro) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    filter var(--t-micro) var(--ease);
+}
+.tkr-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, var(--sheen), transparent);
+  translate: -130% 0;
+}
+.tkr-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--halo);
+}
+.tkr-cta:hover::after {
+  animation: tkr-shine 0.9s var(--ease) both;
+}
+.tkr-cta:active {
+  filter: brightness(0.92);
+}
+.tkr-cta :is(svg, .tkr-cta__arrow) {
+  transition: translate var(--t-move) var(--spring);
+}
+.tkr-cta:hover :is(svg, .tkr-cta__arrow) {
+  translate: 4px 0;
+}
+
+/* Poster type: one per hero. */
+.tkr-mega {
+  font-family: var(--display);
+  font-size: var(--t-mega);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: var(--track-display);
+  text-transform: uppercase;
+}
+.tkr-mega em,
+.tkr-mega .tkr-mega__soft {
+  font-style: normal;
+  color: color-mix(in oklab, var(--ink) 55%, var(--mint));
+}
+
+/* A cream circle holding an icon — the badge on every feature pill. */
+.tkr-badge-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--ground);
+  transition: transform var(--t-move) var(--spring);
+}
+:is(a, button, li, div):hover > .tkr-badge-icon {
+  transform: rotate(-8deg) scale(1.06);
+}
+
+/* The feature pill: glass, rounded, a badge on the left. */
+.tkr-pill-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-5) var(--s-2) var(--s-2);
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  border: 1px solid var(--glass-edge);
+  transition:
+    background var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease),
+    transform var(--t-move) var(--spring);
+}
+.tkr-pill-row:hover {
+  background: var(--glass-strong);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+  transform: translateX(4px);
+}
+
+/* The gold orbit ring that sits behind hero art. Decorative only. */
+.tkr-orbit {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  border: 2px solid var(--orbit);
+  box-shadow: var(--halo-sm);
+  rotate: -18deg;
+  scale: 1 0.42;
+  animation: tkr-orbit-breathe 6s var(--ease) infinite;
+}
+@keyframes tkr-orbit-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.tkr-float { animation: tkr-bob 6s var(--ease) infinite; }
+.tkr-float--tilt { animation: tkr-bob-tilt 7s var(--ease) infinite; }
+.tkr-float--slow { animation-duration: 9s; }
+.tkr-float--delay { animation-delay: -3s; }
+
+/* A live dot with a ping ring — "online", "new", "live". */
+.tkr-live {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good);
+}
+.tkr-live::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: inherit;
+  animation: tkr-ping 1.6s var(--ease-out) infinite;
+}
+
+.tkr-pop { animation: tkr-count-pop var(--t-enter) var(--spring) backwards; }
+
+/* ══ 2. PRIMITIVES ═════════════════════════════════════════════════════ */
+
+/* Buttons: the solid one is the yellow pill, everywhere. */
+.mnd-btn {
+  font-weight: 650;
+  overflow: hidden;
+  isolation: isolate;
+}
+.mnd-btn--solid {
+  background: var(--gold);
+  color: var(--on-accent);
+  box-shadow: var(--halo-sm);
+}
+.mnd-btn--solid::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, var(--sheen), transparent);
+  translate: -130% 0;
+  pointer-events: none;
+}
+.mnd-btn--solid:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--halo);
+}
+.mnd-btn--solid:hover:not(:disabled)::after {
+  animation: tkr-shine 0.9s var(--ease) both;
+}
+.mnd-btn--outline {
+  color: var(--ink);
+  border-color: var(--glass-edge);
+  background: var(--glass);
+}
+.mnd-btn--outline:hover:not(:disabled) {
+  background: var(--glass-strong);
+  border-color: color-mix(in oklab, var(--accent) 50%, transparent);
+  transform: translateY(-1px);
+}
+.mnd-btn--ghost:hover:not(:disabled) {
+  background: var(--glass);
+  color: var(--ink);
+}
+.mnd-btn:active:not(:disabled) {
+  transform: none;
+  filter: brightness(0.92);
+}
+.mnd-btn__icon {
+  transition: translate var(--t-move) var(--spring);
+}
+.mnd-btn:hover:not(:disabled) .mnd-btn__icon:last-child {
+  translate: 3px 0;
+}
+
+/* Cards lift and catch the light. */
+.tkr-card {
+  border-color: var(--glass-edge);
+  transition:
+    transform var(--t-move) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    border-color var(--t-move) var(--ease);
+}
+.tkr-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--accent) 35%, transparent);
+  box-shadow: var(--lift-3), var(--halo-sm);
+}
+.tkr-card__media img {
+  transition: scale var(--t-slow) var(--ease-out);
+}
+.tkr-card:hover .tkr-card__media img {
+  scale: 1.06;
+}
+
+.tkr-add {
+  background: var(--gold);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.tkr-add:hover {
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+}
+.tkr-add:active {
+  transform: none;
+  filter: brightness(0.9);
+}
+.tkr-step__n { animation: tkr-count-pop var(--t-move) var(--spring); }
+
+/* Sheets and toasts are glass over a blurred page. */
+.mnd-sheet {
+  background: color-mix(in oklab, var(--raised) 92%, transparent);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border-color: var(--glass-edge);
+  box-shadow: var(--lift-4);
+}
+.mnd-sheet--right,
+.mnd-sheet--left {
+  border-radius: var(--r-2xl) 0 0 var(--r-2xl);
+}
+.mnd-sheet--left {
+  border-radius: 0 var(--r-2xl) var(--r-2xl) 0;
+}
+.mnd-sheet--bottom {
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+}
+.mnd-sheet__scrim {
+  background: color-mix(in srgb, var(--void) 62%, transparent);
+  backdrop-filter: blur(6px);
+}
+.mnd-toast {
+  background: color-mix(in oklab, var(--raised) 90%, transparent);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  border-color: var(--glass-edge);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-3);
+}
+
+/* Skeletons shimmer in forest tones. */
+.tkr-skel,
+.mnd-skel-bar {
+  background: linear-gradient(90deg,
+    var(--surface) 25%,
+    var(--lifted) 50%,
+    var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: tkr-shimmer 1.3s linear infinite;
+}
+
+/* Stat tiles and bento cells rise in as the page loads. */
+.mnd-bento > * {
+  animation: tkr-fade-up var(--t-enter) var(--ease-out) backwards;
+}
+.mnd-bento > :nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.mnd-bento > :nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.mnd-bento > :nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.mnd-bento > :nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.mnd-bento > :nth-child(n + 6) { animation-delay: calc(5 * var(--stagger)); }
+
+/* Text selection and the scrollbar wear the theme too. */
+::selection {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+  color: var(--ink);
+}
+* {
+  scrollbar-color: var(--hairline-bright) transparent;
+}
+
+/* ══ REDUCED MOTION ════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  main,
+  .tkr-reveal,
+  .tkr-reveal-kids > *,
+  .tkr-stagger > *,
+  .tkr-float,
+  .tkr-float--tilt,
+  .tkr-orbit,
+  .tkr-live::after,
+  .mnd-bento > * {
+    animation: none !important;
+  }
+  .tkr-cta:hover,
+  .tkr-card:hover,
+  .tkr-pill-row:hover,
+  .mnd-btn:hover {
+    transform: none !important;
+  }
+}

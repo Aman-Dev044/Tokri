@@ -40,6 +40,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AISLES, getAisle, isAisleKey, type AisleKey } from '@mandi/design-system';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { APP_NAME } from '@/config/brand';
 import { useGeolocation, marketLocationQuery } from '@/hooks/useGeolocation';
 import { useShopQuery } from '@/hooks/useShopQuery';
@@ -114,12 +115,17 @@ export function ShopView() {
   );
 
   const aisle = aisleKey === null ? null : getAisle(aisleKey);
+  /* The plain landing state — no category, no search — is the only one that
+     gets the poster headline and the promo banner. A filtered grid is a
+     working screen and should get to its products quickly. */
+  const isHome = query === '' && aisle === null;
 
   return (
-    <div className="shell shop-page">
-      <header className="shop-page__head">
+    <div className="shell shop-page shop-home">
+      <header className="shop-page__head shop-home__head">
+        <ShopGreeting />
         <p className="eyebrow">Shop</p>
-        <h1 className="shop-page__title">
+        <h1 className={isHome ? 'shop-page__title shop-page__title--mega' : 'shop-page__title'}>
           {query !== ''
             ? `“${query}”`
             : aisle !== null
@@ -152,34 +158,65 @@ export function ShopView() {
           Hiding an empty category would make the catalogue look complete
           when it is not, and a customer cannot ask for electronics from a
           rail that does not admit the aisle exists. */}
-      <nav className="shop-tabs tkr-scroll-x" aria-label="Categories">
-        <button
-          type="button"
-          className="shop-tab"
-          data-active={aisleKey === null ? 'true' : 'false'}
-          aria-pressed={aisleKey === null}
-          onClick={() => {
-            setParam('aisleKey', null);
-          }}
-        >
-          All categories
-        </button>
-        {AISLES.map((entry) => (
+      {isHome ? <PromoBanner /> : null}
+
+      <section className="shop-aisles" aria-labelledby="shop-aisles-title">
+        <div className="shop-rowhead tkr-reveal">
+          <h2 id="shop-aisles-title" className="shop-rowhead__title">
+            Aisles
+          </h2>
+          <Link href="/stores" className="shop-rowhead__more">
+            See all stores
+            <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+              <path
+                d="M3.5 8 H12 M8.5 4.5 L12 8 L8.5 11.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </Link>
+        </div>
+
+        <nav className="shop-tabs shop-tabs--tiles tkr-scroll-x" aria-label="Categories">
           <button
-            key={entry.key}
             type="button"
             className="shop-tab"
-            data-active={aisleKey === entry.key ? 'true' : 'false'}
-            aria-pressed={aisleKey === entry.key}
+            data-active={aisleKey === null ? 'true' : 'false'}
+            aria-pressed={aisleKey === null}
             onClick={() => {
-              setParam('aisleKey', aisleKey === entry.key ? null : entry.key);
+              setParam('aisleKey', null);
             }}
           >
-            <span className="shop-tab__swatch" data-key={entry.key} aria-hidden="true" />
-            {entry.name}
+            <span className="shop-tab__swatch" data-key="all" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22">
+                <rect x="4" y="4" width="7" height="7" rx="2" fill="currentColor" />
+                <rect x="13" y="4" width="7" height="7" rx="2" fill="currentColor" opacity="0.6" />
+                <rect x="4" y="13" width="7" height="7" rx="2" fill="currentColor" opacity="0.6" />
+                <rect x="13" y="13" width="7" height="7" rx="2" fill="currentColor" />
+              </svg>
+            </span>
+            <span className="shop-tab__name">All categories</span>
           </button>
-        ))}
-      </nav>
+          {AISLES.map((entry) => (
+            <button
+              key={entry.key}
+              type="button"
+              className="shop-tab"
+              data-active={aisleKey === entry.key ? 'true' : 'false'}
+              aria-pressed={aisleKey === entry.key}
+              onClick={() => {
+                setParam('aisleKey', aisleKey === entry.key ? null : entry.key);
+              }}
+            >
+              <span className="shop-tab__swatch" data-key={entry.key} aria-hidden="true" />
+              <span className="shop-tab__name">{entry.name}</span>
+            </button>
+          ))}
+        </nav>
+      </section>
 
       <LocationLine />
 
@@ -223,6 +260,17 @@ export function ShopView() {
         </div>
       ) : products.error !== null ? (
         <ErrorNotice error={products.error} onRetry={products.refetch} what="the catalogue" />
+      ) : null}
+
+      {products.loading || rows.length > 0 ? (
+        <div className="shop-rowhead tkr-reveal">
+          <h2 className="shop-rowhead__title">
+            {query !== '' ? 'Results' : aisle !== null ? aisle.name : 'On the shelves'}
+          </h2>
+          {meta !== null && rows.length > 0 ? (
+            <span className="shop-rowhead__count mono">{meta.total}</span>
+          ) : null}
+        </div>
       ) : null}
 
       {products.loading && !products.hasLoadedOnce ? (
@@ -272,6 +320,132 @@ export function ShopView() {
         <EmptyShelf aisle={aisle} query={query} onClearAisle={() => { setParam('aisleKey', null); }} />
       ) : null}
     </div>
+  );
+}
+
+/* ═══════════════════════════ the greeting ═══════════════════════════════ */
+
+/**
+ * "Good morning, Asha" — the first line of the home screen.
+ *
+ * The part of the day is read in an effect, never during render: the server
+ * renders this in its own timezone, and a greeting computed there would
+ * disagree with the browser's and trip a hydration mismatch. Until the effect
+ * runs it says a neutral "Hello".
+ */
+function ShopGreeting() {
+  const { user, isAuthenticated } = useAuth();
+  const [part, setPart] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    setPart(hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
+  }, []);
+
+  const name = isAuthenticated && user !== null ? user.name.trim() : '';
+  const first = name === '' ? null : (name.split(/\s+/)[0] ?? null);
+  const initials =
+    name === ''
+      ? null
+      : name
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, 2)
+          .map((word) => word.charAt(0).toUpperCase())
+          .join('');
+
+  return (
+    <div className="shop-greet">
+      <span className="shop-greet__avatar" aria-hidden="true">
+        {initials ?? (
+          <svg viewBox="0 0 32 32" width="20" height="20">
+            <path
+              d="M4 11 H28 L25 27 H7 Z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M11 11 C11 6 13.2 4 16 4 C18.8 4 21 6 21 11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+      </span>
+      <p className="shop-greet__text">
+        <span className="shop-greet__hello">{part ?? 'Hello'},</span>{' '}
+        <strong className="shop-greet__name">{first ?? `welcome to ${APP_NAME}`}</strong>
+      </p>
+    </div>
+  );
+}
+
+/* ═════════════════════════════ the promo ════════════════════════════════ */
+
+/**
+ * The one loud yellow card on the home screen. It promises nothing the app
+ * does not do — no discount, no free delivery — it points at the stores list,
+ * which is the honest "see more" for a catalogue this size. The art is
+ * decorative and hidden from assistive tech.
+ */
+function PromoBanner() {
+  return (
+    <section className="shop-promo" aria-labelledby="shop-promo-title">
+      <div className="shop-promo__copy">
+        <p className="shop-promo__eyebrow">One basket · one rider</p>
+        <h2 id="shop-promo-title" className="shop-promo__title">
+          Your street&rsquo;s shelves, in one basket
+        </h2>
+        <p className="shop-promo__body">
+          The kirana, the dairy and the bakery near you — live stock and an honest delivery
+          estimate.
+        </p>
+        <Link href="/stores" className="shop-promo__go">
+          <span>Browse stores</span>
+          <span className="shop-promo__arrow" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="16" height="16">
+              <path
+                d="M3.5 8 H12 M8.5 4.5 L12 8 L8.5 11.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+        </Link>
+      </div>
+
+      <div className="shop-promo__art" aria-hidden="true">
+        <span className="tkr-orbit shop-promo__orbit" />
+        <span className="tkr-orbit shop-promo__orbit shop-promo__orbit--far" />
+        <span className="shop-promo__float tkr-float tkr-float--tilt">
+          <svg viewBox="0 0 120 120" className="shop-promo__basket">
+            <ellipse cx="60" cy="104" rx="34" ry="6" className="shop-promo__shadow" />
+            <circle cx="44" cy="44" r="14" className="shop-promo__fruit" />
+            <circle cx="66" cy="38" r="16" className="shop-promo__fruit shop-promo__fruit--b" />
+            <circle cx="80" cy="50" r="11" className="shop-promo__fruit" />
+            <path
+              d="M18 52 H102 L92 96 A6 6 0 0 1 86 101 H34 A6 6 0 0 1 28 96 Z"
+              className="shop-promo__body-shape"
+            />
+            <path
+              d="M40 52 C40 30 50 20 60 20 C70 20 80 30 80 52"
+              fill="none"
+              className="shop-promo__handle"
+            />
+            <path d="M44 64 L47 90 M60 64 V90 M76 64 L73 90" className="shop-promo__weave" />
+          </svg>
+        </span>
+        <span className="shop-promo__bit shop-promo__bit--a tkr-float tkr-float--delay" />
+        <span className="shop-promo__bit shop-promo__bit--b tkr-float tkr-float--slow" />
+      </div>
+    </section>
   );
 }
 

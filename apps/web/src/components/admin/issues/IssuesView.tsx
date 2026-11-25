@@ -117,6 +117,12 @@ function sortValue(row: Issue, key: string): string | number | null {
   }
 }
 
+/** The list endpoint sends `messageCount` and no thread; the fixture sends the
+ *  thread. Either answers "how many messages". */
+function messageCountOf(row: Issue): number {
+  return row.messageCount ?? row.messages?.length ?? 0;
+}
+
 function median(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -192,7 +198,7 @@ export function IssuesView() {
       if (filters.status !== '' && row.status !== filters.status) return false;
       if (filters.priority !== '' && row.priority !== filters.priority) return false;
       if (filters.type !== '' && row.type !== filters.type) return false;
-      if (filters.assignee === UNASSIGNED && row.assignedToUserId !== undefined) return false;
+      if (filters.assignee === UNASSIGNED && row.assignedToUserId != null) return false;
       if (
         filters.assignee !== '' &&
         filters.assignee !== UNASSIGNED &&
@@ -219,7 +225,7 @@ export function IssuesView() {
     const resolvedToday =
       today === null
         ? 0
-        : rows.filter((row) => row.resolvedAt !== undefined && row.resolvedAt.slice(0, 10) === today)
+        : rows.filter((row) => row.resolvedAt != null && row.resolvedAt.slice(0, 10) === today)
             .length;
 
     const ages = rows
@@ -247,7 +253,7 @@ export function IssuesView() {
     const seen = new Map<string, string>();
     for (const agent of SUPPORT_AGENTS) seen.set(agent.id, agent.name);
     for (const row of rows) {
-      if (row.assignedToUserId === undefined) continue;
+      if (row.assignedToUserId == null) continue;
       if (!seen.has(row.assignedToUserId)) {
         // A live row assigned to someone the fixture roster has never heard of.
         // The id is not a name, but it is truthful and it filters correctly.
@@ -435,7 +441,7 @@ export function IssuesView() {
                       row.orderNo === undefined ? null : `Order ${row.orderNo}`,
                       row.customerName ?? null,
                       row.vendorName ?? null,
-                      row.messages.length > 1 ? `${row.messages.length} messages` : null,
+                      messageCountOf(row) > 1 ? `${messageCountOf(row)} messages` : null,
                     ]
                       .filter((part): part is string => part !== null)
                       .join(' · ')}
@@ -470,7 +476,7 @@ export function IssuesView() {
             width: '9rem',
             sortable: true,
             render: (row: Issue) =>
-              row.assignedToUserId === undefined ? (
+              row.assignedToUserId == null ? (
                 <span className={shared.muted}>unassigned</span>
               ) : (
                 <span className={shared.truncate}>

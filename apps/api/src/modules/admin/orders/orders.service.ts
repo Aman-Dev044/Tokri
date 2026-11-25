@@ -31,7 +31,7 @@ import {
 import { JwtUser } from '../../../common/decorators/current-user.decorator';
 import { Paginated, paginate } from '../../../common/dto/paginated';
 import { AuditService } from '../audit/audit.service';
-import { escapeRegex } from '../common/dto';
+import { escapeRegex, inclusiveTo } from '../common/dto';
 import { CancelOrderDto, ListOrdersQueryDto } from './dto';
 
 export interface OrderPricingView {
@@ -175,7 +175,7 @@ export class AdminOrdersService {
     if (query.from || query.to) {
       const placedAt: Record<string, Date> = {};
       if (query.from) placedAt.$gte = new Date(query.from);
-      if (query.to) placedAt.$lte = new Date(query.to);
+      if (query.to) placedAt.$lte = inclusiveTo(query.to);
       filter.placedAt = placedAt;
     }
 

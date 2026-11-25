@@ -84,7 +84,7 @@ export function DeliveryCheck() {
   return (
     <section className="mk-sec mk-sec--tight" id="delivery-check">
       <div className="mk-shell">
-        <div className="mk-check tkr-card">
+        <div className="mk-check tkr-card tkr-reveal tkr-reveal--zoom">
           <header className="mk-check__head">
             <p className="mk-eyebrow">Serviceability</p>
             <h2 className="mk-title mk-title--sm">Do we deliver to you?</h2>

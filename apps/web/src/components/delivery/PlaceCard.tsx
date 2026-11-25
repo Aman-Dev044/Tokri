@@ -61,13 +61,17 @@ export function PlaceCard({
   return (
     <section className={styles.panel} aria-label={isPickup ? 'Pickup' : 'Drop-off'}>
       <div className={styles.place}>
-        <span className={styles.placeKind}>
+        <span
+          className={`${styles.placeKind} ${
+            isPickup ? styles.placeKindPickup : styles.placeKindDrop
+          }`}
+        >
           {isPickup ? <IconStore size={14} /> : <IconPin size={14} />}
           {isPickup ? ' Pick up from' : ' Deliver to'}
         </span>
         <h2 className={styles.placeLabel}>{place.label}</h2>
         {place.address === '' ? (
-          <p className={styles.placeAddress}>
+          <p className={`${styles.placeAddress} ${styles.placeAddressMissing}`}>
             No address on this order — call before you set off.
           </p>
         ) : (

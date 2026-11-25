@@ -1,156 +1,127 @@
 /* ════════════════════════════════════════════════════════════════════════
-   TOKENS — "Paper"
+   TOKENS — "Forest Gold"
    ════════════════════════════════════════════════════════════════════════
 
-   A light-first, quiet interface. White surfaces, one accent, 1px rules,
-   small radii, and almost no shadow. The things that carry meaning here
-   are hierarchy, spacing and alignment — not colour and not depth.
+   Deep forest green ground, cream ink, and ONE loud accent: a sunflower
+   yellow that is spent on calls to action, focus and the thing that matters
+   most on a screen. Cards are dark green glass with a pale rim, everything
+   that can be a pill is a pill, headings are heavy, and soft gold light
+   (`--halo-*`, `--orbit`) is allowed to glow behind the things worth
+   looking at.
 
    ── WHY THE WHOLE FILE IS THE DESIGN ────────────────────────────────────
    Every raw colour in this application lives in THIS FILE and nowhere
-   else: 164 hex values here, zero in the other ten stylesheets, which
-   read `var(--token)` exclusively. Even component-local tokens derive
-   from globals (`--go: var(--mint)` in the rider CSS). So repainting the
-   product is editing this file, and the token NAMES are the contract —
-   renaming one silently blanks whatever read it. Values change here;
-   names do not.
+   else; the other stylesheets read `var(--token)` exclusively. So
+   repainting the product is editing this file, and the token NAMES are the
+   contract — renaming one silently blanks whatever read it. Values change
+   here; names do not. `pnpm -w lint` runs the token audit that enforces it.
 
-   ── WHAT CHANGED FROM "NEON ORCHARD" ────────────────────────────────────
-   That system was dark-first and loud: a #2bf5a0 neon mint on near-black,
-   four depth planes, perspective tilt on hover, and glows sized in tens of
-   pixels. It read as a product that wanted to be noticed. This one is
-   meant to be used for eight hours without being noticed at all.
-
-   Concretely:
-     · light is now the DEFAULT, dark is the override — the inverse of
-       before, because a vendor doing stock at 11am is the common case
-     · one accent, not four brand hues competing for the same attention
-     · `--glow-*` are focus RINGS now, not halos; `--lift-*` are hairline
-       shadows measured in single pixels
-     · 3D is neutralised at the token level (`--tilt: 0deg`, `--persp:
-       none`, `--z-*: 0`), so the existing `.tkr-tilt` markup keeps
-       working and simply lies flat. Nothing had to be torn out of the
-       components to stop them tilting.
+   ── WHAT CHANGED FROM "PAPER" ───────────────────────────────────────────
+     · dark is now the DEFAULT, for every visitor who has not chosen. Light
+       is an explicit choice (`data-theme='light'`), restated below in the
+       same palette: mint-cream ground, forest ink, the same yellow.
+     · the accent moved from leaf green to yellow. Green is still the
+       brand's ground and `--mint` is still green — it is just no longer
+       the colour of a button.
+     · radii doubled, motion got livelier (a real spring, longer enters),
+       and blur glows came back as NEW tokens (`--halo-*`) so the existing
+       ring tokens keep their shape.
 
    ── WHAT DID NOT CHANGE ─────────────────────────────────────────────────
-   The nine aisle hues stay NINE DISTINCT HUES, because they are data:
-   a customer learns that orange means fruit. They are restated for a
-   white ground (a neon that sang on #0e0a14 is unreadable on #fff), but
-   the mapping is untouched.
+   The nine aisle hues stay nine distinct hues, because they are data: a
+   customer learns that orange means fruit.
    ════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* ── GROUND — paper, not planes ────────────────────────────────────────
-     Four values still, but they differ by a few percent rather than by
-     lightness steps. On a white interface, separation comes from the 1px
-     rule between things, not from stacking tones. */
-  --void: #f2ece0; /* behind everything; the page gutter */
-  --ground: #fbf8f1; /* the page — warm cream, not white */
-  --surface: #fffdf7; /* a card */
-  --raised: #fffdf7; /* a popover — told apart by its rule, not its fill */
-  --lifted: #f4efe2; /* hover, pressed, the row under the cursor */
+  /* ── GROUND — forest at night ──────────────────────────────────────── */
+  --void: #06130c; /* behind everything */
+  --ground: #0b1d13; /* the page */
+  --surface: #11291b; /* a card */
+  --raised: #163322; /* a popover, a menu — opaque, it covers things */
+  --lifted: #1c3d29; /* hover, pressed, the row under the cursor */
 
   /* ── INK ──────────────────────────────────────────────────────────── */
-  --ink: #1f2a1b; /* 14.6:1 on surface — green-black, never pure black */
-  --ink-soft: #3d4636; /* 8.4:1  — secondary */
-  --ink-faint: #6b7363; /* 4.8:1  — labels, captions */
-  --hairline: #e7dfcc; /* the workhorse: every card, table row, input */
-  --hairline-bright: #d8cdb2; /* a rule that needs to be seen, not felt */
+  --ink: #f4f0e1; /* cream, never pure white */
+  --ink-soft: #c9d4c2;
+  --ink-faint: #97aa95; /* labels, captions — 5:1 on surface */
+  --hairline: #234531;
+  --hairline-bright: #33603f;
 
-  /* ── THE ACCENT ────────────────────────────────────────────────────────
-     ONE. A grocery platform that was already green stays green, so the
-     brand survives the repaint — but at #16a34a instead of #2bf5a0, which
-     is the difference between a colour and a light source.
+  /* ── BRAND GREEN ──────────────────────────────────────────────────── */
+  --mint: #7fcb6b;
+  --mint-ink: #acdf98;
+  --mint-dim: #2d5a35;
+  --mint-wash: #163a23;
 
-     The other three hues remain defined because the aisles, the delivery
-     states and the charts all reference them. They are no longer brand
-     colours; they are vocabulary. */
-  --mint: #5d8a2a; /* leaf green — the one accent */
-  --mint-ink: #3f5f1f; /* text on a green wash */
-  --mint-dim: #86efac; /* a disabled or inactive mint */
-  --mint-wash: #eef4e3; /* the palest fill that still reads green */
+  --coral: #e8946a;
+  --coral-ink: #f3bc9e;
+  --coral-wash: #33200f;
 
-  --coral: #b8743f; /* earth, not fire */
-  --coral-ink: #8a5229; /* text on a clay wash */
-  --coral-wash: #f9efe6;
+  --violet: #c9a06e;
+  --violet-ink: #e2c39c;
+  --violet-wash: #2c2212;
 
-  --violet: #8a5a2b; /* kept as a NAME; it is a brown in this palette */
-  --violet-ink: #6b4520;
-  --violet-wash: #f4ece1;
+  /* ── THE ACCENT — sunflower yellow ─────────────────────────────────── */
+  --gold: #f6d54a;
+  --gold-ink: #fbe68f;
+  --gold-wash: #2b3214;
 
-  --gold: #b98e35; /* the warm secondary — ghee, honey, brass */
-  --gold-ink: #8a6a22;
-  --gold-wash: #faf2dd;
+  --accent: var(--gold);
+  --accent-ink: var(--gold-ink);
+  --accent-wash: var(--gold-wash);
+  --on-accent: #0c2015; /* forest ink on a yellow pill */
 
-  --accent: var(--mint);
-  --accent-ink: var(--mint-ink);
-  --accent-wash: var(--mint-wash);
-  --on-accent: #fffdf7;
+  /* ── SEMANTIC — separate from the brand on purpose ─────────────────── */
+  --good: #7fcb6b;
+  --good-ink: #acdf98;
+  --good-wash: #163a23;
+  --warn: #f1ad4b;
+  --warn-ink: #f8cf8f;
+  --warn-wash: #33250c;
+  --crit: #f07b6b;
+  --crit-ink: #f7aa9f;
+  --crit-wash: #36150f;
+  --info: #6cbccb;
+  --info-ink: #a3d9e3;
+  --info-wash: #0f2b30;
 
-  /* ── SEMANTIC — deliberately separate from the brand hues ─────────────
-     `--good` happening to equal `--mint` today is a coincidence, not a
-     rule. Status must stay re-colourable without touching the brand. */
-  --good: #4f7a28;
-  --good-ink: #3f5f1f;
-  --good-wash: #eef4e3;
-  --warn: #b98e35;
-  --warn-ink: #8a6a22;
-  --warn-wash: #faf2dd;
-  --crit: #b03a2e;
-  --crit-ink: #8c2d24;
-  --crit-wash: #f9ebe8;
-  --info: #3f7d78;
-  --info-ink: #2c5c58;
-  --info-wash: #e9f2f1;
+  /* ── THE AISLES — data, not decoration ─────────────────────────────── */
+  --aisle-fruits: #ec8f54;
+  --aisle-vegetables: #7fcb6b;
+  --aisle-dairy: #f6d54a;
+  --aisle-bakery: #dd9a6d;
+  --aisle-beverages: #6cbccb;
+  --aisle-snacks: #e08b82;
+  --aisle-staples: #c99a63;
+  --aisle-frozen: #8bbcd0;
+  --aisle-electronics: #a9c27f;
 
-  /* ── THE AISLES — data, not decoration ────────────────────────────────
-     Nine hues a shopper learns by sight. The base is the dot, the chip,
-     the 2px rule; `-ink` is the darker sibling for text ON that hue's
-     wash. On a dark ground the ink variant was LIGHTER than the base;
-     here it is darker. That inversion is the whole reason both exist. */
-  --aisle-fruits: #c2561f;
-  --aisle-vegetables: #5d8a2a;
-  --aisle-dairy: #b98e35;
-  --aisle-bakery: #b8743f;
-  --aisle-beverages: #3f7d78;
-  --aisle-snacks: #b05b53;
-  --aisle-staples: #8a5a2b;
-  --aisle-frozen: #5a8794;
-  --aisle-electronics: #6b7a4a;
-
-  --aisle-fruits-ink: #9c4318;
-  --aisle-vegetables-ink: #3f5f1f;
-  --aisle-dairy-ink: #8a6a22;
-  --aisle-bakery-ink: #8a5229;
-  --aisle-beverages-ink: #2c5c58;
-  --aisle-snacks-ink: #8a443e;
-  --aisle-staples-ink: #6b4520;
-  --aisle-frozen-ink: #416571;
-  --aisle-electronics-ink: #4e5b34;
+  --aisle-fruits-ink: #f5b48a;
+  --aisle-vegetables-ink: #acdf98;
+  --aisle-dairy-ink: #fbe68f;
+  --aisle-bakery-ink: #f0bf9c;
+  --aisle-beverages-ink: #a3d9e3;
+  --aisle-snacks-ink: #efb2ab;
+  --aisle-staples-ink: #e2c39c;
+  --aisle-frozen-ink: #b8dbe8;
+  --aisle-electronics-ink: #cbdcaa;
 
   --aisle: var(--mint);
   --aisle-ink: var(--mint-ink);
 
-  /* ── SHAPE ────────────────────────────────────────────────────────────
-     Small. A 40px radius on a data table reads as a toy; 8px reads as
-     software. `--r-pill` survives for genuine pills — chips and badges. */
-  --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 10px;
-  --r-xl: 12px;
-  --r-2xl: 16px;
+  /* ── SHAPE — soft and generous; pills wherever a pill fits ─────────── */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+  --r-2xl: 28px;
   --r-pill: 999px;
 
-  /* ── 3D — retired, not removed ─────────────────────────────────────────
-     The markup that reads these is still in the components. Rather than
-     tear `.tkr-tilt` out of every card and risk breaking layout, the
-     tokens are neutralised: no perspective ancestor, no rotation, no
-     Z offset. The effect evaluates to the identity transform and the
-     cards simply sit flat. Restore the old values here and the depth
-     comes back without touching a component. */
+  /* ── 3D — still neutral. The Add-button click bug (a transform pushing
+     it behind the card on a 3D layer) is why this stays flat. ────────── */
   --persp: none;
   --persp-near: none;
   --z-1: 0px;
@@ -159,26 +130,42 @@
   --z-4: 0px;
   --tilt: 0deg;
 
-  /* ── DEPTH — hairlines first, shadow barely ───────────────────────────
-     On a white ground a shadow is a last resort, used only where
-     something genuinely floats above the page: a menu, a dialog, a
-     sticky bar. Everything else is separated by `--hairline`. */
-  --lift-1: 0 1px 2px rgb(9 9 11 / 0.05);
-  --lift-2: 0 1px 3px rgb(9 9 11 / 0.08), 0 1px 2px rgb(9 9 11 / 0.04);
-  --lift-3: 0 4px 12px rgb(9 9 11 / 0.08), 0 1px 3px rgb(9 9 11 / 0.05);
-  --lift-4: 0 12px 32px rgb(9 9 11 / 0.1), 0 2px 6px rgb(9 9 11 / 0.05);
+  /* ── DEPTH ─────────────────────────────────────────────────────────── */
+  --lift-1: 0 1px 2px rgb(1 8 4 / 0.45);
+  --lift-2: 0 2px 6px rgb(1 8 4 / 0.45), 0 1px 2px rgb(1 8 4 / 0.3);
+  --lift-3: 0 10px 24px -6px rgb(1 8 4 / 0.55), 0 2px 6px rgb(1 8 4 / 0.35);
+  --lift-4: 0 24px 48px -12px rgb(1 8 4 / 0.65), 0 4px 12px rgb(1 8 4 / 0.4);
 
-  /* Rings, not halos. Same token names so every `box-shadow: var(--glow)`
-     in the app becomes a crisp outline instead of a 34px bloom. */
-  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent);
-  --glow: 0 0 0 2px color-mix(in oklab, var(--accent) 28%, transparent);
-  --glow-lg: 0 0 0 4px color-mix(in oklab, var(--accent) 18%, transparent);
+  /* Rings. These keep the ring SHAPE (one 4-length shadow) because existing
+     callers compose and filter them; blur glows are the `--halo-*` below. */
+  --glow-sm: 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+  --glow: 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
+  --glow-lg: 0 0 0 4px color-mix(in oklab, var(--accent) 24%, transparent);
 
-  /* A white inset rim is a dark-mode device: on white it is invisible.
-     Kept as a real 1px rule so the many `var(--rim)` call sites still
-     draw the edge they were asking for. */
+  /* NEW: soft light. Whole shadows, for `box-shadow` only. */
+  --halo-sm: 0 0 18px -4px color-mix(in oklab, var(--accent) 45%, transparent);
+  --halo: 0 0 32px -6px color-mix(in oklab, var(--accent) 50%, transparent);
+  --halo-lg: 0 0 64px -8px color-mix(in oklab, var(--accent) 45%, transparent);
+  --halo-mint: 0 0 40px -8px color-mix(in oklab, var(--mint) 55%, transparent);
+
   --rim: inset 0 0 0 1px var(--hairline);
-  --rim-accent: inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent);
+  --rim-accent: inset 0 0 0 1px color-mix(in oklab, var(--accent) 45%, transparent);
+
+  /* NEW: glass. Paints and a length; spend them as
+     `background: var(--glass); border: 1px solid var(--glass-edge);
+     backdrop-filter: blur(var(--blur))`. */
+  --glass: color-mix(in oklab, var(--ink) 6%, transparent);
+  --glass-strong: color-mix(in oklab, var(--ink) 10%, transparent);
+  --glass-edge: color-mix(in oklab, var(--ink) 14%, transparent);
+  --blur: 14px;
+  /* The light sweep across a yellow pill on hover. */
+  --sheen: rgb(255 255 255 / 0.5);
+
+  /* NEW: the gold orbit line behind hero art, and the page's ambient light. */
+  --orbit: color-mix(in oklab, var(--gold) 60%, transparent);
+  --ground-art:
+    radial-gradient(1100px 680px at 88% -8%, color-mix(in oklab, var(--mint) 20%, transparent), transparent 62%),
+    radial-gradient(900px 620px at -12% 108%, color-mix(in oklab, var(--gold) 9%, transparent), transparent 60%);
 
   /* ── SPACE ─────────────────────────────────────────────────────────── */
   --s-1: 4px;
@@ -192,48 +179,44 @@
   --s-9: 96px;
   --s-10: 128px;
 
-  /* ── TYPE ──────────────────────────────────────────────────────────────
-     The loaded faces are unchanged — they are self-hosted and already
-     work. What changed is how loudly they are used: headings are smaller
-     and lighter, and the tracking is half as tight. A 6.5rem hero is a
-     marketing device; it has no business above a table of orders. */
+  /* ── TYPE ──────────────────────────────────────────────────────────── */
   --display: var(--font-display), 'Cabinet Grotesk', system-ui, -apple-system, sans-serif;
   --body: var(--font-body), 'General Sans', system-ui, -apple-system, sans-serif;
   --data: var(--font-data), 'Space Mono', ui-monospace, 'Cascadia Mono', monospace;
   /* Marketing display only — see the note in app/layout.tsx. */
   --serif: var(--font-serif), 'Lora', Georgia, 'Times New Roman', serif;
 
-  --t-hero: clamp(2.25rem, 1.6rem + 3.2vw, 3.75rem);
-  --t-h1: clamp(1.75rem, 1.4rem + 1.8vw, 2.5rem);
-  --t-h2: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
+  /* NEW: the poster size — uppercase, 800, for one headline per hero. */
+  --t-mega: clamp(2.75rem, 1.2rem + 6.4vw, 6.75rem);
+  --t-hero: clamp(2.5rem, 1.6rem + 3.8vw, 4.25rem);
+  --t-h1: clamp(1.85rem, 1.4rem + 2vw, 2.75rem);
+  --t-h2: clamp(1.4rem, 1.2rem + 1vw, 1.875rem);
   --t-h3: clamp(1.125rem, 1.05rem + 0.4vw, 1.3125rem);
   --t-lg: 1rem;
-  --t-md: 0.875rem; /* the body size of every console in this class */
+  --t-md: 0.875rem;
   --t-sm: 0.8125rem;
   --t-xs: 0.75rem;
   --t-2xs: 0.6875rem;
 
-  --lh-tight: 1.1;
+  --lh-tight: 1.02;
   --lh-snug: 1.25;
   --lh-body: 1.55;
-  --track-tight: -0.018em;
-  --track-label: 0.06em;
+  --track-tight: -0.022em;
+  --track-display: -0.035em;
+  --track-label: 0.08em;
 
-  /* ── MOTION ─────────────────────────────────────────────────────────────
-     Shorter and flatter. The spring curves stay defined — several
-     components name them — but they overshoot far less, because a
-     bouncing data row looks unserious. */
-  --t-instant: 80ms;
-  --t-micro: 140ms;
-  --t-move: 220ms;
-  --t-enter: 300ms;
-  --t-slow: 500ms;
-  --t-amble: 1200ms;
+  /* ── MOTION — lively, with a real spring ────────────────────────────── */
+  --t-instant: 90ms;
+  --t-micro: 160ms;
+  --t-move: 260ms;
+  --t-enter: 460ms;
+  --t-slow: 700ms;
+  --t-amble: 1400ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --spring: cubic-bezier(0.34, 1.26, 0.64, 1);
-  --spring-soft: cubic-bezier(0.22, 1.1, 0.36, 1);
-  --stagger: 30ms;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-soft: cubic-bezier(0.22, 1.25, 0.36, 1);
+  --stagger: 55ms;
 
   /* ── LAYOUT ───────────────────────────────────────────────────────── */
   --page-max: 1280px;
@@ -244,168 +227,97 @@
   --dock-h: 72px;
 }
 
-/* ══ SYSTEM DARK ════════════════════════════════════════════════════════
-   The inverse of before: light is the default, dark is the override.
-
-   Guarded with `:not([data-theme='light'])` so an explicit light choice
-   wins over the OS preference. Only the values that must differ are
-   restated — shape, space, type and motion are theme-independent, and
-   repeating them here is how the two themes drift apart.
+/* ══ EXPLICIT LIGHT ═════════════════════════════════════════════════════
+   The same theme in daylight: mint-cream ground, forest ink, the same
+   yellow. Only values that must differ are restated. Yellow is unreadable
+   as TEXT on a light ground, so `--accent-ink` and `--gold-ink` go forest
+   here while `--accent` stays the yellow fill.
    ══════════════════════════════════════════════════════════════════════ */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    color-scheme: dark;
+:root[data-theme='light'] {
+  color-scheme: light;
 
-    --void: #080c07;
-    --ground: #0d130c;
-    --surface: #13240f;
-    --raised: #1a2c15;
-    --lifted: #22371c;
+  --void: #dcebd8;
+  --ground: #eef6ea;
+  --surface: #fbfdf7;
+  --raised: #ffffff;
+  --lifted: #e6f1e1;
 
-    --ink: #f4efe2;
-    --ink-soft: #b9c4ac;
-    --ink-faint: #94a089;
-    --hairline: #243a1e;
-    --hairline-bright: #35502c;
+  --ink: #0e2417;
+  --ink-soft: #2d4536;
+  --ink-faint: #56705e;
+  --hairline: #d3e3cd;
+  --hairline-bright: #b4ceac;
 
-    --mint: #7fae45;
-    --mint-ink: #a9cf72;
-    --mint-dim: #166534;
-    --mint-wash: #15270f;
+  --mint: #2f8a45;
+  --mint-ink: #1d5f2e;
+  --mint-dim: #a6d7a9;
+  --mint-wash: #e2f2e0;
 
-    --coral: #d08a52;
-    --coral-ink: #ecb795;
-    --coral-wash: #2a1a10;
+  --coral: #c0683a;
+  --coral-ink: #8f4724;
+  --coral-wash: #fbece2;
 
-    --violet: #c09a6a;
-    --violet-ink: #dbb08a;
-    --violet-wash: #241a10;
+  --violet: #8a5a2b;
+  --violet-ink: #6b4520;
+  --violet-wash: #f4ece1;
 
-    --gold: #e2bf6c;
-    --gold-ink: #f6e7bb;
-    --gold-wash: #271d05;
+  --gold: #f2cc2e;
+  --gold-ink: #6b5700;
+  --gold-wash: #fdf5cc;
 
-    --on-accent: #0d130c;
+  --accent-ink: #1d5f2e;
+  --on-accent: #0e2417;
 
-    --good: #7fae45;
-    --good-ink: #a9cf72;
-    --good-wash: #15270f;
-    --warn: #e2bf6c;
-    --warn-ink: #f6e7bb;
-    --warn-wash: #271d05;
-    --crit: #e07a6a;
-    --crit-ink: #f0a99c;
-    --crit-wash: #2a1210;
-    --info: #6fb0a9;
-    --info-ink: #9bd0ca;
-    --info-wash: #0e2220;
+  --good: #2f8a45;
+  --good-ink: #1d5f2e;
+  --good-wash: #e2f2e0;
+  --warn: #b7791f;
+  --warn-ink: #8a5a12;
+  --warn-wash: #fbf0dc;
+  --crit: #b8382b;
+  --crit-ink: #8c2a20;
+  --crit-wash: #f9e7e4;
+  --info: #2f7c8a;
+  --info-ink: #215a64;
+  --info-wash: #e3f1f3;
 
-    --aisle-fruits: #e2884f;
-    --aisle-vegetables: #7fae45;
-    --aisle-dairy: #e2bf6c;
-    --aisle-bakery: #d8926a;
-    --aisle-beverages: #6fb0a9;
-    --aisle-snacks: #d4857c;
-    --aisle-staples: #c08b5c;
-    --aisle-frozen: #86b2c0;
-    --aisle-electronics: #9db176;
+  --aisle-fruits: #c2561f;
+  --aisle-vegetables: #2f8a45;
+  --aisle-dairy: #b98e1a;
+  --aisle-bakery: #b8743f;
+  --aisle-beverages: #2f7c8a;
+  --aisle-snacks: #b05b53;
+  --aisle-staples: #8a5a2b;
+  --aisle-frozen: #4f8396;
+  --aisle-electronics: #5e7a32;
 
-    --aisle-fruits-ink: #f0ad80;
-    --aisle-vegetables-ink: #a9cf72;
-    --aisle-dairy-ink: #f6e7bb;
-    --aisle-bakery-ink: #ecb795;
-    --aisle-beverages-ink: #9bd0ca;
-    --aisle-snacks-ink: #e8aaa3;
-    --aisle-staples-ink: #dbb08a;
-    --aisle-frozen-ink: #aed0da;
-    --aisle-electronics-ink: #c0cf9f;
+  --aisle-fruits-ink: #9c4318;
+  --aisle-vegetables-ink: #1d5f2e;
+  --aisle-dairy-ink: #6b5700;
+  --aisle-bakery-ink: #8a5229;
+  --aisle-beverages-ink: #215a64;
+  --aisle-snacks-ink: #8a443e;
+  --aisle-staples-ink: #6b4520;
+  --aisle-frozen-ink: #3a6575;
+  --aisle-electronics-ink: #43581f;
 
-    /* Black shadows vanish on a dark ground; these carry a little more
-       weight so a dialog still separates from the page behind it. */
-    --lift-1: 0 1px 2px rgb(0 0 0 / 0.4);
-    --lift-2: 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.3);
-    --lift-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.35);
-    --lift-4: 0 12px 32px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
-    --rim: inset 0 0 0 1px var(--hairline);
-  }
-}
+  --lift-1: 0 1px 2px rgb(14 36 23 / 0.06);
+  --lift-2: 0 2px 6px rgb(14 36 23 / 0.08), 0 1px 2px rgb(14 36 23 / 0.05);
+  --lift-3: 0 10px 24px -6px rgb(14 36 23 / 0.14), 0 2px 6px rgb(14 36 23 / 0.06);
+  --lift-4: 0 24px 48px -12px rgb(14 36 23 / 0.2), 0 4px 12px rgb(14 36 23 / 0.08);
 
-/* ══ EXPLICIT DARK ══════════════════════════════════════════════════════
-   The toggle. Identical to the block above, so choosing dark on a light
-   machine looks the same as a dark machine with no choice made.
-   ══════════════════════════════════════════════════════════════════════ */
-:root[data-theme='dark'] {
-  color-scheme: dark;
+  --halo-sm: 0 0 18px -4px color-mix(in oklab, var(--accent) 55%, transparent);
+  --halo: 0 0 32px -6px color-mix(in oklab, var(--accent) 60%, transparent);
+  --halo-lg: 0 0 64px -8px color-mix(in oklab, var(--accent) 55%, transparent);
+  --halo-mint: 0 0 40px -8px color-mix(in oklab, var(--mint) 40%, transparent);
 
-  --void: #080c07;
-  --ground: #0d130c;
-  --surface: #13240f;
-  --raised: #1a2c15;
-  --lifted: #22371c;
-
-  --ink: #f4efe2;
-  --ink-soft: #b9c4ac;
-  --ink-faint: #94a089;
-  --hairline: #243a1e;
-  --hairline-bright: #35502c;
-
-  --mint: #7fae45;
-  --mint-ink: #a9cf72;
-  --mint-dim: #166534;
-  --mint-wash: #15270f;
-
-  --coral: #d08a52;
-  --coral-ink: #ecb795;
-  --coral-wash: #2a1a10;
-
-  --violet: #c09a6a;
-  --violet-ink: #dbb08a;
-  --violet-wash: #241a10;
-
-  --gold: #e2bf6c;
-  --gold-ink: #f6e7bb;
-  --gold-wash: #271d05;
-
-  --on-accent: #0d130c;
-
-  --good: #7fae45;
-  --good-ink: #a9cf72;
-  --good-wash: #15270f;
-  --warn: #e2bf6c;
-  --warn-ink: #f6e7bb;
-  --warn-wash: #271d05;
-  --crit: #e07a6a;
-  --crit-ink: #f0a99c;
-  --crit-wash: #2a1210;
-  --info: #6fb0a9;
-  --info-ink: #9bd0ca;
-  --info-wash: #0e2220;
-
-  --aisle-fruits: #e2884f;
-  --aisle-vegetables: #7fae45;
-  --aisle-dairy: #e2bf6c;
-  --aisle-bakery: #d8926a;
-  --aisle-beverages: #6fb0a9;
-  --aisle-snacks: #d4857c;
-  --aisle-staples: #c08b5c;
-  --aisle-frozen: #86b2c0;
-  --aisle-electronics: #9db176;
-
-  --aisle-fruits-ink: #f0ad80;
-  --aisle-vegetables-ink: #a9cf72;
-  --aisle-dairy-ink: #f6e7bb;
-  --aisle-bakery-ink: #ecb795;
-  --aisle-beverages-ink: #9bd0ca;
-  --aisle-snacks-ink: #e8aaa3;
-  --aisle-staples-ink: #dbb08a;
-  --aisle-frozen-ink: #aed0da;
-  --aisle-electronics-ink: #c0cf9f;
-
-  --lift-1: 0 1px 2px rgb(0 0 0 / 0.4);
-  --lift-2: 0 1px 3px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.3);
-  --lift-3: 0 4px 12px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.35);
-  --lift-4: 0 12px 32px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.35);
-  --rim: inset 0 0 0 1px var(--hairline);
+  --glass: color-mix(in oklab, var(--surface) 72%, transparent);
+  --glass-strong: color-mix(in oklab, var(--surface) 88%, transparent);
+  --glass-edge: color-mix(in oklab, var(--ink) 10%, transparent);
+  --orbit: color-mix(in oklab, var(--gold) 80%, transparent);
+  --ground-art:
+    radial-gradient(1100px 680px at 88% -8%, color-mix(in oklab, var(--mint) 16%, transparent), transparent 62%),
+    radial-gradient(900px 620px at -12% 108%, color-mix(in oklab, var(--gold) 16%, transparent), transparent 60%);
 }
 
 /* ══ AISLES ════════════════════════════════════════════════════════════ */
@@ -447,9 +359,9 @@
 
 /* A custom property is an untyped string to the engine, and strings do not
    interpolate. Registering these makes the aisle crossfade a real animation
-   instead of a hard cut. The initial values track the light palette. */
-@property --aisle { syntax: '<color>'; inherits: true; initial-value: #5d8a2a; }
-@property --accent { syntax: '<color>'; inherits: true; initial-value: #5d8a2a; }
+   instead of a hard cut. The initial values track the default palette. */
+@property --aisle { syntax: '<color>'; inherits: true; initial-value: #7fcb6b; }
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #f6d54a; }
 
 html { transition: --aisle var(--t-enter) var(--ease), --accent var(--t-enter) var(--ease); }
 
@@ -460,7 +372,11 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   /* Explicit, from a token. A transparent body borrows whatever ground the
      host paints — which is how a page ends up with light text on light. */
-  background: var(--ground);
+  background-color: var(--ground);
+  /* The ambient forest light — two soft pools, pinned to the viewport so
+     long pages do not stretch them. */
+  background-image: var(--ground-art);
+  background-attachment: fixed;
   color: var(--ink);
   font-family: var(--body);
   font-size: var(--t-md);
@@ -473,9 +389,8 @@ body {
 
 h1, h2, h3, h4 {
   font-family: var(--display);
-  /* 800 was a poster weight. 650 is a heading that sits above a table
-     without shouting at it. */
-  font-weight: 650;
+  /* Heavy, like the poster type this theme comes from. */
+  font-weight: 800;
   line-height: var(--lh-tight);
   letter-spacing: var(--track-tight);
   text-wrap: balance;

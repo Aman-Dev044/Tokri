@@ -160,8 +160,12 @@ export function WalletView() {
         </Notice>
       ) : null}
 
-      {/* The one number that decides whether the rider can work. */}
-      <section className={styles.panelFlat} aria-label="Balance">
+      {/* The one number that decides whether the rider can work — the big
+          yellow card, unless the server says it is low. */}
+      <section
+        className={`${styles.balanceCard} ${wallet.lowBalance ? styles.balanceLow : ''}`}
+        aria-label="Balance"
+      >
         <span className={styles.stepTag}>Balance</span>
         <div className={styles.payoutValue}>{money(wallet.balancePaise)}</div>
         <p className={styles.lede}>
@@ -253,7 +257,7 @@ export function WalletView() {
           </p>
         </section>
       ) : (
-        <ul className={styles.rows}>
+        <ul className={`${styles.rows} tkr-reveal`}>
           {rows.map((row) => (
             <li key={row.id} className={styles.row}>
               <div className={styles.rowMain}>

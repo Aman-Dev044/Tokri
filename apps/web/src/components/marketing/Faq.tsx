@@ -56,12 +56,12 @@ export function Faq() {
   return (
     <section className="mk-sec" id="faq">
       <div className="mk-shell">
-        <header className="mk-sec__head">
+        <header className="mk-sec__head tkr-reveal">
           <p className="mk-eyebrow">Questions</p>
           <h2 className="mk-title">Everything you&rsquo;d like to know.</h2>
         </header>
 
-        <div className="mk-faq">
+        <div className="mk-faq tkr-reveal-kids">
           {QUESTIONS.map((item) => (
             <details className="mk-faq__item" key={item.q}>
               <summary className="mk-faq__q">

@@ -43,20 +43,25 @@ export interface Issue {
   id: string;
   /** the short human handle — what support says out loud on a call */
   code: string;
-  orderId?: string;
-  customerId?: string;
-  vendorId?: string;
-  riderId?: string;
+  /* The API sends `null` for an empty link, the fixture omits it; every read
+     site checks `== null` so both shapes render. */
+  orderId?: string | null;
+  customerId?: string | null;
+  vendorId?: string | null;
+  riderId?: string | null;
   type: IssueType;
   priority: IssuePriority;
   status: IssueStatus;
   subject: string;
   description: string;
-  assignedToUserId?: string;
-  resolution?: string;
-  resolvedAt?: string;
-  resolvedBy?: string;
-  messages: IssueMessage[];
+  assignedToUserId?: string | null;
+  resolution?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+  /** The thread — sent by the detail endpoint, not by the list. */
+  messages?: IssueMessage[];
+  /** Sent by the list endpoint in place of the thread. */
+  messageCount?: number;
   createdAt: string;
   updatedAt: string;
 

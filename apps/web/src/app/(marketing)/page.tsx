@@ -89,7 +89,7 @@ export default function LandingPage() {
       {/* ── HOW IT WORKS ───────────────────────────────────────────────── */}
       <section className="mk-sec" id="how-it-works">
         <div className="mk-shell">
-          <header className="mk-sec__head mk-sec__head--wide">
+          <header className="mk-sec__head mk-sec__head--wide tkr-reveal">
             <p className="mk-eyebrow">How it works</p>
             <h2 className="mk-title">
               Four steps. No countdown
@@ -103,7 +103,7 @@ export default function LandingPage() {
             </p>
           </header>
 
-          <ul className="mk-grid">
+          <ul className="mk-grid tkr-reveal-kids">
             {STEPS.map((step, i) => (
               <li className="mk-cell mk-cell--3" key={step.n}>
                 <div className="mk-step tkr-card" style={{ ['--i' as string]: i }}>
@@ -126,7 +126,7 @@ export default function LandingPage() {
       {/* ── WHY THIS APP ───────────────────────────────────────────────── */}
       <section className="mk-sec" id="why">
         <div className="mk-shell">
-          <header className="mk-sec__head mk-sec__head--wide">
+          <header className="mk-sec__head mk-sec__head--wide tkr-reveal">
             <p className="mk-eyebrow">Why {APP_NAME}</p>
             <h2 className="mk-title">
               Built like a market.
@@ -142,7 +142,7 @@ export default function LandingPage() {
             </p>
           </header>
 
-          <ul className="mk-grid">
+          <ul className="mk-grid tkr-reveal-kids">
             {WHY.map((item, i) => (
               <li
                 className={`mk-cell mk-cell--3 mk-cell--tone-${WHY_TONES[i % WHY_TONES.length]}`}
@@ -163,7 +163,7 @@ export default function LandingPage() {
       <section className="mk-sec" id="vendors">
         <div className="mk-shell">
           <ul className="mk-grid">
-            <li className="mk-cell mk-cell--8">
+            <li className="mk-cell mk-cell--8 tkr-reveal tkr-reveal--left">
               <div className="mk-band tkr-card tkr-card--raised" style={{ ['--i' as string]: 0 }}>
                 <p className="mk-eyebrow">For vendors</p>
                 <h2 className="mk-title">
@@ -178,7 +178,7 @@ export default function LandingPage() {
                   onto each order at the moment it is placed, so changing the rate later
                   never rewrites what you have already earned.
                 </p>
-                <ul className="mk-facts">
+                <ul className="mk-facts tkr-reveal-kids">
                   <li>
                     <b>Weekly</b> settlement, every Monday
                   </li>
@@ -197,10 +197,10 @@ export default function LandingPage() {
               </div>
             </li>
 
-            <li className="mk-cell mk-cell--4 mk-cell--tone-gold">
+            <li className="mk-cell mk-cell--4 mk-cell--tone-gold tkr-reveal tkr-reveal--right">
               <div className="mk-ledger-card tkr-card" style={{ ['--i' as string]: 1 }}>
                 <p className="mk-eyebrow">Settlement · week 38</p>
-                <dl className="mk-ledger">
+                <dl className="mk-ledger tkr-reveal-kids">
                   <div className="mk-ledger__row">
                     <dt>Gross sales</dt>
                     <dd>₹1,84,250</dd>
@@ -233,7 +233,7 @@ export default function LandingPage() {
       <section className="mk-sec" id="riders">
         <div className="mk-shell">
           <ul className="mk-grid">
-            <li className="mk-cell mk-cell--4 mk-cell--tone-mint">
+            <li className="mk-cell mk-cell--4 mk-cell--tone-mint tkr-reveal tkr-reveal--left">
               <div className="mk-offer-card tkr-card" style={{ ['--i' as string]: 0 }}>
                 <p className="mk-offer__head">
                   <span>Offer</span>
@@ -281,7 +281,7 @@ export default function LandingPage() {
               </div>
             </li>
 
-            <li className="mk-cell mk-cell--8">
+            <li className="mk-cell mk-cell--8 tkr-reveal tkr-reveal--right">
               <div className="mk-band tkr-card tkr-card--raised" style={{ ['--i' as string]: 1 }}>
                 <p className="mk-eyebrow">For riders</p>
                 <h2 className="mk-title">
@@ -297,7 +297,7 @@ export default function LandingPage() {
                   mono ETA you can read at arm&apos;s length in the rain. No decoration,
                   nothing to hunt for.
                 </p>
-                <ul className="mk-facts">
+                <ul className="mk-facts tkr-reveal-kids">
                   <li>
                     <b>Offers</b> you accept or decline — never assigned silently
                   </li>
@@ -326,19 +326,31 @@ export default function LandingPage() {
       <section className="mk-sec mk-sec--tight">
         <div className="mk-shell">
           <ul className="mk-grid">
-            <li className="mk-cell mk-cell--12">
+            <li className="mk-cell mk-cell--12 tkr-reveal tkr-reveal--zoom">
               <div className="mk-closer tkr-card tkr-card--raised" style={{ ['--i' as string]: 0 }}>
+                {/* The hero's orbit, echoed, with three bits of produce
+                    drifting round it. Decorative only. */}
+                <span className="mk-closer__orbit tkr-orbit" aria-hidden="true" />
+                <span className="mk-closer__bit mk-closer__bit--a" aria-hidden="true">
+                  🥭
+                </span>
+                <span className="mk-closer__bit mk-closer__bit--b" aria-hidden="true">
+                  🥕
+                </span>
+                <span className="mk-closer__bit mk-closer__bit--c" aria-hidden="true">
+                  🥛
+                </span>
                 <p className="mk-eyebrow">Ready when you are</p>
                 {/* The hue underlines each word rather than colouring it. Several of
                     the eight aisle hues cannot clear 4.5:1 as text on either ground
                     (saffron is 2.3:1), and a decorative rule carries the identity
                     without putting an unreadable word on the page. */}
                 <h2 className="mk-closer__title">
-                  {AISLES.map((a) => (
+                  {AISLES.map((a, i) => (
                     <span
                       className="mk-closer__word"
                       key={a.key}
-                      style={{ ['--sw' as string]: `var(--aisle-${a.key})` }}
+                      style={{ ['--sw' as string]: `var(--aisle-${a.key})`, ['--i' as string]: i }}
                     >
                       {a.name}
                     </span>

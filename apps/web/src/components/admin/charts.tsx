@@ -244,7 +244,7 @@ export function LineChart({
                 <>
                   <defs>
                     <linearGradient id="adm-line-area" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={line.color} stopOpacity="0.16" />
+                      <stop offset="0%" stopColor={line.color} stopOpacity="0.3" />
                       <stop offset="100%" stopColor={line.color} stopOpacity="0" />
                     </linearGradient>
                   </defs>
@@ -289,7 +289,7 @@ export function LineChart({
                   cx={point[0]}
                   cy={point[1]}
                   r={3.5}
-                  fill="var(--adm-panel)"
+                  fill="var(--adm-solid)"
                   stroke={line.color}
                   strokeWidth={2}
                 />

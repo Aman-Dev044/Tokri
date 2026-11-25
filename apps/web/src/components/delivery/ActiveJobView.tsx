@@ -248,7 +248,12 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
     return (
       <>
         <div className={styles.resting}>
-          <IconCheck size={64} />
+          {/* The check draws itself inside a green disc, with two rings
+              pinging out from behind it. Once — this is a moment, not a
+              loop. */}
+          <span className={styles.successMark} aria-hidden="true">
+            <IconCheck size={56} />
+          </span>
           <h1 className={styles.h1}>Delivered</h1>
           <p className={styles.lede}>
             Nice work. Your earnings update once {APP_NAME} settles the order.
@@ -275,7 +280,7 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
             {loadError}
           </Notice>
         )}
-        <div className={styles.resting}>
+        <div className={`${styles.resting} ${styles.restingOff}`}>
           <IconBox size={64} className={styles.restingMark} />
           <h1 className={styles.h1}>No active delivery</h1>
           <p className={styles.lede}>
@@ -342,6 +347,17 @@ export function ActiveJobView({ orderId }: { orderId: string }) {
             Step {stepIndex + 1} of {STEP_ORDER.length}
           </span>
         </div>
+        {/* The gold line fills from the step just finished to this one. The
+            rail is keyed on the step, so it plays once per transition. */}
+        <span className={styles.stepBar} aria-hidden="true">
+          <span
+            className={styles.stepBarFill}
+            style={{
+              ['--p' as string]: (stepIndex + 1) / STEP_ORDER.length,
+              ['--p0' as string]: Math.max(0, stepIndex) / STEP_ORDER.length,
+            }}
+          />
+        </span>
       </div>
 
       {/*

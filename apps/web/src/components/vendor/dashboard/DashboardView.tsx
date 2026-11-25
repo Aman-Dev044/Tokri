@@ -37,7 +37,16 @@ import { todayWindow } from '@/lib/vendor/range';
 import type { OrderStatus, Paged, VendorDashboard, VendorOrder } from '@/lib/vendor/types';
 import { BarChart, RankedBars, type BarDatum } from '../charts';
 import { formatCount, formatDate, formatPaiseCompact, humanise } from '../format';
-import { IconChevronRight, IconInbox } from '../icons';
+import {
+  IconAlert,
+  IconChevronRight,
+  IconDashboard,
+  IconEarnings,
+  IconInbox,
+  IconOrders,
+  IconRiders,
+  IconStock,
+} from '../icons';
 import { VenPage, VenSection } from '../Page';
 import {
   ChartPanel,
@@ -196,6 +205,7 @@ export function DashboardView() {
           <div className="ven-kpigrid">
             <KpiCell
               label="Revenue today"
+              icon={<IconEarnings />}
               value={data?.revenueToday.gross ?? 0}
               format={formatPaiseCompact}
               spark={spark}
@@ -204,6 +214,7 @@ export function DashboardView() {
             />
             <KpiCell
               label="Orders today"
+              icon={<IconOrders />}
               value={data?.ordersToday.total ?? 0}
               format={formatCount}
               tone="plain"
@@ -211,6 +222,7 @@ export function DashboardView() {
             />
             <KpiCell
               label="Delivered today"
+              icon={<IconRiders />}
               value={data?.ordersToday.byStatus.DELIVERED ?? 0}
               format={formatCount}
               tone="good"
@@ -218,6 +230,7 @@ export function DashboardView() {
             />
             <KpiCell
               label="Waiting for you"
+              icon={<IconAlert />}
               value={data?.pendingCount ?? 0}
               format={formatCount}
               tone={(data?.pendingCount ?? 0) > 0 ? 'crit' : 'plain'}
@@ -225,6 +238,7 @@ export function DashboardView() {
             />
             <KpiCell
               label="Low or out of stock"
+              icon={<IconStock />}
               value={lowOrOut}
               format={formatCount}
               tone={lowOrOut > 0 ? 'warn' : 'plain'}
@@ -239,6 +253,7 @@ export function DashboardView() {
             */}
             <KpiCell
               label="Store rating"
+              icon={<IconDashboard />}
               value={Math.round(rating * 10)}
               format={(tenths) => `${(tenths / 10).toFixed(1)} ★`}
               tone="plain"
@@ -367,11 +382,19 @@ function NeedCard({
 }) {
   return (
     <Link className="ven-need" href={href} data-tone={tone}>
-      {count === null ? null : <span className="ven-need__count">{count}</span>}
-      <span className="ven-need__label">
-        {label} <IconChevronRight style={{ width: 12, height: 12, verticalAlign: '-1px' }} />
+      <span className="ven-need__badge">
+        {count === null ? (
+          <span className="ven-need__live" aria-hidden="true" />
+        ) : (
+          <span className="ven-need__count">{count}</span>
+        )}
       </span>
-      <span className="ven-need__detail">{detail}</span>
+      <span className="ven-need__text">
+        <span className="ven-need__label">
+          {label} <IconChevronRight className="ven-need__arrow" />
+        </span>
+        <span className="ven-need__detail">{detail}</span>
+      </span>
     </Link>
   );
 }

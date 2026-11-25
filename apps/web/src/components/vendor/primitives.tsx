@@ -25,7 +25,7 @@
  *     CSS animations with `backwards` fill from a visible resting state.
  */
 
-import { useEffect, useId, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Tilt3D } from '@mandi/design-system';
 import { useCountUp, type Freshness } from '@/hooks';
 import type { OrderStatus, PartnerStatus, SettlementStatus } from '@/lib/vendor/types';
@@ -323,6 +323,8 @@ export interface KpiCellProps {
   /** stagger position in the grid */
   index?: number;
   loading?: boolean;
+  /** a glyph for the cream badge in the tile's corner — decoration only */
+  icon?: ReactNode;
 }
 
 /**
@@ -344,6 +346,7 @@ export function KpiCell({
   spark,
   index = 0,
   loading = false,
+  icon,
 }: KpiCellProps) {
   return (
     <Tilt3D
@@ -355,7 +358,14 @@ export function KpiCell({
       style={{ ['--i' as string]: index }}
     >
       <div className="ven-kpi" data-tone={tone}>
-        <span className="ven-label">{label}</span>
+        <div className="ven-kpi__head">
+          <span className="ven-label">{label}</span>
+          {icon ? (
+            <span className="ven-kpi__badge" aria-hidden="true">
+              {icon}
+            </span>
+          ) : null}
+        </div>
         {loading ? (
           <SkelLine width="60%" height={30} />
         ) : (
@@ -465,15 +475,43 @@ export interface SegmentedProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-/** Today / 7 days / 30 days. The selected pill slides rather than blinks. */
+/**
+ * Today / 7 days / 30 days. The selected pill slides rather than blinks.
+ *
+ * The slide is one gold indicator behind the buttons, placed from the pressed
+ * button's own box. Until that measurement lands (first paint, no script) the
+ * pressed button paints its own pill, so the control is never unlabelled.
+ */
 export function Segmented<T extends string>({
   label,
   value,
   options,
   onChange,
 }: SegmentedProps<T>) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const place = () => {
+      const pressed = node.querySelector<HTMLElement>('[aria-pressed="true"]');
+      if (!pressed) {
+        node.removeAttribute('data-slide');
+        return;
+      }
+      node.style.setProperty('--seg-x', `${pressed.offsetLeft}px`);
+      node.style.setProperty('--seg-w', `${pressed.offsetWidth}px`);
+      node.setAttribute('data-slide', 'on');
+    };
+    place();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(place);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [value, options]);
+
   return (
-    <div className="ven-seg" role="group" aria-label={label}>
+    <div className="ven-seg" role="group" aria-label={label} ref={ref}>
       {options.map((option) => (
         <button
           key={option.value}

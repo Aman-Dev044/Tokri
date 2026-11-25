@@ -12,7 +12,8 @@
     "./styles.css": "./src/styles/components.css",
     "./aisles": "./src/aisles.ts",
     "./map": "./src/map/index.ts",
-    "./journey-ribbon": "./src/components/JourneyRibbon.tsx"
+    "./journey-ribbon": "./src/components/JourneyRibbon.tsx",
+    "./forest.css": "./src/styles/forest.css"
   },
   "files": [
     "src"

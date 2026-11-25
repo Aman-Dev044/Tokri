@@ -69,7 +69,7 @@ export function NotifyBell() {
           />
         </svg>
         {unreadCount > 0 ? (
-          <span className="shop-notify__count" aria-hidden="true">
+          <span key={unreadCount} className="shop-notify__count" aria-hidden="true">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         ) : null}

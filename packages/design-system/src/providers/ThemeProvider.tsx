@@ -3,10 +3,10 @@
 /**
  * Light / dark / system.
  *
- * "system" means: remove `data-theme` entirely and let the
- * `@media (prefers-color-scheme: dark)` block in tokens.css decide. An explicit
- * choice stamps `data-theme="light"` or `data-theme="dark"`, which the token
- * file is written to let win in BOTH directions.
+ * "system" means: remove `data-theme` entirely and get the default, which in
+ * "Forest Gold" is the dark forest theme on every machine. An explicit choice
+ * stamps `data-theme="light"` or `data-theme="dark"`; only light restates
+ * values in tokens.css, because dark IS the default.
  *
  * Persistence is localStorage, wrapped in try/catch: private windows, blocked
  * site data and thumbnail capture contexts all throw on access, and a theme
@@ -74,13 +74,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     if (theme === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', theme);
 
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const compute = () =>
-      setResolved(theme === 'system' ? (mq.matches ? 'dark' : 'light') : theme);
-    compute();
-
-    mq.addEventListener('change', compute);
-    return () => mq.removeEventListener('change', compute);
+    setResolved(theme === 'light' ? 'light' : 'dark');
   }, [theme]);
 
   const setTheme = useCallback((t: ThemeChoice) => {

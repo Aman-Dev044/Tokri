@@ -333,81 +333,127 @@ export type PaymentStatus =
   | 'refunded'
   | 'partially_refunded';
 
+/**
+ * `OrderPricingView` in `apps/api/src/modules/admin/orders/orders.service.ts`.
+ * Every amount is INTEGER PAISE under the API's own names — there is no
+ * `Paise` suffix on the wire, so there is none here.
+ */
+export interface OrderPricing {
+  itemsSubtotal: number;
+  discount: number;
+  deliveryFee: number;
+  taxes: number;
+  grandTotal: number;
+  /** percent, snapshotted when the order was created */
+  commissionPct: number;
+  commissionAmount: number;
+  vendorPayout: number;
+}
+
+/**
+ * One row of `GET /admin/orders` — `OrderRow` in
+ * `apps/api/src/modules/admin/orders/orders.service.ts`, field for field.
+ *
+ * The names are `null` when the vendor or customer record is gone; the row
+ * still carries the id.
+ */
 export interface OrderListRow {
   id: string;
   orderNo: string;
-  vendorId: string;
-  vendorName: string;
-  customerName: string;
-  city: string;
   status: OrderStatus;
-  paymentMethod: 'online' | 'cod';
-  paymentStatus: PaymentStatus;
+  customerId: string;
+  customerName: string | null;
+  vendorId: string;
+  vendorName: string | null;
   itemCount: number;
-  totalPaise: number;
+  pricing: OrderPricing;
+  payment: { method: 'online' | 'cod'; status: PaymentStatus };
+  deliveryPartnerId: string | null;
   placedAt: string;
+  deliveredAt: string | null;
 }
 
+/**
+ * One entry of `statusHistory`. The API records WHO by id and role only —
+ * there is no display name on it. `byRole` is the API's `Role` value
+ * (`customer`, `vendor`, `staff`, `delivery`, `admin`, `super_admin`), or
+ * `null` for a transition the system made on its own.
+ */
 export interface OrderStatusEvent {
   from: OrderStatus | null;
   to: OrderStatus;
-  byName: string;
-  byRole: 'admin' | 'vendor' | 'customer' | 'delivery' | 'system';
-  reason?: string;
+  byUserId: string | null;
+  byRole: string | null;
+  reason: string | null;
   at: string;
 }
 
+/** One line of `items`. `price` and `lineTotal` are INTEGER PAISE. */
 export interface OrderLine {
   productId: string;
   name: string;
-  aisleKey: AisleKey;
+  image: string | null;
   unit: string;
+  price: number;
   qty: number;
-  pricePaise: number;
-  lineTotalPaise: number;
+  lineTotal: number;
   fulfilled: boolean;
 }
 
+/**
+ * `GET /admin/orders/:id` — `OrderDetail` in
+ * `apps/api/src/modules/admin/orders/orders.service.ts`, field for field.
+ * `PATCH /admin/orders/:id/cancel` answers with the same shape.
+ *
+ * It is the list row plus the full record. Note that `payment` stays the
+ * row's two-field summary; the provider refs live on `paymentDetail`.
+ */
 export interface OrderDetail extends OrderListRow {
-  statusHistory: OrderStatusEvent[];
   items: OrderLine[];
-  pricing: {
-    itemsSubtotalPaise: number;
-    discountPaise: number;
-    deliveryFeePaise: number;
-    taxesPaise: number;
-    grandTotalPaise: number;
-    commissionPct: number;
-    commissionAmountPaise: number;
-    vendorPayoutPaise: number;
-  };
-  payment: {
-    method: 'online' | 'cod';
-    status: PaymentStatus;
-    provider: string;
-    providerOrderId: string | null;
-    providerPaymentId: string | null;
-    paidAt: string | null;
-    refundedAmountPaise: number;
-  };
   address: {
-    label: string;
+    label: string | null;
     line1: string;
-    line2?: string;
+    line2: string | null;
     city: string;
     pincode: string;
     phone: string;
+    location: { lat: number; lng: number } | null;
   };
-  rider: {
+  paymentDetail: {
+    method: 'online' | 'cod';
+    status: PaymentStatus;
+    provider: string | null;
+    providerOrderId: string | null;
+    providerPaymentId: string | null;
+    paidAt: string | null;
+    /** INTEGER PAISE */
+    refundedAmount: number;
+  };
+  statusHistory: OrderStatusEvent[];
+  /** `by` is the canceller's ROLE, not a name */
+  cancellation: {
+    by: string | null;
+    reason: string | null;
+    at: string | null;
+  } | null;
+  proof: { otpVerifiedAt: string | null; photoUrl: string | null };
+  vendor: { id: string; storeName: string; city: string | null } | null;
+  customer: {
     id: string;
     name: string;
     phone: string;
-    vehicleType: string;
-    assignedAt: string;
-    completedCount: number;
-    rating: number;
+    email: string | null;
   } | null;
-  cancellation: { by: string; reason: string; at: string } | null;
+  /** The delivery partner. No rating, job count or assignment time is sent. */
+  rider: {
+    id: string;
+    name: string | null;
+    phone: string | null;
+    vehicleType: string;
+  } | null;
+  acceptedAt: string | null;
+  readyAt: string | null;
+  pickedUpAt: string | null;
 }
 
 /* ------------------------------------------------------------------ */

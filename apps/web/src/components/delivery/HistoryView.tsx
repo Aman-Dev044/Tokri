@@ -83,7 +83,7 @@ export function HistoryView() {
       {loading && sorted.length === 0 ? <RowsSkeleton rows={5} /> : null}
 
       {!loading && error === null && sorted.length === 0 ? (
-        <div className={styles.resting}>
+        <div className={`${styles.resting} ${styles.restingOff}`}>
           <IconList size={56} className={styles.restingMark} />
           <p className={styles.lede}>
             No completed deliveries yet. Every job you finish lands here with what it
@@ -95,7 +95,9 @@ export function HistoryView() {
       {days.map(([day, rows]) => {
         const dayTotal = rows.reduce((sum, row) => sum + row.payoutPaise, 0);
         return (
-          <section key={day === UNDATED ? 'undated' : day}>
+          // Each day rises in as it scrolls into view (`tkr-reveal` is the
+          // shared scroll-driven reveal; with no support it is simply shown).
+          <section key={day === UNDATED ? 'undated' : day} className="tkr-reveal">
             <div className={styles.dayHead}>
               <span>{day === UNDATED ? 'Not delivered' : dayLabel(day)}</span>
               <span className={styles.rowValue}>{money(dayTotal)}</span>

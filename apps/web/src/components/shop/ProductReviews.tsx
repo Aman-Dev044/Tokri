@@ -87,7 +87,7 @@ export function ProductReviews({ productId }: { productId: string }) {
 
   return (
     <section className="shop-reviews" id="reviews" aria-labelledby="reviews-title">
-      <header className="shop-reviews__head">
+      <header className="shop-reviews__head tkr-reveal">
         <h2 className="shop-reviews__title" id="reviews-title">
           Reviews
         </h2>

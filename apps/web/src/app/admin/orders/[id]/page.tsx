@@ -24,12 +24,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAdminMutation, useAdminQuery } from '@/hooks';
-import { formatDate, formatPct, humanise } from '@/lib/admin/format';
-import type { OrderDetail, OrderStatus, OrderStatusEvent } from '@/lib/admin/types';
+import { formatDate, formatPct, humanise, orderActorLabel } from '@/lib/admin/format';
+import type { OrderDetail, OrderStatus } from '@/lib/admin/types';
 import {
   AdminPage,
   AdminSection,
-  AisleDot,
   ConfirmDialog,
   EmptyState,
   IconAlert,
@@ -61,13 +60,9 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 const TERMINAL: ReadonlySet<OrderStatus> = new Set(['DELIVERED', 'REJECTED', 'CANCELLED']);
 
-const ROLE_LABEL: Record<OrderStatusEvent['byRole'], string> = {
-  admin: 'admin',
-  vendor: 'vendor',
-  customer: 'customer',
-  delivery: 'rider',
-  system: 'system',
-};
+/** `PATCH /admin/orders/:id/cancel` takes `{ reason }`, 3 to 500 characters. */
+const REASON_MIN = 3;
+const REASON_MAX = 500;
 
 export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -88,7 +83,15 @@ export default function AdminOrderDetailPage() {
     'PATCH',
   );
 
-  const cancellable = order ? !TERMINAL.has(order.status) : false;
+  // Ask the machine, not "is it terminal": ASSIGNED, PICKED_UP and
+  // OUT_FOR_DELIVERY are live but cannot go to CANCELLED, and the API 409s.
+  const cancellable = order ? TRANSITIONS[order.status].includes('CANCELLED') : false;
+  const trimmedReason = reason.trim();
+  const reasonValid = trimmedReason.length >= REASON_MIN && trimmedReason.length <= REASON_MAX;
+  // The API refunds a prepaid order that is paid OR merely authorised.
+  const willRefund =
+    order?.payment.method === 'online' &&
+    (order.payment.status === 'paid' || order.payment.status === 'authorized');
 
   if (!query.loading && !order) {
     return (
@@ -117,7 +120,7 @@ export default function AdminOrderDetailPage() {
       title={order?.orderNo ?? 'Loading…'}
       description={
         order
-          ? `${order.vendorName} → ${order.customerName} · placed ${formatDate(order.placedAt, 'long')}`
+          ? `${order.vendorName ?? 'Store not resolved'} → ${order.customerName ?? 'Customer not resolved'} · placed ${formatDate(order.placedAt, 'long')}`
           : 'Fetching the order.'
       }
       isFixture={query.isFixture}
@@ -185,7 +188,6 @@ export default function AdminOrderDetailPage() {
                   <tr key={line.productId} style={{ ['--adm-i' as string]: String(i) }}>
                     <td>
                       <span className="adm-row">
-                        <AisleDot aisleKey={line.aisleKey} />
                         <span style={{ minWidth: 0 }}>
                           {line.name}
                           <span className="adm-table__sub">{line.unit}</span>
@@ -196,10 +198,10 @@ export default function AdminOrderDetailPage() {
                       {line.qty}
                     </td>
                     <td data-align="right">
-                      <Money value={line.pricePaise} />
+                      <Money value={line.price} />
                     </td>
                     <td data-align="right">
-                      <Money value={line.lineTotalPaise} />
+                      <Money value={line.lineTotal} />
                     </td>
                     <td data-align="center">
                       {line.fulfilled ? (
@@ -224,22 +226,22 @@ export default function AdminOrderDetailPage() {
             {order ? (
               <div className="adm-price">
                 <span className="adm-price__label">Items subtotal</span>
-                <Money value={order.pricing.itemsSubtotalPaise} />
+                <Money value={order.pricing.itemsSubtotal} />
 
                 <span className="adm-price__label">Discount</span>
-                <Money value={-order.pricing.discountPaise} />
+                <Money value={-order.pricing.discount} />
 
                 <span className="adm-price__label">Delivery fee</span>
-                <Money value={order.pricing.deliveryFeePaise} />
+                <Money value={order.pricing.deliveryFee} />
 
                 <span className="adm-price__label">Taxes</span>
-                <Money value={order.pricing.taxesPaise} />
+                <Money value={order.pricing.taxes} />
 
                 <span className="adm-price__rule" />
 
                 <span className="adm-price__total">Customer pays</span>
                 <span className="adm-price__total">
-                  <Money value={order.pricing.grandTotalPaise} />
+                  <Money value={order.pricing.grandTotal} />
                 </span>
 
                 <div className="adm-price__split">
@@ -251,13 +253,13 @@ export default function AdminOrderDetailPage() {
                   </p>
                   <div className="adm-price">
                     <span className="adm-price__label">Platform commission</span>
-                    <Money value={order.pricing.commissionAmountPaise} />
+                    <Money value={order.pricing.commissionAmount} />
                     <span className="adm-price__label">Delivery fee (platform)</span>
-                    <Money value={order.pricing.deliveryFeePaise} />
+                    <Money value={order.pricing.deliveryFee} />
                     <span className="adm-price__rule" />
                     <span className="adm-price__total">Vendor payout</span>
                     <span className="adm-price__total">
-                      <Money value={order.pricing.vendorPayoutPaise} />
+                      <Money value={order.pricing.vendorPayout} />
                     </span>
                   </div>
                 </div>
@@ -286,24 +288,24 @@ export default function AdminOrderDetailPage() {
                   <StatusPill status={order.payment.status} kind="payment" />
                 </dd>
                 <dt>Provider</dt>
-                <dd>{order.payment.provider}</dd>
+                <dd>{order.paymentDetail.provider ?? '—'}</dd>
                 <dt>Order ref</dt>
-                <dd className="adm-num">{order.payment.providerOrderId ?? '—'}</dd>
+                <dd className="adm-num">{order.paymentDetail.providerOrderId ?? '—'}</dd>
                 <dt>Payment ref</dt>
-                <dd className="adm-num">{order.payment.providerPaymentId ?? '—'}</dd>
+                <dd className="adm-num">{order.paymentDetail.providerPaymentId ?? '—'}</dd>
                 <dt>Paid</dt>
                 <dd>
-                  {order.payment.paidAt ? (
-                    <RelativeTime value={order.payment.paidAt} live={false} />
+                  {order.paymentDetail.paidAt ? (
+                    <RelativeTime value={order.paymentDetail.paidAt} live={false} />
                   ) : (
                     '—'
                   )}
                 </dd>
-                {order.payment.refundedAmountPaise > 0 ? (
+                {order.paymentDetail.refundedAmount > 0 ? (
                   <>
                     <dt>Refunded</dt>
                     <dd>
-                      <Money value={order.payment.refundedAmountPaise} />
+                      <Money value={order.paymentDetail.refundedAmount} />
                     </dd>
                   </>
                 ) : null}
@@ -319,19 +321,23 @@ export default function AdminOrderDetailPage() {
             {order?.rider ? (
               <dl className="adm-dl">
                 <dt>Name</dt>
-                <dd>{order.rider.name}</dd>
+                <dd>{order.rider.name ?? 'Not resolved'}</dd>
                 <dt>Phone</dt>
-                <dd className="adm-num">{order.rider.phone}</dd>
+                <dd className="adm-num">{order.rider.phone ?? '—'}</dd>
                 <dt>Vehicle</dt>
-                <dd>{order.rider.vehicleType}</dd>
-                <dt>Assigned</dt>
+                <dd>{humanise(order.rider.vehicleType)}</dd>
+                <dt>Picked up</dt>
                 <dd>
-                  <RelativeTime value={order.rider.assignedAt} live={false} />
+                  {order.pickedUpAt ? <RelativeTime value={order.pickedUpAt} live={false} /> : '—'}
                 </dd>
-                <dt>Completed</dt>
-                <dd className="adm-num">{order.rider.completedCount}</dd>
-                <dt>Rating</dt>
-                <dd className="adm-num">{order.rider.rating.toFixed(1)}</dd>
+                <dt>Delivered</dt>
+                <dd>
+                  {order.deliveredAt ? (
+                    <RelativeTime value={order.deliveredAt} live={false} />
+                  ) : (
+                    '—'
+                  )}
+                </dd>
               </dl>
             ) : order ? (
               <p style={{ color: 'var(--adm-dim)' }}>
@@ -349,7 +355,7 @@ export default function AdminOrderDetailPage() {
             {order ? (
               <dl className="adm-dl">
                 <dt>Label</dt>
-                <dd>{order.address.label}</dd>
+                <dd>{order.address.label ?? '—'}</dd>
                 <dt>Address</dt>
                 <dd>
                   {order.address.line1}
@@ -372,9 +378,14 @@ export default function AdminOrderDetailPage() {
             <p className="adm-row" style={{ alignItems: 'flex-start' }}>
               <IconAlert style={{ width: 16, height: 16, color: 'var(--crit-ink)' }} />
               <span>
-                Cancelled by <strong>{order.cancellation.by}</strong>{' '}
-                <RelativeTime value={order.cancellation.at} live={false} /> — “
-                {order.cancellation.reason}”
+                Cancelled by <strong>{orderActorLabel(order.cancellation.by)}</strong>
+                {order.cancellation.at ? (
+                  <>
+                    {' '}
+                    <RelativeTime value={order.cancellation.at} live={false} />
+                  </>
+                ) : null}
+                {order.cancellation.reason ? <> — “{order.cancellation.reason}”</> : null}
               </span>
             </p>
           </div>
@@ -388,10 +399,11 @@ export default function AdminOrderDetailPage() {
         confirmLabel="Cancel the order"
         cancelLabel="Leave it running"
         loading={cancelMutation.loading}
+        confirmDisabled={!reasonValid}
         onCancel={() => setCancelOpen(false)}
         onConfirm={() =>
           void cancelMutation.mutate(
-            { reason: reason.trim() || 'Cancelled by platform admin' },
+            { reason: trimmedReason },
             {
               params: { id },
               invalidate: ['/admin/orders', '/admin/analytics'],
@@ -405,20 +417,23 @@ export default function AdminOrderDetailPage() {
         body={
           <>
             <p style={{ marginBottom: 'var(--s-3)' }}>
-              {order?.payment.status === 'paid'
-                ? 'The payment has been captured, so this raises a refund to source — 5 to 7 working days.'
-                : 'No payment has been captured, so nothing is refunded.'}{' '}
+              {willRefund
+                ? 'This order was paid online, so cancelling it refunds the full total to source — 5 to 7 working days.'
+                : 'No online payment has been taken, so nothing is refunded.'}{' '}
               The cancellation is written to the audit trail with your name on it.
             </p>
             <div className="adm-field">
               <label className="adm-field__label" htmlFor="cancel-reason">
-                Reason (goes to the customer and the vendor)
+                Reason (required — goes to the customer and the vendor)
               </label>
               <input
                 id="cancel-reason"
                 className="adm-input"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
+                minLength={REASON_MIN}
+                maxLength={REASON_MAX}
+                required
                 placeholder="Vendor unreachable, stock unavailable…"
               />
             </div>
@@ -490,8 +505,7 @@ function Timeline({ order }: { order: OrderDetail }) {
                 </div>
 
                 <p className="adm-timeline__actor">
-                  by <strong>{event.byName}</strong>{' '}
-                  <span className="adm-rolepill">{ROLE_LABEL[event.byRole]}</span> ·{' '}
+                  by <span className="adm-rolepill">{orderActorLabel(event.byRole)}</span> ·{' '}
                   <RelativeTime value={event.at} live={false} />{' '}
                   <span style={{ opacity: 0.7 }}>({formatDate(event.at, 'long')})</span>
                   {previous ? <> · {formatGap(gapMs)} after the previous step</> : null}

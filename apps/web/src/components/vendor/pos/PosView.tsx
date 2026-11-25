@@ -360,7 +360,11 @@ function Counter() {
         <header className="ven-pos__carthead">
           <h2 className="ven-section__title">Cart</h2>
           <span className="ven-dim">
-            {cart.reduce((sum, line) => sum + line.qty, 0)} items
+            {/* Keyed on the count so the figure pops each time it changes. */}
+            <span className="ven-pos__pop" key={cart.reduce((sum, line) => sum + line.qty, 0)}>
+              {cart.reduce((sum, line) => sum + line.qty, 0)}
+            </span>{' '}
+            items
           </span>
           {cart.length > 0 ? (
             <Btn size="sm" variant="ghost" onClick={clear}>
@@ -452,7 +456,9 @@ function Counter() {
           </dd>
           <dt className="ven-pos__grand">Total</dt>
           <dd className="ven-pos__grand">
-            <Money value={totals.grandTotal} />
+            <span className="ven-pos__pop" key={totals.grandTotal}>
+              <Money value={totals.grandTotal} />
+            </span>
           </dd>
         </dl>
         <p className="ven-field__hint">
@@ -505,7 +511,10 @@ function Counter() {
         ) : null}
         {mode === 'cash' && tendered >= totals.grandTotal && cart.length > 0 ? (
           <p className="ven-pos__change">
-            Change <Money value={change} dimZero={false} />
+            Change{' '}
+            <span className="ven-pos__pop" key={change}>
+              <Money value={change} dimZero={false} />
+            </span>
           </p>
         ) : null}
 
@@ -546,7 +555,11 @@ function Counter() {
 
         <Btn variant="primary" size="lg" className="ven-pos__charge" disabled={!canCharge} onClick={submit}>
           {charge.loading ? 'Charging…' : 'Charge '}
-          {charge.loading ? null : <Money value={totals.grandTotal} />}
+          {charge.loading ? null : (
+            <span className="ven-pos__pop" key={totals.grandTotal}>
+              <Money value={totals.grandTotal} />
+            </span>
+          )}
         </Btn>
       </section>
 

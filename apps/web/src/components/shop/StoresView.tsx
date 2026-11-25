@@ -177,7 +177,7 @@ export function StoresView() {
       {/* ── market-wide product search ──────────────────────────────────── */}
       {query !== '' ? (
         <section className="shop-section" aria-labelledby="shop-products-title">
-          <h2 id="shop-products-title" className="shop-section__title">
+          <h2 id="shop-products-title" className="shop-section__title tkr-reveal">
             Products matching “{query}”
           </h2>
 
@@ -217,7 +217,7 @@ export function StoresView() {
 
       {/* ── the stores ───────────────────────────────────────────────────── */}
       <section className="shop-section" aria-labelledby="shop-stores-title">
-        <h2 id="shop-stores-title" className="shop-section__title">
+        <h2 id="shop-stores-title" className="shop-section__title tkr-reveal">
           {isLocationFiltered(geo.location) ? 'Stores that reach you' : `Stores on ${APP_NAME}`}
         </h2>
 

@@ -32,7 +32,7 @@ html {
 body {
   /* Explicit ground from a token. The viewer paints its own colour behind the
      page; a transparent body borrows it and the whole design falls apart. */
-  background-color: var(--paper);
+  background-color: var(--ground);
   color: var(--ink);
   font-family: var(--body);
   font-size: var(--fs-body);

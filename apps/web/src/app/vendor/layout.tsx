@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 
 /*
-  The vendor panel is self-contained ("Neon Orchard"): it draws on the shared
-  design-system tokens and the `<Tilt3D>` depth engine (imported globally by
-  the root layout) and nothing else from another surface. vendor.css is the
+  The vendor panel is self-contained ("Forest Gold"): it draws on the shared
+  design-system tokens, the forest.css motion vocabulary and the `<Tilt3D>`
+  depth engine (all imported globally by the root layout) and nothing else
+  from another surface. vendor.css is the
   panel's own stylesheet — the shell, the board, the lanes, the order cards,
   the new-order alert, the stock board, the earnings equation, and every
   local component's class names.

@@ -12,6 +12,14 @@
    series colours — those are passed in as data, not read off --aisle.
 
    Every colour is a token, so light and dark both come for free.
+
+   ── FOREST GOLD ────────────────────────────────────────────────────────────
+   Panels are glass (translucent green, pale rim, generous radius), buttons
+   and fields are pills, the primary action is the yellow pill, the catalog
+   tabs have a sliding yellow indicator. Entrance animations use
+   `translate`/`scale` with `backwards` fill (nothing stays applied once they
+   land — drawers render inline, and a leftover translate would trap one),
+   and panels themselves only fade, for the same reason.
    ============================================================================= */
 
 /* --------------------------------------------------------------------------
@@ -43,7 +51,7 @@
 
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--s-3);
   margin-bottom: var(--s-5);
 }
@@ -90,32 +98,70 @@
    Panel — a plain bordered surface for content that is not a DataTable
    -------------------------------------------------------------------------- */
 
+/* Glass. No transform, no backdrop-filter: a panel may hold an inline
+   drawer, and either would become that drawer's containing block. */
 .panel {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--ink) 9%, transparent),
+      color-mix(in oklab, var(--ink) 3%, transparent) 60%
+    ),
+    var(--glass);
+  box-shadow:
+    0 14px 34px -18px color-mix(in oklab, var(--void) 80%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--ink) 9%, transparent);
+  animation: fadeIn var(--t-enter) var(--ease-out) backwards;
+  transition: border-color var(--t-move) var(--ease);
+}
+
+.panel:hover {
+  border-color: color-mix(in oklab, var(--accent) 22%, var(--glass-edge));
 }
 
 .panelHead {
   display: flex;
   align-items: center;
   gap: var(--s-3);
-  padding: var(--s-3) var(--s-4);
-  border-bottom: 1px solid var(--hairline);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 1px solid var(--glass-edge);
 }
 
+/* A short gold bar before every panel title — the thin glowing accent. */
 .panelTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
   margin: 0;
   font-family: var(--body);
   font-size: var(--t-xs);
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+}
+
+.panelTitle::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 4px;
+  height: 0.95em;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  box-shadow: var(--halo-sm);
 }
 
 .panelBody {
-  padding: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+}
+
+@media (max-width: 34rem) {
+  .panelHead,
+  .panelBody {
+    padding-inline: var(--s-4);
+  }
 }
 
 .panelBodyFlush {
@@ -145,6 +191,16 @@
   overflow-wrap: anywhere;
 }
 
+/* Detail rows (KYC, wallet, profile) fade down the list in pairs. */
+.defList > * {
+  animation: fadeIn var(--t-enter) var(--ease-out) backwards;
+}
+.defList > :nth-child(n + 3) { animation-delay: calc(1 * var(--stagger)); }
+.defList > :nth-child(n + 5) { animation-delay: calc(2 * var(--stagger)); }
+.defList > :nth-child(n + 7) { animation-delay: calc(3 * var(--stagger)); }
+.defList > :nth-child(n + 9) { animation-delay: calc(4 * var(--stagger)); }
+.defList > :nth-child(n + 11) { animation-delay: calc(5 * var(--stagger)); }
+
 /* --------------------------------------------------------------------------
    Numbers. Azeret Mono, tabular, always.
    -------------------------------------------------------------------------- */
@@ -156,11 +212,14 @@
 }
 
 .numLarge {
+  display: inline-block;
   font-family: var(--data);
   font-variant-numeric: tabular-nums;
-  font-size: var(--t-h3);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: var(--t-h2);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  transform-origin: left bottom;
+  animation: countPop var(--t-enter) var(--spring) 120ms backwards;
 }
 
 .good {
@@ -199,35 +258,32 @@
 
 .presenceOnline {
   background: var(--good);
+  box-shadow: 0 0 8px var(--good);
 }
 
-/* The halo is the "live" feeling. It is a second element so the dot itself
+/* The ping is the "live" feeling. It is a second element so the dot itself
    never moves — a pulsing dot in a table row drags the eye off the numbers. */
 .presenceOnline::after {
   content: "";
   position: absolute;
-  inset: -0.25rem;
+  inset: 0;
   border-radius: var(--r-pill);
-  border: 1px solid var(--good);
-  opacity: 0.55;
-  animation: pulse 2.4s var(--ease-out) infinite;
+  background: var(--good);
+  animation: ping 1.8s var(--ease-out) infinite;
 }
 
 .presenceBusy {
   background: var(--warn);
+  box-shadow: 0 0 8px var(--warn);
 }
 
-@keyframes pulse {
+@keyframes ping {
   0% {
-    transform: scale(0.72);
-    opacity: 0.65;
-  }
-  70% {
-    transform: scale(1.25);
-    opacity: 0;
+    scale: 1;
+    opacity: 0.55;
   }
   100% {
-    transform: scale(1.25);
+    scale: 2.4;
     opacity: 0;
   }
 }
@@ -254,7 +310,7 @@
 .legendSwatch {
   width: 0.65rem;
   height: 0.65rem;
-  border-radius: var(--r-xs);
+  border-radius: 50%;
   flex: 0 0 auto;
 }
 
@@ -264,10 +320,10 @@
 
 .progress {
   position: relative;
-  height: 0.4rem;
+  height: 0.45rem;
   min-width: 5rem;
   border-radius: var(--r-pill);
-  background: var(--void);
+  background: color-mix(in oklab, var(--void) 50%, transparent);
   overflow: hidden;
 }
 
@@ -275,23 +331,26 @@
   height: 100%;
   border-radius: var(--r-pill);
   background: var(--good);
+  box-shadow: 0 0 10px var(--good);
   transform-origin: left center;
-  animation: fillIn var(--t-move) var(--ease-out) both;
+  animation: fillIn var(--t-slow) var(--spring-soft) 120ms backwards;
 }
 
 .progressFillWarn {
   background: var(--warn);
+  box-shadow: 0 0 10px var(--warn);
 }
 .progressFillCrit {
   background: var(--crit);
+  box-shadow: 0 0 10px var(--crit);
 }
 
 @keyframes fillIn {
   from {
-    transform: scaleX(0);
+    scale: 0 1;
   }
   to {
-    transform: scaleX(1);
+    scale: 1 1;
   }
 }
 
@@ -308,35 +367,64 @@
    Tabs (catalog)
    -------------------------------------------------------------------------- */
 
+/* A glass track of equal-width tabs with a yellow pill (`.tabInk`) that
+   SLIDES to the selected one. Equal widths are what let the pill move by a
+   plain percentage, with no measuring script. */
 .tabs {
-  display: flex;
-  gap: var(--s-1);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  width: min(100%, 36rem);
+  padding: 4px;
   margin-bottom: var(--s-5);
-  border-bottom: 1px solid var(--hairline);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
+  animation: riseIn var(--t-enter) var(--ease-out) backwards;
 }
 
 .tab {
   appearance: none;
   border: 0;
+  border-radius: var(--r-pill);
   background: none;
-  padding: var(--s-3) var(--s-4);
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  color: var(--ink-faint);
+  padding: var(--s-2) var(--s-3);
+  min-height: 2.5rem;
+  color: var(--ink-soft);
   font: inherit;
   font-size: var(--t-xs);
-  font-weight: 550;
+  font-weight: 650;
+  line-height: 1.2;
+  text-align: center;
   cursor: pointer;
-  transition: color var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease);
+  transition: color var(--t-move) var(--ease), background var(--t-micro) var(--ease);
 }
 
 .tab:hover {
   color: var(--ink);
+  background: var(--glass);
 }
 
 .tab[aria-selected="true"] {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
+  color: var(--on-accent);
+  background: none;
+}
+
+.tabInk {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--adm-tab-n, 3));
+  border-radius: var(--r-pill);
+  background: var(--gold);
+  box-shadow: var(--halo-sm);
+  translate: calc(var(--adm-tab-i, 0) * 100%) 0;
+  transition: translate var(--t-enter) var(--spring-soft);
+  pointer-events: none;
 }
 
 .tabCount {
@@ -351,29 +439,47 @@
    Buttons. Local to these pages — deliberately quieter than the shop's.
    -------------------------------------------------------------------------- */
 
+/* Glass pills. Pressed is a darken, never a transform — these sit inside
+   rows and cards that may themselves be moving. */
 .btn {
   appearance: none;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--s-2);
-  padding: 0.45rem 0.85rem;
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-md);
-  background: var(--raised);
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   color: var(--ink);
   font: inherit;
   font-size: var(--t-xs);
-  font-weight: 550;
+  font-weight: 650;
   line-height: 1.2;
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--t-micro) var(--ease), border-color var(--t-micro) var(--ease),
-    color var(--t-micro) var(--ease);
+  transition:
+    background var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease),
+    color var(--t-micro) var(--ease),
+    transform var(--t-micro) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    filter var(--t-micro) var(--ease);
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--void);
+  background: var(--glass-strong);
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
+  transform: translateY(-1px);
+  box-shadow: var(--halo-sm);
+}
+
+.btn:active:not(:disabled) {
+  transform: none;
+  filter: brightness(0.92);
 }
 
 .btn:disabled {
@@ -381,38 +487,60 @@
   cursor: not-allowed;
 }
 
-/* The mint accent, same as every other primary action in the console —
-   see .adm-btn--primary in admin.css. An inverted ink/paper button read as
-   "primary" under the old cream theme; on Neon Orchard's dark ground the
-   accent is what says "the one action that matters here". */
+/* The sunflower pill, the same as every other primary action in the
+   console (.adm-btn--primary in admin.css), with the light sweep on hover. */
 .btnPrimary {
-  background: var(--accent);
+  background: var(--gold);
   border-color: transparent;
   color: var(--on-accent);
+  box-shadow: var(--halo-sm);
+}
+
+.btnPrimary::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: -1;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, var(--sheen), transparent);
+  translate: -130% 0;
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--accent) 88%, var(--ink));
-  box-shadow: var(--glow-sm);
+  background: var(--gold);
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: var(--halo);
+}
+
+.btnPrimary:hover:not(:disabled)::after {
+  animation: shine 0.9s var(--ease) both;
 }
 
 .btnDanger {
-  border-color: var(--crit);
+  border-color: color-mix(in oklab, var(--crit) 55%, transparent);
   color: var(--crit-ink);
 }
 
 .btnDanger:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--crit) 12%, var(--surface));
+  background: color-mix(in oklab, var(--crit) 14%, transparent);
+  border-color: var(--crit);
+  box-shadow: 0 0 20px -6px var(--crit);
 }
 
 .btnSmall {
-  padding: 0.25rem 0.55rem;
+  padding: 0.3rem 0.7rem;
   font-size: var(--t-2xs);
 }
 
 .btnGhost {
   border-color: transparent;
   background: none;
+}
+
+.btnGhost:hover:not(:disabled) {
+  box-shadow: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -453,17 +581,39 @@
   color: var(--ink-faint);
 }
 
+/* Glass fields with a yellow focus ring. */
 .input,
 .select,
 .textarea {
   width: 100%;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid var(--hairline-bright);
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--glass-edge);
   border-radius: var(--r-md);
-  background: var(--raised);
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
   color: var(--ink);
   font: inherit;
   font-size: var(--t-xs);
+  transition:
+    border-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
+    box-shadow var(--t-move) var(--ease);
+}
+
+.input,
+.select {
+  border-radius: var(--r-pill);
+}
+
+.select option {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.input:hover:not(:disabled),
+.select:hover:not(:disabled),
+.textarea:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--ink) 22%, transparent);
+  background: var(--glass-strong);
 }
 
 .inputNum {
@@ -474,25 +624,43 @@
 .input:focus-visible,
 .select:focus-visible,
 .textarea:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  background: var(--glass-strong);
+  box-shadow: 0 0 0 3px var(--focus-halo), var(--halo-sm);
 }
 
 .input:disabled,
 .select:disabled,
 .textarea:disabled {
-  background: var(--void);
+  background: color-mix(in oklab, var(--void) 45%, transparent);
   color: var(--ink-faint);
   cursor: not-allowed;
 }
 
 .inputInvalid {
   border-color: var(--crit);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--crit) 18%, transparent);
+  animation: nudge 0.35s var(--ease) 1;
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -3px 0;
+  }
+  75% {
+    translate: 3px 0;
+  }
 }
 
 .fieldError {
   font-size: var(--t-2xs);
   color: var(--crit-ink);
+  animation: riseIn var(--t-move) var(--ease-out) backwards;
 }
 
 .fieldHint {
@@ -510,7 +678,7 @@
   margin-top: 0.15rem;
   width: 1rem;
   height: 1rem;
-  accent-color: var(--ink);
+  accent-color: var(--accent);
 }
 
 /* --------------------------------------------------------------------------
@@ -525,22 +693,56 @@
   align-items: center;
   gap: var(--s-3);
   margin-top: var(--s-5);
-  padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-md);
-  background: var(--raised);
-  box-shadow: var(--lift-2);
-  animation: riseIn var(--t-move) var(--spring) both;
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-5);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--raised) 94%, transparent);
+  box-shadow: var(--lift-4), var(--halo-sm);
+  animation: riseIn var(--t-enter) var(--spring) backwards;
 }
 
+/* Entrance keyframes move `translate`, never `transform`, so hover lifts
+   compose with them. */
 @keyframes riseIn {
   from {
-    transform: translateY(0.75rem);
+    translate: 0 0.75rem;
     opacity: 0;
   }
   to {
-    transform: translateY(0);
+    translate: 0 0;
     opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes countPop {
+  0% {
+    scale: 0.6;
+    opacity: 0;
+  }
+  60% {
+    scale: 1.12;
+    opacity: 1;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@keyframes shine {
+  from {
+    translate: -130% 0;
+  }
+  to {
+    translate: 230% 0;
   }
 }
 
@@ -555,10 +757,12 @@
   gap: var(--s-2);
   padding: var(--s-3) var(--s-4);
   margin-bottom: var(--s-5);
-  border: 1px dashed var(--hairline-bright);
-  border-radius: var(--r-md);
+  border: 1px dashed color-mix(in oklab, var(--accent) 35%, transparent);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
   font-size: var(--t-xs);
-  color: var(--ink-faint);
+  color: var(--ink-soft);
+  animation: fadeIn var(--t-enter) var(--ease-out) backwards;
 }
 
 /* --------------------------------------------------------------------------
@@ -574,20 +778,46 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* gross − commission − refunds = net, assembled term by term. */
 .reconTerm {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: var(--s-3);
+  padding: var(--s-3) var(--s-4);
   min-width: 8rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--glass);
+  animation: riseIn var(--t-enter) var(--ease-out) backwards;
+  transition:
+    transform var(--t-move) var(--spring),
+    border-color var(--t-move) var(--ease);
+}
+
+.reconTerm:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+
+.recon > :nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.recon > :nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.recon > :nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.recon > :nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.recon > :nth-child(6) { animation-delay: calc(5 * var(--stagger)); }
+.recon > :nth-child(n + 7) { animation-delay: calc(6 * var(--stagger)); }
+
+.reconOp {
+  animation: fadeIn var(--t-enter) var(--ease-out) backwards;
 }
 
 .reconTermResult {
-  border-color: var(--ink);
-  background: var(--raised);
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  box-shadow: var(--halo-sm);
+}
+
+.reconTermResult .reconValue {
+  color: var(--accent-ink);
 }
 
 .reconLabel {
@@ -603,7 +833,7 @@
   font-weight: 600;
 }
 
-.reconOp {
+.recon > .reconOp {
   align-self: center;
   padding: 0 var(--s-1);
   font-size: var(--t-h3);
@@ -638,9 +868,10 @@
 }
 
 .diff {
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--void);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--void) 50%, transparent);
+  overflow: hidden;
   margin: var(--s-2) 0 var(--s-4);
   font-family: var(--data);
   font-size: var(--t-2xs);
@@ -650,7 +881,8 @@
   display: grid;
   grid-template-columns: minmax(8rem, 1.1fr) minmax(0, 2fr) minmax(0, 2fr);
   gap: 0;
-  border-bottom: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--glass-edge);
+  background: var(--glass);
   font-family: var(--body);
   font-size: var(--t-2xs);
   letter-spacing: 0.04em;
@@ -665,7 +897,12 @@
 .diffRow {
   display: grid;
   grid-template-columns: minmax(8rem, 1.1fr) minmax(0, 2fr) minmax(0, 2fr);
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--glass-edge);
+  transition: background var(--t-micro) var(--ease);
+}
+
+.diffRow:hover {
+  background: color-mix(in oklab, var(--accent) 6%, transparent);
 }
 
 .diffRow:first-child {
@@ -718,7 +955,7 @@
   width: 100%;
   padding: var(--s-2) var(--s-3);
   border: 0;
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--glass-edge);
   background: none;
   color: var(--ink-faint);
   font: inherit;
@@ -729,7 +966,7 @@
 }
 
 .diffUnchangedToggle:hover {
-  color: var(--ink);
+  color: var(--accent-ink);
 }
 
 .diffEmpty {
@@ -751,7 +988,7 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink-faint);
-  background: var(--surface);
+  background: var(--glass);
 }
 
 .diffChanged .redacted,
@@ -775,14 +1012,22 @@
   list-style: none;
   margin: 0;
   padding: 0 0 0 var(--s-4);
-  border-left: 1px solid var(--hairline);
+  border-left: 2px solid transparent;
+  border-image: linear-gradient(180deg, color-mix(in oklab, var(--accent) 45%, transparent), var(--glass-edge)) 1;
 }
 
 .timelineItem {
   position: relative;
   padding: 0 0 var(--s-4) var(--s-4);
   font-size: var(--t-xs);
+  animation: riseIn var(--t-enter) var(--ease-out) backwards;
 }
+
+.timelineItem:nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.timelineItem:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.timelineItem:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.timelineItem:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.timelineItem:nth-child(n + 6) { animation-delay: calc(5 * var(--stagger)); }
 
 .timelineItem:last-child {
   padding-bottom: 0;
@@ -791,16 +1036,22 @@
 .timelineItem::before {
   content: "";
   position: absolute;
-  left: calc(-1 * var(--s-4) - 4px);
-  top: 0.35rem;
-  width: 7px;
-  height: 7px;
+  left: calc(-1 * var(--s-4) - 6px);
+  top: 0.3rem;
+  width: 9px;
+  height: 9px;
   border-radius: var(--r-pill);
   background: var(--hairline-bright);
 }
 
 .timelineItemDone::before {
   background: var(--good);
+  box-shadow: 0 0 8px var(--good);
+}
+
+.timelineItem:first-child::before {
+  background: var(--accent);
+  box-shadow: var(--halo-sm);
 }
 
 .timelineWhen {
@@ -821,24 +1072,54 @@
   gap: var(--s-3);
 }
 
+/* An aisle is a glass card that lifts and catches the light. A leaf button,
+   so it may move. Its entrance staggers across the grid. */
 .aisleCard {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  padding: var(--s-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  padding: var(--s-4) var(--s-5);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--ink) 9%, transparent),
+      color-mix(in oklab, var(--ink) 3%, transparent) 60%
+    ),
+    var(--glass);
+  color: var(--ink);
   text-align: left;
   font: inherit;
   cursor: pointer;
-  transition: border-color var(--t-micro) var(--ease), background var(--t-micro) var(--ease);
+  transition:
+    border-color var(--t-move) var(--ease),
+    background var(--t-micro) var(--ease),
+    transform var(--t-move) var(--spring),
+    box-shadow var(--t-move) var(--ease),
+    filter var(--t-micro) var(--ease);
 }
 
 .aisleCard:hover {
-  border-color: var(--hairline-bright);
-  background: var(--raised);
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent);
+  background-color: var(--glass-strong);
+  transform: translateY(-4px);
+  box-shadow:
+    0 14px 34px -18px color-mix(in oklab, var(--void) 80%, transparent),
+    var(--halo-sm);
 }
+
+.aisleCard:active {
+  filter: brightness(0.94);
+}
+
+.aisleGrid > :nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+.aisleGrid > :nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+.aisleGrid > :nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+.aisleGrid > :nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+.aisleGrid > :nth-child(6) { animation-delay: calc(5 * var(--stagger)); }
+.aisleGrid > :nth-child(7) { animation-delay: calc(6 * var(--stagger)); }
+.aisleGrid > :nth-child(n + 8) { animation-delay: calc(7 * var(--stagger)); }
 
 .aisleCardHead {
   display: flex;
@@ -892,9 +1173,10 @@
 
 .tag {
   display: inline-block;
-  padding: 0.1rem 0.4rem;
-  border: 1px solid var(--hairline-bright);
-  border-radius: var(--r-xs);
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: var(--glass);
   font-size: var(--t-2xs);
   color: var(--ink-faint);
   white-space: nowrap;
@@ -905,15 +1187,15 @@
    -------------------------------------------------------------------------- */
 
 .skel {
-  border-radius: var(--r-xs);
+  border-radius: var(--r-pill);
   background: linear-gradient(
     90deg,
-    var(--void) 0%,
-    color-mix(in srgb, var(--hairline) 60%, var(--void)) 50%,
-    var(--void) 100%
+    color-mix(in oklab, var(--ink) 6%, transparent) 25%,
+    color-mix(in oklab, var(--ink) 14%, transparent) 50%,
+    color-mix(in oklab, var(--ink) 6%, transparent) 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
+  animation: shimmer 1.3s linear infinite;
 }
 
 .skelLine {
@@ -936,17 +1218,19 @@
    -------------------------------------------------------------------------- */
 
 .enter {
-  animation: enter var(--t-move) var(--ease-out) both;
+  animation: enter var(--t-enter) var(--ease-out) backwards;
 }
 
+/* `translate`, not `transform`, and `backwards` fill: a tab panel holds the
+   products drawer, and nothing may stay applied to it once it has landed. */
 @keyframes enter {
   from {
     opacity: 0.01;
-    transform: translateY(0.4rem);
+    translate: 0 0.6rem;
   }
   to {
     opacity: 1;
-    transform: none;
+    translate: 0 0;
   }
 }
 
@@ -959,15 +1243,27 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background: var(--glass);
   overflow: hidden;
+  animation: fadeIn var(--t-enter) var(--ease-out) backwards;
 }
 
 .auditItem {
-  border-top: 1px solid var(--hairline);
+  border-top: 1px solid var(--glass-edge);
+  animation: riseIn var(--t-enter) var(--ease-out) backwards;
 }
+
+.auditItem:nth-child(2) { animation-delay: 30ms; }
+.auditItem:nth-child(3) { animation-delay: 60ms; }
+.auditItem:nth-child(4) { animation-delay: 90ms; }
+.auditItem:nth-child(5) { animation-delay: 120ms; }
+.auditItem:nth-child(6) { animation-delay: 150ms; }
+.auditItem:nth-child(7) { animation-delay: 180ms; }
+.auditItem:nth-child(8) { animation-delay: 210ms; }
+.auditItem:nth-child(9) { animation-delay: 240ms; }
+.auditItem:nth-child(n + 10) { animation-delay: 270ms; }
 
 .auditItem:first-child {
   border-top: 0;
@@ -986,11 +1282,15 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background var(--t-micro) var(--ease);
+  box-shadow: inset 0 0 0 var(--accent);
+  transition:
+    background var(--t-micro) var(--ease),
+    box-shadow var(--t-move) var(--ease-out);
 }
 
 .auditHead:hover {
-  background: var(--raised);
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .auditHead:focus-visible {
@@ -1003,11 +1303,12 @@
   height: 0.75rem;
   justify-self: center;
   color: var(--ink-faint);
-  transition: transform var(--t-micro) var(--ease);
+  transition: transform var(--t-move) var(--spring);
 }
 
 .auditChevronOpen {
   transform: rotate(90deg);
+  color: var(--accent-ink);
 }
 
 .auditBody {
@@ -1041,8 +1342,32 @@
   .saveBar,
   .enter,
   .skel,
-  .presenceOnline::after {
+  .presenceOnline::after,
+  .panel,
+  .tabs,
+  .defList > *,
+  .numLarge,
+  .inputInvalid,
+  .fieldError,
+  .readOnlyNote,
+  .reconTerm,
+  .reconOp,
+  .timelineItem,
+  .auditList,
+  .auditItem,
+  .btnPrimary:hover::after {
     animation: none;
+  }
+
+  .tabInk {
+    transition: none;
+  }
+
+  .btn:hover:not(:disabled),
+  .btnPrimary:hover:not(:disabled),
+  .aisleCard:hover,
+  .reconTerm:hover {
+    transform: none;
   }
 
   .diffWrap {

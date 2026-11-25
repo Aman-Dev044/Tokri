@@ -31,7 +31,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAdminQuery, useDebounced, useFreshness } from '@/hooks';
-import { formatCount, formatDate, humanise } from '@/lib/admin/format';
+import { formatCount, formatDate, humanise, orderActorLabel } from '@/lib/admin/format';
 import {
   OPS_LANES,
   OPS_LANE_LABEL,
@@ -488,7 +488,7 @@ function CardDrawer({ card, onClose }: { card: OpsOrderCard | null; onClose: () 
                       <span className="adm-timeline__to">{humanise(event.to)}</span>
                     </div>
                     <p className="adm-timeline__actor">
-                      by <strong>{event.byName}</strong> ·{' '}
+                      by <strong>{orderActorLabel(event.byRole)}</strong> ·{' '}
                       <RelativeTime value={event.at} live={false} />
                     </p>
                     {event.reason ? (

@@ -69,7 +69,15 @@ import type {
 } from '@/lib/vendor/types';
 import { AreaChart, RankedBars, type BarDatum } from '../charts';
 import { formatCount, formatDate, formatPaise, formatPaiseCompact } from '../format';
-import { IconInbox } from '../icons';
+import {
+  IconAlert,
+  IconBilling,
+  IconEarnings,
+  IconInbox,
+  IconOrders,
+  IconRefresh,
+  IconStaff,
+} from '../icons';
 import { VenPage, VenSection } from '../Page';
 import {
   ChartPanel,
@@ -274,6 +282,7 @@ export function EarningsView() {
       <div className="ven-kpigrid">
         <KpiCell
           label="Gross sales"
+          icon={<IconEarnings />}
           value={data?.gross ?? 0}
           format={formatPaiseCompact}
           tone="good"
@@ -282,6 +291,7 @@ export function EarningsView() {
         />
         <KpiCell
           label="Average order"
+          icon={<IconBilling />}
           value={averageOrderValue}
           format={formatPaiseCompact}
           index={1}
@@ -289,6 +299,7 @@ export function EarningsView() {
         />
         <KpiCell
           label="Orders"
+          icon={<IconOrders />}
           value={data?.orderCount ?? 0}
           format={formatCount}
           index={2}
@@ -296,6 +307,7 @@ export function EarningsView() {
         />
         <KpiCell
           label="Commission taken"
+          icon={<IconStaff />}
           value={data?.commission ?? 0}
           format={formatPaiseCompact}
           tone="warn"
@@ -304,6 +316,7 @@ export function EarningsView() {
         />
         <KpiCell
           label="Awaiting payout"
+          icon={<IconRefresh />}
           value={data?.payoutPending ?? 0}
           format={formatPaiseCompact}
           index={4}
@@ -311,6 +324,7 @@ export function EarningsView() {
         />
         <KpiCell
           label="Refunded"
+          icon={<IconAlert />}
           value={data?.refunds ?? 0}
           format={formatPaiseCompact}
           tone="crit"

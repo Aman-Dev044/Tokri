@@ -44,12 +44,11 @@ const manifest: MetadataRoute.Manifest = {
   orientation: 'portrait',
   // `theme_color`/`background_color` are read by the OS before any stylesheet
   // loads, so they cannot reference a custom property — kept in lockstep with
-  // "Neon Orchard"'s `--ground` (dark: #0e0a14) by hand. Only one value is
-  // possible here (the manifest has no media-query form), and it is the dark
-  // one: riders work evenings and a pale splash screen at 10pm is the thing
-  // they would complain about.
-  background_color: '#0e0a14',
-  theme_color: '#0e0a14',
+  // "Forest Gold"'s `--ground` (#0b1d13) by hand. Only one value is possible
+  // here (the manifest has no media-query form), and dark forest is the
+  // theme's default for everyone anyway.
+  background_color: '#0b1d13',
+  theme_color: '#0b1d13',
   categories: ['business', 'productivity'],
   dir: 'ltr',
   lang: 'en-IN',

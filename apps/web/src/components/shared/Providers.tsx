@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { AisleProvider, ThemeProvider, ToastProvider } from '@mandi/design-system';
 import { AuthProvider } from '@/components/auth/AuthProvider';
+import { MotionRoot } from './MotionRoot';
 
 /**
  * One client boundary at the root, so `layout.tsx` itself stays a Server
@@ -28,7 +29,10 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <AisleProvider>
         <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <MotionRoot />
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </AisleProvider>
     </ThemeProvider>

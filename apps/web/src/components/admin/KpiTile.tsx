@@ -3,7 +3,7 @@
 import { Tilt3D } from '@mandi/design-system';
 import { useCountUp } from '@/hooks';
 import { formatCount, formatPaise, formatPct } from '@/lib/admin/format';
-import { IconArrowUp } from './icons';
+import { IconArrowUp, IconOverview, IconPayments, IconReports } from './icons';
 import { Sparkline, type SparkTone } from './Sparkline';
 
 export type KpiTone = 'neutral' | 'good' | 'warn' | 'crit';
@@ -33,6 +33,17 @@ export interface KpiTileProps {
   /** a lower delta is better here (cancellation rate), so invert the colours */
   invertDelta?: boolean;
   className?: string;
+}
+
+/**
+ * The tile's cream icon badge. Purely decorative (the label carries the
+ * meaning), so it is picked from what the number IS rather than asked for:
+ * money gets the wallet, a rate gets the chart, a count gets the bars.
+ */
+function badgeIconFor(unit: string | undefined) {
+  if (unit === 'paise') return IconPayments;
+  if (unit === '%') return IconReports;
+  return IconOverview;
 }
 
 const SPARK_TONE: Record<KpiTone, SparkTone> = {
@@ -79,11 +90,15 @@ export function KpiTile({
   };
 
   const countRef = useCountUp(value, { format, delayMs: index * 55 });
+  const BadgeIcon = badgeIconFor(unit);
 
   if (loading) {
     return (
       <div className="adm-tile" aria-busy="true">
-        <div className="adm-skel adm-skel--line" style={{ width: '55%' }} />
+        <div className="adm-tile__head">
+          <span className="adm-skel" style={{ width: 38, height: 38, flex: '0 0 auto' }} />
+          <div className="adm-skel adm-skel--line" style={{ width: '55%' }} />
+        </div>
         <div className="adm-skel adm-skel--line" style={{ height: 26, width: '70%' }} />
         <div className="adm-tile__foot">
           <div className="adm-skel adm-skel--line" style={{ width: 72 }} />
@@ -119,7 +134,12 @@ export function KpiTile({
         data-fixture={isFixture ? 'true' : undefined}
         style={{ ['--adm-i' as string]: String(index) }}
       >
-        <p className="adm-tile__label">{label}</p>
+        <div className="adm-tile__head">
+          <span className="adm-tile__badge" aria-hidden="true">
+            <BadgeIcon />
+          </span>
+          <p className="adm-tile__label">{label}</p>
+        </div>
 
         <p className="adm-tile__value">
           {/* The ref'd span holds exactly the animated string; the unit sits

@@ -191,7 +191,7 @@ export function AreaChart({ data, format, label, tone = 'accent', height = 220 }
           className="ven-chart__axis"
         />
         {area ? <path className="ven-chart__area" d={area} /> : null}
-        {line ? <path className="ven-chart__line" d={line} /> : null}
+        {line ? <path className="ven-chart__line" d={line} pathLength={1} /> : null}
         {points.map((point, index) => (
           <circle
             key={`${id}-p-${index}`}
@@ -256,7 +256,7 @@ export function Sparkline({ values }: { values: readonly number[] }) {
       aria-hidden="true"
       focusable="false"
     >
-      <path className="ven-spark__line" d={path} />
+      <path className="ven-spark__line" d={path} pathLength={1} />
     </svg>
   );
 }

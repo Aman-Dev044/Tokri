@@ -50,7 +50,7 @@
  */
 
 import Link from 'next/link';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import styles from './delivery.module.css';
 import { CachedBanner, FixtureBanner, Notice } from './Banners';
@@ -58,7 +58,18 @@ import { Dock, PrimaryLink } from './Dock';
 import { useHideNav } from './RiderShell';
 import { CardSkeleton, StatPairSkeleton } from './Skeletons';
 import { useRider } from './RiderProvider';
-import { IconBox, IconNavigate, IconResting, IconShield, IconWallet } from './icons';
+import {
+  IconArrow,
+  IconBox,
+  IconChart,
+  IconCheck,
+  IconClock,
+  IconNavigate,
+  IconResting,
+  IconShield,
+  IconUser,
+  IconWallet,
+} from './icons';
 import { dayLabel, distanceKm, money } from '@/lib/delivery/format';
 import { useRiderEarnings } from '@/lib/delivery/useRiderData';
 import { APP_NAME } from '@/config/brand';
@@ -94,6 +105,22 @@ export function DashboardView() {
   const [toggleError, setToggleError] = useState<string | null>(null);
   const online = profile?.isOnline ?? false;
   const today = profile?.today ?? null;
+  const riderName = (profile?.name ?? '').trim();
+
+  /*
+    "Good morning, Name". Read from the clock AFTER mount, never during
+    render: the server and the phone disagree about the hour, and a
+    greeting computed in render is a hydration mismatch waiting to happen.
+  */
+  const [greeting, setGreeting] = useState<{ hello: string; date: string } | null>(null);
+  useEffect(() => {
+    const at = new Date();
+    const hour = at.getHours();
+    setGreeting({
+      hello: hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening',
+      date: at.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' }),
+    });
+  }, []);
 
   const goOnline = useCallback(() => {
     setToggleError(null);
@@ -149,6 +176,19 @@ export function DashboardView() {
           {toggleError}
         </Notice>
       )}
+
+      {/* ------------------------------------------------ greeting ---- */}
+      <div className={styles.greet}>
+        <span className={styles.greetAvatar} aria-hidden="true">
+          {riderName === '' ? <IconUser size={26} /> : riderName.charAt(0)}
+        </span>
+        <div className={styles.greetText}>
+          <span className={styles.greetHello}>
+            {greeting === null ? 'Hello' : `${greeting.hello} · ${greeting.date}`}
+          </span>
+          <p className={styles.greetName}>{riderName === '' ? 'Rider' : riderName}</p>
+        </div>
+      </div>
 
       {/* ------------------------------------------- needs you now ---- */}
       <section className={styles.sec} aria-labelledby="rid-needs">
@@ -313,7 +353,8 @@ export function DashboardView() {
             </Link>
           </Notice>
         ) : (
-          <div className={styles.resting}>
+          // The big status card: yellow while online, quiet glass offline.
+          <div className={`${styles.resting} ${online ? styles.restingOn : styles.restingOff}`}>
             <IconResting size={72} className={styles.restingMark} />
             <h3 className={styles.h1}>
               {online ? 'Waiting for offers' : 'Nothing will arrive while you are offline'}
@@ -323,8 +364,11 @@ export function DashboardView() {
                 ? 'The next job arrives with a 45-second countdown.'
                 : 'Go online above and offers will start coming through.'}
             </p>
-            <Link href="/delivery/offers" className={styles.inlineLink}>
+            <Link href="/delivery/offers" className={styles.restingCta}>
               Open the offers screen
+              <span className={styles.arrowBubble} aria-hidden="true">
+                <IconArrow size={22} />
+              </span>
             </Link>
           </div>
         )}
@@ -345,32 +389,38 @@ export function DashboardView() {
         <div className={`${styles.summaryGrid} ${styles.grid3}`}>
           <Tile
             index={0}
+            icon={<IconWallet size={18} />}
             value={wallet === null ? '—' : money(wallet.balancePaise)}
             label="Wallet balance"
             tone={brokeTone === 'crit' ? 'crit' : lowTone === 'warn' ? 'warn' : undefined}
           />
           <Tile
             index={1}
+            icon={<IconChart size={18} />}
             value={today === null ? '—' : money(today.earningsPaise)}
             label="Earned today"
           />
           <Tile
             index={2}
+            icon={<IconBox size={18} />}
             value={today === null ? '—' : String(today.deliveries)}
             label="Deliveries today"
           />
           <Tile
             index={3}
+            icon={<IconCheck size={18} />}
             value={wallet === null ? '—' : String(wallet.totalDelivered)}
             label="Delivered in total"
           />
           <Tile
             index={4}
+            icon={<IconClock size={18} />}
             value={wallet === null ? '—' : money(wallet.lifetimeEarnedPaise)}
             label="Earned in total"
           />
           <Tile
             index={5}
+            icon={<IconNavigate size={18} />}
             value={
               wallet === null
                 ? '—'
@@ -409,6 +459,9 @@ export function DashboardView() {
                       ? ` · ${money(statement.codCollectedPaise)} cash collected`
                       : ''
                   } · open the full breakdown`}
+            </span>
+            <span className={styles.statementArrow} aria-hidden="true">
+              <IconArrow size={20} />
             </span>
           </Link>
         )}
@@ -455,18 +508,26 @@ function Tile({
   value,
   label,
   tone,
+  icon,
 }: {
   index: number;
   value: string;
   label: string;
   tone?: 'warn' | 'crit';
+  /** A small cream badge in the corner. Decorative; the label is the meaning. */
+  icon?: React.ReactNode;
 }) {
   return (
     <div
-      className={styles.summaryTile}
+      className={`${styles.summaryTile} ${icon === undefined ? '' : styles.summaryTileIcon}`}
       style={{ ['--i' as string]: index }}
       data-tone={tone}
     >
+      {icon === undefined ? null : (
+        <span className={styles.tileIcon} aria-hidden="true">
+          {icon}
+        </span>
+      )}
       <div className={styles.summaryValue}>{value}</div>
       <div className={styles.summaryLabel}>{label}</div>
     </div>

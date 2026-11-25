@@ -72,7 +72,21 @@ export function MagneticLink({
       onPointerLeave={reset}
       onBlur={reset}
     >
-      {children}
+      <span className="mk-btn__label">{children}</span>
+      {/* The arrow is decoration: hidden from assistive technology, so the
+          link's accessible name is still exactly its label. */}
+      {variant === 'ghost' ? null : (
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="mk-btn__arrow">
+          <path
+            d="M5 12h13m0 0-5-5m5 5-5 5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
     </Link>
   );
 }

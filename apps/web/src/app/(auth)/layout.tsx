@@ -12,7 +12,15 @@ import '@/styles/auth.css';
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth">
-      <div className="auth__glow" aria-hidden="true" />
+      {/* Forest light, two gold orbits and a little drifting produce behind
+          the card. Fixed to the viewport and purely decorative. */}
+      <div className="auth__glow" aria-hidden="true">
+        <span className="auth__orbit tkr-orbit" />
+        <span className="auth__orbit auth__orbit--b tkr-orbit" />
+        <span className="auth__bit auth__bit--a">🥭</span>
+        <span className="auth__bit auth__bit--b">🥬</span>
+        <span className="auth__bit auth__bit--c">🥖</span>
+      </div>
       <header className="auth__bar auth__shell">
         <Link href="/" className="auth__brand" aria-label={`${APP_NAME}, home`}>
           <span className="auth__mark" aria-hidden="true">
@@ -43,7 +51,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         </Link>
 
         <Link href="/" className="auth__back">
-          <span aria-hidden="true">←</span> Back to the market
+          <span className="auth__back-arrow" aria-hidden="true">
+            ←
+          </span>{' '}
+          Back to the market
         </Link>
       </header>
 

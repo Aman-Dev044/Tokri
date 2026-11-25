@@ -66,9 +66,9 @@ export interface DataTableProps<T> {
  * the user believes they sorted 214, is worse than no sorting at all.
  *
  * ── THE STAGGER ────────────────────────────────────────────────────────────
- * Rows animate in 20ms apart (admin.css), which reads as "this list just
+ * Rows animate in 30ms apart (admin.css), which reads as "this list just
  * changed" — the point of the animation is to catch the eye when a filter
- * lands. It is capped at 14 rows: past that, the stagger stops being feedback
+ * lands. It is capped at 10 rows: past that, the stagger stops being feedback
  * and becomes a queue you wait through.
  *
  * ── HORIZONTAL SCROLL ──────────────────────────────────────────────────────
@@ -190,7 +190,7 @@ export function DataTable<T>({
                   tabIndex={clickable ? 0 : undefined}
                   onClick={clickable ? () => onRowClick?.(row) : undefined}
                   onKeyDown={clickable ? (event) => onRowKeyDown(event, row) : undefined}
-                  style={{ ['--adm-i' as string]: String(Math.min(i, 14)) }}
+                  style={{ ['--adm-i' as string]: String(Math.min(i, 10)) }}
                 >
                   {columns.map((column) => (
                     <td

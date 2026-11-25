@@ -50,7 +50,7 @@ export function AisleShowcase() {
   return (
     <section className="mk-sec" id="aisles">
       <div className="mk-shell">
-        <header className="mk-sec__head">
+        <header className="mk-sec__head tkr-reveal">
           <p className="mk-eyebrow">Pillar one</p>
           <h2 className="mk-title">
             Nine aisles. Nine colours.
@@ -64,7 +64,7 @@ export function AisleShowcase() {
           </p>
         </header>
 
-        <ul className="mk-grid mk-grid--aisles">
+        <ul className="mk-grid mk-grid--aisles tkr-reveal-kids">
           {AISLES.map((a, i) => {
             const isOn = current?.key === a.key;
             return (

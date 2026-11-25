@@ -55,6 +55,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function OffersView() {
   const {
+    profile,
     offers,
     offersAreSample,
     wallet,
@@ -143,7 +144,11 @@ export function OffersView() {
           </Notice>
         ) : null}
 
-        <div className={styles.resting}>
+        <div
+          className={`${styles.resting} ${
+            profile?.isOnline === true ? styles.restingOn : styles.restingOff
+          }`}
+        >
           <IconResting size={72} className={styles.restingMark} />
           <h1 className={styles.h1}>Waiting for offers</h1>
           <p className={styles.lede}>
@@ -164,7 +169,8 @@ export function OffersView() {
         <FixtureBanner endpoints={sampleEndpoints} onRetry={refresh} />
       ) : null}
 
-      <section className={styles.panelFlat}>
+      {/* The offer zooms in on a spring; its countdown ring glows gold. */}
+      <section className={styles.offerCard}>
         <div className={styles.offerHead}>
           <div className={styles.payoutBlock}>
             <span className={styles.stepTag}>You earn</span>

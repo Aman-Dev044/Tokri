@@ -85,7 +85,7 @@ export function WishlistView() {
           ) : null}
 
           {gone.length > 0 ? (
-            <section className="shop-wish__gone" aria-labelledby="wish-gone">
+            <section className="shop-wish__gone tkr-reveal" aria-labelledby="wish-gone">
               <h2 className="shop-wish__gone-title" id="wish-gone">
                 No longer available
               </h2>

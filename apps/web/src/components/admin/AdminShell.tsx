@@ -236,7 +236,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   aria-current={active ? 'page' : undefined}
                   title={collapsed && !isDrawer ? item.label : undefined}
                 >
-                  <Icon className="adm-rail__icon" />
+                  <span className="adm-rail__ico" aria-hidden="true">
+                    <Icon className="adm-rail__icon" />
+                  </span>
                   <span className="adm-rail__label">{item.label}</span>
 
                   {badge === undefined ? null : (

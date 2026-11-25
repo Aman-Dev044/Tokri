@@ -20,8 +20,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAdminQuery, useDebounced } from '@/hooks';
 import { formatCount } from '@/lib/admin/format';
-import { fixtureVendorOptions } from '@/lib/admin/fixtures';
-import type { OrderListRow, Paginated } from '@/lib/admin/types';
+import type { OrderListRow, Paginated, VendorListRow } from '@/lib/admin/types';
 import {
   AdminPage,
   AdminSection,
@@ -111,19 +110,33 @@ function OrdersBoard() {
     { refreshMs: 20_000 },
   );
 
+  // The vendor filter sends `vendorId`, which the API validates as a Mongo
+  // id — so the options must be real vendor ids, read from the vendor list
+  // (100 is that endpoint's page cap). This used to be a hard-coded fixture
+  // list whose ids 400'd the moment one was picked against the real API.
+  const vendorList = useAdminQuery<Paginated<VendorListRow>>('/admin/vendors', {
+    limit: 100,
+    sort: 'storeName',
+  });
+  const vendorRows = vendorList.data?.data;
+
   const filters: FilterDef[] = useMemo(
     () => [
-      { key: 'q', label: 'Search', type: 'search', placeholder: 'Order no, customer, vendor…' },
+      // The API matches `q` against the order number only.
+      { key: 'q', label: 'Search', type: 'search', placeholder: 'Order no…' },
       { key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS },
       {
         key: 'vendorId',
         label: 'Vendor',
         type: 'select',
-        options: [{ label: 'All vendors', value: 'all' }, ...fixtureVendorOptions()],
+        options: [
+          { label: 'All vendors', value: 'all' },
+          ...(vendorRows ?? []).map((v) => ({ label: v.storeName, value: v.id })),
+        ],
       },
       { key: 'placedAt', label: 'Placed between', type: 'daterange' },
     ],
-    [],
+    [vendorRows],
   );
 
   const rows = query.data?.data ?? [];
@@ -147,38 +160,40 @@ function OrdersBoard() {
       {
         key: 'status',
         header: 'Status',
+        sortable: true,
         render: (row) => <StatusPill status={row.status} kind="order" />,
       },
       {
         key: 'vendorName',
         header: 'Vendor',
-        sortable: true,
         render: (row) => (
           <Link className="adm-table__link" href={`/admin/vendors/${row.vendorId}`}>
-            {row.vendorName}
-            <span className="adm-table__sub">{row.city}</span>
+            {row.vendorName ?? 'Not resolved'}
           </Link>
         ),
       },
-      { key: 'customerName', header: 'Customer' },
       {
-        key: 'paymentStatus',
+        key: 'customerName',
+        header: 'Customer',
+        render: (row) => row.customerName ?? 'Not resolved',
+      },
+      {
+        key: 'payment',
         header: 'Payment',
         render: (row) => (
           <span className="adm-row">
-            <StatusPill status={row.paymentStatus} kind="payment" />
+            <StatusPill status={row.payment.status} kind="payment" />
             <span className="adm-table__sub" style={{ display: 'inline' }}>
-              {row.paymentMethod === 'cod' ? 'COD' : 'online'}
+              {row.payment.method === 'cod' ? 'COD' : 'online'}
             </span>
           </span>
         ),
       },
       {
-        key: 'totalPaise',
+        key: 'pricing',
         header: 'Total',
         align: 'right',
-        sortable: true,
-        render: (row) => <Money value={row.totalPaise} />,
+        render: (row) => <Money value={row.pricing.grandTotal} />,
       },
       {
         key: 'placedAt',
@@ -200,8 +215,15 @@ function OrdersBoard() {
     <AdminPage
       title="Orders"
       description="Every order on the platform, newest first. Refreshes every 20 seconds while this tab is in front."
-      isFixture={query.isFixture}
-      fixturePaths={query.isFixture ? ['/admin/orders'] : undefined}
+      isFixture={query.isFixture || vendorList.isFixture}
+      fixturePaths={
+        query.isFixture || vendorList.isFixture
+          ? [
+              ...(query.isFixture ? ['/admin/orders'] : []),
+              ...(vendorList.isFixture ? ['/admin/vendors'] : []),
+            ]
+          : undefined
+      }
       actions={
         <button type="button" className="adm-btn adm-btn--sm" onClick={query.refetch}>
           Refresh now

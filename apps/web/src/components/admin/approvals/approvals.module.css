@@ -58,20 +58,30 @@
 
 .preset {
   appearance: none;
-  border: 1px dashed var(--hairline-bright);
+  border: 1px dashed var(--glass-edge);
   border-radius: var(--r-pill);
-  background: none;
-  color: var(--ink-faint);
+  background: var(--glass);
+  color: var(--ink-soft);
   font: inherit;
   font-size: var(--t-2xs);
-  padding: 0.15rem 0.6rem;
+  padding: 0.2rem 0.7rem;
   cursor: pointer;
+  transition:
+    color var(--t-micro) var(--ease),
+    border-color var(--t-micro) var(--ease),
+    background var(--t-micro) var(--ease),
+    filter var(--t-micro) var(--ease);
 }
 
 .preset:hover {
-  color: var(--ink);
-  border-color: var(--ink);
+  color: var(--accent-ink);
+  border-color: color-mix(in oklab, var(--accent) 50%, transparent);
   border-style: solid;
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+.preset:active {
+  filter: brightness(0.92);
 }
 
 /* --------------------------------------------------------------------------
@@ -98,19 +108,20 @@
   align-items: flex-start;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
-  border: 1px solid var(--hairline-bright);
+  border: 1px solid var(--glass-edge);
   border-left-width: 3px;
-  border-radius: var(--r-md);
-  background: var(--raised);
-  box-shadow: var(--lift-2);
+  border-radius: var(--r-lg);
+  background: color-mix(in oklab, var(--raised) 94%, transparent);
+  box-shadow: var(--lift-4);
   font-size: var(--t-xs);
   color: var(--ink);
   pointer-events: auto;
-  animation: toastIn var(--t-move) var(--spring) both;
+  animation: toastIn var(--t-enter) var(--spring) backwards;
 }
 
 .toastGood {
   border-left-color: var(--good);
+  box-shadow: var(--lift-4), var(--halo-mint);
 }
 .toastCrit {
   border-left-color: var(--crit);
@@ -157,16 +168,19 @@
 }
 
 .toastClose:hover {
-  color: var(--ink);
+  color: var(--accent-ink);
 }
 
+/* Slides in from the right edge it lives on. `translate`, `backwards`. */
 @keyframes toastIn {
   from {
-    transform: translateY(0.75rem);
+    translate: 1.5rem 0;
+    scale: 0.96;
     opacity: 0;
   }
   to {
-    transform: none;
+    translate: 0 0;
+    scale: 1;
     opacity: 1;
   }
 }
@@ -182,28 +196,56 @@
   gap: var(--s-2);
   padding: var(--s-8) var(--s-4);
   text-align: center;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-md);
-  background: var(--surface);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(360px 220px at 50% 0%, color-mix(in oklab, var(--mint) 14%, transparent), transparent 70%),
+    var(--glass);
+  animation: clearIn var(--t-enter) var(--ease-out) backwards;
 }
 
+/* The cream badge, floating — a finished queue is a calm thing. */
 .clearMark {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 3.25rem;
+  height: 3.25rem;
   display: grid;
   place-items: center;
   border-radius: var(--r-pill);
-  border: 1px solid color-mix(in srgb, var(--good) 45%, var(--hairline));
-  color: var(--good-ink);
-  font-size: 1.1rem;
+  background: var(--ink);
+  color: var(--ground);
+  box-shadow: var(--halo-mint);
+  font-size: 1.3rem;
   line-height: 1;
+  animation: bob 6s var(--ease) infinite;
 }
 
 .clearTitle {
   margin: 0;
   font-family: var(--display);
-  font-size: var(--t-lg);
+  font-size: var(--t-h3);
+  font-weight: 800;
   color: var(--ink);
+}
+
+@keyframes clearIn {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
 }
 
 .clearBody {
@@ -244,7 +286,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .toast {
+  .toast,
+  .clear,
+  .clearMark {
     animation: none;
   }
 }

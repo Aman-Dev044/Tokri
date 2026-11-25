@@ -72,6 +72,15 @@ export function IconCheck({ size = 24, className }: IconProps) {
   );
 }
 
+/** The round arrow button's glyph — "go", on every yellow pill. */
+export function IconArrow({ size = 24, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
 export function IconX({ size = 24, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

@@ -57,6 +57,16 @@ export function CatalogView() {
             {entry.label}
           </button>
         ))}
+        {/* The sliding yellow pill behind the selected tab. Decorative — the
+            selection itself is `aria-selected` on the tab. */}
+        <span
+          className={styles.tabInk}
+          aria-hidden="true"
+          style={{
+            ['--adm-tab-i' as string]: String(Math.max(0, TABS.findIndex((entry) => entry.key === tab))),
+            ['--adm-tab-n' as string]: String(TABS.length),
+          }}
+        />
       </div>
 
       {/*

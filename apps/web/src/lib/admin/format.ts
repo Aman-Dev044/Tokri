@@ -226,3 +226,22 @@ export function humanise(value: string): string {
   const spaced = value.replace(/[_-]+/g, ' ').trim().toLowerCase();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
+
+/**
+ * The actor on an order's `statusHistory` entry. The API records a ROLE (its
+ * `Role` enum value) and a user id, never a name; `null` is a transition the
+ * system made on its own.
+ */
+const ORDER_ACTOR_LABEL: Record<string, string> = {
+  super_admin: 'super admin',
+  admin: 'admin',
+  vendor: 'vendor',
+  staff: 'store staff',
+  customer: 'customer',
+  delivery: 'rider',
+};
+
+export function orderActorLabel(byRole: string | null): string {
+  if (byRole === null) return 'system';
+  return ORDER_ACTOR_LABEL[byRole] ?? humanise(byRole).toLowerCase();
+}

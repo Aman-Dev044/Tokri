@@ -50,13 +50,13 @@ import {
 } from 'react';
 
 import styles from './delivery.module.css';
-import { Dock, RiderNav } from './Dock';
+import { Dock, PrimaryArrow, RiderNav } from './Dock';
 import { RiderRail } from './RiderRail';
 import { RiderProfileSheet } from './RiderProfileSheet';
 import { RiderProvider, useRider } from './RiderProvider';
 import { useRiderSession } from '@/lib/delivery/session';
 import { money } from '@/lib/delivery/format';
-import { IconShield, IconUser } from './icons';
+import { IconArrow, IconShield, IconUser } from './icons';
 import { APP_NAME } from '@/config/brand';
 
 /* ------------------------------------------------------------------ */
@@ -137,6 +137,9 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
   const online = profile?.isOnline ?? false;
   const today = profile?.today ?? null;
   const riderName = profile?.name ?? '';
+  // The avatar shows the rider's initial once the profile has answered, and
+  // the generic mark until then. Display only — the label carries the name.
+  const initial = riderName.trim().charAt(0);
 
   const onToggle = useCallback(() => {
     setToggleError(null);
@@ -160,6 +163,7 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
       <div className={styles.headerInner}>
         <div className={styles.headerTop}>
           <Link href="/delivery" className={styles.brand}>
+            <span className={styles.brandMark} aria-hidden="true" />
             {APP_NAME} <span className={styles.brandRole}>RIDER</span>
           </Link>
           <div className={styles.headerActions}>
@@ -182,7 +186,13 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
                   : `${riderName} — account and sign out`
               }
             >
-              <IconUser size={24} />
+              {initial === '' ? (
+                <IconUser size={24} />
+              ) : (
+                <span className={styles.accountInitial} aria-hidden="true">
+                  {initial}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -197,8 +207,11 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
         <div className={styles.headerBar}>
           {/*
             THE control. Everything else on this surface is secondary to it.
-            `key` on the ON state so the leaf fill pulses ONCE when it flips,
-            then holds — a toggle that keeps pulsing stops being read.
+            Glass while offline, the big yellow status card while online.
+            `key` on the ON state so the card lights up, the lamp pings and
+            the switch's knob slides exactly ONCE per real flip, then holds —
+            a toggle that keeps pulsing stops being read. The switch is
+            aria-hidden: the words are the state, `aria-pressed` is the role.
           */}
           <button
             key={online ? 'on' : 'off'}
@@ -217,6 +230,11 @@ function Header({ onOpenAccount }: { onOpenAccount: () => void }) {
                   : online
                     ? 'Tap to stop receiving offers'
                     : 'Tap to start receiving offers'}
+              </span>
+            </span>
+            <span className={styles.toggleSwitch} aria-hidden="true">
+              <span className={styles.toggleKnob}>
+                <IconArrow size={16} />
               </span>
             </span>
           </button>
@@ -259,6 +277,7 @@ function Chrome({ children }: { children: ReactNode }) {
   const [hideNav, setHideNav] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const { offers, activeOrder, wallet, kyc, profile } = useRider();
+  const online = profile?.isOnline ?? false;
 
   const value = useMemo<ChromeValue>(() => ({ hideNav, setHideNav }), [hideNav]);
 
@@ -289,7 +308,12 @@ function Chrome({ children }: { children: ReactNode }) {
 
   return (
     <ChromeContext.Provider value={value}>
-      <div className={styles.shell}>
+      {/*
+        `data-online` only brightens the fixed pool of gold light behind the
+        header. The shell itself never animates: it holds the sticky header,
+        the sticky rail and every fixed dock.
+      */}
+      <div className={styles.shell} data-online={online ? 'true' : 'false'}>
         {/*
           ALWAYS rendered, shown by a media query at 1024px and never by a
           viewport check in JavaScript — a layout chosen from `innerWidth`
@@ -354,8 +378,12 @@ export function RiderShell({ children }: { children: ReactNode }) {
         title="Sign in to ride"
         body="Your session has ended. Sign in again to see your offers and your current delivery."
         action={
-          <Link className={styles.primary} href="/login?next=/delivery">
+          <Link
+            className={`${styles.primary} ${styles.primaryWithArrow}`}
+            href="/login?next=/delivery"
+          >
             Sign in
+            <PrimaryArrow />
           </Link>
         }
       />
